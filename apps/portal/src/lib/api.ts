@@ -242,6 +242,37 @@ export const api = {
     ),
   followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
 
+  shop: () =>
+    request<{
+      xp: number;
+      level: number;
+      streak: User['streak'];
+      freeze: { cost: number; held: number; max: number };
+      breakDay: {
+        cost: number;
+        held: number;
+        max: number;
+        boughtThisMonth: number;
+        minLeadHours: number;
+      };
+      backgrounds: Array<{
+        id: string;
+        name: string;
+        minLevel: number;
+        costXp: number | null;
+        owned: boolean;
+      }>;
+      accents: Array<{ id: string; name: string; minLevel: number; unlocked: boolean }>;
+      badges: Array<{ key: string; name: string; description: string }>;
+      achievements: Array<{ key: string; unlockedAt: string }>;
+    }>('GET', '/api/shop'),
+  buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),
+  buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
+  applyBreakDay: (date: string) =>
+    request<{ breakDays: string[] }>('POST', '/api/shop/break-day/apply', { date }),
+  buyBackground: (id: string) =>
+    request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
+
   googleStatus: () =>
     request<{
       available: boolean;

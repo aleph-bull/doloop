@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { isValidTimezone } from '@doloop/core';
+import { isAccentUnlocked, isBackgroundAvailable, isValidTimezone } from '@doloop/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { viewPolicy } from '../services/rest-days';
@@ -39,6 +39,12 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
 
   app.patch('/api/me/settings', async (req) => {
     const patch = settingsSchema.parse(req.body);
+    const accent = patch.theme?.accent;
+    if (accent && !accent.startsWith('custom:') && !isAccentUnlocked(accent, req.user.level))
+      throw badRequest('That accent unlocks at a higher level');
+    const bg = patch.theme?.backgroundId;
+    if (bg && !isBackgroundAvailable(bg, req.user.level, req.user.purchasedBackgrounds))
+      throw badRequest('That background is locked or not yet purchased');
     const row = await updateSettings(db, req.user, patch);
     return { settings: toUser(row).settings };
   });

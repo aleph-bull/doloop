@@ -40,6 +40,7 @@ import { loadCompletedSessions, paceContext } from './pace';
 import { overlapsPlannedBlock } from './planned-blocks';
 import { dt, dtn, toNode, toSession } from './sessions-mapper';
 import { settingsOf, syncStreak } from './users';
+import { unlockNewBadges } from './achievements';
 
 export interface SessionView {
   session: Session;
@@ -390,6 +391,7 @@ async function finalize(
     .set({ review, xpAwarded: xp.total, phraseId: phrase?.id ?? null })
     .where(eq(sessions.id, row.id))
     .returning();
+  const badges = await unlockNewBadges(db, user, now, row.id);
 
   const confetti =
     settings.effects.confetti &&
@@ -414,7 +416,7 @@ async function finalize(
     statusAfter,
     nodeCompleted,
     phrase,
-    badges: [], // Phase 7
+    badges,
     confetti,
     isFirstSessionOnNode,
   };

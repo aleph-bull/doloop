@@ -12,6 +12,7 @@ const links = [
   { to: '/tasks', label: 'Tasks' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/analytics', label: 'Analytics' },
+  { to: '/achievements', label: 'Achievements' },
 ];
 
 export function AppShell() {

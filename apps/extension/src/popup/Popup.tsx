@@ -51,7 +51,11 @@ export function Popup() {
   const [review, setReview] = useState<{ sessionId: string; distracted: string | null } | null>(
     null,
   );
-  const [summary, setSummary] = useState<{ xp: number; phrase: string | null } | null>(null);
+  const [summary, setSummary] = useState<{
+    xp: number;
+    phrase: string | null;
+    badges: string[];
+  } | null>(null);
   const [startMode, setStartMode] = useState<'pomodoro' | 'unlimited'>('pomodoro');
   const [startNode, setStartNode] = useState('');
 
@@ -136,13 +140,17 @@ export function Popup() {
 
   const finish = async (rev: Record<string, unknown> | null) => {
     if (!active) return;
-    const r = await run<{ xp: { total: number }; phrase: { text: string } | null }>({
+    const r = await run<{
+      xp: { total: number };
+      phrase: { text: string } | null;
+      badges: string[];
+    }>({
       type: 'end',
       sessionId: active.session.id,
       review: rev,
     });
     setReview(null);
-    if (r) setSummary({ xp: r.xp.total, phrase: r.phrase?.text ?? null });
+    if (r) setSummary({ xp: r.xp.total, phrase: r.phrase?.text ?? null, badges: r.badges ?? [] });
   };
 
   const portal = store?.connection?.portalUrl ?? 'http://localhost:5173';
@@ -170,7 +178,8 @@ export function Popup() {
         <Glass className="card stack">
           {summary.phrase && <h1>{summary.phrase}</h1>}
           <div className="xp">+{summary.xp} XP</div>
-          <p>Session saved. Details and badges are in the portal.</p>
+          {summary.badges.length > 0 && <p>Badge unlocked: {summary.badges.join(', ')}</p>}
+          <p>Session saved. Details are in the portal.</p>
           <Button variant="primary" onClick={() => setSummary(null)}>
             Done
           </Button>

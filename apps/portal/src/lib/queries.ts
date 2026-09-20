@@ -19,6 +19,7 @@ export const keys = {
   busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
   unlinked: ['calendar', 'unlinked'] as const,
   google: ['calendar', 'google'] as const,
+  shop: ['shop'] as const,
 };
 
 export function useMe() {
@@ -138,6 +139,10 @@ export function useDeleteBlock() {
     mutationFn: (id: string) => api.deleteBlock(id),
     onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
   });
+}
+
+export function useShop() {
+  return useQuery({ queryKey: keys.shop, queryFn: api.shop, staleTime: 30_000 });
 }
 
 export function useRestDays() {

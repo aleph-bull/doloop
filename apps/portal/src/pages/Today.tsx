@@ -113,6 +113,17 @@ export function Today() {
         Rest days never break your streak. Set the days you don't study and pace will plan around
         them.
       </Hint>
+      <Hint
+        id="freezes"
+        when={(me.data?.user.streak.current ?? 0) >= 3}
+        action={
+          <Link to="/achievements" className="btn btn-secondary btn-sm">
+            Open the shop
+          </Link>
+        }
+      >
+        Your streak is growing. A streak freeze (150 XP) covers one missed day automatically.
+      </Hint>
       <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
         Every session earns XP. Honest reviews and focused blocks earn a little more. Levels unlock
         accent colours.
@@ -158,6 +169,7 @@ export function Today() {
         summary={summary}
         onClose={() => setSummary(null)}
         phrasesEnabled={settings.effects.phrases}
+        badgeToasts={settings.effects.badgeToasts}
       />
       <StartSessionDialog
         open={startFor !== null}

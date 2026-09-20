@@ -13,6 +13,7 @@ import { sessionRoutes } from './routes/sessions';
 import { quoteRoutes } from './routes/quote';
 import { analyticsRoutes } from './routes/analytics';
 import { calendarRoutes, type CalendarRouteOptions } from './routes/calendar';
+import { shopRoutes } from './routes/shop';
 
 export interface BuildOptions {
   db: Db;
@@ -69,6 +70,7 @@ export async function buildServer(opts: BuildOptions) {
   };
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);
   calendarRoutes(app, opts.db, clock, calendar);
+  shopRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
   analyticsRoutes(app, opts.db, clock);

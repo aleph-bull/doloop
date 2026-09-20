@@ -1,0 +1,240 @@
+import { describe, expect, it } from 'vitest';
+import {
+  BADGES,
+  badgeByKey,
+  evaluateBadges,
+  satisfiedBadges,
+  sessionDate,
+  type BadgeInput,
+} from './badges';
+import { emptyStreak } from './streak';
+import type { PlannedBlock, Session, StudyNode } from './types';
+
+const TZ = 'America/Toronto';
+let seq = 0;
+const node = (over: Partial<StudyNode> = {}): StudyNode => ({
+  id: `n${++seq}`,
+  userId: 'u',
+  parentId: null,
+  title: `N${seq}`,
+  kind: 'task',
+  estimatedMinutes: null,
+  dueAt: null,
+  completedAt: null,
+  sortOrder: 0,
+  color: null,
+  archived: false,
+  countUnit: null,
+  countUnitLabel: null,
+  outcomeRating: null,
+  ...over,
+});
+const session = (
+  nodeId: string,
+  startedAt: string,
+  workMinutes: number,
+  over: Partial<Session> = {},
+): Session => ({
+  id: `s${++seq}`,
+  userId: 'u',
+  nodeId,
+  startedAt,
+  endedAt: new Date(Date.parse(startedAt) + workMinutes * 60_000).toISOString(),
+  mode: 'unlimited',
+  plannedEndAt: null,
+  workSeconds: workMinutes * 60,
+  breakSeconds: 0,
+  idleSeconds: 0,
+  pomodoroConfigSnapshot: null,
+  review: null,
+  xpAwarded: 0,
+  badgesAwarded: [],
+  ...over,
+});
+const focused = (nodeId: string, at: string) =>
+  session(nodeId, at, 30, {
+    review: {
+      skipped: false,
+      prepared: null,
+      distracted: 'no',
+      completedCount: null,
+      correctCount: null,
+      mood: null,
+      extraMinutesAdded: null,
+      note: null,
+    },
+  });
+const input = (over: Partial<BadgeInput> = {}): BadgeInput => ({
+  nodes: [],
+  sessions: [],
+  plannedBlocks: [],
+  streak: emptyStreak(),
+  freezeDates: [],
+  timezone: TZ,
+  unlocked: [],
+  today: '2026-09-20',
+  ...over,
+});
+
+describe('badges', () => {
+  it('catalogue has unique keys and lookups work', () => {
+    expect(new Set(BADGES.map((b) => b.key)).size).toBe(BADGES.length);
+    expect(badgeByKey('planner')?.name).toBe('Planner');
+    expect(badgeByKey('nope')).toBeUndefined();
+  });
+
+  it('first-session and first-review', () => {
+    const n = node();
+    expect(
+      evaluateBadges(input({ nodes: [n], sessions: [session(n.id, '2026-09-20T14:00:00Z', 10)] })),
+    ).toEqual(['first-session']);
+    expect(
+      evaluateBadges(input({ nodes: [n], sessions: [focused(n.id, '2026-09-20T14:00:00Z')] })),
+    ).toEqual(['first-session', 'first-review']);
+    expect(
+      evaluateBadges(
+        input({
+          nodes: [n],
+          sessions: [focused(n.id, '2026-09-20T14:00:00Z')],
+          unlocked: ['first-session', 'first-review'],
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('focus-5 and focus-25 count sessions with no distraction', () => {
+    const n = node();
+    const five = Array.from({ length: 5 }, (_, i) => focused(n.id, `2026-09-1${i}T14:00:00Z`));
+    expect(satisfiedBadges(input({ nodes: [n], sessions: five })).has('focus-5')).toBe(true);
+    expect(satisfiedBadges(input({ nodes: [n], sessions: five })).has('focus-25')).toBe(false);
+    const twentyFive = Array.from({ length: 25 }, (_, i) =>
+      focused(n.id, `2026-08-${String(1 + (i % 28)).padStart(2, '0')}T14:00:00Z`),
+    );
+    expect(satisfiedBadges(input({ nodes: [n], sessions: twentyFive })).has('focus-25')).toBe(true);
+  });
+
+  it('estimate-oracle needs three completed nodes within 10%', () => {
+    const mk = (est: number, logged: number) => {
+      const n = node({ estimatedMinutes: est, completedAt: '2026-09-20T00:00:00Z' });
+      return { n, s: session(n.id, '2026-09-19T14:00:00Z', logged) };
+    };
+    const a = mk(100, 95),
+      b = mk(100, 108),
+      c = mk(100, 120),
+      d = mk(60, 60);
+    const two = input({ nodes: [a.n, b.n, c.n], sessions: [a.s, b.s, c.s] });
+    expect(satisfiedBadges(two).has('estimate-oracle')).toBe(false);
+    const three = input({ nodes: [a.n, b.n, c.n, d.n], sessions: [a.s, b.s, c.s, d.s] });
+    expect(satisfiedBadges(three).has('estimate-oracle')).toBe(true);
+  });
+
+  it('early-bird counts sessions starting before 08:00 local', () => {
+    const n = node();
+    // 11:30Z = 07:30 EDT
+    const early = Array.from({ length: 5 }, (_, i) => session(n.id, `2026-09-1${i}T11:30:00Z`, 10));
+    const late = Array.from({ length: 5 }, (_, i) => session(n.id, `2026-09-1${i}T12:30:00Z`, 10));
+    expect(satisfiedBadges(input({ nodes: [n], sessions: early })).has('early-bird')).toBe(true);
+    expect(satisfiedBadges(input({ nodes: [n], sessions: late })).has('early-bird')).toBe(false);
+  });
+
+  it('planner counts sessions inside planned blocks for the same node', () => {
+    const n = node();
+    const other = node();
+    const blocks: PlannedBlock[] = Array.from({ length: 10 }, (_, i) => ({
+      id: `b${i}`,
+      userId: 'u',
+      nodeId: n.id,
+      startAt: `2026-09-${String(1 + i).padStart(2, '0')}T14:00:00Z`,
+      endAt: `2026-09-${String(1 + i).padStart(2, '0')}T15:00:00Z`,
+      source: 'app',
+      googleEventId: null,
+      cancelled: false,
+    }));
+    const inside = blocks.map((b) => session(n.id, b.startAt, 30));
+    expect(
+      satisfiedBadges(input({ nodes: [n, other], sessions: inside, plannedBlocks: blocks })).has(
+        'planner',
+      ),
+    ).toBe(true);
+    const wrongNode = blocks.map((b) => session(other.id, b.startAt, 30));
+    expect(
+      satisfiedBadges(input({ nodes: [n, other], sessions: wrongNode, plannedBlocks: blocks })).has(
+        'planner',
+      ),
+    ).toBe(false);
+    const cancelled = blocks.map((b) => ({ ...b, cancelled: true }));
+    expect(
+      satisfiedBadges(input({ nodes: [n], sessions: inside, plannedBlocks: cancelled })).has(
+        'planner',
+      ),
+    ).toBe(false);
+  });
+
+  it('streak badges use the best of current and longest', () => {
+    expect(
+      satisfiedBadges(input({ streak: { ...emptyStreak(), current: 7, longest: 7 } })).has(
+        'streak-7',
+      ),
+    ).toBe(true);
+    expect(
+      satisfiedBadges(input({ streak: { ...emptyStreak(), current: 2, longest: 30 } })).has(
+        'streak-30',
+      ),
+    ).toBe(true);
+    expect(
+      satisfiedBadges(input({ streak: { ...emptyStreak(), current: 99, longest: 99 } })).has(
+        'streak-100',
+      ),
+    ).toBe(false);
+  });
+
+  it('course-complete needs a completed, non-archived course', () => {
+    expect(
+      satisfiedBadges(
+        input({ nodes: [node({ kind: 'course', completedAt: '2026-09-20T00:00:00Z' })] }),
+      ).has('course-complete'),
+    ).toBe(true);
+    expect(
+      satisfiedBadges(
+        input({
+          nodes: [node({ kind: 'course', completedAt: '2026-09-20T00:00:00Z', archived: true })],
+        }),
+      ).has('course-complete'),
+    ).toBe(false);
+    expect(
+      satisfiedBadges(
+        input({ nodes: [node({ kind: 'task', completedAt: '2026-09-20T00:00:00Z' })] }),
+      ).has('course-complete'),
+    ).toBe(false);
+  });
+
+  it('no-freeze-30 requires a 30-day streak without a freeze in the window', () => {
+    const streak = { ...emptyStreak(), current: 30, longest: 30 };
+    expect(satisfiedBadges(input({ streak })).has('no-freeze-30')).toBe(true);
+    expect(
+      satisfiedBadges(input({ streak, freezeDates: ['2026-09-10'] })).has('no-freeze-30'),
+    ).toBe(false);
+    expect(
+      satisfiedBadges(input({ streak, freezeDates: ['2026-08-01'] })).has('no-freeze-30'),
+    ).toBe(true);
+    expect(
+      satisfiedBadges(input({ streak: { ...emptyStreak(), current: 29, longest: 29 } })).has(
+        'no-freeze-30',
+      ),
+    ).toBe(false);
+  });
+
+  it('returns new badges in catalogue order', () => {
+    const n = node();
+    const keys = evaluateBadges(
+      input({
+        nodes: [n],
+        sessions: [focused(n.id, '2026-09-20T14:00:00Z')],
+        streak: { ...emptyStreak(), current: 7, longest: 7 },
+        unlocked: ['first-session'],
+      }),
+    );
+    expect(keys).toEqual(['first-review', 'streak-7']);
+    expect(sessionDate(focused(n.id, '2026-09-21T03:00:00Z'), TZ)).toBe('2026-09-20');
+  });
+});

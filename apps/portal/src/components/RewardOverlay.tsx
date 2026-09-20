@@ -1,6 +1,6 @@
-import { levelProgress } from '@doloop/core';
+import { badgeByKey, levelProgress } from '@doloop/core';
 import { useEffect } from 'react';
-import { Button, fireConfetti, Modal, ProgressBar } from '@doloop/ui';
+import { Button, fireConfetti, Modal, ProgressBar, useToast } from '@doloop/ui';
 import type { EndSummary } from '../lib/api';
 import { fmtMinutes } from '../lib/format';
 
@@ -8,13 +8,26 @@ export interface RewardOverlayProps {
   summary: EndSummary | null;
   onClose: () => void;
   phrasesEnabled: boolean;
+  badgeToasts?: boolean;
 }
 
 /** Rewards + summary after a session (spec §6, §7). */
-export function RewardOverlay({ summary, onClose, phrasesEnabled }: RewardOverlayProps) {
+export function RewardOverlay({
+  summary,
+  onClose,
+  phrasesEnabled,
+  badgeToasts = true,
+}: RewardOverlayProps) {
+  const { toast } = useToast();
   useEffect(() => {
     if (summary?.confetti) fireConfetti();
-  }, [summary]);
+    if (summary && badgeToasts) {
+      for (const key of summary.badges) {
+        const b = badgeByKey(key);
+        if (b) toast(`Badge unlocked: ${b.name}`, { tone: 'ok', durationMs: 5000 });
+      }
+    }
+  }, [summary, badgeToasts, toast]);
 
   if (!summary) return null;
   const lp = levelProgress(summary.xpTotal);
@@ -94,6 +107,12 @@ export function RewardOverlay({ summary, onClose, phrasesEnabled }: RewardOverla
           </span>
           {summary.streak.message && <span>{summary.streak.message}</span>}
           {summary.nodeCompleted && <span>Marked as done.</span>}
+          {summary.badges.length > 0 && (
+            <span>
+              New badge{summary.badges.length === 1 ? '' : 's'}:{' '}
+              {summary.badges.map((k) => badgeByKey(k)?.name ?? k).join(', ')}
+            </span>
+          )}
         </div>
       </div>
     </Modal>

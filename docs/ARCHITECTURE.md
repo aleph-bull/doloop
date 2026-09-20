@@ -50,6 +50,6 @@ api ─────────▶ core
 | 4 Extension              | done    |
 | 5 Analytics              | done    |
 | 6 Calendar               | done    |
-| 7 Economy + achievements | pending |
+| 7 Economy + achievements | done    |
 | 8 Quotes                 | pending |
 | 9 Polish                 | pending |

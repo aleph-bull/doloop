@@ -7,6 +7,7 @@ import { AuthCallback } from './pages/AuthCallback';
 import { Extension } from './pages/Extension';
 import { Analytics } from './pages/Analytics';
 import { Calendar } from './pages/Calendar';
+import { Achievements } from './pages/Achievements';
 import { WeeklyReviewPage } from './pages/WeeklyReviewPage';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
@@ -91,6 +92,7 @@ export function App() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/analytics" element={<Analytics />} />
+        <Route path="/achievements" element={<Achievements />} />
         <Route path="/analytics/review" element={<WeeklyReviewPage />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/extension" element={<Extension />} />
