@@ -8,7 +8,8 @@ import {
 } from '@doloop/core';
 import { ExternalLink, Pause, Play, SkipForward, Square } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Chip, Glass } from '@doloop/ui';
+import { applyUserTheme, Backdrop, Button, Chip, Glass } from '@doloop/ui';
+import { resolveTheme as resolveThemeSafe } from '@doloop/ui';
 import { getAll, onChange, set, type Stored } from '../lib/storage';
 
 type Reply<T> = { ok: true; result: T } | { ok: false; error: string };
@@ -95,6 +96,23 @@ export function Popup() {
   const active = snapshot?.active ?? null;
   const settings = snapshot?.settings ?? null;
 
+  // Same theme, accent, background, and panel surface as the portal.
+  useEffect(() => {
+    if (settings) applyUserTheme(settings);
+  }, [settings]);
+  const resolvedTheme = settings ? resolveThemeSafe(settings.theme.mode) : 'dark';
+  const customImageUrl =
+    settings?.theme.customBackgroundUrl === 'upload'
+      ? (store?.customBackground?.dataUrl ?? null)
+      : (settings?.theme.customBackgroundUrl ?? null);
+  const backdrop = (
+    <Backdrop
+      backgroundId={settings?.theme.backgroundId ?? 'aurora'}
+      theme={resolvedTheme}
+      customImageUrl={customImageUrl}
+    />
+  );
+
   const opts = useMemo<AdvanceOptions>(
     () => ({
       pomodoro: active?.session.pomodoroConfigSnapshot ??
@@ -175,6 +193,7 @@ export function Popup() {
   if (summary) {
     return (
       <div className="popup">
+        {backdrop}
         <Glass className="card stack">
           {summary.phrase && <h1>{summary.phrase}</h1>}
           <div className="xp">+{summary.xp} XP</div>
@@ -191,6 +210,7 @@ export function Popup() {
   if (review) {
     return (
       <div className="popup">
+        {backdrop}
         <Glass className="card stack">
           <h1>Distracted?</h1>
           <div className="row">
@@ -226,6 +246,7 @@ export function Popup() {
   if (store.idlePrompt && active && timer?.phase === 'idle') {
     return (
       <div className="popup">
+        {backdrop}
         <Glass className="card stack">
           <h1>Still studying?</h1>
           <p>The work clock paused while you were away. Time since then is idle, not work.</p>
@@ -259,6 +280,7 @@ export function Popup() {
     const inBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
     return (
       <div className="popup">
+        {backdrop}
         <Glass className="card stack">
           <div className="phase">{PHASE[timer.phase]}</div>
           <h1 className="title">{active.nodeTitle}</h1>
@@ -316,6 +338,7 @@ export function Popup() {
 
   return (
     <div className="popup">
+      {backdrop}
       {quote && (
         <Glass className="card quote">
           <p>{quote.text}</p>

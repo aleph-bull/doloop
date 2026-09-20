@@ -16,14 +16,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  background:
-    radial-gradient(120% 80% at 20% 0%, hsl(var(--accent-h) 70% 40% / 0.5), transparent 60%),
-    radial-gradient(
-      100% 80% at 100% 100%,
-      hsl(calc(var(--accent-h) + 60) 70% 45% / 0.4),
-      transparent 60%
-    ),
-    var(--bg-base);
+  position: relative;
+  background: var(--bg-base);
 }
 
 .card {

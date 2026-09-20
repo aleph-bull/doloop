@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { Flame, LogOut, Settings as SettingsIcon } from 'lucide-react';
-import { applyPanelStyle, applyTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
+import { applyTheme, applyUserTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
 import { CUSTOM_BACKGROUND_UPLOAD, levelProgress as levelProgressView } from '@doloop/core';
 import { useAuth } from '../lib/auth';
 import { useCustomBackground, useMe } from '../lib/queries';
@@ -25,25 +25,7 @@ export function AppShell() {
   useExtensionStatus();
 
   useEffect(() => {
-    if (!settings) return;
-    applyTheme({
-      mode: settings.theme.mode,
-      accent: settings.theme.accent,
-      reducedMotion: settings.effects.reducedMotion,
-    });
-    // Custom accent: "custom:<h>,<s>,<l>"
-    const root = document.documentElement;
-    if (settings.theme.accent.startsWith('custom:')) {
-      const [h, s, l] = settings.theme.accent.slice(7).split(',').map(Number);
-      root.dataset.accent = 'custom';
-      root.style.setProperty('--accent-h', String(h ?? 240));
-      root.style.setProperty('--accent-s', `${s ?? 84}%`);
-      root.style.setProperty('--accent-l', `${l ?? 62}%`);
-    } else {
-      root.style.removeProperty('--accent-h');
-      root.style.removeProperty('--accent-s');
-      root.style.removeProperty('--accent-l');
-    }
+    if (settings) applyUserTheme(settings);
   }, [settings]);
 
   // Follow OS theme changes while in system mode.
@@ -69,15 +51,6 @@ export function AppShell() {
       ? (uploaded.data?.dataUrl ?? null)
       : (settings?.theme.customBackgroundUrl ?? null);
 
-  useEffect(() => {
-    if (!settings) return;
-    applyPanelStyle({
-      panel: settings.theme.panel,
-      color: settings.theme.panelColor,
-      alpha: settings.theme.panelAlpha,
-      theme,
-    });
-  }, [settings, theme]);
   const user = me.data?.user;
   const lp = user ? levelProgressView(user.xp) : null;
 

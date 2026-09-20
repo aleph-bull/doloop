@@ -146,6 +146,20 @@ async function poll(): Promise<Snapshot | null> {
       updatedAt: active.now,
     };
     await set({ snapshot, lastError: null });
+    // Uploaded background: download once per change, drop when no longer in use.
+    const wantsUpload =
+      me.user.settings.theme.customBackgroundUrl === 'upload' && me.backgroundUpdatedAt;
+    const cached = await get('customBackground');
+    if (!wantsUpload) {
+      if (cached) await set({ customBackground: null });
+    } else if (!cached || cached.updatedAt !== me.backgroundUpdatedAt) {
+      try {
+        const bg = await api.background();
+        await set({ customBackground: { dataUrl: bg.dataUrl, updatedAt: bg.updatedAt } });
+      } catch {
+        /* keep whatever we had */
+      }
+    }
     if (!snapshot.active) await set({ idlePrompt: null });
     await syncIdleDetection(snapshot.settings);
     await tick();

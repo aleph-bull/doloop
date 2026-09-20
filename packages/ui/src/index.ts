@@ -18,7 +18,13 @@ export { ToastProvider, useToast } from './components/Toast';
 export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './components/Charts';
 export { Backdrop, sampleImage } from './components/Backdrop';
 export { cn } from './cn';
-export { applyPanelStyle, applyTheme, resolveTheme, type ResolvedTheme } from './theme';
+export {
+  applyPanelStyle,
+  applyTheme,
+  applyUserTheme,
+  resolveTheme,
+  type ResolvedTheme,
+} from './theme';
 export { BACKGROUND_DEFS, backgroundById, type BackgroundDef } from './backgrounds';
 export { fireConfetti } from './confetti';
 export * from './contrast';

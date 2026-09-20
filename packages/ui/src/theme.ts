@@ -100,3 +100,54 @@ export function applyPanelStyle(
     lightText ? 'rgb(255 255 255 / 0.14)' : 'rgb(15 18 32 / 0.12)',
   );
 }
+
+export interface UserThemeLike {
+  theme: {
+    mode: 'system' | 'light' | 'dark';
+    accent: string;
+    panel: 'opaque' | 'glass' | 'custom';
+    panelColor: string;
+    panelAlpha: number;
+  };
+  effects: { reducedMotion: 'system' | 'on' | 'off' };
+}
+
+/**
+ * Apply everything from user settings that lives on <html>: theme, accent (preset or
+ * "custom:<h>,<s>,<l>"), motion, and panel surface. Used by the portal and the extension.
+ */
+export function applyUserTheme(
+  settings: UserThemeLike,
+  root: HTMLElement = document.documentElement,
+): ResolvedTheme {
+  const custom = settings.theme.accent.startsWith('custom:');
+  applyTheme(
+    {
+      mode: settings.theme.mode,
+      accent: custom ? 'custom' : settings.theme.accent,
+      reducedMotion: settings.effects.reducedMotion,
+    },
+    root,
+  );
+  if (custom) {
+    const [h, s, l] = settings.theme.accent.slice(7).split(',').map(Number);
+    root.style.setProperty('--accent-h', String(h ?? 240));
+    root.style.setProperty('--accent-s', `${s ?? 84}%`);
+    root.style.setProperty('--accent-l', `${l ?? 62}%`);
+  } else {
+    root.style.removeProperty('--accent-h');
+    root.style.removeProperty('--accent-s');
+    root.style.removeProperty('--accent-l');
+  }
+  const resolved = resolveTheme(settings.theme.mode);
+  applyPanelStyle(
+    {
+      panel: settings.theme.panel,
+      color: settings.theme.panelColor,
+      alpha: settings.theme.panelAlpha,
+      theme: resolved,
+    },
+    root,
+  );
+  return resolved;
+}

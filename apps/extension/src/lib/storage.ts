@@ -38,6 +38,8 @@ export interface Stored {
   /** Date (user tz) the daily quote was last shown in the popup. */
   quoteShownOn?: string;
   lastError?: string | null;
+  /** Cached uploaded background, keyed by the API's updatedAt. */
+  customBackground?: { dataUrl: string; updatedAt: string } | null;
 }
 
 export async function get<K extends keyof Stored>(key: K): Promise<Stored[K]> {

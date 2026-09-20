@@ -13,12 +13,18 @@ import {
 } from '../services/users';
 import { settingsSchema, updateMeSchema } from '../validation';
 import { exportUserData } from '../services/export';
+import { and, eq } from 'drizzle-orm';
+import { userAssets } from '../db/schema';
 
 export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.get('/api/me', async (req) => {
     const now = clock();
     const streak = await syncStreak(db, req.user, now);
     const policy = await viewPolicy(db, req.user.id, now);
+    const bg = await db.query.userAssets.findFirst({
+      where: and(eq(userAssets.userId, req.user.id), eq(userAssets.kind, 'background')),
+      columns: { updatedAt: true },
+    });
     return {
       user: toUser(req.user),
       onboarded: req.user.onboardedAt !== null,
@@ -27,6 +33,7 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       restDays: policy,
       purchasedBackgrounds: req.user.purchasedBackgrounds,
       icsToken: req.user.icsToken,
+      backgroundUpdatedAt: bg?.updatedAt.toISOString() ?? null,
     };
   });
 

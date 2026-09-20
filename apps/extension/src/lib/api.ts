@@ -73,7 +73,8 @@ export async function request<T>(method: string, path: string, body?: unknown): 
 }
 
 export const api = {
-  me: () => request<{ user: User }>('GET', '/api/me'),
+  me: () => request<{ user: User; backgroundUpdatedAt: string | null }>('GET', '/api/me'),
+  background: () => request<{ dataUrl: string; updatedAt: string }>('GET', '/api/me/background'),
   active: () =>
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
   pace: () => request<{ pace: Record<string, NodePace>; plan: PlanItem[] }>('GET', '/api/pace'),
