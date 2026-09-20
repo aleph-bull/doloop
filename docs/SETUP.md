@@ -45,3 +45,13 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 - A GitHub remote if you want CI to run. The workflow in `.github/workflows/ci.yml` runs `pnpm check` on push.
 - Deployment targets are out of scope until you pick them (portal: any static host; API: any Node host such as Fly, Railway, or Render).
+
+## Running without any credentials (dev mode)
+
+Set these in `apps/api/.env` and the whole stack runs locally with an in-memory database and locally minted tokens:
+
+```
+DEV_AUTH_SECRET=any-long-random-string
+```
+
+Leave `SUPABASE_URL` and `DATABASE_URL` empty. Data is lost when the API restarts. The portal's dev sign-in page mints a token for you when `VITE_DEV_AUTH_SECRET` matches.

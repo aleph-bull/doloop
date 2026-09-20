@@ -1,0 +1,180 @@
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createTestApp, type TestApp } from './helpers';
+
+let t: TestApp;
+beforeAll(async () => {
+  t = await createTestApp('2026-09-20T18:00:00.000Z'); // Sunday 14:00 Toronto
+});
+afterAll(() => t.close());
+
+describe('nodes', () => {
+  it('creates a tree, rejects cycles, archives subtrees', async () => {
+    const course = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'C', kind: 'course' } })
+    ).json().node;
+    const unit = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: { title: 'U', parentId: course.id },
+      })
+    ).json().node;
+    const task = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: { title: 'T', parentId: unit.id, estimatedMinutes: 30 },
+      })
+    ).json().node;
+
+    const cycle = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { parentId: task.id },
+    });
+    expect(cycle.statusCode).toBe(400);
+    const self = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { parentId: course.id },
+    });
+    expect(self.statusCode).toBe(400);
+
+    const bogus = await t.api({
+      method: 'POST',
+      url: '/api/nodes',
+      payload: { title: 'X', parentId: '33333333-3333-4333-8333-333333333333' },
+    });
+    expect(bogus.statusCode).toBe(404);
+
+    const archived = await t.api({ method: 'POST', url: `/api/nodes/${unit.id}/archive` });
+    expect(archived.json().archivedIds.sort()).toEqual([unit.id, task.id].sort());
+    const list = (await t.api({ method: 'GET', url: '/api/nodes' })).json().nodes;
+    expect(list.map((n: { id: string }) => n.id)).toEqual([course.id]);
+    const all = (await t.api({ method: 'GET', url: '/api/nodes?archived=true' })).json().nodes;
+    expect(all.length).toBe(3);
+
+    const deleted = await t.api({ method: 'DELETE', url: `/api/nodes/${course.id}` });
+    expect(deleted.statusCode).toBe(204);
+  });
+
+  it('logs estimate edits and unknown keys are rejected', async () => {
+    const n = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: { title: 'E', estimatedMinutes: 60 },
+      })
+    ).json().node;
+    const ok = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${n.id}`,
+      payload: { estimatedMinutes: 90 },
+    });
+    expect(ok.json().node.estimatedMinutes).toBe(90);
+    const bad = await t.api({ method: 'PATCH', url: `/api/nodes/${n.id}`, payload: { nope: 1 } });
+    expect(bad.statusCode).toBe(400);
+    const changes = await t.db.query.estimateChanges.findMany();
+    expect(changes.filter((c) => c.nodeId === n.id).map((c) => c.toMinutes)).toEqual([60, 90]);
+  });
+});
+
+describe('settings and profile', () => {
+  it('merges partial settings and rejects unknown keys', async () => {
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { pomodoro: { workMin: 50 }, review: { mode: 'full' } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().settings.pomodoro.workMin).toBe(50);
+    expect(res.json().settings.pomodoro.shortBreakMin).toBe(5);
+    expect(res.json().settings.review.mode).toBe('full');
+    const again = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { pomodoro: { shortBreakMin: 10 } },
+    });
+    expect(again.json().settings.pomodoro.workMin).toBe(50);
+    expect(again.json().settings.pomodoro.shortBreakMin).toBe(10);
+    const bad = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { hacker: true },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
+  it('updates timezone and onboarding, regenerates ics token, exports data', async () => {
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me',
+      payload: { timezone: 'Europe/Berlin', onboarded: true },
+    });
+    expect(res.json().user.timezone).toBe('Europe/Berlin');
+    expect(res.json().onboarded).toBe(true);
+    expect(
+      (await t.api({ method: 'PATCH', url: '/api/me', payload: { timezone: 'Nope/Nope' } }))
+        .statusCode,
+    ).toBe(400);
+    const tok = await t.api({ method: 'POST', url: '/api/me/ics-token' });
+    expect(tok.json().icsToken.length).toBeGreaterThan(20);
+    const exp = await t.api({ method: 'GET', url: '/api/me/export' });
+    expect(exp.statusCode).toBe(200);
+    expect(exp.json().user.email).toBe('a@example.com');
+    expect(Array.isArray(exp.json().nodes)).toBe(true);
+  });
+});
+
+describe('rest days', () => {
+  it('schedules weekly changes, enforces vacation lead time and the edit limit', async () => {
+    // user A is now in Europe/Berlin; Sunday 20:00 local
+    let res = await t.api({
+      method: 'PUT',
+      url: '/api/rest-days/weekly',
+      payload: { days: [0, 6] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().policy.pendingWeeklyRestDays).toEqual({
+      days: [0, 6],
+      effectiveFrom: '2026-09-21',
+    });
+    expect(res.json().editsRemaining).toBe(2);
+
+    res = await t.api({
+      method: 'POST',
+      url: '/api/rest-days/vacations',
+      payload: { from: '2026-09-21', to: '2026-09-22', label: 'soon' },
+    });
+    expect(res.statusCode).toBe(400);
+    res = await t.api({
+      method: 'POST',
+      url: '/api/rest-days/vacations',
+      payload: { from: '2026-10-01', to: '2026-10-03', label: 'trip' },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().editsRemaining).toBe(1);
+
+    res = await t.api({ method: 'PUT', url: '/api/rest-days/weekly', payload: { days: [3] } });
+    expect(res.json().editsRemaining).toBe(0);
+    res = await t.api({ method: 'PUT', url: '/api/rest-days/weekly', payload: { days: [4] } });
+    expect(res.statusCode).toBe(400);
+
+    res = await t.api({ method: 'DELETE', url: '/api/rest-days/vacations/2026-10-01' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().policy.vacations).toEqual([]);
+    expect(res.json().editsRemaining).toBe(0);
+
+    // Pending pattern materializes on the next /me read once its Monday arrives.
+    t.clock.now = '2026-09-21T10:00:00.000Z';
+    await t.api({ method: 'GET', url: '/api/me' });
+    res = await t.api({ method: 'GET', url: '/api/rest-days' });
+    expect(res.json().policy.weeklyRestDays).toEqual([3]);
+    expect(res.json().policy.pendingWeeklyRestDays).toBeNull();
+  });
+
+  it('deletes the account', async () => {
+    const res = await t.api({ method: 'DELETE', url: '/api/me', token: t.tokenB });
+    expect(res.statusCode).toBe(204);
+  });
+});

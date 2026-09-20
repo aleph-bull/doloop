@@ -11,3 +11,4 @@ export * from './streak';
 export * from './economy';
 export * from './phrases';
 export * from './quotes';
+export * from './timer';
