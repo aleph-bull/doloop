@@ -217,6 +217,21 @@ export const weeklyReviews = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.weekStart] })],
 );
 
+/** Streak events (counted days are implicit; only freezes and resets are logged). */
+export const streakEvents = pgTable(
+  'streak_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    date: text('date').notNull(),
+    type: text('type', { enum: ['freeze-used', 'reset'] }).notNull(),
+    at: ts('at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('streak_events_user_date_type_idx').on(t.userId, t.date, t.type)],
+);
+
 export const googleCalendar = pgTable('google_calendar', {
   userId: uuid('user_id')
     .primaryKey()
@@ -242,6 +257,7 @@ export const schema = {
   estimateChanges,
   weeklyReviews,
   googleCalendar,
+  streakEvents,
 };
 
 export type UserRow = typeof users.$inferSelect;

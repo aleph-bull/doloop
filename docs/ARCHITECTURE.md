@@ -48,7 +48,7 @@ api ─────────▶ core
 | 2 API + auth             | done    |
 | 3 Portal MVP             | done    |
 | 4 Extension              | done    |
-| 5 Analytics              | pending |
+| 5 Analytics              | done    |
 | 6 Calendar               | pending |
 | 7 Economy + achievements | pending |
 | 8 Quotes                 | pending |

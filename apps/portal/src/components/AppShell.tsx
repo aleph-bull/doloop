@@ -10,6 +10,7 @@ import { useExtensionStatus } from '../lib/extension-bridge';
 const links = [
   { to: '/', label: 'Today' },
   { to: '/tasks', label: 'Tasks' },
+  { to: '/analytics', label: 'Analytics' },
 ];
 
 export function AppShell() {

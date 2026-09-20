@@ -15,6 +15,7 @@ export {
   type SegmentedOption,
 } from './components/Small';
 export { ToastProvider, useToast } from './components/Toast';
+export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './components/Charts';
 export { Backdrop, sampleImage } from './components/Backdrop';
 export { cn } from './cn';
 export { applyTheme, resolveTheme, type ResolvedTheme } from './theme';

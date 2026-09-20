@@ -16,6 +16,11 @@ import type {
   PaceStatus,
   Vacation,
   TimerEvent,
+  HighlightsResult,
+  NodeAnalytics,
+  CourseAnalytics,
+  EstimateAccuracy,
+  WeeklyReview,
 } from '@doloop/core';
 
 export class ApiError extends Error {
@@ -194,4 +199,31 @@ export const api = {
     ),
 
   quote: () => request<{ date: string; pick: DailyPick | null }>('GET', '/api/quote'),
+
+  weekHighlights: (weekStart?: string) =>
+    request<HighlightsResult>(
+      'GET',
+      `/api/analytics/week${weekStart ? `?weekStart=${weekStart}` : ''}`,
+    ),
+  advancedAnalytics: (weekStart?: string) =>
+    request<{
+      weekStart: string;
+      nodes: NodeAnalytics[];
+      courses: CourseAnalytics[];
+      estimateAccuracy: EstimateAccuracy;
+    }>('GET', `/api/analytics/advanced${weekStart ? `?weekStart=${weekStart}` : ''}`),
+  weeklyReview: (weekStart?: string) =>
+    request<{ review: WeeklyReview; note: string | null }>(
+      'GET',
+      `/api/analytics/weekly-review${weekStart ? `?weekStart=${weekStart}` : ''}`,
+    ),
+  saveWeeklyNote: (weekStart: string, note: string) =>
+    request<{ weekStart: string; note: string }>(
+      'PUT',
+      `/api/analytics/weekly-review/${weekStart}`,
+      { note },
+    ),
+  followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
+  dismissFollowUp: (id: string) =>
+    request<{ ok: boolean }>('POST', `/api/nodes/${id}/outcome-dismiss`),
 };

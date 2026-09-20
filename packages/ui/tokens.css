@@ -71,6 +71,13 @@
   --status-bad: #ef4444;
   --status-info: #38bdf8;
 
+  /* ---------- Charts (categorical, fixed order, validated) ---------- */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+
   /* ---------- Focus ring ---------- */
   --ring: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
 }
@@ -142,6 +149,11 @@
 /* ---------- Dark theme ---------- */
 :root[data-theme='dark'] {
   color-scheme: dark;
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
 
   --bg-base: #0b0d14;
   --bg-elevated: #151827;
@@ -171,6 +183,11 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
 
     --bg-base: #0b0d14;
     --bg-elevated: #151827;

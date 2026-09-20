@@ -20,6 +20,7 @@ import type { Db } from '../db/client';
 import {
   restDayPolicies,
   sessions,
+  streakEvents,
   users,
   type RestDayPolicyRow,
   type UserRow,
@@ -167,6 +168,20 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
   if (JSON.stringify(result.state) !== JSON.stringify(row.streak)) {
     await db.update(users).set({ streak: result.state }).where(eq(users.id, row.id));
     row.streak = result.state;
+    const logged = result.events.filter((e) => e.type === 'freeze-used' || e.type === 'reset');
+    if (logged.length) {
+      await db
+        .insert(streakEvents)
+        .values(
+          logged.map((e) => ({
+            userId: row.id,
+            date: e.date,
+            type: e.type as 'freeze-used' | 'reset',
+            at: dt(now),
+          })),
+        )
+        .onConflictDoNothing();
+    }
   }
   return {
     streak: result.state,

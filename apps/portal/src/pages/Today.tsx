@@ -2,6 +2,7 @@ import type { StudyNode } from '@doloop/core';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Glass, Spinner } from '@doloop/ui';
+import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { Hint } from '../components/Hint';
 import { NodeCard } from '../components/NodeCard';
 import { PlanCard } from '../components/PlanCard';
@@ -97,6 +98,7 @@ export function Today() {
         />
       )}
 
+      <FollowUpPrompt />
       <QuoteCard />
 
       <Hint

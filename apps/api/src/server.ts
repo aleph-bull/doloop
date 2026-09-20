@@ -11,6 +11,7 @@ import { plannedBlockRoutes } from './routes/planned-blocks';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
 import { quoteRoutes } from './routes/quote';
+import { analyticsRoutes } from './routes/analytics';
 
 export interface BuildOptions {
   db: Db;
@@ -61,6 +62,7 @@ export async function buildServer(opts: BuildOptions) {
   plannedBlockRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
+  analyticsRoutes(app, opts.db, clock);
 
   return app;
 }

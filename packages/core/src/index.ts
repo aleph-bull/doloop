@@ -12,3 +12,6 @@ export * from './economy';
 export * from './phrases';
 export * from './quotes';
 export * from './timer';
+export * from './highlights-thresholds';
+export * from './highlights';
+export * from './analytics';

@@ -12,6 +12,10 @@ export const keys = {
   quote: ['quote'] as const,
   restDays: ['rest-days'] as const,
   blocks: (from?: string, to?: string) => ['blocks', from ?? '', to ?? ''] as const,
+  weekHighlights: (w?: string) => ['analytics', 'week', w ?? 'current'] as const,
+  advanced: (w?: string) => ['analytics', 'advanced', w ?? 'current'] as const,
+  weeklyReview: (w?: string) => ['analytics', 'review', w ?? 'current'] as const,
+  followUps: ['follow-ups'] as const,
 };
 
 export function useMe() {
@@ -45,6 +49,43 @@ export function useSessions(nodeId?: string, limit = 200) {
     queryFn: () => api.sessions({ nodeId, limit }),
     staleTime: 15_000,
   });
+}
+
+export function useWeekHighlights(weekStart?: string) {
+  return useQuery({
+    queryKey: keys.weekHighlights(weekStart),
+    queryFn: () => api.weekHighlights(weekStart),
+    staleTime: 60_000,
+  });
+}
+
+export function useAdvancedAnalytics(weekStart?: string) {
+  return useQuery({
+    queryKey: keys.advanced(weekStart),
+    queryFn: () => api.advancedAnalytics(weekStart),
+    staleTime: 60_000,
+  });
+}
+
+export function useWeeklyReview(weekStart?: string) {
+  return useQuery({
+    queryKey: keys.weeklyReview(weekStart),
+    queryFn: () => api.weeklyReview(weekStart),
+    staleTime: 60_000,
+  });
+}
+
+export function useSaveWeeklyNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ weekStart, note }: { weekStart: string; note: string }) =>
+      api.saveWeeklyNote(weekStart, note),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['analytics', 'review'] }),
+  });
+}
+
+export function useFollowUps() {
+  return useQuery({ queryKey: keys.followUps, queryFn: api.followUps, staleTime: 5 * 60_000 });
 }
 
 export function useRestDays() {
