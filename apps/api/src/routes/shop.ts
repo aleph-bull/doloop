@@ -85,15 +85,13 @@ export function shopRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       .update(users)
       .set({ xp: r.value.xp, streak: r.value.streak })
       .where(eq(users.id, req.user.id));
-    await db
-      .insert(xpTransactions)
-      .values({
-        userId: req.user.id,
-        at: dt(now),
-        delta: -SHOP.FREEZE_COST,
-        kind: 'freeze',
-        ref: null,
-      });
+    await db.insert(xpTransactions).values({
+      userId: req.user.id,
+      at: dt(now),
+      delta: -SHOP.FREEZE_COST,
+      kind: 'freeze',
+      ref: null,
+    });
     return { xp: r.value.xp, streak: r.value.streak };
   });
 

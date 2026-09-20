@@ -51,5 +51,5 @@ api ─────────▶ core
 | 5 Analytics              | done    |
 | 6 Calendar               | done    |
 | 7 Economy + achievements | done    |
-| 8 Quotes                 | pending |
+| 8 Quotes                 | done    |
 | 9 Polish                 | pending |

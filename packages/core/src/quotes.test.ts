@@ -34,19 +34,16 @@ describe('pickQuote', () => {
   });
 
   it('avoids anything seen in the last 30 days, then falls back to the full pool', () => {
-    const seen: QuoteSeen[] = QUOTES.slice(0, -1).map((q, i) => ({
+    // Several sightings can share a recent date; only the ids matter for the no-repeat window.
+    const seen: QuoteSeen[] = QUOTES.slice(0, -1).map((q) => ({
       userId: 'u',
-      date: `2026-09-${String(1 + i).padStart(2, '0')}`,
+      date: '2026-09-19',
       quoteId: q.id,
     }));
     const last = QUOTES[QUOTES.length - 1]!;
     expect(pickQuote('u', '2026-09-20', 'quotes', seen)!.item.id).toBe(last.id);
 
-    const allSeen = QUOTES.map((q, i) => ({
-      userId: 'u',
-      date: `2026-09-${String(1 + i).padStart(2, '0')}`,
-      quoteId: q.id,
-    }));
+    const allSeen = QUOTES.map((q) => ({ userId: 'u', date: '2026-09-19', quoteId: q.id }));
     expect(pickQuote('u', '2026-09-20', 'quotes', allSeen)).not.toBeNull();
   });
 
@@ -67,5 +64,27 @@ describe('pickQuote', () => {
     // unknown id recorded -> normal pick
     const bad: QuoteSeen[] = [{ userId: 'u', date: '2026-09-20', quoteId: 'gone' }];
     expect(pickQuote('u', '2026-09-20', 'quotes', bad)).not.toBeNull();
+  });
+});
+
+describe('sourced data (spec §12)', () => {
+  it('has 40-60 quotes, all from the two source pages, none about illness or trauma', () => {
+    expect(QUOTES.length).toBeGreaterThanOrEqual(40);
+    expect(QUOTES.length).toBeLessThanOrEqual(60);
+    const sources = new Set(QUOTES.map((q) => q.sourceUrl));
+    expect(sources.size).toBe(2);
+    for (const q of QUOTES) {
+      expect(q.text).not.toMatch(/\b(depression|illness|trauma|disorder|suicide)/i);
+      expect(q.text.split(/\s+/).length).toBeLessThanOrEqual(30);
+      expect(q.tags.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('has 30+ research tips, each with a citation naming a researcher or paper', () => {
+    expect(RESEARCH_TIPS.length).toBeGreaterThanOrEqual(30);
+    for (const t of RESEARCH_TIPS) {
+      expect(t.citation).toMatch(/[A-Z][a-z]+.*\(\d{4}\)/);
+      expect(t.text.length).toBeLessThan(160);
+    }
   });
 });

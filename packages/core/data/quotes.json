@@ -1,30 +1,282 @@
 [
   {
-    "id": "q-dweck-becoming",
-    "text": "Becoming is better than being.",
-    "author": "Carol S. Dweck",
-    "sourceUrl": "https://en.wikiquote.org/wiki/Carol_Dweck",
-    "tags": ["growth", "effort"]
-  },
-  {
-    "id": "q-frankl-change-ourselves",
-    "text": "When we are no longer able to change a situation, we are challenged to change ourselves.",
-    "author": "Viktor E. Frankl",
-    "sourceUrl": "https://en.wikiquote.org/wiki/Viktor_Frankl",
-    "tags": ["setbacks", "growth"]
-  },
-  {
-    "id": "q-rogers-accept",
-    "text": "The curious paradox is that when I accept myself just as I am, then I can change.",
-    "author": "Carl R. Rogers",
-    "sourceUrl": "https://en.wikiquote.org/wiki/Carl_Rogers",
-    "tags": ["self-compassion", "growth"]
-  },
-  {
     "id": "q-skinner-failure",
     "text": "A failure is not always a mistake; it may simply be the best one can do under the circumstances. The real mistake is to stop trying.",
     "author": "B. F. Skinner",
-    "sourceUrl": "https://en.wikiquote.org/wiki/B._F._Skinner",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
     "tags": ["setbacks", "effort"]
+  },
+  {
+    "id": "q-linehan-act",
+    "text": "You can't think yourself into new ways of acting; you only can act yourself into new ways of thinking.",
+    "author": "Marsha Linehan",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["habits", "effort"]
+  },
+  {
+    "id": "q-kahneman-important",
+    "text": "Nothing in life is as important as you think it is, while you are thinking about it.",
+    "author": "Daniel Kahneman",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks", "perspective"]
+  },
+  {
+    "id": "q-kahneman-coherence",
+    "text": "The world makes much less sense than you think. The coherence comes mostly from the way your mind works.",
+    "author": "Daniel Kahneman",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning", "perspective"]
+  },
+  {
+    "id": "q-brown-engaging",
+    "text": "Vulnerability is not knowing victory or defeat, it's understanding the necessity of both; it's engaging. It's being all in.",
+    "author": "Brené Brown",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "setbacks"]
+  },
+  {
+    "id": "q-langer-mindset",
+    "text": "It is not primarily our physical selves that limit us but rather our mindset about our physical limits.",
+    "author": "Ellen J. Langer",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "mindset"]
+  },
+  {
+    "id": "q-mersy-breathing",
+    "text": "Deep breathing is our nervous system's love language.",
+    "author": "Lauren Fogel Mersy",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["self-compassion"]
+  },
+  {
+    "id": "q-maslow-capable",
+    "text": "If you deliberately plan on being less than you are capable of being, then I warn you that you'll be unhappy for the rest of your life.",
+    "author": "Abraham Maslow",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort"]
+  },
+  {
+    "id": "q-biswas-diener-mindful",
+    "text": "Once you start making the effort to 'wake yourself up'—that is, be more mindful in your activities—you suddenly start appreciating life a lot more.",
+    "author": "Robert Biswas-Diener",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "habits"]
+  },
+  {
+    "id": "q-freud-unpleasant",
+    "text": "It is a predisposition of human nature to consider an unpleasant idea untrue, and then it is easy to find arguments against it.",
+    "author": "Sigmund Freud",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning", "perspective"]
+  },
+  {
+    "id": "q-brach-acceptance",
+    "text": "On this sacred path of radical acceptance, rather than striving for perfection, we discover how to love ourselves into wholeness.",
+    "author": "Tara Brach",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["self-compassion"]
+  },
+  {
+    "id": "q-frankl-attitude",
+    "text": "Everything can be taken from a man, but the last of the human freedoms: to choose one's attitudes in any given set of circumstances.",
+    "author": "Viktor Frankl",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks", "perspective"]
+  },
+  {
+    "id": "q-frankl-ensue",
+    "text": "Happiness cannot be pursued; it must ensue.",
+    "author": "Viktor E. Frankl",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "perspective"]
+  },
+  {
+    "id": "q-guralnik-direction",
+    "text": "What you want is to go into the direction that you don't yet know.",
+    "author": "Orna Guralnik",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning"]
+  },
+  {
+    "id": "q-argyle-planned",
+    "text": "For happy people, time is 'filled and planned.' For unhappy people, time is unfilled, open, and uncommitted; they postpone things and are inefficient.",
+    "author": "Michael Argyle",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["habits", "planning"]
+  },
+  {
+    "id": "q-kaufman-possibilities",
+    "text": "Every person on this earth is full of great possibilities that can be realized through imagination, effort, and perseverance.",
+    "author": "Scott Barry Kaufman",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort"]
+  },
+  {
+    "id": "q-tawwab-change-mind",
+    "text": "Permit yourself to change your mind when something is no longer working for you.",
+    "author": "Nedra Glover Tawwab",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["habits", "self-compassion"]
+  },
+  {
+    "id": "q-achor-hold-on",
+    "text": "When we encounter an unexpected challenge or threat, the only way to save ourselves is to hold on tight to the people around us and not let go.",
+    "author": "Shawn Achor",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks"]
+  },
+  {
+    "id": "q-gilbert-adapt",
+    "text": "The truth is, bad things don't affect us as profoundly as we expect them to. That's true of good things, too. We adapt very quickly to either.",
+    "author": "Daniel Gilbert",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks", "perspective"]
+  },
+  {
+    "id": "q-kashdan-open",
+    "text": "When we are open to new possibilities, we find them. Be open and skeptical of everything.",
+    "author": "Todd Kashdan",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning"]
+  },
+  {
+    "id": "q-dweck-becoming",
+    "text": "Becoming is better than being.",
+    "author": "Carol S. Dweck",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "mindset"]
+  },
+  {
+    "id": "q-dweck-challenge",
+    "text": "People in a growth mindset don't just seek challenge, they thrive on it. The bigger the challenge, the more they stretch.",
+    "author": "Carol Dweck",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "mindset"]
+  },
+  {
+    "id": "q-szasz-create",
+    "text": "People often say that this or that person has not yet found himself. But the self is not something one finds, it is something one creates.",
+    "author": "Thomas Szasz",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "mindset"]
+  },
+  {
+    "id": "q-david-contract",
+    "text": "Only dead people never get stressed, never get broken hearts, never experience the disappointment that comes with failure. Tough emotions are part of our contract with life.",
+    "author": "Susan David",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks", "self-compassion"]
+  },
+  {
+    "id": "q-rogers-process",
+    "text": "The good life is a process, not a state of being. It is a direction, not a destination.",
+    "author": "Carl Rogers",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "perspective"]
+  },
+  {
+    "id": "q-watzlawick-reality",
+    "text": "The belief that one's own view of reality is the only reality is the most dangerous of all delusions.",
+    "author": "Paul Watzlawick",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning", "perspective"]
+  },
+  {
+    "id": "q-jung-light",
+    "text": "…the sole purpose of human existence is to kindle a light in the darkness of mere being.",
+    "author": "Carl Gustav Jung",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["effort", "perspective"]
+  },
+  {
+    "id": "q-jung-darkness",
+    "text": "Even a happy life cannot be without a measure of darkness, and the word happy would lose its meaning if it were not balanced by sadness.",
+    "author": "Carl Gustav Jung",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["setbacks", "perspective"]
+  },
+  {
+    "id": "q-jung-individual",
+    "text": "To find out what is truly individual in ourselves, profound reflection is needed; and suddenly we realize how uncommonly difficult the discovery of individuality is.",
+    "author": "Carl Gustav Jung",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["learning"]
+  },
+  {
+    "id": "q-lyubomirsky-inside",
+    "text": "Happiness is not out there for us to find. The reason that it's not out there is that it's inside us.",
+    "author": "Sonja Lyubomirsky",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["self-compassion", "perspective"]
+  },
+  {
+    "id": "q-rosenberg-need",
+    "text": "Every criticism, judgment, diagnosis, and expression of anger is the tragic expression of an unmet need.",
+    "author": "Marshall Rosenberg",
+    "sourceUrl": "https://thriveworks.com/blog/greatest-psychology-quotes-ever/",
+    "tags": ["self-compassion"]
+  },
+  {
+    "id": "q-brown-worthy",
+    "text": "You are worthy of love and belonging just as you are.",
+    "author": "Brené Brown",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["self-compassion"]
+  },
+  {
+    "id": "q-brown-darkness",
+    "text": "Only when we are brave enough to explore the darkness will we discover the infinite power of our light.",
+    "author": "Brené Brown",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["setbacks"]
+  },
+  {
+    "id": "q-brown-courage",
+    "text": "Vulnerability sounds like truth and feels like courage. Truth and courage aren't always comfortable, but they're never weakness.",
+    "author": "Brené Brown",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["effort", "self-compassion"]
+  },
+  {
+    "id": "q-brown-show-up",
+    "text": "Vulnerability is not about winning, and it's not about losing. It's about having the courage to show up and be seen.",
+    "author": "Brené Brown",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["effort"]
+  },
+  {
+    "id": "q-frankl-meaning",
+    "text": "Life is never made unbearable by circumstances, but only by lack of meaning and purpose.",
+    "author": "Viktor E. Frankl",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["setbacks", "perspective"]
+  },
+  {
+    "id": "q-frankl-quest",
+    "text": "The quest for meaning is the key to mental health and human flourishing.",
+    "author": "Viktor Frankl",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["perspective"]
+  },
+  {
+    "id": "q-kabat-zinn-surf",
+    "text": "You can't stop the waves, but you can learn to surf.",
+    "author": "Jon Kabat-Zinn",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["setbacks", "learning"]
+  },
+  {
+    "id": "q-bryant-davis-prioritize",
+    "text": "Start prioritizing your mental health instead of adjusting to toxic spaces.",
+    "author": "Thema Bryant-Davis",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["self-compassion"]
+  },
+  {
+    "id": "q-brach-tenderly",
+    "text": "This revolutionary act of treating ourselves tenderly can begin to undo the aversive messages of a lifetime.",
+    "author": "Tara Brach",
+    "sourceUrl": "https://evolvepsychiatry.com/blog/from-breakdown-to-breakthrough-30-inspiring-mental-health-quotes-for-transformation",
+    "tags": ["self-compassion"]
   }
 ]

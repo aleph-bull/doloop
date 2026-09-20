@@ -6,9 +6,57 @@
     "tags": ["spacing"]
   },
   {
+    "id": "t-spacing-2",
+    "text": "Forgetting a little before you review is a feature. Relearning after a gap makes the memory stick harder.",
+    "citation": "Bjork & Bjork (1992), desirable difficulties",
+    "tags": ["spacing"]
+  },
+  {
+    "id": "t-spacing-3",
+    "text": "If the exam is a month away, spread reviews about a week apart. The best gap grows with the deadline.",
+    "citation": "Cepeda et al. (2008)",
+    "tags": ["spacing", "planning"]
+  },
+  {
+    "id": "t-spacing-4",
+    "text": "Cramming works for tomorrow and fails for next month. Spaced practice reverses that.",
+    "citation": "Kornell (2009)",
+    "tags": ["spacing"]
+  },
+  {
     "id": "t-retrieval-1",
     "text": "Closing the book and recalling what you read strengthens memory more than reading it again.",
+    "citation": "Roediger & Karpicke (2006), the testing effect",
+    "tags": ["retrieval"]
+  },
+  {
+    "id": "t-retrieval-2",
+    "text": "Self-testing feels worse than rereading while you do it, and produces better exam scores. Trust the result, not the feeling.",
     "citation": "Roediger & Karpicke (2006)",
+    "tags": ["retrieval"]
+  },
+  {
+    "id": "t-retrieval-3",
+    "text": "Rereading and highlighting rank near the bottom of study techniques. Practice testing ranks near the top.",
+    "citation": "Dunlosky et al. (2013)",
+    "tags": ["retrieval"]
+  },
+  {
+    "id": "t-retrieval-4",
+    "text": "Write down everything you remember from a chapter before checking. The gaps you find are your study plan.",
+    "citation": "Karpicke & Blunt (2011)",
+    "tags": ["retrieval", "planning"]
+  },
+  {
+    "id": "t-retrieval-5",
+    "text": "Getting a practice question wrong and then seeing the answer teaches more than reading the answer first.",
+    "citation": "Kornell, Hays & Bjork (2009)",
+    "tags": ["retrieval", "setbacks"]
+  },
+  {
+    "id": "t-retrieval-6",
+    "text": "Flashcards work because of the effort to recall, not the card. Do not flip too early.",
+    "citation": "Karpicke & Roediger (2008)",
     "tags": ["retrieval"]
   },
   {
@@ -18,9 +66,39 @@
     "tags": ["interleaving"]
   },
   {
+    "id": "t-interleaving-2",
+    "text": "Blocked practice inflates confidence during study and drops off on the test. Interleave to keep both honest.",
+    "citation": "Taylor & Rohrer (2010)",
+    "tags": ["interleaving"]
+  },
+  {
+    "id": "t-interleaving-3",
+    "text": "Alternate between two subjects in an evening rather than finishing one before starting the next.",
+    "citation": "Rohrer (2012)",
+    "tags": ["interleaving", "planning"]
+  },
+  {
     "id": "t-sleep-1",
     "text": "Sleep after studying is part of studying. Consolidation happens overnight.",
     "citation": "Walker & Stickgold (2004)",
+    "tags": ["sleep"]
+  },
+  {
+    "id": "t-sleep-2",
+    "text": "An all-nighter costs more memory than it buys. Sleep-deprived brains encode new material poorly.",
+    "citation": "Yoo et al. (2007)",
+    "tags": ["sleep"]
+  },
+  {
+    "id": "t-sleep-3",
+    "text": "Reviewing shortly before sleep, then again in the morning, uses the night as a free study session.",
+    "citation": "Mazza et al. (2016)",
+    "tags": ["sleep", "spacing"]
+  },
+  {
+    "id": "t-sleep-4",
+    "text": "A short nap after learning protects the new memory from being overwritten by the rest of the day.",
+    "citation": "Mednick, Nakayama & Stickgold (2003)",
     "tags": ["sleep"]
   },
   {
@@ -28,5 +106,107 @@
     "text": "People reliably underestimate how long tasks take. Add a margin to your estimate.",
     "citation": "Kahneman & Tversky (1979), the planning fallacy",
     "tags": ["planning"]
+  },
+  {
+    "id": "t-planning-2",
+    "text": "Estimate by looking at how long similar tasks actually took you, not by imagining this one going smoothly.",
+    "citation": "Kahneman & Tversky (1979); Buehler, Griffin & Ross (1994)",
+    "tags": ["planning"]
+  },
+  {
+    "id": "t-planning-3",
+    "text": "Breaking a task into parts and estimating each part reduces the underestimate, but rarely removes it.",
+    "citation": "Buehler, Griffin & Ross (1994)",
+    "tags": ["planning"]
+  },
+  {
+    "id": "t-implementation-1",
+    "text": "Deciding when and where you will study roughly doubles the odds that you actually do.",
+    "citation": "Gollwitzer (1999), implementation intentions",
+    "tags": ["habits", "planning"]
+  },
+  {
+    "id": "t-implementation-2",
+    "text": "Phrase the plan as a trigger: after lunch, at the library, open the problem set. Vague intentions fade.",
+    "citation": "Gollwitzer & Sheeran (2006)",
+    "tags": ["habits"]
+  },
+  {
+    "id": "t-implementation-3",
+    "text": "Plan for the obstacle too: if my phone is nearby, it goes in the bag. Naming the if makes the then automatic.",
+    "citation": "Gollwitzer & Oettingen (2011)",
+    "tags": ["habits", "focus"]
+  },
+  {
+    "id": "t-habits-1",
+    "text": "New habits take weeks to months to feel automatic. Missing a single day barely dents the curve.",
+    "citation": "Lally et al. (2010)",
+    "tags": ["habits", "setbacks"]
+  },
+  {
+    "id": "t-habits-2",
+    "text": "Attach studying to something you already do daily. The existing routine becomes the reminder.",
+    "citation": "Wood & Neal (2007)",
+    "tags": ["habits"]
+  },
+  {
+    "id": "t-focus-1",
+    "text": "Switching tasks costs time on every switch, even for people who feel good at it.",
+    "citation": "Rubinstein, Meyer & Evans (2001)",
+    "tags": ["focus"]
+  },
+  {
+    "id": "t-focus-2",
+    "text": "A phone on the desk drains attention even face down and silent. Out of sight is the cheapest focus tool.",
+    "citation": "Ward et al. (2017)",
+    "tags": ["focus"]
+  },
+  {
+    "id": "t-focus-3",
+    "text": "Short breaks restore attention on long tasks. Working through them makes the later minutes worth less.",
+    "citation": "Ariga & Lleras (2011)",
+    "tags": ["focus"]
+  },
+  {
+    "id": "t-elaboration-1",
+    "text": "Asking why a fact is true, and answering in your own words, builds memory better than repeating it.",
+    "citation": "Pressley et al. (1987), elaborative interrogation",
+    "tags": ["learning"]
+  },
+  {
+    "id": "t-elaboration-2",
+    "text": "Explaining a solution to yourself step by step catches misunderstandings that silent reading hides.",
+    "citation": "Chi et al. (1989), self-explanation",
+    "tags": ["learning"]
+  },
+  {
+    "id": "t-metacognition-1",
+    "text": "Fluency is not knowledge. Material that feels familiar after rereading is often not retrievable on the test.",
+    "citation": "Koriat & Bjork (2005)",
+    "tags": ["learning", "retrieval"]
+  },
+  {
+    "id": "t-metacognition-2",
+    "text": "Predict your score before a practice test, then compare. Calibrating your confidence is itself a study skill.",
+    "citation": "Dunlosky & Rawson (2012)",
+    "tags": ["learning"]
+  },
+  {
+    "id": "t-mindset-1",
+    "text": "Treating a wrong answer as information rather than a verdict keeps you working on the hard problems longer.",
+    "citation": "Dweck (2006)",
+    "tags": ["setbacks", "mindset"]
+  },
+  {
+    "id": "t-generation-1",
+    "text": "Trying to produce an answer before you are shown it, even a guess, improves later recall of the right one.",
+    "citation": "Slamecka & Graf (1978), the generation effect",
+    "tags": ["retrieval", "learning"]
+  },
+  {
+    "id": "t-dual-coding-1",
+    "text": "A quick sketch next to your notes gives the idea a second route into memory.",
+    "citation": "Paivio (1971), dual coding",
+    "tags": ["learning"]
   }
 ]
