@@ -34,3 +34,69 @@ export function applyTheme(opts: ApplyThemeOptions, root: HTMLElement = document
   if (opts.reducedMotion === 'system') delete root.dataset.motion;
   else root.dataset.motion = opts.reducedMotion === 'on' ? 'off' : 'on';
 }
+
+export interface PanelStyleOptions {
+  panel: 'opaque' | 'glass' | 'custom';
+  /** Hex colour for 'custom'. */
+  color: string;
+  /** 0..1 for 'custom'. */
+  alpha: number;
+  theme: ResolvedTheme;
+}
+
+function hexToRgbLocal(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function lum([r, g, b]: [number, number, number]): number {
+  const c = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
+}
+
+/**
+ * Surface for dense panels. 'glass' reuses the glass recipe; 'custom' sets the panel fill to
+ * the user's colour and picks light or dark panel text from the composited luminance.
+ */
+export function applyPanelStyle(
+  opts: PanelStyleOptions,
+  root: HTMLElement = document.documentElement,
+) {
+  root.dataset.panel = opts.panel;
+  const clear = [
+    '--panel-fill',
+    '--panel-fg',
+    '--panel-fg-muted',
+    '--panel-fg-subtle',
+    '--panel-border',
+  ];
+  if (opts.panel !== 'custom') {
+    for (const v of clear) root.style.removeProperty(v);
+    return;
+  }
+  const rgb = hexToRgbLocal(/^#[0-9a-f]{6}$/i.test(opts.color) ? opts.color : '#151827');
+  const alpha = Math.min(1, Math.max(0.2, opts.alpha));
+  const base: [number, number, number] = opts.theme === 'dark' ? [11, 13, 20] : [238, 240, 245];
+  const composite = rgb.map((c, i) => Math.round(c * alpha + base[i]! * (1 - alpha))) as [
+    number,
+    number,
+    number,
+  ];
+  const lightText = lum(composite) < 0.4;
+  root.style.setProperty('--panel-fill', `rgb(${rgb.join(' ')} / ${alpha.toFixed(2)})`);
+  root.style.setProperty('--panel-fg', lightText ? '#f2f3f8' : '#0f1220');
+  root.style.setProperty(
+    '--panel-fg-muted',
+    lightText ? 'rgb(242 243 248 / 0.78)' : 'rgb(15 18 32 / 0.72)',
+  );
+  root.style.setProperty(
+    '--panel-fg-subtle',
+    lightText ? 'rgb(242 243 248 / 0.6)' : 'rgb(15 18 32 / 0.55)',
+  );
+  root.style.setProperty(
+    '--panel-border',
+    lightText ? 'rgb(255 255 255 / 0.14)' : 'rgb(15 18 32 / 0.12)',
+  );
+}

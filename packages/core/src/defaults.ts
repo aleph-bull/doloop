@@ -18,7 +18,15 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sounds: { enabled: true, endOfInterval: true, endOfBlock: true, volume: 0.5 },
   effects: { confetti: true, badgeToasts: true, phrases: true, reducedMotion: 'system' },
   quote: { mode: 'quotes' },
-  theme: { mode: 'system', accent: 'indigo', backgroundId: 'aurora', customBackgroundUrl: null },
+  theme: {
+    mode: 'system',
+    accent: 'indigo',
+    backgroundId: 'aurora',
+    customBackgroundUrl: null,
+    panel: 'opaque',
+    panelColor: '#151827',
+    panelAlpha: 0.92,
+  },
   blocking: { enabled: false, domains: [] },
   calendar: {
     googleConnected: false,

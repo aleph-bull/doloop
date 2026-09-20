@@ -20,6 +20,7 @@ export const keys = {
   unlinked: ['calendar', 'unlinked'] as const,
   google: ['calendar', 'google'] as const,
   shop: ['shop'] as const,
+  background: ['me', 'background'] as const,
 };
 
 export function useMe() {
@@ -138,6 +139,16 @@ export function useDeleteBlock() {
   return useMutation({
     mutationFn: (id: string) => api.deleteBlock(id),
     onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+  });
+}
+
+export function useCustomBackground(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.background,
+    queryFn: api.getBackground,
+    enabled,
+    staleTime: Infinity,
+    retry: false,
   });
 }
 

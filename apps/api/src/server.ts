@@ -14,6 +14,7 @@ import { quoteRoutes } from './routes/quote';
 import { analyticsRoutes } from './routes/analytics';
 import { calendarRoutes, type CalendarRouteOptions } from './routes/calendar';
 import { shopRoutes } from './routes/shop';
+import { assetRoutes } from './routes/assets';
 
 export interface BuildOptions {
   db: Db;
@@ -28,7 +29,7 @@ export interface BuildOptions {
 
 /** Build the Fastify app without listening, so tests can inject requests. */
 export async function buildServer(opts: BuildOptions) {
-  const app = Fastify({ logger: opts.logger ?? false });
+  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 8 * 1024 * 1024 });
   const clock = opts.clock ?? (() => new Date().toISOString());
 
   await app.register(cors, {
@@ -71,6 +72,7 @@ export async function buildServer(opts: BuildOptions) {
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);
   calendarRoutes(app, opts.db, clock, calendar);
   shopRoutes(app, opts.db, clock);
+  assetRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
   analyticsRoutes(app, opts.db, clock);

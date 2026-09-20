@@ -26,6 +26,10 @@ import {
 } from '@doloop/ui';
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
+import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
+import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
+import { useQueryClient } from '@tanstack/react-query';
+import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import {
   useAddVacation,
@@ -115,6 +119,7 @@ export function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const restDays = useRestDays();
+  const qc = useQueryClient();
   const setWeekly = useSetWeeklyRestDays();
   const addVacation = useAddVacation();
   const removeVacation = useRemoveVacation();
@@ -266,18 +271,38 @@ export function Settings() {
             })}
           </div>
         </div>
+        <PanelSettings
+          panel={s.theme.panel}
+          panelColor={s.theme.panelColor}
+          panelAlpha={s.theme.panelAlpha}
+          onChange={patch}
+        />
         <Toggle
-          checked={advanced}
+          checked={advanced || !!s.theme.customBackgroundUrl}
           onChange={setAdvanced}
           label="Advanced"
           description="Use your own image. Text colour and glass opacity adapt to it automatically."
         />
-        {advanced && (
+        {(advanced || !!s.theme.customBackgroundUrl) && (
+          <BackgroundUpload
+            hasUpload={s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD}
+            onChanged={() => {
+              void qc.invalidateQueries({ queryKey: keys.background });
+              void me.refetch();
+            }}
+          />
+        )}
+        {(advanced || !!s.theme.customBackgroundUrl) && (
           <div className="flex gap-2 items-end">
             <Input
               label="Image URL"
               placeholder="https://…"
-              value={customBg ?? s.theme.customBackgroundUrl ?? ''}
+              value={
+                customBg ??
+                (s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD
+                  ? ''
+                  : (s.theme.customBackgroundUrl ?? ''))
+              }
               onChange={(e) => setCustomBg(e.target.value)}
               className="flex-1"
             />

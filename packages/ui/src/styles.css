@@ -108,6 +108,23 @@ a:hover {
   border-radius: var(--radius-lg);
   color: var(--fg);
 }
+/* User-selected panel surfaces (data-panel on <html>). */
+:root[data-panel='glass'] .panel {
+  position: relative;
+  background: var(--glass-fill-strong);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-border-inner), var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  color: var(--fg-on-glass);
+}
+:root[data-panel='custom'] .panel {
+  --fg: var(--panel-fg);
+  --fg-muted: var(--panel-fg-muted);
+  --fg-subtle: var(--panel-fg-subtle);
+  --border: var(--panel-border);
+  color: var(--panel-fg);
+}
 
 @supports not (backdrop-filter: blur(1px)) {
   .glass {

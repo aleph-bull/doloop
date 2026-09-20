@@ -35,6 +35,10 @@ Shared design tokens and React components for the portal and the extension popup
 | Overlay    | `--overlay-scrim`                                                                                                                                                                 | Behind modals and the reward overlay.                                                                                   |
 | Focus      | `--ring`                                                                                                                                                                          | Two-tone focus ring, applied by `:focus-visible`.                                                                       |
 
+## Panel surface setting
+
+`data-panel="opaque|glass|custom"` on `<html>` (set by `applyPanelStyle()`). Glass makes `.panel` translucent with the strong-glass recipe; custom sets `--panel-fill` to the user's colour and overrides `--panel-fg`, `--panel-fg-muted`, `--panel-fg-subtle`, and `--panel-border` inline, chosen by luminance so text stays readable.
+
 ## Where glass is allowed
 
 Glass: top nav, timer card, modals, reward overlay, node cards, daily quote card, analytics highlight cards (heavier-than-spec by kickoff decision).

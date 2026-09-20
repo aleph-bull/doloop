@@ -191,3 +191,57 @@ describe('quote', () => {
     expect(c.json().pick).toBeNull();
   });
 });
+
+describe('custom background upload', () => {
+  const png =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+  it('stores, serves, and removes an uploaded image and flips the theme setting', async () => {
+    expect((await t.api({ method: 'GET', url: '/api/me/background' })).statusCode).toBe(404);
+    let res = await t.api({
+      method: 'PUT',
+      url: '/api/me/background',
+      payload: { dataUrl: `data:image/png;base64,${png}` },
+    });
+    expect(res.statusCode).toBe(200);
+    res = await t.api({ method: 'GET', url: '/api/me/background' });
+    expect(res.json().dataUrl).toBe(`data:image/png;base64,${png}`);
+    expect(
+      (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme
+        .customBackgroundUrl,
+    ).toBe('upload');
+    expect(
+      (
+        await t.api({
+          method: 'PUT',
+          url: '/api/me/background',
+          payload: { dataUrl: 'data:text/plain;base64,aGk=' },
+        })
+      ).statusCode,
+    ).toBe(400);
+    expect((await t.api({ method: 'DELETE', url: '/api/me/background' })).statusCode).toBe(204);
+    expect((await t.api({ method: 'GET', url: '/api/me/background' })).statusCode).toBe(404);
+    expect(
+      (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme
+        .customBackgroundUrl,
+    ).toBeNull();
+  });
+
+  it('accepts panel style settings', async () => {
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { panel: 'custom', panelColor: '#336699', panelAlpha: 0.8 } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().settings.theme.panel).toBe('custom');
+    expect(
+      (
+        await t.api({
+          method: 'PATCH',
+          url: '/api/me/settings',
+          payload: { theme: { panelColor: 'blue' } },
+        })
+      ).statusCode,
+    ).toBe(400);
+  });
+});

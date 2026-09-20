@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
 import { Flame, LogOut, Settings as SettingsIcon } from 'lucide-react';
-import { applyTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
-import { levelProgress as levelProgressView } from '@doloop/core';
+import { applyPanelStyle, applyTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
+import { CUSTOM_BACKGROUND_UPLOAD, levelProgress as levelProgressView } from '@doloop/core';
 import { useAuth } from '../lib/auth';
-import { useMe } from '../lib/queries';
+import { useCustomBackground, useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { ErrorBoundary } from './ErrorState';
 
@@ -61,6 +61,23 @@ export function AppShell() {
   }, [settings]);
 
   const theme = resolveTheme(settings?.theme.mode ?? 'system');
+  const uploaded = useCustomBackground(
+    settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD,
+  );
+  const customImageUrl =
+    settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD
+      ? (uploaded.data?.dataUrl ?? null)
+      : (settings?.theme.customBackgroundUrl ?? null);
+
+  useEffect(() => {
+    if (!settings) return;
+    applyPanelStyle({
+      panel: settings.theme.panel,
+      color: settings.theme.panelColor,
+      alpha: settings.theme.panelAlpha,
+      theme,
+    });
+  }, [settings, theme]);
   const user = me.data?.user;
   const lp = user ? levelProgressView(user.xp) : null;
 
@@ -69,7 +86,7 @@ export function AppShell() {
       <Backdrop
         backgroundId={settings?.theme.backgroundId ?? 'aurora'}
         theme={theme}
-        customImageUrl={settings?.theme.customBackgroundUrl ?? null}
+        customImageUrl={customImageUrl}
       />
       <a href="#main" className="skip-link">
         Skip to content

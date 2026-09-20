@@ -217,6 +217,22 @@ export const weeklyReviews = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.weekStart] })],
 );
 
+/** Small per-user binary assets (currently only the custom background image). */
+export const userAssets = pgTable(
+  'user_assets',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['background'] }).notNull(),
+    mime: text('mime').notNull(),
+    data: text('data').notNull(), // base64
+    bytes: integer('bytes').notNull(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.kind] })],
+);
+
 /** Streak events (counted days are implicit; only freezes and resets are logged). */
 export const streakEvents = pgTable(
   'streak_events',
@@ -258,6 +274,7 @@ export const schema = {
   weeklyReviews,
   googleCalendar,
   streakEvents,
+  userAssets,
 };
 
 export type UserRow = typeof users.$inferSelect;

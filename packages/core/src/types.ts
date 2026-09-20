@@ -29,6 +29,8 @@ export type ReviewMode = 'quick' | 'full' | 'off';
 export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type PanelStyle = 'opaque' | 'glass' | 'custom';
+export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
 
 export interface UserSettings {
   pomodoro: PomodoroConfig;
@@ -48,7 +50,14 @@ export interface UserSettings {
     mode: ThemeMode;
     accent: string;
     backgroundId: string;
+    /** A URL, or the sentinel 'upload' meaning the image stored via /api/me/background. */
     customBackgroundUrl: string | null;
+    /** Surface for dense panels (task tree, tables, settings). */
+    panel: PanelStyle;
+    /** Hex colour for panel 'custom'. */
+    panelColor: string;
+    /** 0..1 opacity for panel 'custom'. */
+    panelAlpha: number;
   };
   blocking: { enabled: boolean; domains: string[] };
   calendar: {

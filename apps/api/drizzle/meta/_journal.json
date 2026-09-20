@@ -15,6 +15,13 @@
       "when": 1789943497848,
       "tag": "0001_streak_events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789947524424,
+      "tag": "0002_user_assets",
+      "breakpoints": true
     }
   ]
 }

@@ -270,6 +270,10 @@ export const api = {
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>
     request<{ breakDays: string[] }>('POST', '/api/shop/break-day/apply', { date }),
+  getBackground: () => request<{ dataUrl: string; bytes: number }>('GET', '/api/me/background'),
+  uploadBackground: (dataUrl: string) =>
+    request<{ ok: boolean; bytes: number }>('PUT', '/api/me/background', { dataUrl }),
+  deleteBackground: () => request<void>('DELETE', '/api/me/background'),
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 
