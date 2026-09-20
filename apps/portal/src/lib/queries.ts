@@ -16,6 +16,9 @@ export const keys = {
   advanced: (w?: string) => ['analytics', 'advanced', w ?? 'current'] as const,
   weeklyReview: (w?: string) => ['analytics', 'review', w ?? 'current'] as const,
   followUps: ['follow-ups'] as const,
+  busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
+  unlinked: ['calendar', 'unlinked'] as const,
+  google: ['calendar', 'google'] as const,
 };
 
 export function useMe() {
@@ -86,6 +89,55 @@ export function useSaveWeeklyNote() {
 
 export function useFollowUps() {
   return useQuery({ queryKey: keys.followUps, queryFn: api.followUps, staleTime: 5 * 60_000 });
+}
+
+export function useBlocks(from?: string, to?: string) {
+  return useQuery({
+    queryKey: keys.blocks(from, to),
+    queryFn: () => api.plannedBlocks(from, to),
+    staleTime: 15_000,
+  });
+}
+
+export function useBusy(from: string, to: string) {
+  return useQuery({
+    queryKey: keys.busy(from, to),
+    queryFn: () => api.busy(from, to),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUnlinkedBlocks() {
+  return useQuery({ queryKey: keys.unlinked, queryFn: api.unlinkedBlocks, staleTime: 60_000 });
+}
+
+export function useGoogleStatus() {
+  return useQuery({ queryKey: keys.google, queryFn: api.googleStatus, staleTime: 30_000 });
+}
+
+export function useCreateBlock() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: api.createBlock,
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+  });
+}
+
+export function useUpdateBlock() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateBlock>[1] }) =>
+      api.updateBlock(id, patch),
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+  });
+}
+
+export function useDeleteBlock() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteBlock(id),
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+  });
 }
 
 export function useRestDays() {

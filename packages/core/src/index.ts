@@ -15,3 +15,4 @@ export * from './timer';
 export * from './highlights-thresholds';
 export * from './highlights';
 export * from './analytics';
+export * from './scheduler';

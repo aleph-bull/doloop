@@ -40,6 +40,17 @@ export function setTokenGetter(fn: () => Promise<string | null>) {
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
+/** Public base for links (feed URLs): explicit API URL or this origin. `forFetch` keeps '' for the dev proxy. */
+export function apiBaseUrl(forFetch = false): string {
+  if (BASE) return BASE;
+  return forFetch ? '' : window.location.origin;
+}
+
+export async function authHeaders(): Promise<Record<string, string>> {
+  const token = await tokenGetter();
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await tokenGetter();
   const headers: Record<string, string> = {
@@ -68,6 +79,7 @@ export interface MeResponse {
   streakMilestones: number[];
   restDays: { policy: RestDayPolicy; editsRemaining: number };
   purchasedBackgrounds: string[];
+  icsToken: string;
 }
 
 export interface ActiveSession {
@@ -144,7 +156,12 @@ export const api = {
     request<{ archivedIds: string[] }>('POST', `/api/nodes/${id}/archive`),
   deleteNode: (id: string) => request<void>('DELETE', `/api/nodes/${id}`),
   pace: () =>
-    request<{ now: string; pace: Record<string, NodePace>; plan: PlanItem[] }>('GET', '/api/pace'),
+    request<{
+      now: string;
+      pace: Record<string, NodePace>;
+      plannedMinutes: Record<string, number>;
+      plan: PlanItem[];
+    }>('GET', '/api/pace'),
 
   activeSession: () =>
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
@@ -224,6 +241,33 @@ export const api = {
       { note },
     ),
   followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
+
+  googleStatus: () =>
+    request<{
+      available: boolean;
+      connected: boolean;
+      revoked?: boolean;
+      studyCalendarId?: string | null;
+      lastSyncAt?: string | null;
+    }>('GET', '/api/calendar/google/status'),
+  googleConnect: () => request<{ url: string }>('POST', '/api/calendar/google/connect'),
+  googleSync: () =>
+    request<{ status: string; pushed: number; pulled: number; imported: number }>(
+      'POST',
+      '/api/calendar/google/sync',
+    ),
+  googleDisconnect: () => request<void>('DELETE', '/api/calendar/google'),
+  busy: (from: string, to: string) =>
+    request<{ busy: Array<{ start: string; end: string }> }>(
+      'GET',
+      `/api/calendar/busy?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    ),
+  unlinkedBlocks: () => request<{ blocks: PlannedBlock[] }>('GET', '/api/calendar/unlinked'),
+  suggestSlots: (minutes: number, from: string, days = 7) =>
+    request<{ slots: Array<{ start: string; end: string }> }>(
+      'GET',
+      `/api/calendar/suggest?minutes=${minutes}&from=${encodeURIComponent(from)}&days=${days}`,
+    ),
   dismissFollowUp: (id: string) =>
     request<{ ok: boolean }>('POST', `/api/nodes/${id}/outcome-dismiss`),
 };

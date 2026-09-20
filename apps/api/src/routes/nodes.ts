@@ -3,6 +3,8 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { archiveNode, createNode, deleteNode, listNodes, updateNode } from '../services/nodes';
 import { dailyPlan, paceSnapshot, paceToJson } from '../services/pace';
+import { listBlocks } from '../services/planned-blocks';
+import { buildIndex, descendantIds } from '@doloop/core';
 import { createNodeSchema, updateNodeSchema, uuid } from '../validation';
 
 const idParams = z.object({ id: uuid });
@@ -40,9 +42,23 @@ export function nodeRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.get('/api/pace', async (req) => {
     const now = clock();
     const snap = await paceSnapshot(db, req.user, now);
+    const blocks = (await listBlocks(db, req.user.id, now)).filter((b) => !b.cancelled && b.nodeId);
+    const index = buildIndex(snap.nodes);
+    const planned: Record<string, number> = {};
+    for (const n of snap.nodes) {
+      const ids = new Set([n.id, ...descendantIds(index, n.id)]);
+      planned[n.id] = blocks
+        .filter((b) => ids.has(b.nodeId!))
+        .reduce(
+          (a, b) =>
+            a + (Date.parse(b.endAt) - Math.max(Date.parse(b.startAt), Date.parse(now))) / 60_000,
+          0,
+        );
+    }
     return {
       now,
       pace: paceToJson(snap.pace),
+      plannedMinutes: planned,
       plan: await dailyPlan(db, req.user, now),
     };
   });

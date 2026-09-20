@@ -24,7 +24,8 @@ import {
   useToast,
   hexToRgb,
 } from '@doloop/ui';
-import { api } from '../lib/api';
+import { api, apiBaseUrl, authHeaders } from '../lib/api';
+import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { useAuth } from '../lib/auth';
 import {
   useAddVacation,
@@ -153,6 +154,19 @@ export function Settings() {
     const [r, g, b] = hslToRgb(h ?? 240, sat ?? 84, l ?? 62);
     return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
   })();
+
+  const feedUrl = `${apiBaseUrl()}/calendar.ics?token=${me.data?.icsToken ?? ''}`;
+  const downloadIcs = async () => {
+    const res = await fetch(`${apiBaseUrl(true)}/api/calendar/export.ics?sessions=true`, {
+      headers: await authHeaders(),
+    });
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'doloop.ics';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
 
   const policy = restDays.data?.policy;
   const weeklyDays = weekly ?? policy?.pendingWeeklyRestDays?.days ?? policy?.weeklyRestDays ?? [];
@@ -608,6 +622,51 @@ export function Settings() {
           >
             Save
           </Button>
+        </div>
+      </Section>
+
+      <Section id="calendar" title="Calendar">
+        <GoogleCalendarSettings />
+        <div className="divider" />
+        <div className="flex flex-col gap-2">
+          <span className="field-label">Subscribe from any calendar app (.ics)</span>
+          <div className="flex gap-2 items-center flex-wrap">
+            <Input
+              readOnly
+              value={feedUrl}
+              aria-label="Feed URL"
+              className="flex-1"
+              onFocus={(e) => e.currentTarget.select()}
+            />
+            <Button
+              onClick={() =>
+                navigator.clipboard
+                  .writeText(feedUrl)
+                  .then(() => toast('Copied', { tone: 'ok' }))
+                  .catch(() => toast('Could not copy'))
+              }
+            >
+              Copy
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={async () => {
+                await api.regenerateIcsToken();
+                await me.refetch();
+                toast('Feed URL regenerated. Re-subscribe in your calendar app.');
+              }}
+            >
+              Regenerate
+            </Button>
+          </div>
+          <span className="field-hint">
+            Anyone with this URL can see your planned blocks. Regenerate it if it leaks.
+          </span>
+          <div>
+            <Button size="sm" onClick={downloadIcs}>
+              Download .ics once
+            </Button>
+          </div>
         </div>
       </Section>
 

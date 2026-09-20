@@ -49,7 +49,7 @@ api ─────────▶ core
 | 3 Portal MVP             | done    |
 | 4 Extension              | done    |
 | 5 Analytics              | done    |
-| 6 Calendar               | pending |
+| 6 Calendar               | done    |
 | 7 Economy + achievements | pending |
 | 8 Quotes                 | pending |
 | 9 Polish                 | pending |

@@ -2,6 +2,8 @@ import { createHsVerifier, createSupabaseVerifier, type Verifier } from './auth/
 import { createDb, createPgliteDb, migratePg } from './db/client';
 import { loadEnv } from './env';
 import { buildServer } from './server';
+import { createGoogleClient } from './services/google';
+import type { CalendarDeps } from './services/calendar-sync';
 
 const env = loadEnv();
 
@@ -29,7 +31,33 @@ if (env.databaseUrl) {
   ({ db, close } = await createPgliteDb(env.pgliteDataDir));
 }
 
-const app = await buildServer({ db, verifier, logger: true, corsOrigins: env.corsOrigins });
+let calendarDeps: CalendarDeps | null = null;
+if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
+  calendarDeps = {
+    google: createGoogleClient({
+      clientId: env.google.clientId,
+      clientSecret: env.google.clientSecret,
+      redirectUri: env.google.redirectUri,
+    }),
+    encryptionKey: env.tokenEncryptionKey,
+  };
+} else {
+  console.warn(
+    '[api] Google Calendar disabled (set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY).',
+  );
+}
+
+const app = await buildServer({
+  db,
+  verifier,
+  logger: true,
+  corsOrigins: env.corsOrigins,
+  calendar: {
+    deps: calendarDeps,
+    stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',
+    portalUrl: env.portalUrl,
+  },
+});
 
 const shutdown = async () => {
   await app.close();

@@ -1,7 +1,7 @@
 import type { PlannedBlock } from '@doloop/core';
 import { and, eq, gte, lt, lte } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { plannedBlocks } from '../db/schema';
+import { plannedBlocks, type PlannedBlockRow } from '../db/schema';
 import { badRequest, notFound } from '../errors';
 import { getNodeRow } from './nodes';
 import { dt, toPlannedBlock } from './sessions-mapper';
@@ -20,6 +20,14 @@ export async function listBlocks(
     orderBy: (b, { asc }) => [asc(b.startAt)],
   });
   return rows.map(toPlannedBlock);
+}
+
+export async function getBlockRow(db: Db, userId: string, id: string): Promise<PlannedBlockRow> {
+  const row = await db.query.plannedBlocks.findFirst({
+    where: and(eq(plannedBlocks.id, id), eq(plannedBlocks.userId, userId)),
+  });
+  if (!row) throw notFound('Block not found');
+  return row;
 }
 
 export async function createBlock(

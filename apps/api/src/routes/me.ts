@@ -26,6 +26,7 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       streakMilestones: streak.milestonesReached,
       restDays: policy,
       purchasedBackgrounds: req.user.purchasedBackgrounds,
+      icsToken: req.user.icsToken,
     };
   });
 

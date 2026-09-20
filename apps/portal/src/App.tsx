@@ -6,6 +6,7 @@ import { useMe } from './lib/queries';
 import { AuthCallback } from './pages/AuthCallback';
 import { Extension } from './pages/Extension';
 import { Analytics } from './pages/Analytics';
+import { Calendar } from './pages/Calendar';
 import { WeeklyReviewPage } from './pages/WeeklyReviewPage';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
@@ -88,6 +89,7 @@ export function App() {
       >
         <Route path="/" element={<Today />} />
         <Route path="/tasks" element={<Tasks />} />
+        <Route path="/calendar" element={<Calendar />} />
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/analytics/review" element={<WeeklyReviewPage />} />
         <Route path="/settings" element={<Settings />} />

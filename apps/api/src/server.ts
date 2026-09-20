@@ -12,6 +12,7 @@ import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
 import { quoteRoutes } from './routes/quote';
 import { analyticsRoutes } from './routes/analytics';
+import { calendarRoutes, type CalendarRouteOptions } from './routes/calendar';
 
 export interface BuildOptions {
   db: Db;
@@ -20,6 +21,8 @@ export interface BuildOptions {
   corsOrigins?: string[];
   /** Injectable clock for tests. */
   clock?: () => string;
+  /** Google Calendar integration; null disables the connect flow. */
+  calendar?: Partial<CalendarRouteOptions>;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -59,7 +62,13 @@ export async function buildServer(opts: BuildOptions) {
   meRoutes(app, opts.db, clock);
   nodeRoutes(app, opts.db, clock);
   sessionRoutes(app, opts.db, clock);
-  plannedBlockRoutes(app, opts.db, clock);
+  const calendar: CalendarRouteOptions = {
+    deps: opts.calendar?.deps ?? null,
+    stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
+    portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
+  };
+  plannedBlockRoutes(app, opts.db, clock, calendar.deps);
+  calendarRoutes(app, opts.db, clock, calendar);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
   analyticsRoutes(app, opts.db, clock);

@@ -8,6 +8,8 @@ export interface NodeCardProps {
   node: StudyNode;
   pace?: NodePace;
   courseTitle?: string;
+  /** Future planned minutes for this node (from /api/pace). */
+  plannedMinutes?: number;
   onStart?: (node: StudyNode) => void;
   onOpen?: (node: StudyNode) => void;
 }
@@ -20,7 +22,14 @@ const KIND_LABEL: Record<StudyNode['kind'], string> = {
 };
 
 /** Glass node card with pace status (spec §3, heavier-glass decision). */
-export function NodeCard({ node, pace, courseTitle, onStart, onOpen }: NodeCardProps) {
+export function NodeCard({
+  node,
+  pace,
+  courseTitle,
+  plannedMinutes,
+  onStart,
+  onOpen,
+}: NodeCardProps) {
   const est = pace?.estimatedMinutes ?? node.estimatedMinutes;
   const needLine =
     pace?.requiredPerDay != null && pace.status !== 'done'
@@ -67,6 +76,13 @@ export function NodeCard({ node, pace, courseTitle, onStart, onOpen }: NodeCardP
         <Chip tone="neutral">{KIND_LABEL[node.kind]}</Chip>
         <span>{fmtDue(node.dueAt)}</span>
         {needLine && <span>· {needLine}</span>}
+        {plannedMinutes !== undefined &&
+          pace?.remainingMinutes != null &&
+          pace.status !== 'done' && (
+            <span>
+              · planned {fmtMinutes(plannedMinutes)} / need {fmtMinutes(pace.remainingMinutes)}
+            </span>
+          )}
       </div>
 
       {onStart && !node.completedAt && (
