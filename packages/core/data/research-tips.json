@@ -1,0 +1,32 @@
+[
+  {
+    "id": "t-spacing-1",
+    "text": "Two short sessions on different days beat one long session. Memory consolidates between them.",
+    "citation": "Ebbinghaus (1885); Cepeda et al. (2006)",
+    "tags": ["spacing"]
+  },
+  {
+    "id": "t-retrieval-1",
+    "text": "Closing the book and recalling what you read strengthens memory more than reading it again.",
+    "citation": "Roediger & Karpicke (2006)",
+    "tags": ["retrieval"]
+  },
+  {
+    "id": "t-interleaving-1",
+    "text": "Mixing problem types in one session feels harder but improves your ability to pick the right method later.",
+    "citation": "Rohrer & Taylor (2007)",
+    "tags": ["interleaving"]
+  },
+  {
+    "id": "t-sleep-1",
+    "text": "Sleep after studying is part of studying. Consolidation happens overnight.",
+    "citation": "Walker & Stickgold (2004)",
+    "tags": ["sleep"]
+  },
+  {
+    "id": "t-planning-1",
+    "text": "People reliably underestimate how long tasks take. Add a margin to your estimate.",
+    "citation": "Kahneman & Tversky (1979), the planning fallacy",
+    "tags": ["planning"]
+  }
+]

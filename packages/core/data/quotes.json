@@ -1,0 +1,30 @@
+[
+  {
+    "id": "q-dweck-becoming",
+    "text": "Becoming is better than being.",
+    "author": "Carol S. Dweck",
+    "sourceUrl": "https://en.wikiquote.org/wiki/Carol_Dweck",
+    "tags": ["growth", "effort"]
+  },
+  {
+    "id": "q-frankl-change-ourselves",
+    "text": "When we are no longer able to change a situation, we are challenged to change ourselves.",
+    "author": "Viktor E. Frankl",
+    "sourceUrl": "https://en.wikiquote.org/wiki/Viktor_Frankl",
+    "tags": ["setbacks", "growth"]
+  },
+  {
+    "id": "q-rogers-accept",
+    "text": "The curious paradox is that when I accept myself just as I am, then I can change.",
+    "author": "Carl R. Rogers",
+    "sourceUrl": "https://en.wikiquote.org/wiki/Carl_Rogers",
+    "tags": ["self-compassion", "growth"]
+  },
+  {
+    "id": "q-skinner-failure",
+    "text": "A failure is not always a mistake; it may simply be the best one can do under the circumstances. The real mistake is to stop trying.",
+    "author": "B. F. Skinner",
+    "sourceUrl": "https://en.wikiquote.org/wiki/B._F._Skinner",
+    "tags": ["setbacks", "effort"]
+  }
+]

@@ -44,7 +44,7 @@ api ─────────▶ core
 | Phase                    | Status  |
 | ------------------------ | ------- |
 | 0 Scaffold               | done    |
-| 1 Core logic             | pending |
+| 1 Core logic             | done    |
 | 2 API + auth             | pending |
 | 3 Portal MVP             | pending |
 | 4 Extension              | pending |
