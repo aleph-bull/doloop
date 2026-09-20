@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+@import '@doloop/ui/tokens.css';
+@import '@doloop/ui/styles.css';
+
+@theme {
+  --font-sans: var(--font-sans);
+}

@@ -1,0 +1,41 @@
+@import '@doloop/ui/tokens.css';
+@import '@doloop/ui/styles.css';
+
+/* Fixed popup canvas (§8): 360x480. */
+html,
+body {
+  width: 360px;
+  height: 480px;
+  overflow: hidden;
+}
+
+.popup {
+  width: 360px;
+  height: 480px;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  background:
+    radial-gradient(120% 80% at 20% 0%, hsl(var(--accent-h) 70% 40% / 0.5), transparent 60%),
+    radial-gradient(
+      100% 80% at 100% 100%,
+      hsl(calc(var(--accent-h) + 60) 70% 45% / 0.4),
+      transparent 60%
+    ),
+    var(--bg-base);
+}
+
+.card {
+  padding: var(--space-5);
+}
+
+.card h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  letter-spacing: var(--tracking-tight);
+}
+
+.card p {
+  margin: var(--space-2) 0 0;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}

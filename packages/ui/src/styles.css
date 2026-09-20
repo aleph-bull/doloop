@@ -1,0 +1,68 @@
+/* Base element styles and glass/panel utility classes built on tokens.css. */
+
+html {
+  font-family: var(--font-sans);
+  color: var(--fg);
+  background: var(--bg-base);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  line-height: var(--leading-normal);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-numeric);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Glass surface: nav, timer card, modals, reward overlay, node cards, quote card, highlight cards. */
+.glass {
+  position: relative;
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-border-inner), var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-radius: var(--radius-lg);
+  color: var(--fg-on-glass);
+}
+.glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--glass-highlight);
+  pointer-events: none;
+}
+.glass > * {
+  position: relative;
+}
+.glass-strong {
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+}
+
+/* Opaque panel: task tree, tables, charts. */
+.panel {
+  background: var(--panel-fill);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--radius-lg);
+  color: var(--fg);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass {
+    background: var(--panel-fill);
+  }
+}

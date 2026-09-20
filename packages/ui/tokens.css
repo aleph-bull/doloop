@@ -1,0 +1,213 @@
+/*
+  Doloop design tokens. Single source of truth for color, glass, type, radius, motion.
+  Documented in packages/ui/README.md. Do not hard-code colors anywhere else.
+
+  Theme switching: `data-theme="light" | "dark"` on <html>. When absent, follows
+  prefers-color-scheme, but the app sets the attribute on boot (dark by default when
+  the system preference is unknown - kickoff decision).
+*/
+
+:root {
+  /* ---------- Typography ---------- */
+  --font-sans:
+    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-timer: 4.5rem;
+  --tracking-tight: -0.02em;
+  --tracking-numeric: -0.03em;
+  --leading-tight: 1.15;
+  --leading-normal: 1.5;
+
+  /* ---------- Radius ---------- */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 30px;
+  --radius-pill: 999px;
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 150ms;
+  --dur-base: 200ms;
+  --dur-slow: 250ms;
+
+  /* ---------- Spacing scale (4px base) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ---------- Glass recipe ---------- */
+  --glass-blur: 24px;
+  --glass-saturate: 160%;
+  --glass-blur-strong: 40px;
+
+  /* ---------- Accent (overridden by data-accent / custom) ---------- */
+  --accent-h: 240;
+  --accent-s: 84%;
+  --accent-l: 62%;
+  --accent: hsl(var(--accent-h) var(--accent-s) var(--accent-l));
+  --accent-strong: hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 10%));
+  --accent-soft: hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.18);
+  --accent-fg: #ffffff;
+
+  /* ---------- Status ---------- */
+  --status-ok: #22c55e;
+  --status-warn: #f59e0b;
+  --status-bad: #ef4444;
+  --status-info: #38bdf8;
+
+  /* ---------- Focus ring ---------- */
+  --ring: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
+}
+
+/* ---------- Accent presets (§8: 6 presets, some level-gated in-app) ---------- */
+:root[data-accent='indigo'] {
+  --accent-h: 240;
+  --accent-s: 84%;
+  --accent-l: 62%;
+}
+:root[data-accent='sky'] {
+  --accent-h: 199;
+  --accent-s: 89%;
+  --accent-l: 48%;
+}
+:root[data-accent='mint'] {
+  --accent-h: 160;
+  --accent-s: 64%;
+  --accent-l: 42%;
+}
+:root[data-accent='amber'] {
+  --accent-h: 38;
+  --accent-s: 92%;
+  --accent-l: 50%;
+  --accent-fg: #1a1207;
+}
+:root[data-accent='rose'] {
+  --accent-h: 346;
+  --accent-s: 77%;
+  --accent-l: 56%;
+}
+:root[data-accent='violet'] {
+  --accent-h: 271;
+  --accent-s: 81%;
+  --accent-l: 60%;
+}
+
+/* ---------- Light theme ---------- */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-base: #eef0f5;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #e3e6ee;
+
+  --fg: #0f1220;
+  --fg-muted: #4b5168;
+  --fg-subtle: #7b819a;
+  --fg-on-glass: #0f1220;
+
+  --border: rgb(15 18 32 / 0.08);
+  --border-strong: rgb(15 18 32 / 0.16);
+
+  /* Glass: low-alpha fill + inner 1px light border. Panels for dense content are opaque. */
+  --glass-fill: rgb(255 255 255 / 0.55);
+  --glass-fill-strong: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.65);
+  --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.6);
+  --glass-shadow: 0 10px 40px -10px rgb(15 18 32 / 0.25);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0) 40%);
+
+  --panel-fill: rgb(255 255 255 / 0.92);
+  --panel-border: rgb(15 18 32 / 0.06);
+
+  --overlay-scrim: rgb(15 18 32 / 0.35);
+}
+
+/* ---------- Dark theme ---------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-base: #0b0d14;
+  --bg-elevated: #151827;
+  --bg-sunken: #070810;
+
+  --fg: #f2f3f8;
+  --fg-muted: #b3b8cc;
+  --fg-subtle: #7f8599;
+  --fg-on-glass: #f2f3f8;
+
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.16);
+
+  --glass-fill: rgb(20 22 36 / 0.45);
+  --glass-fill-strong: rgb(20 22 36 / 0.65);
+  --glass-border: rgb(255 255 255 / 0.14);
+  --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+  --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 40%);
+
+  --panel-fill: rgb(21 24 39 / 0.94);
+  --panel-border: rgb(255 255 255 / 0.06);
+
+  --overlay-scrim: rgb(0 0 0 / 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg-base: #0b0d14;
+    --bg-elevated: #151827;
+    --bg-sunken: #070810;
+
+    --fg: #f2f3f8;
+    --fg-muted: #b3b8cc;
+    --fg-subtle: #7f8599;
+    --fg-on-glass: #f2f3f8;
+
+    --border: rgb(255 255 255 / 0.08);
+    --border-strong: rgb(255 255 255 / 0.16);
+
+    --glass-fill: rgb(20 22 36 / 0.45);
+    --glass-fill-strong: rgb(20 22 36 / 0.65);
+    --glass-border: rgb(255 255 255 / 0.14);
+    --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
+    --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
+    --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 40%);
+
+    --panel-fill: rgb(21 24 39 / 0.94);
+    --panel-border: rgb(255 255 255 / 0.06);
+
+    --overlay-scrim: rgb(0 0 0 / 0.55);
+  }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
+:root[data-motion='off'] {
+  --dur-fast: 0ms;
+  --dur-base: 0ms;
+  --dur-slow: 0ms;
+}

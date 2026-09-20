@@ -1,0 +1,24 @@
+{
+  "name": "@doloop/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure shared logic for Doloop: types, pace, XP, streaks, phrases, quotes. No React, no I/O.",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.1",
+    "vitest": "^5.0.1"
+  }
+}
