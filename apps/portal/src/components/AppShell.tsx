@@ -5,6 +5,7 @@ import { applyTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
 import { levelProgress as levelProgressView } from '@doloop/core';
 import { useAuth } from '../lib/auth';
 import { useMe } from '../lib/queries';
+import { useExtensionStatus } from '../lib/extension-bridge';
 
 const links = [
   { to: '/', label: 'Today' },
@@ -16,6 +17,8 @@ export function AppShell() {
   const auth = useAuth();
   const navigate = useNavigate();
   const settings = me.data?.user.settings;
+  // Hands the session to the Chrome extension whenever the shell mounts.
+  useExtensionStatus();
 
   useEffect(() => {
     if (!settings) return;

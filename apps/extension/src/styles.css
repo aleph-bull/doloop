@@ -13,7 +13,9 @@ body {
   width: 360px;
   height: 480px;
   padding: var(--space-4);
-  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
   background:
     radial-gradient(120% 80% at 20% 0%, hsl(var(--accent-h) 70% 40% / 0.5), transparent 60%),
     radial-gradient(
@@ -27,15 +29,76 @@ body {
 .card {
   padding: var(--space-5);
 }
-
-.card h1 {
-  margin: 0;
-  font-size: var(--text-xl);
-  letter-spacing: var(--tracking-tight);
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
-
+.card h1 {
+  font-size: var(--text-xl);
+}
 .card p {
-  margin: var(--space-2) 0 0;
   color: var(--fg-muted);
   font-size: var(--text-sm);
+}
+.phase {
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-subtle);
+}
+.title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.digits {
+  font-size: 3.5rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: var(--space-2) 0;
+}
+.xp {
+  font-size: var(--text-3xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.row.end {
+  justify-content: flex-end;
+}
+.grow {
+  flex: 1;
+}
+.hint {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.error {
+  font-size: var(--text-xs);
+  color: var(--status-bad);
+}
+.quote p:first-child {
+  color: var(--fg-on-glass);
+  font-size: var(--text-sm);
+}
+.link {
+  margin-top: auto;
+  align-self: center;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.link:hover {
+  color: var(--fg);
 }

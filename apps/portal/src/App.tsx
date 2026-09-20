@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell';
 import { useAuth } from './lib/auth';
 import { useMe } from './lib/queries';
 import { AuthCallback } from './pages/AuthCallback';
+import { Extension } from './pages/Extension';
 import { Onboarding } from './pages/Onboarding';
 import { Settings } from './pages/Settings';
 import { SignIn } from './pages/SignIn';
@@ -86,6 +87,7 @@ export function App() {
         <Route path="/" element={<Today />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/extension" element={<Extension />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
