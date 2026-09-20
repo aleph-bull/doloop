@@ -178,3 +178,16 @@ describe('rest days', () => {
     expect(res.statusCode).toBe(204);
   });
 });
+
+describe('quote', () => {
+  it('returns a stable daily pick and honours the off mode', async () => {
+    const a = await t.api({ method: 'GET', url: '/api/quote' });
+    expect(a.statusCode).toBe(200);
+    expect(a.json().pick.kind).toBe('quote');
+    const b = await t.api({ method: 'GET', url: '/api/quote' });
+    expect(b.json().pick.item.id).toBe(a.json().pick.item.id);
+    await t.api({ method: 'PATCH', url: '/api/me/settings', payload: { quote: { mode: 'off' } } });
+    const c = await t.api({ method: 'GET', url: '/api/quote' });
+    expect(c.json().pick).toBeNull();
+  });
+});

@@ -27,6 +27,7 @@
     "react-dom": "*"
   },
   "dependencies": {
-    "@doloop/core": "workspace:*"
+    "@doloop/core": "workspace:*",
+    "lucide-react": "^1.47.0"
   }
 }

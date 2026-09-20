@@ -12,6 +12,10 @@
   "dependencies": {
     "@doloop/core": "workspace:*",
     "@doloop/ui": "workspace:*",
+    "@supabase/supabase-js": "^2.116.0",
+    "@tanstack/react-query": "^5.103.1",
+    "jose": "^6.2.12",
+    "lucide-react": "^1.47.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router": "^8.4.0"

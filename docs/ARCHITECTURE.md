@@ -46,7 +46,7 @@ api ─────────▶ core
 | 0 Scaffold               | done    |
 | 1 Core logic             | done    |
 | 2 API + auth             | done    |
-| 3 Portal MVP             | pending |
+| 3 Portal MVP             | done    |
 | 4 Extension              | pending |
 | 5 Analytics              | pending |
 | 6 Calendar               | pending |

@@ -285,16 +285,14 @@ async function finalize(
   if (reviewSubmitted && review.extraMinutesAdded && review.extraMinutesAdded > 0) {
     const from = node.estimatedMinutes;
     const to = (from ?? 0) + review.extraMinutesAdded;
-    await db
-      .insert(estimateChanges)
-      .values({
-        userId: user.id,
-        nodeId: node.id,
-        at: dt(now),
-        fromMinutes: from,
-        toMinutes: to,
-        source: 'review',
-      });
+    await db.insert(estimateChanges).values({
+      userId: user.id,
+      nodeId: node.id,
+      at: dt(now),
+      fromMinutes: from,
+      toMinutes: to,
+      source: 'review',
+    });
     node = (
       await db
         .update(nodes)

@@ -36,7 +36,10 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      // Files legitimately export hooks and helpers next to components.
+      'react-refresh/only-export-components': 'off',
+      // Resetting dialog state on open and adopting server state are intentional patterns here.
+      'react-hooks/set-state-in-effect': 'off',
     },
   },
   {
