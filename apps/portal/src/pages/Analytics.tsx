@@ -13,6 +13,7 @@ import {
   Spinner,
   StackedBars,
 } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
 import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtHours, fmtMinutes, pct } from '../lib/format';
 import { useAdvancedAnalytics, useWeekHighlights } from '../lib/queries';
@@ -30,6 +31,13 @@ function HighlightCard({ h }: { h: Highlight }) {
 function ThisWeek() {
   const q = useWeekHighlights();
   const [more, setMore] = useState(false);
+  if (q.isError)
+    return (
+      <ErrorPanel
+        message={q.error instanceof Error ? q.error.message : 'Could not load highlights.'}
+        onRetry={() => q.refetch()}
+      />
+    );
   if (!q.data)
     return (
       <div className="flex justify-center p-12">
@@ -85,6 +93,13 @@ function ThisWeek() {
 function Advanced() {
   const q = useAdvancedAnalytics();
   const [selected, setSelected] = useState<string | null>(null);
+  if (q.isError)
+    return (
+      <ErrorPanel
+        message={q.error instanceof Error ? q.error.message : 'Could not load analytics.'}
+        onRetry={() => q.refetch()}
+      />
+    );
   if (!q.data)
     return (
       <div className="flex justify-center p-12">

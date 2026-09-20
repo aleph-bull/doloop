@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Chip, Glass, Panel, Spinner, useToast } from '@doloop/ui';
 import { BlockDialog } from '../components/BlockDialog';
+import { ErrorPanel } from '../components/ErrorState';
 import { api } from '../lib/api';
 import { fmtDate, fmtMinutes, fmtTime } from '../lib/format';
 import {
@@ -57,6 +58,20 @@ export function Calendar() {
   const [drag, setDrag] = useState<{ day: string; from: number; to: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
+  const failed = [nodes, blocks, me].find((q) => q.isError);
+  if (failed && (!nodes.data || !blocks.data || !me.data))
+    return (
+      <ErrorPanel
+        message={
+          failed.error instanceof Error ? failed.error.message : 'Could not load the calendar.'
+        }
+        onRetry={() => {
+          void nodes.refetch();
+          void blocks.refetch();
+          void me.refetch();
+        }}
+      />
+    );
   if (!nodes.data || !blocks.data || !me.data)
     return (
       <div className="flex justify-center p-12">
@@ -139,6 +154,9 @@ export function Calendar() {
             onClick={() => setWeekStart(addDays(weekStart, 7))}
           >
             <ChevronRight size={16} aria-hidden />
+          </Button>
+          <Button size="sm" onClick={() => setDialog({ draft: null })}>
+            New block
           </Button>
           <Button size="sm" variant="primary" onClick={suggest} loading={create.isPending}>
             <Sparkles size={14} aria-hidden /> Suggest a block

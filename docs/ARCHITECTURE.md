@@ -41,15 +41,15 @@ api ─────────▶ core
 
 ## Phase status
 
-| Phase                    | Status  |
-| ------------------------ | ------- |
-| 0 Scaffold               | done    |
-| 1 Core logic             | done    |
-| 2 API + auth             | done    |
-| 3 Portal MVP             | done    |
-| 4 Extension              | done    |
-| 5 Analytics              | done    |
-| 6 Calendar               | done    |
-| 7 Economy + achievements | done    |
-| 8 Quotes                 | done    |
-| 9 Polish                 | pending |
+| Phase                    | Status |
+| ------------------------ | ------ |
+| 0 Scaffold               | done   |
+| 1 Core logic             | done   |
+| 2 API + auth             | done   |
+| 3 Portal MVP             | done   |
+| 4 Extension              | done   |
+| 5 Analytics              | done   |
+| 6 Calendar               | done   |
+| 7 Economy + achievements | done   |
+| 8 Quotes                 | done   |
+| 9 Polish                 | done   |

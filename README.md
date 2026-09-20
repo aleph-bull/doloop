@@ -1,12 +1,15 @@
 # Doloop
 
-A study-planning product: a web portal, a Chrome extension remote, and an API.
+A study-planning product: a web portal, a Chrome extension remote, and an API. Frosted-glass UI, light and dark.
 
-- Plan courses, tasks, and assessments with estimates and due dates.
-- A pace calculator tells you what to work on today and whether you're on track.
-- Timed sessions (pomodoro, unlimited, scheduled) with idle detection and optional site blocking.
-- XP, streaks with rest days and freezes, badges, and a positive-only weekly highlights page.
-- Google Calendar sync and an .ics feed.
+## What it does
+
+- **Plan**: courses, tasks, assessments, and subtasks with estimates and due dates. Rest days and vacations that never break a streak.
+- **Pace**: a calculator tells you what to work on today, how many minutes per day you need, and whether each task is on track, behind, critical, or overdue.
+- **Study**: pomodoro, unlimited, or until-a-time sessions with idle detection, optional site blocking (extension), and a skippable end-of-session review.
+- **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a daily quote or research tip, and a positive-only "This week" page.
+- **Analyse**: an Advanced page with everything (per task, per course, estimate accuracy), a weekly review, and post-assessment follow-ups.
+- **Schedule**: a week view with drag-to-create blocks, free-slot suggestions, two-way Google Calendar sync into a dedicated "Study" calendar, and an .ics feed.
 
 ## Getting started
 
@@ -19,4 +22,18 @@ pnpm dev
 - API: http://localhost:8787/api/health
 - Extension: `pnpm --filter @doloop/extension build`, then load `apps/extension/dist` unpacked in Chrome.
 
-`pnpm check` runs lint, typecheck, tests, and builds. See `docs/SETUP.md` for credentials, `docs/ARCHITECTURE.md` for structure, and `DECISIONS.md` for defaults.
+With no credentials configured the API runs on an in-process Postgres (PGlite, persisted to `apps/api/.pglite`) and the portal signs in with a locally minted dev token. Set `DEV_AUTH_SECRET` in `apps/api/.env` and the same value as `VITE_DEV_AUTH_SECRET` in `apps/portal/.env`.
+
+`pnpm check` runs lint, typecheck, tests, the background contrast audit, and builds.
+
+## Layout
+
+```
+apps/portal      React + Vite + React Router + Tailwind (layout only); visual style from packages/ui tokens
+apps/extension   Chrome MV3 popup, background worker, content-script bridge
+apps/api         Fastify + Drizzle; Supabase Postgres in production, PGlite in dev/tests
+packages/core    Pure TypeScript domain logic (pace, XP, streaks, timer, highlights, badges), 220+ tests
+packages/ui      tokens.css, glass/panel surfaces, components, backgrounds, charts
+```
+
+See `docs/SETUP.md` for Supabase and Google credentials, `docs/ARCHITECTURE.md` for structure and data flow, and `DECISIONS.md` for every default chosen along the way.

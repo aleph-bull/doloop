@@ -6,6 +6,7 @@ import { levelProgress as levelProgressView } from '@doloop/core';
 import { useAuth } from '../lib/auth';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
+import { ErrorBoundary } from './ErrorState';
 
 const links = [
   { to: '/', label: 'Today' },
@@ -70,6 +71,9 @@ export function AppShell() {
         theme={theme}
         customImageUrl={settings?.theme.customBackgroundUrl ?? null}
       />
+      <a href="#main" className="skip-link">
+        Skip to content
+      </a>
       <Glass as="header" className="nav" strong>
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Doloop home">
@@ -113,8 +117,10 @@ export function AppShell() {
           </Button>
         </div>
       </Glass>
-      <main className="page">
-        <Outlet />
+      <main id="main" className="page" tabIndex={-1}>
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </>
   );

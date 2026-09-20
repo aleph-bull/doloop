@@ -19,6 +19,21 @@
   }
 }
 
+.skip-link {
+  position: absolute;
+  left: 16px;
+  top: -48px;
+  z-index: 100;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-fg);
+  transition: top var(--dur-fast) var(--ease-out);
+}
+.skip-link:focus {
+  top: 16px;
+}
+
 .nav {
   position: sticky;
   top: 12px;
@@ -193,4 +208,30 @@
   gap: 12px;
   padding: 12px 14px;
   font-size: var(--text-sm);
+}
+
+/* Small screens: the nav scrolls sideways instead of clipping links. */
+.nav-inner nav {
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.nav-inner nav::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 640px) {
+  .nav-link {
+    padding: 6px 9px;
+    flex-shrink: 0;
+  }
+  .brand span:last-child {
+    display: none;
+  }
+}
+
+/* Touch devices cannot hover: keep row actions visible. */
+@media (hover: none) {
+  .tree-row .row-actions {
+    opacity: 1;
+  }
 }

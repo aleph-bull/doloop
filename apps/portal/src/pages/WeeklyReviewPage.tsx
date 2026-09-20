@@ -2,6 +2,7 @@ import { addDays } from '@doloop/core';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router';
 import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useSaveWeeklyNote, useWeeklyReview } from '../lib/queries';
 
@@ -19,6 +20,13 @@ export function WeeklyReviewPage() {
     if (q.data) setNote(q.data.note ?? '');
   }, [q.data]);
 
+  if (q.isError)
+    return (
+      <ErrorPanel
+        message={q.error instanceof Error ? q.error.message : 'Could not load the review.'}
+        onRetry={() => q.refetch()}
+      />
+    );
   if (!q.data)
     return (
       <div className="flex justify-center p-12">

@@ -2,6 +2,7 @@ import type { NodePace, StudyNode } from '@doloop/core';
 import { Check, ChevronDown, ChevronRight, Pencil, Play, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button, Chip, EmptyState, Panel, ProgressBar, Spinner, useToast } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { StatusChip } from '../components/StatusChip';
@@ -168,6 +169,13 @@ export function Tasks() {
     .filter((n) => !n.parentId || !list.some((x) => x.id === n.parentId))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  if (nodes.isError)
+    return (
+      <ErrorPanel
+        message={nodes.error instanceof Error ? nodes.error.message : 'Could not load tasks.'}
+        onRetry={() => nodes.refetch()}
+      />
+    );
   if (nodes.isLoading || pace.isLoading)
     return (
       <div className="flex justify-center p-12">
@@ -208,7 +216,28 @@ export function Tasks() {
             }
           />
         ) : (
-          <ul aria-label="Task tree">
+          <ul
+            aria-label="Task tree"
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+              const rows = Array.from(
+                e.currentTarget.querySelectorAll<HTMLElement>(
+                  '.tree-row [tabindex], .tree-row button',
+                ),
+              ).filter((el) => el.closest('.tree-row'));
+              const current = rows.findIndex((el) => el === document.activeElement);
+              if (current === -1) return;
+              const currentRow = rows[current]!.closest('.tree-row');
+              const dir = e.key === 'ArrowDown' ? 1 : -1;
+              for (let i = current + dir; i >= 0 && i < rows.length; i += dir) {
+                if (rows[i]!.closest('.tree-row') !== currentRow) {
+                  rows[i]!.focus();
+                  e.preventDefault();
+                  return;
+                }
+              }
+            }}
+          >
             {roots.map((r) => (
               <Row
                 key={r.id}

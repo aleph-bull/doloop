@@ -346,19 +346,19 @@ a:hover {
 }
 .chip-ok {
   background: color-mix(in srgb, var(--status-ok) 18%, transparent);
-  color: color-mix(in srgb, var(--status-ok) 70%, var(--fg));
+  color: color-mix(in srgb, var(--status-ok) 45%, var(--fg));
 }
 .chip-warn {
   background: color-mix(in srgb, var(--status-warn) 20%, transparent);
-  color: color-mix(in srgb, var(--status-warn) 65%, var(--fg));
+  color: color-mix(in srgb, var(--status-warn) 45%, var(--fg));
 }
 .chip-bad {
   background: color-mix(in srgb, var(--status-bad) 18%, transparent);
-  color: color-mix(in srgb, var(--status-bad) 70%, var(--fg));
+  color: color-mix(in srgb, var(--status-bad) 50%, var(--fg));
 }
 .chip-info {
   background: color-mix(in srgb, var(--status-info) 18%, transparent);
-  color: color-mix(in srgb, var(--status-info) 60%, var(--fg));
+  color: color-mix(in srgb, var(--status-info) 45%, var(--fg));
 }
 .chip-neutral {
   background: var(--border);

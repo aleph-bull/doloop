@@ -2,6 +2,7 @@ import type { StudyNode } from '@doloop/core';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Glass, Spinner } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { Hint } from '../components/Hint';
 import { NodeCard } from '../components/NodeCard';
@@ -33,6 +34,19 @@ export function Today() {
   const settings = me.data?.user.settings;
   const sessionCount = sessions.data?.sessions.filter((s) => s.endedAt).length ?? 0;
 
+  const failed = [me, nodes, pace].find((q) => q.isError);
+  if (failed && (!settings || !nodes.data || !pace.data)) {
+    return (
+      <ErrorPanel
+        message={failed.error instanceof Error ? failed.error.message : 'Could not load today.'}
+        onRetry={() => {
+          void me.refetch();
+          void nodes.refetch();
+          void pace.refetch();
+        }}
+      />
+    );
+  }
   if (!settings || !nodes.data || !pace.data) {
     return (
       <div className="flex justify-center p-12">

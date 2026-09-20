@@ -15,7 +15,8 @@
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm audit:contrast && pnpm build",
+    "audit:contrast": "pnpm --filter @doloop/ui audit:contrast"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -26,6 +27,7 @@
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.12.0",
     "prettier": "^3.9.8",
+    "tsx": "^4.23.13",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.70.0",
     "vitest": "^5.0.1"

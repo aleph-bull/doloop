@@ -14,6 +14,7 @@ import {
   Spinner,
   useToast,
 } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
 import { api } from '../lib/api';
 import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop } from '../lib/queries';
@@ -26,6 +27,13 @@ export function Achievements() {
   const [breakDate, setBreakDate] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
+  if (shop.isError)
+    return (
+      <ErrorPanel
+        message={shop.error instanceof Error ? shop.error.message : 'Could not load the shop.'}
+        onRetry={() => shop.refetch()}
+      />
+    );
   if (!shop.data || !me.data)
     return (
       <div className="flex justify-center p-12">
