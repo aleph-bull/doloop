@@ -42,13 +42,19 @@ function Gate({ children }: { children: React.ReactNode }) {
         <Spinner />
       </Centered>
     );
-  if (me.isError)
+  if (me.isError && !me.data)
     return (
       <Centered>
         <p className="muted">Could not reach the API. Is it running?</p>
       </Centered>
     );
-  if (!me.data!.onboarded && location.pathname !== '/onboarding')
+  if (!me.data)
+    return (
+      <Centered>
+        <Spinner />
+      </Centered>
+    );
+  if (!me.data.onboarded && location.pathname !== '/onboarding')
     return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 }

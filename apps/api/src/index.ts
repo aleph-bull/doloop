@@ -25,8 +25,8 @@ if (env.databaseUrl) {
   await migratePg(env.databaseUrl);
   ({ db, close } = createDb(env.databaseUrl));
 } else {
-  console.warn('[api] DATABASE_URL not set; using in-memory PGlite (data is lost on restart).');
-  ({ db, close } = await createPgliteDb());
+  console.warn(`[api] DATABASE_URL not set; using PGlite at ${env.pgliteDataDir} (dev only).`);
+  ({ db, close } = await createPgliteDb(env.pgliteDataDir));
 }
 
 const app = await buildServer({ db, verifier, logger: true, corsOrigins: env.corsOrigins });

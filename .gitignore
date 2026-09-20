@@ -11,3 +11,4 @@ coverage/
 .vite/
 *.tsbuildinfo
 .eslintcache
+.pglite/

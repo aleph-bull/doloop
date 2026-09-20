@@ -25,6 +25,8 @@ export interface Env {
   supabaseJwtSecret: string | undefined;
   /** Dev-only HS256 secret for locally minted tokens when Supabase is not configured. */
   devAuthSecret: string | undefined;
+  /** Where PGlite stores dev data when DATABASE_URL is unset. */
+  pgliteDataDir: string;
   google: {
     clientId: string | undefined;
     clientSecret: string | undefined;
@@ -46,6 +48,7 @@ export function loadEnv(): Env {
     supabaseUrl: str('SUPABASE_URL'),
     supabaseJwtSecret: str('SUPABASE_JWT_SECRET'),
     devAuthSecret: str('DEV_AUTH_SECRET'),
+    pgliteDataDir: str('PGLITE_DATA_DIR', '.pglite')!,
     google: {
       clientId: str('GOOGLE_CLIENT_ID'),
       clientSecret: str('GOOGLE_CLIENT_SECRET'),

@@ -15,12 +15,17 @@ export function createDb(connectionString: string): { db: Db; close: () => Promi
   return { db, close: () => client.end() };
 }
 
-/** In-process Postgres (PGlite) with migrations applied. Used by tests and credential-free dev. */
-export async function createPgliteDb(): Promise<{ db: Db; close: () => Promise<void> }> {
+/**
+ * In-process Postgres (PGlite) with migrations applied. Used by tests (in memory) and
+ * credential-free dev (persisted to dataDir so restarts keep your data).
+ */
+export async function createPgliteDb(
+  dataDir?: string,
+): Promise<{ db: Db; close: () => Promise<void> }> {
   const { PGlite } = await import('@electric-sql/pglite');
   const { drizzle } = await import('drizzle-orm/pglite');
   const { migrate } = await import('drizzle-orm/pglite/migrator');
-  const client = new PGlite();
+  const client = dataDir ? new PGlite(dataDir) : new PGlite();
   const db = drizzle(client, { schema });
   await migrate(db, { migrationsFolder: MIGRATIONS_FOLDER });
   return { db: db as unknown as Db, close: () => client.close() };
