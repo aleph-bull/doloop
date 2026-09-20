@@ -16,8 +16,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  position: relative;
-  background: var(--bg-base);
+  /* Transparent so the fixed Backdrop (z-index -1) shows through; html keeps --bg-base as fallback. */
+  background: transparent;
 }
 
 .card {
