@@ -132,6 +132,14 @@ export const settingsSchema = z
         extensionBackground: z.string().max(32),
       })
       .partial(),
+    visualizer: z
+      .object({
+        enabled: z.boolean(),
+        intensity: z.number().min(0).max(1),
+        opacity: z.number().min(0).max(1),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+      })
+      .partial(),
     blocking: z
       .object({
         enabled: z.boolean(),

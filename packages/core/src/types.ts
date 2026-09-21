@@ -64,6 +64,20 @@ export interface UserSettings {
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
     extensionBackground: string;
   };
+  /**
+   * The ambient glow on the focus screen. It reacts to system audio, which the browser
+   * only exposes through a screen-share prompt, so `enabled` is a preference rather than a
+   * guarantee that it is running.
+   */
+  visualizer: {
+    enabled: boolean;
+    /** How far the glow rises, 0..1. */
+    intensity: number;
+    /** Overall transparency of the glow, 0..1. */
+    opacity: number;
+    /** Hex colour. Editable in Settings and on the focus screen itself. */
+    color: string;
+  };
   blocking: { enabled: boolean; domains: string[] };
   calendar: {
     googleConnected: boolean;

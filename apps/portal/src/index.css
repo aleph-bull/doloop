@@ -201,6 +201,137 @@
   color: #fff;
 }
 
+/* ---------- focus screen ---------- */
+
+.focus-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(16px, 4vw, 48px);
+  background: var(--bg-base);
+  color: var(--fg);
+  overflow: hidden;
+}
+.focus-centre {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  text-align: center;
+}
+.focus-phase {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.focus-time {
+  font-size: clamp(4rem, 18vw, 13rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: var(--tracking-numeric);
+}
+.focus-context {
+  margin-top: 18px;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.focus-subject {
+  font-size: var(--text-lg);
+}
+.focus-child {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* The chrome around the timer fades out while you are still. */
+.focus-chrome {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.focus-chrome.is-hidden,
+.focus-context.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.focus-corner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.focus-bottom-right,
+.focus-top-right {
+  align-items: flex-end;
+  text-align: right;
+}
+.focus-clock {
+  font-size: var(--text-2xl);
+  color: var(--fg);
+  line-height: 1.1;
+}
+.focus-date {
+  font-size: var(--text-sm);
+}
+.focus-audio-hint {
+  max-width: 28ch;
+  color: var(--fg-subtle);
+}
+.focus-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.focus-swatches {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.focus-swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.focus-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  padding: 0;
+  cursor: pointer;
+}
+.focus-swatch[aria-pressed='true'] {
+  outline: 2px solid var(--fg);
+  outline-offset: 2px;
+}
+.focus-swatch-input {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
 /* Shown when a chosen session length would cut a pomodoro block short. */
 .cut-warning {
   margin: 0;

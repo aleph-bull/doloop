@@ -38,6 +38,16 @@ export {
   type BackgroundDef,
   type BackgroundPhoto,
 } from './backgrounds';
+export { AudioGlow, type AudioGlowProps } from './components/AudioGlow';
+export {
+  BAND_COUNT,
+  canCaptureSystemAudio,
+  captureSystemAudio,
+  isSilent,
+  type AudioLevels,
+  type AudioSource,
+  type AudioSourceState,
+} from './audio-levels';
 export { fireConfetti } from './confetti';
 export { fireRewardBurst, type BurstOptions } from './burst';
 export * from './contrast';
