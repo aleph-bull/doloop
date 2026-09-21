@@ -4,6 +4,7 @@ import {
   bucketForSession,
   computePace,
   computeSessionXp,
+  isEndedEarly,
   isUnderAssessment,
   buildIndex,
   levelForXp,
@@ -221,6 +222,8 @@ export interface EndSummary {
   badges: string[];
   confetti: boolean;
   isFirstSessionOnNode: boolean;
+  /** True when the session was cancelled early and earned no XP. */
+  endedEarly: boolean;
 }
 
 export async function endSession(
@@ -343,7 +346,15 @@ async function finalize(
     row.startedAt.toISOString(),
     row.endedAt?.toISOString() ?? now,
   );
+  const endedEarly = isEndedEarly({
+    mode: row.timer.mode,
+    cycle: row.timer.cycle,
+    autoEnded: row.timer.autoEnded,
+    endedAt: row.timer.endedAt,
+    plannedEndAt: row.timer.plannedEndAt,
+  });
   const xp = computeSessionXp({
+    endedEarly,
     workMinutes: row.workSeconds / 60,
     reviewSubmitted,
     distracted: review?.distracted ?? null,
@@ -395,6 +406,7 @@ async function finalize(
 
   const confetti =
     settings.effects.confetti &&
+    !endedEarly &&
     (review?.distracted === 'no' ||
       nodeCompleted ||
       levelAfter > levelBefore ||
@@ -419,6 +431,7 @@ async function finalize(
     badges,
     confetti,
     isFirstSessionOnNode,
+    endedEarly,
   };
 }
 

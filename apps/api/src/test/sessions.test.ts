@@ -126,11 +126,13 @@ describe('session lifecycle', () => {
       mood: 4,
       note: 'good',
     });
-    expect(summary.xp.base).toBe(17);
-    expect(summary.xp.reviewSubmitted).toBe(5);
-    expect(summary.xp.focus).toBe(15);
+    // 35 focused minutes -> 70 base; review 10%, focus 20%, streak day 1
+    expect(summary.xp.base).toBe(70);
+    expect(summary.xp.reviewSubmitted).toBe(7);
+    expect(summary.xp.focus).toBe(14);
     expect(summary.streak.current).toBe(1);
-    expect(summary.xp.streakMult).toBeCloseTo(1.01);
+    expect(summary.xp.streakBonus).toBe(1);
+    expect(summary.endedEarly).toBe(false);
     expect(summary.phrase).not.toBeNull();
     expect(summary.isFirstSessionOnNode).toBe(true);
     expect(summary.confetti).toBe(true);
@@ -179,7 +181,7 @@ describe('session lifecycle', () => {
     });
     const { summary } = res.json();
     expect(summary.session.review.skipped).toBe(true);
-    expect(summary.xp.base).toBe(14);
+    expect(summary.xp.base).toBe(40);
     expect(summary.xp.reviewSubmitted).toBe(0);
     expect(summary.xp.focus).toBe(0);
     expect(summary.isFirstSessionOnNode).toBe(false);
@@ -276,8 +278,9 @@ describe('session lifecycle', () => {
     const { summary } = res.json();
     expect(summary.nodeCompleted).toBe(true);
     expect(summary.statusAfter).toBe('done');
-    expect(summary.xp.estimateBeat).toBe(10);
-    expect(summary.xp.onPace).toBe(10);
+    // 8 focused minutes -> 16 base; estimate beat 20% = 3, on pace 10% = 1
+    expect(summary.xp.estimateBeat).toBe(3);
+    expect(summary.xp.onPace).toBe(1);
     expect(summary.phrase.bucket).toBe('node-completed');
   });
 
@@ -287,5 +290,65 @@ describe('session lifecycle', () => {
     expect(list.length).toBe(5);
     for (let i = 1; i < list.length; i++)
       expect(list[i - 1].startedAt >= list[i].startedAt).toBe(true);
+  });
+});
+
+describe('early cancellation', () => {
+  it('a pomodoro ended before its first work interval earns no XP', async () => {
+    const node = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Early' } })
+    ).json().node;
+    const start = await t.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'pomodoro' },
+    });
+    advanceClock(t, 10);
+    const res = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${start.json().active.session.id}/end`,
+      payload: { review: { distracted: 'no' } },
+    });
+    const { summary } = res.json();
+    expect(summary.endedEarly).toBe(true);
+    expect(summary.xp.total).toBe(0);
+    expect(summary.xp.withheld).toBe(true);
+    expect(summary.confetti).toBe(false);
+    expect(summary.session.workSeconds).toBe(600);
+  });
+
+  it('a scheduled session stopped before its planned end earns no XP, but full XP when it runs to the end', async () => {
+    const node = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Sched' } })
+    ).json().node;
+    let plannedEndAt = new Date(Date.parse(t.clock.now) + 30 * 60_000).toISOString();
+    let start = await t.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'scheduled', plannedEndAt },
+    });
+    advanceClock(t, 15);
+    let res = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${start.json().active.session.id}/end`,
+      payload: {},
+    });
+    expect(res.json().summary.endedEarly).toBe(true);
+    expect(res.json().summary.xp.total).toBe(0);
+
+    plannedEndAt = new Date(Date.parse(t.clock.now) + 20 * 60_000).toISOString();
+    start = await t.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'scheduled', plannedEndAt },
+    });
+    advanceClock(t, 20);
+    res = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${start.json().active.session.id}/end`,
+      payload: {},
+    });
+    expect(res.json().summary.endedEarly).toBe(false);
+    expect(res.json().summary.xp.base).toBe(40);
   });
 });

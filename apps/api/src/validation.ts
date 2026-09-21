@@ -124,6 +124,7 @@ export const settingsSchema = z
         panel: z.enum(['opaque', 'glass', 'custom']),
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),
+        extensionBackground: z.string().max(32),
       })
       .partial(),
     blocking: z

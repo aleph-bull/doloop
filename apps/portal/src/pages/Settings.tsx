@@ -27,6 +27,7 @@ import {
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
+import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { keys } from '../lib/queries';
@@ -271,6 +272,14 @@ export function Settings() {
             })}
           </div>
         </div>
+        <ExtensionBackgroundPicker
+          value={s.theme.extensionBackground}
+          hasUpload={s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD}
+          level={level}
+          purchased={purchased}
+          theme={theme}
+          onChange={(v) => patch({ theme: { extensionBackground: v } })}
+        />
         <PanelSettings
           panel={s.theme.panel}
           panelColor={s.theme.panelColor}
@@ -330,35 +339,16 @@ export function Settings() {
 
       <Section id="timer" title="Timer">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <NumberField
-            label="Work (min)"
-            value={s.pomodoro.workMin}
-            min={1}
-            max={180}
-            onCommit={(v) => patch({ pomodoro: { workMin: v } })}
-          />
-          <NumberField
-            label="Short break"
-            value={s.pomodoro.shortBreakMin}
-            min={1}
-            max={60}
-            onCommit={(v) => patch({ pomodoro: { shortBreakMin: v } })}
-          />
-          <NumberField
-            label="Long break"
-            value={s.pomodoro.longBreakMin}
-            min={1}
-            max={120}
-            onCommit={(v) => patch({ pomodoro: { longBreakMin: v } })}
-          />
-          <NumberField
-            label="Cycles before long"
-            value={s.pomodoro.cyclesBeforeLong}
-            min={1}
-            max={12}
-            onCommit={(v) => patch({ pomodoro: { cyclesBeforeLong: v } })}
-          />
+          <Input label="Work (min)" value={s.pomodoro.workMin} disabled readOnly />
+          <Input label="Short break" value={s.pomodoro.shortBreakMin} disabled readOnly />
+          <Input label="Long break" value={s.pomodoro.longBreakMin} disabled readOnly />
+          <Input label="Cycles before long" value={s.pomodoro.cyclesBeforeLong} disabled readOnly />
         </div>
+        <p className="field-hint">
+          Interval lengths are fixed so XP cannot be farmed with short intervals. A pomodoro ended
+          before its first work interval, or a scheduled session stopped before its planned end,
+          earns no XP.
+        </p>
         <Toggle
           checked={s.pomodoro.autoStartBreaks}
           onChange={(v) => patch({ pomodoro: { autoStartBreaks: v } })}

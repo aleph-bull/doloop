@@ -1,19 +1,28 @@
 import type { Distracted, PaceStatus } from './types';
 
-/** All XP constants in one place so they can be tuned (spec §6). */
+/**
+ * XP constants, all in one place so they can be tuned.
+ *
+ * Everything scales with focused time: the base is per work minute and every bonus is a
+ * percentage of that base. The streak bonus is a fixed amount per streak day. A session
+ * cancelled before its first work interval (pomodoro) or planned end (scheduled) earns nothing.
+ */
 export const XP = {
-  BASE_FLAT: 10,
-  BASE_PER_5_MIN: 1,
-  REVIEW_SUBMITTED: 5,
-  FOCUS_NO: 15,
-  FOCUS_A_LITTLE: 5,
-  FOCUS_A_LOT: 0,
-  PLANNED_BLOCK: 10,
-  ON_PACE: 10,
-  ESTIMATE_BEAT: 10,
-  STREAK_MULT_PER_DAY: 0.01,
-  STREAK_MULT_CAP_DAYS: 30,
-  LEVEL_DIVISOR: 50,
+  /** XP per focused minute. */
+  PER_MINUTE: 2,
+  /** Bonus percentages applied to the base. */
+  REVIEW_SUBMITTED_PCT: 10,
+  FOCUS_NO_PCT: 20,
+  FOCUS_A_LITTLE_PCT: 5,
+  FOCUS_A_LOT_PCT: 0,
+  PLANNED_BLOCK_PCT: 10,
+  ON_PACE_PCT: 10,
+  ESTIMATE_BEAT_PCT: 20,
+  /** Flat XP per streak day, capped. */
+  STREAK_PER_DAY: 1,
+  STREAK_CAP_DAYS: 30,
+  /** Level = floor(sqrt(xp / LEVEL_DIVISOR)). */
+  LEVEL_DIVISOR: 100,
 } as const;
 
 export interface SessionXpInput {
@@ -28,48 +37,68 @@ export interface SessionXpInput {
   loggedWorkMinutesAfter: number;
   estimatedMinutes: number | null;
   streakCurrent: number;
+  /** True when the session was cancelled early (see `isEndedEarly`). No XP at all. */
+  endedEarly?: boolean;
 }
 
 export interface SessionXpBreakdown {
+  /** XP from focused minutes. */
   base: number;
   reviewSubmitted: number;
   focus: number;
   plannedBlock: number;
   onPace: number;
   estimateBeat: number;
-  subtotal: number;
-  streakMult: number;
+  /** Flat streak bonus. */
+  streakBonus: number;
   total: number;
+  /** True when nothing was awarded because the session ended early. */
+  withheld: boolean;
 }
 
-export function streakMultiplier(streakCurrent: number): number {
-  const days = Math.max(0, Math.min(streakCurrent, XP.STREAK_MULT_CAP_DAYS));
-  return 1 + days * XP.STREAK_MULT_PER_DAY;
+export function streakBonus(streakCurrent: number): number {
+  return Math.max(0, Math.min(streakCurrent, XP.STREAK_CAP_DAYS)) * XP.STREAK_PER_DAY;
 }
 
-export function focusXp(distracted: Distracted | null): number {
-  if (distracted === 'no') return XP.FOCUS_NO;
-  if (distracted === 'a-little') return XP.FOCUS_A_LITTLE;
-  return XP.FOCUS_A_LOT;
+export function focusPct(distracted: Distracted | null): number {
+  if (distracted === 'no') return XP.FOCUS_NO_PCT;
+  if (distracted === 'a-little') return XP.FOCUS_A_LITTLE_PCT;
+  return XP.FOCUS_A_LOT_PCT;
 }
 
-/** XP for one session. All terms are additive and non-negative. */
+const pct = (base: number, p: number) => Math.floor((base * p) / 100);
+
+/** XP for one session. Every term is non-negative and proportional to focused time. */
 export function computeSessionXp(input: SessionXpInput): SessionXpBreakdown {
-  const workMinutes = Math.max(0, Math.floor(input.workMinutes));
-  const base = XP.BASE_FLAT + Math.floor(workMinutes / 5) * XP.BASE_PER_5_MIN;
-  const reviewSubmitted = input.reviewSubmitted ? XP.REVIEW_SUBMITTED : 0;
-  const focus = focusXp(input.distracted);
-  const plannedBlock = input.overlapsPlannedBlock ? XP.PLANNED_BLOCK : 0;
-  const onPace = input.statusAfter === 'on-track' || input.statusAfter === 'done' ? XP.ON_PACE : 0;
+  const zero: SessionXpBreakdown = {
+    base: 0,
+    reviewSubmitted: 0,
+    focus: 0,
+    plannedBlock: 0,
+    onPace: 0,
+    estimateBeat: 0,
+    streakBonus: 0,
+    total: 0,
+    withheld: false,
+  };
+  if (input.endedEarly) return { ...zero, withheld: true };
+  const minutes = Math.max(0, Math.floor(input.workMinutes));
+  if (minutes === 0) return zero;
+  const base = minutes * XP.PER_MINUTE;
+  const reviewSubmitted = input.reviewSubmitted ? pct(base, XP.REVIEW_SUBMITTED_PCT) : 0;
+  const focus = pct(base, focusPct(input.distracted));
+  const plannedBlock = input.overlapsPlannedBlock ? pct(base, XP.PLANNED_BLOCK_PCT) : 0;
+  const onPace =
+    input.statusAfter === 'on-track' || input.statusAfter === 'done'
+      ? pct(base, XP.ON_PACE_PCT)
+      : 0;
   const estimateBeat =
     input.nodeJustCompleted &&
     input.estimatedMinutes !== null &&
     input.loggedWorkMinutesAfter <= input.estimatedMinutes
-      ? XP.ESTIMATE_BEAT
+      ? pct(base, XP.ESTIMATE_BEAT_PCT)
       : 0;
-  const subtotal = base + reviewSubmitted + focus + plannedBlock + onPace + estimateBeat;
-  const streakMult = streakMultiplier(input.streakCurrent);
-  const total = Math.floor(subtotal * streakMult);
+  const streak = streakBonus(input.streakCurrent);
   return {
     base,
     reviewSubmitted,
@@ -77,13 +106,36 @@ export function computeSessionXp(input: SessionXpInput): SessionXpBreakdown {
     plannedBlock,
     onPace,
     estimateBeat,
-    subtotal,
-    streakMult,
-    total,
+    streakBonus: streak,
+    total: base + reviewSubmitted + focus + plannedBlock + onPace + estimateBeat + streak,
+    withheld: false,
   };
 }
 
-/** Level = floor(sqrt(xp / 50)). */
+export interface EndedEarlyInput {
+  mode: 'pomodoro' | 'unlimited' | 'scheduled';
+  /** Completed work intervals (pomodoro). */
+  cycle: number;
+  /** Scheduled: ended by the timer rather than the user. */
+  autoEnded: boolean;
+  endedAt: string | null;
+  plannedEndAt: string | null;
+}
+
+/**
+ * A pomodoro cancelled before its first work interval completes, or a scheduled session
+ * stopped before its planned end, counts as ended early. Unlimited sessions never do.
+ */
+export function isEndedEarly(t: EndedEarlyInput): boolean {
+  if (t.mode === 'pomodoro') return t.cycle < 1;
+  if (t.mode === 'scheduled') {
+    if (t.autoEnded || !t.plannedEndAt || !t.endedAt) return false;
+    return Date.parse(t.endedAt) < Date.parse(t.plannedEndAt);
+  }
+  return false;
+}
+
+/** Level = floor(sqrt(xp / LEVEL_DIVISOR)). */
 export function levelForXp(xp: number): number {
   return Math.floor(Math.sqrt(Math.max(0, xp) / XP.LEVEL_DIVISOR));
 }

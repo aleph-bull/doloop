@@ -56,6 +56,11 @@ export function RewardOverlay({
           <h2 className="text-2xl leading-tight">{summary.phrase.text}</h2>
         )}
         {!phrasesEnabled && <h2 className="text-2xl">Session saved</h2>}
+        {summary.endedEarly && (
+          <p className="muted">
+            Ended early, so no XP this time. The minutes still count toward your tasks.
+          </p>
+        )}
 
         <div className="flex items-baseline gap-3">
           <span className="reward-xp">+{x.total}</span>
@@ -82,13 +87,13 @@ export function RewardOverlay({
                 <span className="tabular">+{v}</span>
               </li>
             ))}
-          {x.streakMult > 1 && (
+          {x.streakBonus > 0 && (
             <li
               className="flex justify-between col-span-2 border-t pt-1 mt-1"
               style={{ borderColor: 'var(--border)' }}
             >
-              <span className="muted">Streak bonus</span>
-              <span className="tabular">×{x.streakMult.toFixed(2)}</span>
+              <span className="muted">Streak bonus ({summary.streak.current} days)</span>
+              <span className="tabular">+{x.streakBonus}</span>
             </li>
           )}
         </ul>

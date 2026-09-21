@@ -147,8 +147,11 @@ async function poll(): Promise<Snapshot | null> {
     };
     await set({ snapshot, lastError: null });
     // Uploaded background: download once per change, drop when no longer in use.
+    const th = me.user.settings.theme;
     const wantsUpload =
-      me.user.settings.theme.customBackgroundUrl === 'upload' && me.backgroundUpdatedAt;
+      me.backgroundUpdatedAt &&
+      (th.extensionBackground === 'upload' ||
+        (th.extensionBackground === 'same' && th.customBackgroundUrl === 'upload'));
     const cached = await get('customBackground');
     if (!wantsUpload) {
       if (cached) await set({ customBackground: null });

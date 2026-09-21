@@ -103,6 +103,7 @@ export interface EndSummary {
   badges: string[];
   confetti: boolean;
   isFirstSessionOnNode: boolean;
+  endedEarly: boolean;
 }
 
 export type DailyPick = { kind: 'quote'; item: Quote } | { kind: 'tip'; item: ResearchTip };

@@ -52,6 +52,14 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     const bg = patch.theme?.backgroundId;
     if (bg && !isBackgroundAvailable(bg, req.user.level, req.user.purchasedBackgrounds))
       throw badRequest('That background is locked or not yet purchased');
+    const ext = patch.theme?.extensionBackground;
+    if (
+      ext &&
+      ext !== 'same' &&
+      ext !== 'upload' &&
+      !isBackgroundAvailable(ext, req.user.level, req.user.purchasedBackgrounds)
+    )
+      throw badRequest('That background is locked or not yet purchased');
     const row = await updateSettings(db, req.user, patch);
     return { settings: toUser(row).settings };
   });

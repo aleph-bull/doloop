@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { applyUserTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
+import {
+  applyUserTheme,
+  Backdrop,
+  Button,
+  Glass,
+  resolveExtensionBackdrop,
+  resolveTheme,
+} from '@doloop/ui';
 import { getAll, type Stored } from '../lib/storage';
 
 const FALLBACK_PORTAL = import.meta.env.VITE_PORTAL_URL ?? 'http://localhost:5173';
@@ -14,16 +21,15 @@ export function Options() {
     if (settings) applyUserTheme(settings);
   }, [settings]);
   const portal = store?.connection?.portalUrl ?? FALLBACK_PORTAL;
-  const customImageUrl =
-    settings?.theme.customBackgroundUrl === 'upload'
-      ? (store?.customBackground?.dataUrl ?? null)
-      : (settings?.theme.customBackgroundUrl ?? null);
+  const choice = settings
+    ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
+    : { backgroundId: 'aurora', customImageUrl: null };
   return (
     <main style={{ padding: 32, maxWidth: 520 }}>
       <Backdrop
-        backgroundId={settings?.theme.backgroundId ?? 'aurora'}
+        backgroundId={choice.backgroundId}
         theme={settings ? resolveTheme(settings.theme.mode) : 'dark'}
-        customImageUrl={customImageUrl}
+        customImageUrl={choice.customImageUrl}
       />
       <Glass
         className="card"

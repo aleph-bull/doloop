@@ -8,7 +8,14 @@ import {
 } from '@doloop/core';
 import { ExternalLink, Pause, Play, SkipForward, Square } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { applyUserTheme, Backdrop, Button, Chip, Glass } from '@doloop/ui';
+import {
+  applyUserTheme,
+  Backdrop,
+  Button,
+  Chip,
+  Glass,
+  resolveExtensionBackdrop,
+} from '@doloop/ui';
 import { resolveTheme as resolveThemeSafe } from '@doloop/ui';
 import { getAll, onChange, set, type Stored } from '../lib/storage';
 
@@ -56,6 +63,7 @@ export function Popup() {
     xp: number;
     phrase: string | null;
     badges: string[];
+    endedEarly: boolean;
   } | null>(null);
   const [startMode, setStartMode] = useState<'pomodoro' | 'unlimited'>('pomodoro');
   const [startNode, setStartNode] = useState('');
@@ -101,15 +109,14 @@ export function Popup() {
     if (settings) applyUserTheme(settings);
   }, [settings]);
   const resolvedTheme = settings ? resolveThemeSafe(settings.theme.mode) : 'dark';
-  const customImageUrl =
-    settings?.theme.customBackgroundUrl === 'upload'
-      ? (store?.customBackground?.dataUrl ?? null)
-      : (settings?.theme.customBackgroundUrl ?? null);
+  const choice = settings
+    ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
+    : { backgroundId: 'aurora', customImageUrl: null };
   const backdrop = (
     <Backdrop
-      backgroundId={settings?.theme.backgroundId ?? 'aurora'}
+      backgroundId={choice.backgroundId}
       theme={resolvedTheme}
-      customImageUrl={customImageUrl}
+      customImageUrl={choice.customImageUrl}
     />
   );
 
@@ -162,13 +169,20 @@ export function Popup() {
       xp: { total: number };
       phrase: { text: string } | null;
       badges: string[];
+      endedEarly?: boolean;
     }>({
       type: 'end',
       sessionId: active.session.id,
       review: rev,
     });
     setReview(null);
-    if (r) setSummary({ xp: r.xp.total, phrase: r.phrase?.text ?? null, badges: r.badges ?? [] });
+    if (r)
+      setSummary({
+        xp: r.xp.total,
+        phrase: r.phrase?.text ?? null,
+        badges: r.badges ?? [],
+        endedEarly: r.endedEarly ?? false,
+      });
   };
 
   const portal = store?.connection?.portalUrl ?? 'http://localhost:5173';
@@ -197,6 +211,7 @@ export function Popup() {
         <Glass className="card stack">
           {summary.phrase && <h1>{summary.phrase}</h1>}
           <div className="xp">+{summary.xp} XP</div>
+          {summary.endedEarly && <p>Ended early, so no XP this time.</p>}
           {summary.badges.length > 0 && <p>Badge unlocked: {summary.badges.join(', ')}</p>}
           <p>Session saved. Details are in the portal.</p>
           <Button variant="primary" onClick={() => setSummary(null)}>

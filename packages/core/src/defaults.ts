@@ -26,6 +26,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     panel: 'opaque',
     panelColor: '#151827',
     panelAlpha: 0.92,
+    extensionBackground: 'same',
   },
   blocking: { enabled: false, domains: [] },
   calendar: {

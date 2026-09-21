@@ -58,6 +58,8 @@ export interface UserSettings {
     panelColor: string;
     /** 0..1 opacity for panel 'custom'. */
     panelAlpha: number;
+    /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
+    extensionBackground: string;
   };
   blocking: { enabled: boolean; domains: string[] };
   calendar: {

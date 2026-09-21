@@ -2,6 +2,7 @@ import {
   advance,
   buildIndex,
   formatClock,
+  isEndedEarly,
   isUnderAssessment,
   viewTimer,
   type AdvanceOptions,
@@ -45,6 +46,7 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
   const [now, setNow] = useState(() => Date.now());
   const [reviewOpen, setReviewOpen] = useState(false);
   const [idleOpen, setIdleOpen] = useState(false);
+  const [earlyOpen, setEarlyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const endingRef = useRef(false);
 
@@ -159,7 +161,20 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
     }
   };
 
-  const stop = async () => {
+  const wouldEndEarly = isEndedEarly({
+    mode: timer.mode,
+    cycle: timer.cycle,
+    autoEnded: timer.autoEnded,
+    endedAt: nowIso,
+    plannedEndAt: timer.plannedEndAt,
+  });
+
+  const stop = async (confirmed = false) => {
+    if (wouldEndEarly && !confirmed) {
+      setEarlyOpen(true);
+      return;
+    }
+    setEarlyOpen(false);
     // Bank work now so filling in the review does not count as study time.
     if (timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break') {
       await send({ type: 'pause' });
@@ -275,11 +290,33 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
             </Button>
           )}
           <span className="flex-1" />
-          <Button variant="danger" onClick={stop} disabled={busy || timer.phase === 'idle'}>
+          <Button variant="danger" onClick={() => stop()} disabled={busy || timer.phase === 'idle'}>
             <Square size={14} aria-hidden /> Stop
           </Button>
         </div>
       </Glass>
+
+      <Modal
+        open={earlyOpen}
+        onClose={() => setEarlyOpen(false)}
+        title="End early?"
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setEarlyOpen(false)}>
+              Keep going
+            </Button>
+            <Button variant="danger" onClick={() => stop(true)}>
+              End without XP
+            </Button>
+          </>
+        }
+      >
+        <p className="muted">
+          {timer.mode === 'pomodoro'
+            ? 'The first work interval is not finished. Ending now logs the minutes but earns no XP.'
+            : 'The planned end has not arrived. Ending now logs the minutes but earns no XP.'}
+        </p>
+      </Modal>
 
       <Modal
         open={idleOpen}
