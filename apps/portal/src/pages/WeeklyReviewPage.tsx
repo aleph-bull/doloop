@@ -1,9 +1,10 @@
 import { addDays } from '@doloop/core';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@doloop/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { fmtDate, fmtHours } from '../lib/format';
+import { useLocalDraft } from '../lib/local-state';
 import { useSaveWeeklyNote, useWeeklyReview } from '../lib/queries';
 
 const DAY = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -14,11 +15,11 @@ export function WeeklyReviewPage() {
   const q = useWeeklyReview(weekStart);
   const save = useSaveWeeklyNote();
   const { toast } = useToast();
-  const [note, setNote] = useState('');
-
-  useEffect(() => {
-    if (q.data) setNote(q.data.note ?? '');
-  }, [q.data]);
+  // Kept in this browser, so a half-written note survives a reload or a refetch.
+  const [note, setNote, clearNoteDraft] = useLocalDraft(
+    `weekly-review.${q.data?.review.weekStart ?? weekStart ?? 'current'}`,
+    q.data?.note ?? '',
+  );
 
   if (q.isError)
     return (
@@ -128,7 +129,10 @@ export function WeeklyReviewPage() {
             onClick={() =>
               save
                 .mutateAsync({ weekStart: r.weekStart, note })
-                .then(() => toast('Saved', { tone: 'ok' }))
+                .then(() => {
+                  clearNoteDraft();
+                  toast('Saved', { tone: 'ok' });
+                })
                 .catch((e) => toast(e.message))
             }
           >

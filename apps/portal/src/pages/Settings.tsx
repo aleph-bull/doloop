@@ -32,6 +32,7 @@ import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
 import { useQueryClient } from '@tanstack/react-query';
+import { clearQueryCache } from '../lib/persist';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import {
@@ -704,6 +705,16 @@ export function Settings() {
             Export my data (JSON)
           </Button>
           <Button
+            variant="secondary"
+            onClick={async () => {
+              await clearQueryCache();
+              qc.clear();
+              toast('Offline copy cleared', { tone: 'ok' });
+            }}
+          >
+            Clear offline copy
+          </Button>
+          <Button
             variant="danger"
             onClick={async () => {
               if (!window.confirm('Delete your account and all data? This cannot be undone.'))
@@ -718,6 +729,8 @@ export function Settings() {
         </div>
         <p className="field-hint">
           Signed in as {me.data!.user.email || auth.email}. No analytics or tracking SDKs are used.
+          Doloop keeps a copy of your data in this browser so it opens instantly and still works
+          offline; that copy never leaves the device and is cleared when you sign out.
         </p>
       </Section>
     </div>

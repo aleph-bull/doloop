@@ -4,6 +4,7 @@ import { Spinner } from '@doloop/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
 import { useAuth } from './lib/auth';
+import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
 import { Today } from './pages/Today';
@@ -81,6 +82,7 @@ function Gate({ children }: { children: ReactNode }) {
 }
 
 export function App() {
+  useCachePersistence();
   return (
     <ErrorBoundary>
       <Suspense fallback={fallback}>

@@ -202,6 +202,21 @@
   gap: 8px;
 }
 
+.offline-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-md);
+  color: var(--fg-on-glass);
+}
+.offline-bar svg {
+  flex-shrink: 0;
+  color: var(--status-warn);
+}
+
 /* ---------- analytics ---------- */
 
 .stat-row {

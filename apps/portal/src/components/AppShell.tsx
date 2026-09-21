@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router';
-import { Flame, LogOut, Settings as SettingsIcon } from 'lucide-react';
+import { Flame, LogOut, Settings as SettingsIcon, WifiOff } from 'lucide-react';
 import { applyTheme, applyUserTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
 import { CUSTOM_BACKGROUND_UPLOAD, levelProgress as levelProgressView } from '@doloop/core';
 import { useAuth } from '../lib/auth';
+import { useOnlineStatus } from '../lib/local-state';
 import { useCustomBackground, useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { ErrorBoundary } from './ErrorState';
@@ -22,6 +23,7 @@ export function AppShell() {
   const auth = useAuth();
   const navigate = useNavigate();
   const settings = me.data?.user.settings;
+  const online = useOnlineStatus();
   // Hands the session to the Chrome extension whenever the shell mounts.
   useExtensionStatus();
 
@@ -109,6 +111,15 @@ export function AppShell() {
         </div>
       </Glass>
       <main id="main" className="page" tabIndex={-1}>
+        {!online && (
+          <Glass className="offline-bar" role="status">
+            <WifiOff size={16} aria-hidden />
+            <span>
+              You are offline. This is your saved data — it will refresh once you reconnect, and
+              anything you change now will not be saved.
+            </span>
+          </Glass>
+        )}
         <ErrorBoundary>
           <Outlet />
         </ErrorBoundary>
