@@ -67,6 +67,37 @@ export function ancestors(index: NodeIndex, nodeId: string): StudyNode[] {
   return out;
 }
 
+export const PATH_SEPARATOR = ' \u203a ';
+
+/**
+ * Titles of a node's ancestors from the root down to its parent, e.g. ["Biology", "Unit 3"].
+ * Works on any id map so lightweight clients (the extension snapshot) can use it too.
+ */
+export function ancestorTitles(
+  byId: ReadonlyMap<string, { title: string; parentId: string | null }>,
+  nodeId: string,
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>([nodeId]);
+  let cur = byId.get(nodeId);
+  while (cur?.parentId && !seen.has(cur.parentId)) {
+    seen.add(cur.parentId);
+    const p = byId.get(cur.parentId);
+    if (!p) break;
+    out.unshift(p.title);
+    cur = p;
+  }
+  return out;
+}
+
+/** "Biology › Unit 3" for a node, or "" for a root. */
+export function pathLabel(
+  byId: ReadonlyMap<string, { title: string; parentId: string | null }>,
+  nodeId: string,
+): string {
+  return ancestorTitles(byId, nodeId).join(PATH_SEPARATOR);
+}
+
 /** The root course for a node (or the node itself if it is a root). */
 export function rootOf(index: NodeIndex, nodeId: string): StudyNode | undefined {
   const chain = ancestors(index, nodeId);

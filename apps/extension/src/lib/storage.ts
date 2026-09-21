@@ -26,7 +26,14 @@ export interface Snapshot {
   timezone: string | null;
   /** Leaves the user can start, from the daily plan (already ordered). */
   plan: Array<{ nodeId: string; title: string; suggestedMinutes: number }>;
-  nodes: Array<{ id: string; title: string; kind: string; completedAt: string | null }>;
+  /** Every non-archived node (parents included, for path labels). */
+  nodes: Array<{
+    id: string;
+    title: string;
+    kind: string;
+    parentId: string | null;
+    completedAt: string | null;
+  }>;
   updatedAt: string;
 }
 

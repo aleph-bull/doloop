@@ -1,4 +1,4 @@
-import type { PlanItem, StudyNode } from '@doloop/core';
+import { pathLabel, type PlanItem, type StudyNode } from '@doloop/core';
 import { Play } from 'lucide-react';
 import { Button, Glass } from '@doloop/ui';
 import { fmtDue, fmtMinutes } from '../lib/format';
@@ -25,10 +25,16 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
   }
   const node = nodesById.get(top.nodeId);
   const rest = plan.slice(1, 4);
+  const topPath = pathLabel(nodesById, top.nodeId);
   return (
     <Glass className="p-5 flex flex-col gap-4" as="section" aria-label="Suggested next session">
       <div>
         <div className="subtle text-xs uppercase tracking-wide">Up next</div>
+        {topPath && (
+          <div className="muted text-sm mt-1 truncate" aria-label="In">
+            {topPath}
+          </div>
+        )}
         <div className="flex items-start gap-2 mt-1">
           <h2 className="text-xl flex-1">{top.title}</h2>
           <StatusChip status={top.status} />
@@ -49,12 +55,18 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
       </div>
       {rest.length > 0 && (
         <ul className="text-sm muted flex flex-col gap-1" aria-label="Also today">
-          {rest.map((p) => (
-            <li key={p.nodeId} className="flex justify-between gap-2">
-              <span className="truncate">{p.title}</span>
-              <span className="tabular shrink-0">{fmtMinutes(p.suggestedMinutes)}</span>
-            </li>
-          ))}
+          {rest.map((p) => {
+            const parent = pathLabel(nodesById, p.nodeId);
+            return (
+              <li key={p.nodeId} className="flex justify-between gap-2">
+                <span className="truncate">
+                  {parent && <span className="subtle">{parent} · </span>}
+                  {p.title}
+                </span>
+                <span className="tabular shrink-0">{fmtMinutes(p.suggestedMinutes)}</span>
+              </li>
+            );
+          })}
         </ul>
       )}
     </Glass>

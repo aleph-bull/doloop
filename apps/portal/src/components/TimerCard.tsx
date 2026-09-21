@@ -4,6 +4,7 @@ import {
   formatClock,
   isEndedEarly,
   isUnderAssessment,
+  pathLabel,
   viewTimer,
   type AdvanceOptions,
   type StudyNode,
@@ -65,6 +66,7 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
   const node = nodes.find((n) => n.id === active.session.nodeId);
   const index = useMemo(() => buildIndex(nodes), [nodes]);
   const underAssessment = node ? isUnderAssessment(index, node.id) : false;
+  const nodePath = node ? pathLabel(index.byId, node.id) : '';
 
   // 1 s tick: materialize transitions locally, chime on interval boundaries.
   useEffect(() => {
@@ -212,6 +214,7 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
             <div className="subtle text-xs uppercase tracking-wide">{PHASE_LABEL[timer.phase]}</div>
+            {nodePath && <div className="muted text-sm truncate">{nodePath}</div>}
             <h2 className="text-xl truncate">{active.nodeTitle}</h2>
             <div className="muted text-sm mt-1 flex gap-2 flex-wrap">
               <Chip tone="neutral">

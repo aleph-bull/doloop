@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ancestorTitles,
   ancestors,
   buildIndex,
   childrenOf,
   descendantIds,
   effectiveColor,
   isUnderAssessment,
+  pathLabel,
   rootOf,
   sessionsForSubtree,
 } from './tree';
@@ -69,6 +71,23 @@ describe('buildIndex', () => {
     expect(ancestors(idx, 'q-review').map((a) => a.id)).toEqual(['quiz', 'course']);
     expect(ancestors(idx, 'course')).toEqual([]);
     expect(ancestors(idx, 'nope')).toEqual([]);
+  });
+
+  it('ancestorTitles/pathLabel run root-first and tolerate cycles and orphans', () => {
+    const idx = buildIndex(nodes);
+    expect(ancestorTitles(idx.byId, 'q-review')).toEqual([
+      idx.byId.get('course')!.title,
+      idx.byId.get('quiz')!.title,
+    ]);
+    expect(pathLabel(idx.byId, 'course')).toBe('');
+    expect(pathLabel(idx.byId, 'nope')).toBe('');
+    const loop = new Map([
+      ['a', { title: 'A', parentId: 'b' }],
+      ['b', { title: 'B', parentId: 'a' }],
+      ['c', { title: 'C', parentId: 'ghost' }],
+    ]);
+    expect(ancestorTitles(loop, 'a')).toEqual(['B']);
+    expect(ancestorTitles(loop, 'c')).toEqual([]);
     expect(rootOf(idx, 'q-review')?.id).toBe('course');
     expect(rootOf(idx, 'course')?.id).toBe('course');
   });

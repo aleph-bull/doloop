@@ -1,6 +1,7 @@
 import {
   advance,
   formatClock,
+  pathLabel,
   viewTimer,
   type AdvanceOptions,
   type TimerEvent,
@@ -102,6 +103,10 @@ export function Popup() {
 
   const snapshot = store?.snapshot ?? null;
   const active = snapshot?.active ?? null;
+  const nodesById = useMemo(
+    () => new Map((snapshot?.nodes ?? []).map((n) => [n.id, n] as const)),
+    [snapshot?.nodes],
+  );
   const settings = snapshot?.settings ?? null;
 
   // Same theme, accent, background, and panel surface as the portal.
@@ -298,6 +303,9 @@ export function Popup() {
         {backdrop}
         <Glass className="card stack">
           <div className="phase">{PHASE[timer.phase]}</div>
+          {pathLabel(nodesById, active.session.nodeId) && (
+            <p className="hint">{pathLabel(nodesById, active.session.nodeId)}</p>
+          )}
           <h1 className="title">{active.nodeTitle}</h1>
           <div className="digits tabular">{timer.showTimer ? digits : '· · ·'}</div>
           <div className="row">
@@ -343,7 +351,7 @@ export function Popup() {
   }
 
   // Idle: start a session.
-  const nodes = snapshot?.nodes ?? [];
+  const nodes = (snapshot?.nodes ?? []).filter((n) => n.kind !== 'course' && !n.completedAt);
   const plan = snapshot?.plan ?? [];
   const ordered = [
     ...plan.map((p) => nodes.find((n) => n.id === p.nodeId)).filter(Boolean),
@@ -373,7 +381,9 @@ export function Popup() {
           >
             {ordered.map((n) => (
               <option key={n.id} value={n.id}>
-                {n.title}
+                {pathLabel(nodesById, n.id)
+                  ? `${pathLabel(nodesById, n.id)} · ${n.title}`
+                  : n.title}
               </option>
             ))}
           </select>

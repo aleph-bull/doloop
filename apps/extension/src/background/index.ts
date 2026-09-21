@@ -141,8 +141,14 @@ async function poll(): Promise<Snapshot | null> {
         suggestedMinutes: p.suggestedMinutes,
       })),
       nodes: nodes.nodes
-        .filter((n) => n.kind !== 'course' && !n.completedAt)
-        .map((n) => ({ id: n.id, title: n.title, kind: n.kind, completedAt: n.completedAt })),
+        .filter((n) => !n.archived)
+        .map((n) => ({
+          id: n.id,
+          title: n.title,
+          kind: n.kind,
+          parentId: n.parentId,
+          completedAt: n.completedAt,
+        })),
       updatedAt: active.now,
     };
     await set({ snapshot, lastError: null });
