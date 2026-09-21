@@ -17,3 +17,6 @@ export * from './highlights';
 export * from './analytics';
 export * from './scheduler';
 export * from './badges';
+export * from './rewards';
+export * from './routines';
+export * from './ics-parse';

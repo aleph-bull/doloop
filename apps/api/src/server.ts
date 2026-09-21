@@ -15,6 +15,8 @@ import { analyticsRoutes } from './routes/analytics';
 import { calendarRoutes, type CalendarRouteOptions } from './routes/calendar';
 import { shopRoutes } from './routes/shop';
 import { assetRoutes } from './routes/assets';
+import { rewardRoutes } from './routes/rewards';
+import { routineRoutes } from './routes/routines';
 
 export interface BuildOptions {
   db: Db;
@@ -72,6 +74,8 @@ export async function buildServer(opts: BuildOptions) {
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);
   calendarRoutes(app, opts.db, clock, calendar);
   shopRoutes(app, opts.db, clock);
+  rewardRoutes(app, opts.db, clock);
+  routineRoutes(app, opts.db, clock);
   assetRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);

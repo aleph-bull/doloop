@@ -179,7 +179,9 @@ export const xpTransactions = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     at: ts('at').notNull().defaultNow(),
     delta: integer('delta').notNull(),
-    kind: text('kind', { enum: ['session', 'freeze', 'break-day', 'background'] }).notNull(),
+    kind: text('kind', {
+      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine'],
+    }).notNull(),
     ref: text('ref'),
   },
   (t) => [index('xp_tx_user_at_idx').on(t.userId, t.at)],
@@ -233,6 +235,84 @@ export const userAssets = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.kind] })],
 );
 
+/** User-defined rewards bought with XP. Doloop only enforces the price floor. */
+export const customRewards = pgTable(
+  'custom_rewards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    note: text('note'),
+    emoji: text('emoji'),
+    costXp: integer('cost_xp').notNull(),
+    /** 0 = redeemable whenever it is affordable. */
+    cooldownDays: integer('cooldown_days').notNull().default(0),
+    archived: boolean('archived').notNull().default(false),
+    lastRedeemedAt: ts('last_redeemed_at'),
+    redeemedCount: integer('redeemed_count').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('custom_rewards_user_idx').on(t.userId)],
+);
+
+/** Recurring tasks: daily/weekly/monthly things that are ticked off rather than timed. */
+export const routines = pgTable(
+  'routines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    note: text('note'),
+    estimatedMinutes: integer('estimated_minutes').notNull(),
+    freq: text('freq', { enum: ['daily', 'weekly', 'monthly'] }).notNull(),
+    interval: integer('interval').notNull().default(1),
+    byWeekday: jsonb('by_weekday').$type<number[]>().notNull().default([]),
+    byMonthday: jsonb('by_monthday').$type<number[]>().notNull().default([]),
+    startDate: text('start_date').notNull(),
+    endDate: text('end_date'),
+    source: text('source', { enum: ['app', 'ics'] })
+      .notNull()
+      .default('app'),
+    icsUid: text('ics_uid'),
+    archived: boolean('archived').notNull().default(false),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('routines_user_idx').on(t.userId),
+    // Re-importing the same calendar updates rather than duplicates.
+    uniqueIndex('routines_ics_uid_idx').on(t.userId, t.icsUid),
+  ],
+);
+
+/** One tick of one occurrence. The unique index is what makes ticking idempotent. */
+export const routineCompletions = pgTable(
+  'routine_completions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    routineId: uuid('routine_id')
+      .notNull()
+      .references(() => routines.id, { onDelete: 'cascade' }),
+    /** The occurrence date, as a calendar day in the user's timezone. */
+    date: text('date').notNull(),
+    completedAt: ts('completed_at').notNull().defaultNow(),
+    minutes: integer('minutes').notNull(),
+    xpAwarded: integer('xp_awarded').notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex('routine_completions_once_idx').on(t.routineId, t.date),
+    index('routine_completions_user_date_idx').on(t.userId, t.date),
+  ],
+);
+
 /** Streak events (counted days are implicit; only freezes and resets are logged). */
 export const streakEvents = pgTable(
   'streak_events',
@@ -275,6 +355,9 @@ export const schema = {
   googleCalendar,
   streakEvents,
   userAssets,
+  customRewards,
+  routines,
+  routineCompletions,
 };
 
 export type UserRow = typeof users.$inferSelect;
@@ -282,3 +365,6 @@ export type NodeRow = typeof nodes.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type PlannedBlockRow = typeof plannedBlocks.$inferSelect;
 export type RestDayPolicyRow = typeof restDayPolicies.$inferSelect;
+export type CustomRewardRow = typeof customRewards.$inferSelect;
+export type RoutineRow = typeof routines.$inferSelect;
+export type RoutineCompletionRow = typeof routineCompletions.$inferSelect;

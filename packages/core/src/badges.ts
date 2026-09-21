@@ -1,4 +1,4 @@
-import { localHour, toLocalDate } from './dates';
+import { addDays, dayOfWeek, localHour, startOfWeekMonday, toLocalDate } from './dates';
 import type { ISODate, PlannedBlock, Session, StreakState, StudyNode } from './types';
 
 /** Badge catalogue (spec §7). Keys are stable; conditions are evaluated in `evaluateBadges`. */
@@ -37,6 +37,83 @@ export const BADGES: BadgeDef[] = [
     name: 'Unassisted 30',
     description: 'A 30-day streak without using a freeze.',
   },
+  // --- volume ---
+  { key: 'hours-10', name: 'Ten hours', description: 'Ten hours of focused work, all time.' },
+  { key: 'hours-50', name: 'Fifty hours', description: 'Fifty hours of focused work, all time.' },
+  {
+    key: 'hours-100',
+    name: 'Century of hours',
+    description: 'One hundred hours of focused work, all time.',
+  },
+  {
+    key: 'sessions-100',
+    name: 'Hundred sessions',
+    description: 'Finish one hundred sessions.',
+  },
+  // --- rhythm ---
+  { key: 'night-owl', name: 'Night owl', description: 'Start five sessions after 22:00.' },
+  {
+    key: 'weekend-warrior',
+    name: 'Weekend warrior',
+    description: 'Study on both days of the same weekend, five times.',
+  },
+  {
+    key: 'full-week',
+    name: 'Full week',
+    description: 'Study on all seven days of one calendar week.',
+  },
+  {
+    key: 'marathon',
+    name: 'Marathon',
+    description: 'Four hours of focused work in a single day.',
+  },
+  {
+    key: 'deep-work',
+    name: 'Deep work',
+    description: 'A single session of two hours or more.',
+  },
+  // --- habits ---
+  {
+    key: 'routine-starter',
+    name: 'Routine starter',
+    description: 'Tick off your first recurring task.',
+  },
+  {
+    key: 'routine-50',
+    name: 'Creature of habit',
+    description: 'Tick off fifty recurring tasks.',
+  },
+  {
+    key: 'routine-perfect-week',
+    name: 'Perfect week',
+    description: 'Complete every recurring task due in one calendar week.',
+  },
+  // --- reflection and rewards ---
+  {
+    key: 'reviewer-25',
+    name: 'Reflective',
+    description: 'Submit twenty-five end-of-session reviews.',
+  },
+  {
+    key: 'weekly-reviewer',
+    name: 'Looking back',
+    description: 'Write notes on four weekly reviews.',
+  },
+  {
+    key: 'first-reward',
+    name: 'Well earned',
+    description: 'Redeem a reward you set for yourself.',
+  },
+  {
+    key: 'reward-5',
+    name: 'Paid in full',
+    description: 'Redeem five rewards.',
+  },
+  {
+    key: 'course-complete-3',
+    name: 'Three down',
+    description: 'Mark three courses as done.',
+  },
 ];
 
 export interface BadgeInput {
@@ -52,6 +129,18 @@ export interface BadgeInput {
   unlocked: string[];
   /** Today's date in the user's timezone, for the no-freeze window. */
   today: ISODate;
+  /** Recurring-task ticks, for the habit badges. Absent is treated as none. */
+  routineTicks?: RoutineTick[];
+  /** Weeks (Monday, user tz) in which every due recurring task was ticked. */
+  perfectRoutineWeeks?: number;
+  /** How many custom rewards have been redeemed. */
+  rewardsRedeemed?: number;
+  /** How many weekly reviews carry a written note. */
+  weeklyNotes?: number;
+}
+
+export interface RoutineTick {
+  date: ISODate;
 }
 
 function overlapsBlock(s: Session, blocks: PlannedBlock[]): boolean {
@@ -103,8 +192,55 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (best >= 30) done.add('streak-30');
   if (best >= 100) done.add('streak-100');
 
-  if (input.nodes.some((n) => n.kind === 'course' && n.completedAt && !n.archived))
-    done.add('course-complete');
+  const courses = input.nodes.filter((n) => n.kind === 'course' && n.completedAt && !n.archived);
+  if (courses.length >= 1) done.add('course-complete');
+  if (courses.length >= 3) done.add('course-complete-3');
+
+  /* --- volume --- */
+  const totalMinutes = sessions.reduce((a, s) => a + s.workSeconds / 60, 0);
+  if (totalMinutes >= 10 * 60) done.add('hours-10');
+  if (totalMinutes >= 50 * 60) done.add('hours-50');
+  if (totalMinutes >= 100 * 60) done.add('hours-100');
+  if (sessions.length >= 100) done.add('sessions-100');
+  if (sessions.some((s) => s.workSeconds >= 2 * 3600)) done.add('deep-work');
+
+  /* --- rhythm --- */
+  if (sessions.filter((s) => localHour(s.startedAt, input.timezone) >= 22).length >= 5)
+    done.add('night-owl');
+
+  const minutesByDay = new Map<ISODate, number>();
+  for (const s of sessions) {
+    const d = toLocalDate(s.startedAt, input.timezone);
+    minutesByDay.set(d, (minutesByDay.get(d) ?? 0) + s.workSeconds / 60);
+  }
+  if ([...minutesByDay.values()].some((m) => m >= 4 * 60)) done.add('marathon');
+
+  const studiedDays = new Set(minutesByDay.keys());
+  // A weekend counts when both its Saturday and the following Sunday were studied.
+  let weekends = 0;
+  for (const d of studiedDays) {
+    if (dayOfWeek(d) === 6 && studiedDays.has(addDays(d, 1))) weekends++;
+  }
+  if (weekends >= 5) done.add('weekend-warrior');
+
+  const weekDayCounts = new Map<ISODate, Set<ISODate>>();
+  for (const d of studiedDays) {
+    const wk = startOfWeekMonday(d);
+    if (!weekDayCounts.has(wk)) weekDayCounts.set(wk, new Set());
+    weekDayCounts.get(wk)!.add(d);
+  }
+  if ([...weekDayCounts.values()].some((days) => days.size >= 7)) done.add('full-week');
+
+  /* --- habits, reflection, rewards --- */
+  const ticks = input.routineTicks ?? [];
+  if (ticks.length >= 1) done.add('routine-starter');
+  if (ticks.length >= 50) done.add('routine-50');
+  if ((input.perfectRoutineWeeks ?? 0) >= 1) done.add('routine-perfect-week');
+
+  if (reviewed.length >= 25) done.add('reviewer-25');
+  if ((input.weeklyNotes ?? 0) >= 4) done.add('weekly-reviewer');
+  if ((input.rewardsRedeemed ?? 0) >= 1) done.add('first-reward');
+  if ((input.rewardsRedeemed ?? 0) >= 5) done.add('reward-5');
 
   if (input.streak.current >= 30) {
     // Freeze used within the current 30-day run disqualifies.
