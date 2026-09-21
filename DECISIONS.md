@@ -125,3 +125,45 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 - **Why**: two tasks can share a title ("Test 1"), so the Up Next card was ambiguous.
 - **What**: `ancestorTitles`/`pathLabel` in core build "Course › Topic" from any id map. Shown above the title on the Up Next card, prefixed in the "Also today" list, under the running task in the timer card, and in the extension popup's task picker and active view.
 - **Extension snapshot** now carries every non-archived node with `parentId` (parents included) so the popup can resolve paths; the picker filters to startable leaves itself.
+
+## Custom rewards, routines, analytics, local cache (user request, 2026-09-21)
+
+### Tab logo, backgrounds, interval lengths
+
+- **Favicon** is `apps/portal/public/favicon.svg`, drawn to match the existing extension icon (gradient squircle, open white loop with the gap at 1 o'clock). The gradient stops were sampled from `icon128.png` so tab and extension icon read as the same mark. `apple-touch-icon.png` reuses that PNG.
+- **Custom backgrounds are upload-only.** `theme.customBackgroundUrl` narrows to `'upload' | null` and the settings schema rejects anything else, so a remote image URL can no longer be stored or rendered. This reverses the earlier "the URL option remains for hosted images" decision, at the user's request.
+- **Pomodoro durations are editable again, but only between sessions.** The user asked for them to be changeable "outside of break sessions", read as: not while a session is running. `PATCH /api/me/settings` rejects a duration change when an active session exists, and the fields disable themselves. `POMODORO_LIMITS` keeps work at 10–90 min so the original anti-farming reason — clearing the "no XP before the first work interval" gate with a 1-minute interval — still cannot happen. This supersedes the "durations are locked" decision above.
+
+### Custom rewards
+
+- **The user defines the reward; Doloop only enforces the price.** Minimum 150 XP, roughly an hour of focused work, so XP always has to be earned before it buys anything. No content judgement — "doomscroll for an hour" is a legitimate reward.
+- **Optional cooldown** (0–90 days) so a reward can be once-a-week rather than whenever affordable. Counted in whole local calendar days from the last redemption.
+- **Redemptions are written to `xp_transactions`** (`kind: 'reward'`, `ref` = reward id), so history survives deleting the reward and the badge counts come from the ledger rather than a denormalised field.
+- **The redeem animation is deliberately different from the session overlay**: an emoji burst keyed to the reward's own icon (`fireRewardBurst` in `@doloop/ui`) over confetti a beat later. Both respect `data-motion` and the OS reduced-motion preference.
+
+### Recurring tasks (routines)
+
+- **Ticked off, not timed.** A routine carries an estimate and earns XP per tick at 1 XP per estimated minute — half the focused-session rate, because it is self-reported — capped at 60 XP per tick and 120 XP per day.
+- **XP is banked against the occurrence's own date**, not today, so catching up on a backlog draws on each day's budget instead of bypassing the daily cap. Ticks are idempotent by `(routine, date)` via a unique index; future dates are refused; unticking refunds exactly what was paid.
+- **Recurrence is DAILY/WEEKLY/MONTHLY with an interval and an optional day selector.** Monthly days that do not exist in a month (the 31st in February) simply produce no occurrence rather than shifting.
+- **ICS import matches on UID**, so re-importing a calendar updates what it created instead of duplicating. Only recurring events become routines; everything else is reported in a skipped list rather than dropped silently. `parseIcs` is a narrow RFC 5545 reader in core: VEVENT only, unfolding and escaping handled, malformed lines skipped rather than thrown on.
+
+### Analytics
+
+- **Three tabs**: "This week" (wins only, unchanged), "All time" (new), "By task" (the old Advanced). Each says at the top what it is for.
+- **The contribution grid ramps off quartiles of the user's own studied days**, not a fixed minute scale, so it stays readable at twenty minutes a day and at three hours. Comparisons are strictly-less so the heaviest day always lands in the top step. Future days render as placeholders, never as missed days. `--heat-0..4` derive from the accent hue so the ramp follows the user's accent in both themes.
+- **Every insight carries its evidence.** `buildInsights` returns a claim plus the figures behind it, so a reader can check it. Tone is descriptive: no targets, no "you should". A time-of-day preference is only claimed when one band holds 35% or more; the cadence line waits for a fortnight of history.
+- **"Since you started" counts from `users.created_at`**, not the first session, because that is what the user asked for.
+- **Sub-hour durations read in minutes** across charts, the heatmap tooltip and the lifetime headline. `0.0 h` told the reader nothing about a twenty-minute day.
+
+### Local persistence
+
+- **The query cache is mirrored to IndexedDB and restored before first paint**, so the app opens on last-known data and keeps working read-only when the API is unreachable. Verified by stopping the API and reloading.
+- **Cache, not outbox.** Mutations are never dehydrated or replayed; an offline banner says edits will not be saved rather than letting them fail silently. Cloud sync was explicitly deferred by the user.
+- **Scoped to one account.** The record stores whose data it holds and is discarded unread if a different account signs in, wiped on sign-out, and expired after seven days or a `CACHE_VERSION` bump. `doloop.user` in localStorage is what makes that check possible synchronously at boot.
+- **Never persisted**: `['sessions','active']`, because only the server can be right about a running timer, and `['me','background']`, a multi-megabyte data URL that would be rewritten on every cache change.
+- **No new dependencies** — `dehydrate`/`hydrate` ship with TanStack Query, and the IndexedDB wrapper is about eighty lines. Everything degrades to the previous behaviour when IndexedDB is missing, blocked or slow.
+
+### Badges
+
+- **Seventeen added** across volume (hours, sessions, deep work), rhythm (night owl, weekend warrior, full week, marathon), habits (routine ticks, a perfect routine week), reflection (reviews, weekly notes) and rewards. Twenty-nine total. A "perfect week" only counts weeks that have finished and that actually had something due.

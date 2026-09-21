@@ -53,3 +53,24 @@ api ─────────▶ core
 | 7 Economy + achievements | done   |
 | 8 Quotes                 | done   |
 | 9 Polish                 | done   |
+
+## Post-phase features
+
+Added after the numbered phases, at the user's request. See `DECISIONS.md` for the reasoning.
+
+| Feature              | Core                          | API                                          | Portal                                               |
+| -------------------- | ----------------------------- | -------------------------------------------- | ---------------------------------------------------- |
+| Custom rewards       | `rewards.ts`                  | `routes/rewards.ts`, `services/rewards.ts`   | `RewardShelf`, `RewardDialog`, `RewardRedeemed`      |
+| Recurring tasks      | `routines.ts`, `ics-parse.ts` | `routes/routines.ts`, `services/routines.ts` | `pages/Routines`, `RoutineDialog`, `IcsImportDialog` |
+| Long-range analytics | `insights.ts`                 | `GET /api/analytics/overview`                | `AnalyticsOverview`, `ui/components/Heatmap`         |
+| Local cache          | —                             | —                                            | `lib/persist.ts`, `lib/local-state.ts`               |
+
+### Local persistence
+
+The portal mirrors its TanStack Query cache to IndexedDB and restores it before the first
+render, so the app opens on last-known data and stays usable read-only when the API is
+unreachable. It is a cache, not an outbox: mutations are never replayed, and an offline
+banner says so. The record is scoped to one account and dropped on sign-out, on an account
+change, after seven days, or on a `CACHE_VERSION` bump. The running timer and the uploaded
+background are never persisted. Nothing is synced anywhere — cloud sync is deliberately not
+built yet.
