@@ -5,6 +5,7 @@ import {
   evaluateStreak,
   levelForXp,
   materializePendingRestDays,
+  resolveBackgroundId,
   toLocalDate,
   withDefaults,
   type RestDayPolicy,
@@ -67,7 +68,12 @@ export async function ensureUser(
 }
 
 export function settingsOf(row: UserRow): UserSettings {
-  return withDefaults(row.settings);
+  const settings = withDefaults(row.settings);
+  // A background saved before the catalogue changed may no longer exist; read it as the
+  // default rather than handing the client an id nothing can render or select.
+  const backgroundId = resolveBackgroundId(settings.theme.backgroundId);
+  if (backgroundId === settings.theme.backgroundId) return settings;
+  return { ...settings, theme: { ...settings.theme, backgroundId } };
 }
 
 export function toPolicy(row: RestDayPolicyRow | undefined, userId: string): RestDayPolicy {

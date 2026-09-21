@@ -3,12 +3,16 @@ import {
   ACCENT_PRESETS,
   applyBreakDay,
   BACKGROUNDS,
+  BACKGROUND_CATEGORY_LABELS,
+  backgroundsInCategory,
+  DEFAULT_BACKGROUND_ID,
   breakDayCost,
   isAccentUnlocked,
   isBackgroundAvailable,
   purchaseBackground,
   purchaseBreakDay,
   purchaseFreeze,
+  resolveBackgroundId,
   SHOP,
   unlockedAccents,
 } from './economy';
@@ -119,18 +123,38 @@ describe('cosmetics', () => {
 
   it('gates and sells backgrounds', () => {
     expect(BACKGROUNDS.length).toBeGreaterThanOrEqual(8);
-    expect(isBackgroundAvailable('aurora', 0, [])).toBe(true);
-    expect(isBackgroundAvailable('nebula', 7, [])).toBe(false);
-    expect(isBackgroundAvailable('nebula', 8, [])).toBe(true);
-    expect(isBackgroundAvailable('prism', 50, [])).toBe(false);
-    expect(isBackgroundAvailable('prism', 0, ['prism'])).toBe(true);
+    // Every gradient is free, so the quiet set is always usable.
+    expect(isBackgroundAvailable('graphite', 0, [])).toBe(true);
+    expect(isBackgroundAvailable('onyx', 0, [])).toBe(true);
+    // Level gates.
+    expect(isBackgroundAvailable('ice-canyon', 7, [])).toBe(false);
+    expect(isBackgroundAvailable('ice-canyon', 8, [])).toBe(true);
+    // A purchasable background is never unlocked by levelling.
+    expect(isBackgroundAvailable('kirkjufell', 50, [])).toBe(false);
+    expect(isBackgroundAvailable('kirkjufell', 0, ['kirkjufell'])).toBe(true);
     expect(isBackgroundAvailable('nope', 0, [])).toBe(false);
 
-    expect(purchaseBackground(100, 'aurora', []).ok).toBe(false);
-    expect(purchaseBackground(100, 'prism', []).ok).toBe(false);
-    expect(purchaseBackground(500, 'prism', ['prism']).ok).toBe(false);
-    const r = purchaseBackground(500, 'prism', []);
+    expect(purchaseBackground(100, 'graphite', []).ok).toBe(false);
+    expect(purchaseBackground(100, 'kirkjufell', []).ok).toBe(false);
+    expect(purchaseBackground(500, 'kirkjufell', ['kirkjufell']).ok).toBe(false);
+    const r = purchaseBackground(500, 'kirkjufell', []);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value).toEqual({ xp: 100, purchasedIds: ['prism'] });
+    if (r.ok) expect(r.value).toEqual({ xp: 100, purchasedIds: ['kirkjufell'] });
+  });
+
+  it('resolves an unknown or dropped background id to the default', () => {
+    expect(resolveBackgroundId('graphite')).toBe('graphite');
+    // Ids from the old catalogue no longer exist.
+    expect(resolveBackgroundId('aurora')).toBe(DEFAULT_BACKGROUND_ID);
+    expect(resolveBackgroundId(null)).toBe(DEFAULT_BACKGROUND_ID);
+    expect(resolveBackgroundId('')).toBe(DEFAULT_BACKGROUND_ID);
+  });
+
+  it('gives every background a category that the pickers can group by', () => {
+    const labelled = new Set(BACKGROUND_CATEGORY_LABELS.map((c) => c.id));
+    for (const b of BACKGROUNDS) expect(labelled.has(b.category)).toBe(true);
+    // No category is advertised with nothing in it.
+    for (const c of BACKGROUND_CATEGORY_LABELS)
+      expect(backgroundsInCategory(c.id).length).toBeGreaterThan(0);
   });
 });

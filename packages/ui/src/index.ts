@@ -18,6 +18,7 @@ export { ToastProvider, useToast } from './components/Toast';
 export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './components/Charts';
 export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatmap';
 export { Backdrop, sampleImage } from './components/Backdrop';
+export { BackgroundThumb, type BackgroundThumbProps } from './components/BackgroundThumb';
 export { cn } from './cn';
 export {
   applyPanelStyle,
@@ -27,7 +28,16 @@ export {
   resolveTheme,
   type ResolvedTheme,
 } from './theme';
-export { BACKGROUND_DEFS, backgroundById, type BackgroundDef } from './backgrounds';
+export {
+  BACKGROUND_CATEGORIES,
+  BACKGROUND_DEFS,
+  DEFAULT_BACKGROUND_ID,
+  backgroundById,
+  backgroundsByCategory,
+  type BackgroundCategory,
+  type BackgroundDef,
+  type BackgroundPhoto,
+} from './backgrounds';
 export { fireConfetti } from './confetti';
 export { fireRewardBurst, type BurstOptions } from './burst';
 export * from './contrast';

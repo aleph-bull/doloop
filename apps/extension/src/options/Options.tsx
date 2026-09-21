@@ -3,6 +3,7 @@ import {
   applyUserTheme,
   Backdrop,
   Button,
+  DEFAULT_BACKGROUND_ID,
   Glass,
   resolveExtensionBackdrop,
   resolveTheme,
@@ -23,13 +24,14 @@ export function Options() {
   const portal = store?.connection?.portalUrl ?? FALLBACK_PORTAL;
   const choice = settings
     ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
-    : { backgroundId: 'aurora', customImageUrl: null };
+    : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
   return (
     <main style={{ padding: 32, maxWidth: 520 }}>
       <Backdrop
         backgroundId={choice.backgroundId}
         theme={settings ? resolveTheme(settings.theme.mode) : 'dark'}
         customImageUrl={choice.customImageUrl}
+        assetBase={portal}
       />
       <Glass
         className="card"

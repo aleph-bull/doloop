@@ -188,6 +188,39 @@
   background: rgb(0 0 0 / 0.45);
   color: #fff;
 }
+/* What unlocks a locked background, kept clear of the name in the opposite corner. */
+.bg-thumb-badge {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+}
+
+/* ---------- background picker ---------- */
+
+.bg-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.bg-group-title {
+  margin: 0 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 10px;
+}
 
 .reward-xp {
   font-size: var(--text-3xl);

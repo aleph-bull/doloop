@@ -15,7 +15,8 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
-    "audit:contrast": "tsx scripts/contrast-audit.ts"
+    "audit:contrast": "tsx scripts/contrast-audit.ts",
+    "prepare:backgrounds": "tsx scripts/prepare-backgrounds.ts"
   },
   "peerDependencies": {
     "react": "*",

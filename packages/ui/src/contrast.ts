@@ -28,6 +28,45 @@ export function luminanceToTextTheme(luminance: number): 'light' | 'dark' {
   return luminance < 0.4 ? 'light' : 'dark';
 }
 
+export interface GlassAdaptation {
+  /** Text colour to use on glass over this backdrop. */
+  fg: RGB;
+  /** Tint of the glass fill: dark behind light text, light behind dark text. */
+  fill: RGB;
+  alpha: number;
+  strongAlpha: number;
+  /** Contrast actually achieved at `alpha`; below 4.5 the photo is simply too busy. */
+  ratio: number;
+}
+
+const MAX_ALPHA = 0.95;
+
+/**
+ * Pick the text colour and glass opacity for an arbitrary backdrop colour.
+ *
+ * A photograph can be any colour, so the fill is thickened step by step until text on
+ * glass clears 4.5:1. Used live for a user's uploaded image and ahead of time for every
+ * shipped photo, so both go through identical maths.
+ */
+export function adaptGlassToBackdrop(avg: RGB): GlassAdaptation {
+  const textTheme = luminanceToTextTheme(relativeLuminance(avg));
+  const fg: RGB = textTheme === 'light' ? [242, 243, 248] : [15, 18, 32];
+  const fill: RGB = textTheme === 'light' ? [20, 22, 36] : [255, 255, 255];
+  let alpha = 0.45;
+  let ratio = contrastRatio(fg, composite(fill, alpha, avg));
+  while (ratio < 4.5 && alpha < MAX_ALPHA) {
+    alpha = Math.round((alpha + 0.05) * 100) / 100;
+    ratio = contrastRatio(fg, composite(fill, alpha, avg));
+  }
+  return {
+    fg,
+    fill,
+    alpha,
+    strongAlpha: Math.min(0.97, Math.round((alpha + 0.15) * 100) / 100),
+    ratio,
+  };
+}
+
 export function hexToRgb(hex: string): RGB {
   const h = hex.replace('#', '');
   const full =

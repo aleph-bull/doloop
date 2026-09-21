@@ -81,20 +81,28 @@ describe('shop', () => {
     res = await t.api({
       method: 'PATCH',
       url: '/api/me/settings',
-      payload: { theme: { backgroundId: 'prism' } },
+      payload: { theme: { backgroundId: 'kirkjufell' } },
     });
     expect(res.statusCode).toBe(400);
-    res = await t.api({ method: 'POST', url: '/api/shop/background', payload: { id: 'prism' } });
+    res = await t.api({
+      method: 'POST',
+      url: '/api/shop/background',
+      payload: { id: 'kirkjufell' },
+    });
     expect(res.statusCode).toBe(200);
-    expect(res.json().purchasedBackgrounds).toEqual(['prism']);
+    expect(res.json().purchasedBackgrounds).toEqual(['kirkjufell']);
     expect(res.json().xp).toBe(550);
     res = await t.api({
       method: 'PATCH',
       url: '/api/me/settings',
-      payload: { theme: { backgroundId: 'prism' } },
+      payload: { theme: { backgroundId: 'kirkjufell' } },
     });
     expect(res.statusCode).toBe(200);
-    res = await t.api({ method: 'POST', url: '/api/shop/background', payload: { id: 'prism' } });
+    res = await t.api({
+      method: 'POST',
+      url: '/api/shop/background',
+      payload: { id: 'kirkjufell' },
+    });
     expect(res.statusCode).toBe(400); // already owned
     res = await t.api({
       method: 'PATCH',

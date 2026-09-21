@@ -1,5 +1,6 @@
 import {
   advance,
+  DEFAULT_BACKGROUND_ID,
   formatClock,
   pathLabel,
   viewTimer,
@@ -116,12 +117,13 @@ export function Popup() {
   const resolvedTheme = settings ? resolveThemeSafe(settings.theme.mode) : 'dark';
   const choice = settings
     ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
-    : { backgroundId: 'aurora', customImageUrl: null };
+    : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
   const backdrop = (
     <Backdrop
       backgroundId={choice.backgroundId}
       theme={resolvedTheme}
       customImageUrl={choice.customImageUrl}
+      assetBase={store?.connection?.portalUrl ?? 'http://localhost:5173'}
     />
   );
 

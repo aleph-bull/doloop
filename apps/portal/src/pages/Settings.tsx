@@ -1,8 +1,7 @@
 import {
   ACCENT_PRESETS,
-  BACKGROUNDS,
   isAccentUnlocked,
-  isBackgroundAvailable,
+  resolveBackgroundId,
   POMODORO_DURATION_KEYS,
   POMODORO_LIMITS,
   type UserSettings,
@@ -10,7 +9,6 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  BACKGROUND_DEFS,
   Button,
   Glass,
   hslToRgb,
@@ -28,6 +26,7 @@ import {
 } from '@doloop/ui';
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
+import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
@@ -252,37 +251,13 @@ export function Settings() {
         </div>
         <div className="field">
           <span className="field-label">Background</span>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {BACKGROUNDS.map((b) => {
-              const def = BACKGROUND_DEFS.find((d) => d.id === b.id);
-              const available = isBackgroundAvailable(b.id, level, purchased);
-              return (
-                <button
-                  key={b.id}
-                  type="button"
-                  className="bg-thumb"
-                  aria-pressed={s.theme.backgroundId === b.id && !s.theme.customBackgroundUrl}
-                  aria-label={
-                    available
-                      ? b.name
-                      : `${b.name}, ${b.costXp ? `${b.costXp} XP in the shop` : `level ${b.minLevel}`}`
-                  }
-                  disabled={!available}
-                  style={{
-                    background: def ? (theme === 'dark' ? def.dark.css : def.light.css) : undefined,
-                    opacity: available ? 1 : 0.5,
-                  }}
-                  onClick={() =>
-                    patch({ theme: { backgroundId: b.id, customBackgroundUrl: null } })
-                  }
-                >
-                  <span className="bg-thumb-label">
-                    {available ? b.name : b.costXp ? `${b.costXp} XP` : `Lv ${b.minLevel}`}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          <BackgroundPicker
+            value={s.theme.customBackgroundUrl ? '' : resolveBackgroundId(s.theme.backgroundId)}
+            level={level}
+            purchased={purchased}
+            theme={theme}
+            onChange={(id) => patch({ theme: { backgroundId: id, customBackgroundUrl: null } })}
+          />
         </div>
         <ExtensionBackgroundPicker
           value={s.theme.extensionBackground}

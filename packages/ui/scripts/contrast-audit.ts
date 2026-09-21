@@ -8,7 +8,13 @@
  * Run: pnpm --filter @doloop/ui audit:contrast
  */
 import { BACKGROUND_DEFS } from '../src/backgrounds';
-import { composite, contrastRatio, hslToRgb, type RGB } from '../src/contrast';
+import {
+  adaptGlassToBackdrop,
+  composite,
+  contrastRatio,
+  hslToRgb,
+  type RGB,
+} from '../src/contrast';
 
 interface Theme {
   name: 'light' | 'dark';
@@ -87,7 +93,45 @@ function averageBackground(css: string): RGB {
 let failures = 0;
 const rows: string[] = [];
 
+/**
+ * A photograph does not use the static glass tokens: `Backdrop` thickens the fill until
+ * text clears 4.5:1, using the average colour baked in at build time. So the check here is
+ * that the adaptation can reach 4.5:1 at all — a photo busy enough to need more than 95%
+ * opacity would be unreadable, and should not ship.
+ */
+function auditPhoto(bg: (typeof BACKGROUND_DEFS)[number]): void {
+  const avg = bg.photo!.avg as RGB;
+  const a = adaptGlassToBackdrop(avg);
+  const ok = a.ratio >= 4.5;
+  if (!ok) failures++;
+  rows.push(
+    `${ok ? 'PASS' : 'FAIL'}  ${bg.id.padEnd(13)} photo  adapted glass @ ${String(
+      Math.round(a.alpha * 100),
+    ).padStart(3)}%       ${a.ratio.toFixed(2)}:1`,
+  );
+
+  // Panels are opaque enough that they do not adapt; check them against the photo directly.
+  for (const theme of THEMES) {
+    const surface = composite(theme.panelFill.rgb, theme.panelFill.alpha, avg);
+    for (const [label, fg] of [
+      ['fg on panel', theme.fg],
+      ['muted on panel', theme.fgMuted],
+    ] as Array<[string, RGB]>) {
+      const ratio = contrastRatio(fg, surface);
+      const pass = ratio >= 4.5;
+      if (!pass) failures++;
+      rows.push(
+        `${pass ? 'PASS' : 'FAIL'}  ${bg.id.padEnd(13)} ${theme.name.padEnd(5)} ${label.padEnd(22)} ${ratio.toFixed(2)}:1`,
+      );
+    }
+  }
+}
+
 for (const bg of BACKGROUND_DEFS) {
+  if (bg.photo) {
+    auditPhoto(bg);
+    continue;
+  }
   for (const theme of THEMES) {
     const variant = theme.name === 'dark' ? bg.dark : bg.light;
     const avg = averageBackground(variant.css);
@@ -106,7 +150,7 @@ for (const bg of BACKGROUND_DEFS) {
       const ok = ratio >= 4.5;
       if (!ok) failures++;
       rows.push(
-        `${ok ? 'PASS' : 'FAIL'}  ${bg.id.padEnd(9)} ${theme.name.padEnd(5)} ${label.padEnd(22)} ${ratio.toFixed(2)}:1`,
+        `${ok ? 'PASS' : 'FAIL'}  ${bg.id.padEnd(13)} ${theme.name.padEnd(5)} ${label.padEnd(22)} ${ratio.toFixed(2)}:1`,
       );
     }
   }

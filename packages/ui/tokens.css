@@ -149,7 +149,7 @@
   --glass-border: rgb(255 255 255 / 0.65);
   --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.6);
   --glass-shadow: 0 10px 40px -10px rgb(15 18 32 / 0.25);
-  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.5), rgb(255 255 255 / 0) 40%);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.26), rgb(255 255 255 / 0) 38%);
 
   --panel-fill: rgb(255 255 255 / 0.92);
   --panel-border: rgb(15 18 32 / 0.06);
@@ -189,7 +189,7 @@
   --glass-border: rgb(255 255 255 / 0.14);
   --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
   --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
-  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 40%);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 38%);
 
   --panel-fill: rgb(21 24 39 / 0.94);
   --panel-border: rgb(255 255 255 / 0.06);
@@ -229,7 +229,7 @@
     --glass-border: rgb(255 255 255 / 0.14);
     --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
     --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
-    --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0) 40%);
+    --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 38%);
 
     --panel-fill: rgb(21 24 39 / 0.94);
     --panel-border: rgb(255 255 255 / 0.06);

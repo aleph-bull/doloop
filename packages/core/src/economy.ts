@@ -105,28 +105,87 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'violet', name: 'Violet', minLevel: 20 },
 ];
 
+export type BackgroundCategory =
+  'minimal' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
+
 export interface BackgroundMeta {
   id: string;
   name: string;
+  category: BackgroundCategory;
   /** Level required, 0 = always available. */
   minLevel: number;
   /** XP price if purchasable instead of level-gated; null = free. */
   costXp: number | null;
 }
 
-/** Catalogue only; the visuals live in packages/ui. */
+/**
+ * Catalogue only; the visuals live in packages/ui. Ids are persisted in user settings,
+ * so they are stable — renaming one orphans whatever a user had selected.
+ *
+ * Minimal is the Graphite family: CSS gradients, always free, nothing to download. The
+ * photographs are mostly free too; a handful are level-gated or purchasable so the shop
+ * still has something to sell, but the set is not something to grind for.
+ */
 export const BACKGROUNDS: BackgroundMeta[] = [
-  { id: 'aurora', name: 'Aurora', minLevel: 0, costXp: null },
-  { id: 'dusk', name: 'Dusk', minLevel: 0, costXp: null },
-  { id: 'glacier', name: 'Glacier', minLevel: 0, costXp: null },
-  { id: 'meadow', name: 'Meadow', minLevel: 0, costXp: null },
-  { id: 'ember', name: 'Ember', minLevel: 0, costXp: null },
-  { id: 'graphite', name: 'Graphite', minLevel: 0, costXp: null },
-  { id: 'tide', name: 'Tide', minLevel: 3, costXp: null },
-  { id: 'nebula', name: 'Nebula', minLevel: 8, costXp: null },
-  { id: 'prism', name: 'Prism', minLevel: 0, costXp: 400 },
-  { id: 'monolith', name: 'Monolith', minLevel: 0, costXp: 600 },
+  // --- minimal (gradients) ---
+  { id: 'graphite', name: 'Graphite', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'slate', name: 'Slate', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'ash', name: 'Ash', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'onyx', name: 'Onyx', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'basalt', name: 'Basalt', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'fog', name: 'Fog', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'lanterns', name: 'Lanterns', category: 'minimal', minLevel: 0, costXp: null },
+  // --- mountains ---
+  { id: 'fuji', name: 'Fuji', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'alpine-pass', name: 'Alpine Pass', category: 'mountains', minLevel: 3, costXp: null },
+  { id: 'alpenglow', name: 'Alpenglow', category: 'mountains', minLevel: 12, costXp: null },
+  { id: 'kirkjufell', name: 'Kirkjufell', category: 'mountains', minLevel: 0, costXp: 400 },
+  // --- night ---
+  { id: 'still-water', name: 'Still Water', category: 'night', minLevel: 0, costXp: null },
+  { id: 'milky-way', name: 'Milky Way', category: 'night', minLevel: 5, costXp: null },
+  { id: 'ice-canyon', name: 'Ice Canyon', category: 'night', minLevel: 8, costXp: null },
+  // --- coast ---
+  { id: 'vestrahorn', name: 'Vestrahorn', category: 'coast', minLevel: 3, costXp: null },
+  { id: 'stormlight', name: 'Stormlight', category: 'coast', minLevel: 5, costXp: null },
+  { id: 'shipwreck', name: 'Shipwreck', category: 'coast', minLevel: 0, costXp: 600 },
+  // --- forest ---
+  { id: 'redwood', name: 'Redwood', category: 'forest', minLevel: 0, costXp: null },
+  { id: 'frozen-lake', name: 'Frozen Lake', category: 'forest', minLevel: 3, costXp: null },
+  // --- open country ---
+  { id: 'cloud-valley', name: 'Cloud Valley', category: 'country', minLevel: 0, costXp: null },
+  { id: 'ridgeline', name: 'Ridgeline', category: 'country', minLevel: 0, costXp: null },
+  { id: 'badlands', name: 'Badlands', category: 'country', minLevel: 5, costXp: null },
+  { id: 'emberlight', name: 'Emberlight', category: 'country', minLevel: 12, costXp: null },
+  // --- cities ---
+  { id: 'hallstatt', name: 'Hallstatt', category: 'cities', minLevel: 8, costXp: null },
+  { id: 'victoria-peak', name: 'Victoria Peak', category: 'cities', minLevel: 0, costXp: 800 },
 ];
+
+/** Display order and labels for the grouped pickers. */
+export const BACKGROUND_CATEGORY_LABELS: Array<{ id: BackgroundCategory; label: string }> = [
+  { id: 'minimal', label: 'Minimal' },
+  { id: 'mountains', label: 'Mountains' },
+  { id: 'night', label: 'Night' },
+  { id: 'coast', label: 'Coast' },
+  { id: 'forest', label: 'Forest' },
+  { id: 'country', label: 'Open country' },
+  { id: 'cities', label: 'Cities' },
+];
+
+/** The quiet default, and what an unrecognised id falls back to. */
+export const DEFAULT_BACKGROUND_ID = 'graphite';
+
+/**
+ * Normalise a stored background id. Settings saved before the catalogue changed can name
+ * a background that no longer exists; those read as the default rather than as nothing.
+ */
+export function resolveBackgroundId(id: string | null | undefined): string {
+  return id && BACKGROUNDS.some((b) => b.id === id) ? id : DEFAULT_BACKGROUND_ID;
+}
+
+export function backgroundsInCategory(category: BackgroundCategory): BackgroundMeta[] {
+  return BACKGROUNDS.filter((b) => b.category === category);
+}
 
 export function unlockedAccents(level: number): AccentPreset[] {
   return ACCENT_PRESETS.filter((a) => a.minLevel <= level);

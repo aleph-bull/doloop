@@ -47,7 +47,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   theme: {
     mode: 'system',
     accent: 'indigo',
-    backgroundId: 'aurora',
+    backgroundId: 'graphite',
     customBackgroundUrl: null,
     panel: 'opaque',
     panelColor: '#151827',

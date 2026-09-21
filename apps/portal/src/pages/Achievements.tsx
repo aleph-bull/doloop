@@ -3,7 +3,7 @@ import { Award, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  BACKGROUND_DEFS,
+  BackgroundThumb,
   Button,
   Chip,
   Glass,
@@ -76,8 +76,8 @@ export function Achievements() {
         </div>
         <ProgressBar value={lp.ratio} label="Progress to next level" />
         <p className="muted text-sm">
-          Levels unlock accent colours (5, 10, 20) and backgrounds (3, 8). XP is only ever earned by
-          studying or ticking off a routine — never by buying anything.
+          Levels unlock accent colours (5, 10, 20) and backgrounds (3, 5, 8, 12). XP is only ever
+          earned by studying or ticking off a routine — never by buying anything.
         </p>
       </Glass>
 
@@ -202,24 +202,17 @@ export function Achievements() {
         </div>
 
         <h3 className="font-medium mt-2">Backgrounds</h3>
+        <p className="muted text-sm">
+          Most are free. These are the ones still to unlock — pick any of them in Settings once they
+          are yours.
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {s.backgrounds.map((b) => {
-            const def = BACKGROUND_DEFS.find((d) => d.id === b.id);
-            return (
+          {s.backgrounds
+            .filter((b) => !b.owned)
+            .map((b) => (
               <div key={b.id} className="flex flex-col gap-1">
-                <div
-                  className="bg-thumb"
-                  style={{
-                    background: def ? (theme === 'dark' ? def.dark.css : def.light.css) : undefined,
-                    cursor: 'default',
-                  }}
-                  aria-hidden
-                >
-                  <span className="bg-thumb-label">{b.name}</span>
-                </div>
-                {b.owned ? (
-                  <span className="text-xs muted">Available</span>
-                ) : b.costXp !== null ? (
+                <BackgroundThumb id={b.id} theme={theme} label={b.name} disabled />
+                {b.costXp !== null ? (
                   <Button
                     size="sm"
                     variant="secondary"
@@ -233,8 +226,10 @@ export function Achievements() {
                   <span className="text-xs muted">Level {b.minLevel}</span>
                 )}
               </div>
-            );
-          })}
+            ))}
+          {s.backgrounds.every((b) => b.owned) && (
+            <p className="muted text-sm">Every background is unlocked.</p>
+          )}
         </div>
       </section>
     </div>

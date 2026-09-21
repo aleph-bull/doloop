@@ -1,5 +1,6 @@
-import { BACKGROUNDS, isBackgroundAvailable } from '@doloop/core';
-import { BACKGROUND_DEFS, Segmented, type ResolvedTheme } from '@doloop/ui';
+import { DEFAULT_BACKGROUND_ID } from '@doloop/core';
+import { BackgroundThumb, Segmented, type ResolvedTheme } from '@doloop/ui';
+import { BackgroundPicker } from './BackgroundPicker';
 
 export interface ExtensionBackgroundPickerProps {
   value: string; // 'same' | 'upload' | preset id
@@ -26,7 +27,9 @@ export function ExtensionBackgroundPicker({
       <Segmented
         ariaLabel="Extension background"
         value={mode}
-        onChange={(m) => onChange(m === 'same' ? 'same' : hasUpload ? 'upload' : 'aurora')}
+        onChange={(m) =>
+          onChange(m === 'same' ? 'same' : hasUpload ? 'upload' : DEFAULT_BACKGROUND_ID)
+        }
         options={[
           { value: 'same', label: 'Same as portal' },
           { value: 'own', label: 'Different' },
@@ -36,40 +39,26 @@ export function ExtensionBackgroundPicker({
         The Chrome extension popup can share this page's background or use its own.
       </span>
       {mode === 'own' && (
-        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
-          {hasUpload && (
-            <button
-              type="button"
-              className="bg-thumb"
-              aria-pressed={value === 'upload'}
-              aria-label="Uploaded image"
-              style={{ background: 'var(--accent-soft)' }}
-              onClick={() => onChange('upload')}
-            >
-              <span className="bg-thumb-label">Uploaded</span>
-            </button>
-          )}
-          {BACKGROUNDS.map((b) => {
-            const def = BACKGROUND_DEFS.find((d) => d.id === b.id);
-            const available = isBackgroundAvailable(b.id, level, purchased);
-            return (
-              <button
-                key={b.id}
-                type="button"
-                className="bg-thumb"
-                aria-pressed={value === b.id}
-                aria-label={available ? b.name : `${b.name}, locked`}
-                disabled={!available}
-                style={{
-                  background: def ? (theme === 'dark' ? def.dark.css : def.light.css) : undefined,
-                  opacity: available ? 1 : 0.5,
-                }}
-                onClick={() => onChange(b.id)}
-              >
-                <span className="bg-thumb-label">{b.name}</span>
-              </button>
-            );
-          })}
+        <div className="mt-2">
+          <BackgroundPicker
+            value={value}
+            level={level}
+            purchased={purchased}
+            theme={theme}
+            onChange={onChange}
+            leading={
+              hasUpload ? (
+                <BackgroundThumb
+                  id="graphite"
+                  theme={theme}
+                  label="Uploaded"
+                  ariaLabel="Uploaded image"
+                  selected={value === 'upload'}
+                  onClick={() => onChange('upload')}
+                />
+              ) : undefined
+            }
+          />
         </div>
       )}
     </div>

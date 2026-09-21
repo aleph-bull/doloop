@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { backgroundById } from '../backgrounds';
-import { contrastRatio, luminanceToTextTheme, relativeLuminance, type RGB } from '../contrast';
+import { adaptGlassToBackdrop, type RGB } from '../contrast';
 import type { ResolvedTheme } from '../theme';
 
 export interface BackdropProps {
@@ -8,77 +8,106 @@ export interface BackdropProps {
   theme: ResolvedTheme;
   /** Custom image URL (Advanced). When set, it replaces the curated background. */
   customImageUrl?: string | null;
+  /**
+   * Prefix for a shipped photograph's path. The portal serves them from its own root, so
+   * it passes nothing; the extension passes the portal origin.
+   */
+  assetBase?: string;
+}
+
+/** Push the adapted glass tokens onto <html>, or clear them for a plain gradient. */
+function applyGlass(avg: RGB | null): void {
+  const root = document.documentElement;
+  if (!avg) {
+    root.style.removeProperty('--fg-on-glass');
+    root.style.removeProperty('--glass-fill');
+    root.style.removeProperty('--glass-fill-strong');
+    return;
+  }
+  const a = adaptGlassToBackdrop(avg);
+  root.style.setProperty('--fg-on-glass', `rgb(${a.fg.join(' ')})`);
+  root.style.setProperty('--glass-fill', `rgb(${a.fill.join(' ')} / ${a.alpha.toFixed(2)})`);
+  root.style.setProperty(
+    '--glass-fill-strong',
+    `rgb(${a.fill.join(' ')} / ${a.strongAlpha.toFixed(2)})`,
+  );
 }
 
 /**
- * Fixed full-viewport background layer. For custom images it samples the average
- * luminance, flips `--fg-on-glass` to light or dark, and raises the glass fill alpha
- * until text on glass reaches 4.5:1.
+ * Fixed full-viewport background layer.
+ *
+ * A gradient renders straight from its CSS. A shipped photograph renders from its
+ * precomputed average colour — no sampling, no flash — over a 20px placeholder that
+ * paints instantly. A user's own upload is sampled live, since nothing is known about it
+ * ahead of time.
  */
-export function Backdrop({ backgroundId, theme, customImageUrl }: BackdropProps) {
+export function Backdrop({ backgroundId, theme, customImageUrl, assetBase = '' }: BackdropProps) {
   const def = backgroundById(backgroundId);
   const variant = theme === 'dark' ? def.dark : def.light;
-  const [imageStyle, setImageStyle] = useState<{ ok: boolean }>({ ok: false });
+  const photo = customImageUrl ? null : def.photo;
+  const [uploadOk, setUploadOk] = useState(false);
 
+  // Shipped photographs: apply synchronously on change, so text never renders unreadable.
   useEffect(() => {
-    const root = document.documentElement;
+    if (customImageUrl) return;
+    applyGlass(photo ? photo.avg : null);
+  }, [photo, customImageUrl]);
+
+  // A user's own image has to be measured in the browser.
+  useEffect(() => {
     if (!customImageUrl) {
-      root.style.removeProperty('--fg-on-glass');
-      root.style.removeProperty('--glass-fill');
-      root.style.removeProperty('--glass-fill-strong');
-      setImageStyle({ ok: false });
+      setUploadOk(false);
       return;
     }
     let cancelled = false;
     sampleImage(customImageUrl)
       .then((avg) => {
         if (cancelled) return;
-        const lum = relativeLuminance(avg);
-        const textTheme = luminanceToTextTheme(lum);
-        const fg: RGB = textTheme === 'light' ? [242, 243, 248] : [15, 18, 32];
-        const fillBase: RGB = textTheme === 'light' ? [20, 22, 36] : [255, 255, 255];
-        // Increase fill alpha until fg on (fill over image) reaches 4.5:1.
-        let alpha = 0.45;
-        for (; alpha <= 0.95; alpha += 0.05) {
-          const composite = avg.map((c, i) =>
-            Math.round(c * (1 - alpha) + fillBase[i]! * alpha),
-          ) as RGB;
-          if (contrastRatio(fg, composite) >= 4.5) break;
-        }
-        root.style.setProperty('--fg-on-glass', `rgb(${fg.join(' ')})`);
-        root.style.setProperty('--glass-fill', `rgb(${fillBase.join(' ')} / ${alpha.toFixed(2)})`);
-        root.style.setProperty(
-          '--glass-fill-strong',
-          `rgb(${fillBase.join(' ')} / ${Math.min(0.97, alpha + 0.15).toFixed(2)})`,
-        );
-        setImageStyle({ ok: true });
+        applyGlass(avg);
+        setUploadOk(true);
       })
-      .catch(() => setImageStyle({ ok: false }));
+      .catch(() => {
+        if (!cancelled) setUploadOk(false);
+      });
     return () => {
       cancelled = true;
     };
   }, [customImageUrl]);
 
-  const style =
-    customImageUrl && imageStyle.ok
-      ? {
-          backgroundImage: `url("${customImageUrl}")`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }
-      : { background: variant.css };
+  const imageUrl = customImageUrl && uploadOk ? customImageUrl : null;
+  // `src` has no leading slash, so an empty base resolves to the app root.
+  const photoUrl = photo ? `${assetBase}/${photo.src}` : null;
 
   return (
-    <div
-      aria-hidden
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: -1,
-        transition: 'background var(--dur-slow) var(--ease-out)',
-        ...style,
-      }}
-    />
+    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
+      {/* Base layer: the gradient, or the photo's placeholder while it loads. */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          ...(photo
+            ? {
+                backgroundImage: `url("${photo.lqip}")`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }
+            : { background: variant.css }),
+        }}
+      />
+      {(imageUrl || photoUrl) && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url("${imageUrl ?? photoUrl}")`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+          }}
+        />
+      )}
+      {/* Scrim, so a bright photo does not fight the glass. */}
+      {photo && <div style={{ position: 'absolute', inset: 0, background: variant.css }} />}
+    </div>
   );
 }
 
