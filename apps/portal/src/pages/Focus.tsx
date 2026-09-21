@@ -135,32 +135,24 @@ export function Focus() {
       </div>
     );
 
+  // The screen is still worth being on with nothing running: the glow renders, so it can
+  // be previewed and its colour picked, and the way to start a session is right there.
   const session = active.data.active;
-  if (!session || !timer)
-    return (
-      <div className="focus-screen focus-centre">
-        <div className="flex flex-col items-center gap-4">
-          <p className="text-xl">No session running.</p>
-          <Button variant="primary" onClick={() => navigate('/')}>
-            Back to Today
-          </Button>
-        </div>
-      </div>
-    );
-
-  const view = viewTimer(timer, new Date(now).toISOString());
+  const view = timer ? viewTimer(timer, new Date(now).toISOString()) : null;
   const clock =
-    view.phaseRemainingSeconds !== null
-      ? formatClock(view.phaseRemainingSeconds)
-      : formatClock(view.phaseElapsedSeconds);
+    view === null
+      ? null
+      : view.phaseRemainingSeconds !== null
+        ? formatClock(view.phaseRemainingSeconds)
+        : formatClock(view.phaseElapsedSeconds);
 
   // Subject is the course the task sits under; the child is the task itself. A task with
   // no parent is its own subject and has no child line.
   const index = buildIndex(nodes.data?.nodes ?? []);
-  const node = index.byId.get(session.session.nodeId);
+  const node = session ? index.byId.get(session.session.nodeId) : undefined;
   const ancestors = node ? ancestorTitles(index.byId, node.id) : [];
-  const subject = ancestors.length > 0 ? ancestors[0]! : (node?.title ?? null);
-  const child = ancestors.length > 0 ? (node?.title ?? null) : null;
+  const subject = node ? (ancestors.length > 0 ? ancestors[0]! : node.title) : null;
+  const child = node && ancestors.length > 0 ? node.title : null;
 
   // Hours left on the task being studied, or on whatever the plan says is next.
   const nextBest = pace.data?.plan?.[0] ?? null;
@@ -175,7 +167,7 @@ export function Focus() {
         ? { minutes: ownRemaining, label: 'left' }
         : null;
 
-  const sessionHours = fmtHours(view.workSeconds / 60);
+  const sessionHours = view ? fmtHours(view.workSeconds / 60) : null;
   const nowDate = new Date(now);
 
   return (
@@ -218,19 +210,39 @@ export function Focus() {
       </div>
 
       <div className="focus-centre">
-        <div className="focus-phase">{PHASE_LABEL[view.phase]}</div>
-        <div className="focus-time tabular">{clock}</div>
-        {subject && (
-          <div className={`focus-context${chromeVisible ? '' : ' is-hidden'}`}>
-            <div className="focus-subject">{subject}</div>
-            {child && <div className="focus-child">{child}</div>}
-          </div>
+        {view && clock ? (
+          <>
+            <div className="focus-phase">{PHASE_LABEL[view.phase]}</div>
+            <div className="focus-time tabular">{clock}</div>
+            {subject && (
+              <div className={`focus-context${chromeVisible ? '' : ' is-hidden'}`}>
+                <div className="focus-subject">{subject}</div>
+                {child && <div className="focus-child">{child}</div>}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="focus-phase">Ready</div>
+            <div className="focus-time tabular">--:--</div>
+            <div className="focus-context">
+              <div className="focus-subject">Nothing running yet</div>
+              <div className="focus-child">
+                Start a session and the countdown takes over this screen.
+              </div>
+            </div>
+            <div className="mt-6">
+              <Button variant="primary" onClick={() => navigate('/')}>
+                Start a session
+              </Button>
+            </div>
+          </>
         )}
       </div>
 
       <div className={`focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
         <div className="focus-corner focus-bottom-left">
-          <span className="tabular">{sessionHours} this session</span>
+          {sessionHours && <span className="tabular">{sessionHours} this session</span>}
           {subject && remaining && (
             <span className="tabular">
               {fmtHours(remaining.minutes)} {remaining.label}
