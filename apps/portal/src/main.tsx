@@ -7,6 +7,7 @@ import { DEFAULT_SETTINGS } from '@doloop/core';
 import './index.css';
 import { App } from './App';
 import { AuthProvider } from './lib/auth';
+import { unlockAudio } from './lib/sounds';
 import { restoreQueryCache } from './lib/persist';
 
 // Apply the default theme before first paint; the shell re-applies from user settings.
@@ -32,6 +33,10 @@ const queryClient = new QueryClient({
 // Fill the cache from disk before the first paint. Best-effort: if IndexedDB is missing,
 // blocked or slow, this resolves false and the app starts empty exactly as it used to.
 await restoreQueryCache(queryClient);
+
+// A browser keeps an AudioContext suspended until the page has been interacted with, and
+// an alert fired by a timer is not an interaction. Arm it on the first click or keypress.
+unlockAudio();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -286,3 +286,59 @@ describe('formatClock', () => {
     expect(formatClock(-5)).toBe('0:00');
   });
 });
+
+describe('a pomodoro runs its cycle without being nudged', () => {
+  const cfg = { workMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4 };
+  const t0 = '2026-09-21T14:00:00.000Z';
+  const at = (min: number) => new Date(Date.parse(t0) + min * 60_000).toISOString();
+  const opts = (autoStartWork: boolean) => ({
+    pomodoro: cfg,
+    autoStartBreaks: true,
+    autoStartWork,
+  });
+
+  /** Walk the timer minute by minute and record the phase at each step. */
+  const walk = (autoStartWork: boolean, minutes: number) => {
+    let s = startTimer({ mode: 'pomodoro', now: t0, pomodoro: cfg });
+    const phases: string[] = [];
+    for (let m = 0; m <= minutes; m++) {
+      s = advance(s, at(m), opts(autoStartWork));
+      phases.push(s.phase);
+    }
+    return { state: s, phases };
+  };
+
+  it('loops work and break indefinitely by default', () => {
+    const { phases } = walk(true, 300);
+    // It never parks itself waiting to be resumed.
+    expect(phases).not.toContain('paused');
+    expect(phases).not.toContain('ended');
+    // Both kinds of block are reached, over and over.
+    expect(phases.filter((p) => p === 'work').length).toBeGreaterThan(100);
+    expect(phases.filter((p) => p === 'short-break').length).toBeGreaterThan(10);
+  });
+
+  it('takes a long break every fourth work block', () => {
+    const { phases } = walk(true, 300);
+    expect(phases).toContain('long-break');
+    // First long break follows 4 work blocks and 3 short breaks: 4*25 + 3*5 = 115 min.
+    expect(phases[115]).toBe('long-break');
+    expect(phases[114]).toBe('work');
+  });
+
+  it('stalls after the first break when auto-start work is off', () => {
+    const { phases } = walk(false, 120);
+    expect(phases[30]).toBe('paused');
+    // And stays there: this is what "the timer stopped" looked like.
+    expect(phases.slice(30).every((p) => p === 'paused')).toBe(true);
+  });
+
+  it('still stops at a planned end while looping', () => {
+    const plannedEndAt = at(55);
+    let s = startTimer({ mode: 'pomodoro', now: t0, pomodoro: cfg, plannedEndAt });
+    for (let m = 0; m <= 70; m++) s = advance(s, at(m), opts(true));
+    expect(s.phase).toBe('ended');
+    expect(s.endedAt).toBe(plannedEndAt);
+    expect(s.autoEnded).toBe(true);
+  });
+});

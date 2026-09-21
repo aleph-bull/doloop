@@ -1,4 +1,4 @@
-import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS } from '@doloop/core';
+import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS, SOUND_PRESETS } from '@doloop/core';
 import { z } from 'zod';
 
 export const isoDateTime = z.iso.datetime({ offset: true });
@@ -80,6 +80,9 @@ export const vacationSchema = z.object({
   label: z.string().max(80).default(''),
 });
 
+/** Only a preset that actually exists; an unknown id would play nothing. */
+const soundPresetId = z.enum(SOUND_PRESETS.map((p) => p.id) as [string, ...string[]]);
+
 const minutes = (k: keyof typeof POMODORO_LIMITS) =>
   z.number().int().min(POMODORO_LIMITS[k].min).max(POMODORO_LIMITS[k].max);
 
@@ -105,9 +108,10 @@ export const settingsSchema = z
     sounds: z
       .object({
         enabled: z.boolean(),
-        endOfInterval: z.boolean(),
-        endOfBlock: z.boolean(),
         volume: z.number().min(0).max(1),
+        workStart: soundPresetId,
+        breakStart: soundPresetId,
+        sessionEnd: soundPresetId,
       })
       .partial(),
     effects: z

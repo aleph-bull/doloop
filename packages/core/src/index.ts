@@ -12,6 +12,7 @@ export * from './economy';
 export * from './phrases';
 export * from './quotes';
 export * from './timer';
+export * from './sounds';
 export * from './session-plan';
 export * from './highlights-thresholds';
 export * from './highlights';

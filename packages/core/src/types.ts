@@ -38,7 +38,15 @@ export interface UserSettings {
   idle: { enabled: boolean; thresholdMin: number };
   streak: { minMinutes: number };
   pace: { maxComfortableMinutesPerDay: number };
-  sounds: { enabled: boolean; endOfInterval: boolean; endOfBlock: boolean; volume: number };
+  sounds: {
+    enabled: boolean;
+    /** Master level, 0..1. */
+    volume: number;
+    /** Preset id per moment; SILENT_SOUND_ID mutes just that one. */
+    workStart: string;
+    breakStart: string;
+    sessionEnd: string;
+  };
   effects: {
     confetti: boolean;
     badgeToasts: boolean;

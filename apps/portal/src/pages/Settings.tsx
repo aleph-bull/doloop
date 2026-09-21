@@ -4,9 +4,14 @@ import {
   resolveBackgroundId,
   POMODORO_DURATION_KEYS,
   POMODORO_LIMITS,
+  formatSoundLength,
+  SILENT_SOUND_ID,
+  SOUND_EVENT_LABELS,
+  SOUND_PRESETS,
   type UserSettings,
 } from '@doloop/core';
 import { useEffect, useState } from 'react';
+import { Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import {
   Button,
@@ -32,6 +37,7 @@ import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPick
 import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearQueryCache } from '../lib/persist';
+import { playSound } from '../lib/sounds';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import {
@@ -400,16 +406,6 @@ export function Settings() {
         />
         {s.sounds.enabled && (
           <>
-            <Toggle
-              checked={s.sounds.endOfInterval}
-              onChange={(v) => patch({ sounds: { endOfInterval: v } })}
-              label="Chime at the end of a work or break interval"
-            />
-            <Toggle
-              checked={s.sounds.endOfBlock}
-              onChange={(v) => patch({ sounds: { endOfBlock: v } })}
-              label="Chime when a scheduled session ends"
-            />
             <div className="field">
               <span className="field-label">Volume {Math.round(s.sounds.volume * 100)}%</span>
               <Slider
@@ -418,9 +414,46 @@ export function Settings() {
                 step={0.05}
                 value={s.sounds.volume}
                 onChange={(v) => patch({ sounds: { volume: v } })}
+                onMouseUp={() => playSound(s.sounds.workStart, s.sounds.volume)}
                 aria-label="Volume"
               />
+              <span className="field-hint">Releasing the slider plays the work tone.</span>
             </div>
+            {SOUND_EVENT_LABELS.map((ev) => (
+              <div className="field" key={ev.id}>
+                <span className="field-label">{ev.label}</span>
+                <div className="flex items-end gap-2">
+                  <Select
+                    aria-label={ev.label}
+                    className="flex-1"
+                    value={s.sounds[ev.id]}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      void patch({ sounds: { [ev.id]: id } });
+                      // Play it as it is picked, so choosing does not need a second click.
+                      playSound(id, s.sounds.volume);
+                    }}
+                  >
+                    {SOUND_PRESETS.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                        {p.seconds > 0 ? ` — ${formatSoundLength(p)}` : ''}
+                      </option>
+                    ))}
+                  </Select>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    aria-label={`Preview ${ev.label}`}
+                    disabled={s.sounds[ev.id] === SILENT_SOUND_ID}
+                    onClick={() => playSound(s.sounds[ev.id], s.sounds.volume)}
+                  >
+                    <Volume2 size={15} aria-hidden /> Play
+                  </Button>
+                </div>
+                <span className="field-hint">{ev.hint}</span>
+              </div>
+            ))}
           </>
         )}
       </Section>

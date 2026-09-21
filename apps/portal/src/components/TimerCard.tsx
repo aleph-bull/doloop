@@ -8,6 +8,7 @@ import {
   viewTimer,
   type AdvanceOptions,
   type StudyNode,
+  type SoundEvent,
   type TimerState,
   type UserSettings,
 } from '@doloop/core';
@@ -19,7 +20,7 @@ import { api, type ActiveSession, type EndSummary, type ReviewInput } from '../l
 import { fmtTime } from '../lib/format';
 import { useIdleDetection } from '../lib/idle';
 import { keys } from '../lib/queries';
-import { chime } from '../lib/sounds';
+import { playSound, preloadSounds } from '../lib/sounds';
 import { ReviewDialog } from './ReviewDialog';
 
 export interface TimerCardProps {
@@ -68,38 +69,59 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
   const underAssessment = node ? isUnderAssessment(index, node.id) : false;
   const nodePath = node ? pathLabel(index.byId, node.id) : '';
 
-  // 1 s tick: materialize transitions locally, chime on interval boundaries.
+  // 1 s tick: materialize transitions locally. The updater stays pure — React may call it
+  // more than once, which is why playing a sound from inside it used to double-fire.
   useEffect(() => {
     const id = window.setInterval(() => {
       const t = Date.now();
       setNow(t);
-      setTimer((prev) => {
-        const next = advance(prev, new Date(t).toISOString(), opts);
-        if (next !== prev && next.phase !== prev.phase) {
-          if (settings.sounds.enabled && settings.sounds.endOfInterval && next.phase !== 'ended')
-            chime(settings.sounds.volume);
-          if (next.phase === 'ended' && settings.sounds.enabled && settings.sounds.endOfBlock)
-            chime(settings.sounds.volume, 'block');
-        }
-        return next;
-      });
+      setTimer((prev) => advance(prev, new Date(t).toISOString(), opts));
     }, 1000);
     return () => window.clearInterval(id);
-  }, [opts, settings.sounds]);
+  }, [opts]);
 
   const nowIso = new Date(now).toISOString();
   const view = viewTimer(timer, nowIso);
 
-  // Chime once when a scheduled session reaches its planned end (grace begins).
+  /** Play a tone for a moment, if the user has not muted it. */
+  const alert = useCallback(
+    (event: SoundEvent) => {
+      if (!settings.sounds.enabled) return;
+      playSound(settings.sounds[event], settings.sounds.volume);
+    },
+    [settings.sounds],
+  );
+
+  // Decode the chosen sounds up front; an alert must not wait on a fetch.
+  useEffect(() => {
+    preloadSounds([
+      settings.sounds.workStart,
+      settings.sounds.breakStart,
+      settings.sounds.sessionEnd,
+    ]);
+  }, [settings.sounds.workStart, settings.sounds.breakStart, settings.sounds.sessionEnd]);
+
+  // Sound on a phase change, watched as an effect so it fires exactly once per transition.
+  const lastPhase = useRef(timer.phase);
+  useEffect(() => {
+    const from = lastPhase.current;
+    const to = timer.phase;
+    if (from === to) return;
+    lastPhase.current = to;
+    if (to === 'short-break' || to === 'long-break') alert('breakStart');
+    else if (to === 'work' && from !== 'idle') alert('workStart');
+    else if (to === 'ended') alert('sessionEnd');
+  }, [timer.phase, alert]);
+
+  // The planned end of a session: sound once when the grace period opens.
   const graceChimed = useRef(false);
   useEffect(() => {
     if (view.graceRemainingSeconds !== null && !graceChimed.current) {
       graceChimed.current = true;
-      if (settings.sounds.enabled && settings.sounds.endOfBlock)
-        chime(settings.sounds.volume, 'block');
+      alert('sessionEnd');
     }
     if (view.graceRemainingSeconds === null) graceChimed.current = false;
-  }, [view.graceRemainingSeconds, settings.sounds]);
+  }, [view.graceRemainingSeconds, alert]);
 
   const send = useCallback(
     async (event: Parameters<typeof api.sessionEvent>[1]) => {
