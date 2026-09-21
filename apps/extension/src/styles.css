@@ -69,11 +69,15 @@ body {
 .grow {
   flex: 1;
 }
-.hint {
+/* The `.card p` rule above is as specific as a bare class, so these name the element too —
+   otherwise an error inside a card renders muted grey instead of red. */
+.hint,
+.card p.hint {
   font-size: var(--text-xs);
   color: var(--fg-subtle);
 }
-.error {
+.error,
+.card p.error {
   font-size: var(--text-xs);
   color: var(--status-bad);
 }
@@ -95,4 +99,120 @@ body {
 }
 .link:hover {
   color: var(--fg);
+}
+
+/* ---------- Tabbed shell ---------- */
+
+/* The canvas is fixed, so the section scrolls and the tab bar stays put. */
+.content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  flex: none;
+}
+.tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--glass-fill);
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.tab:hover {
+  color: var(--fg);
+}
+.tab[aria-current='page'] {
+  background: var(--glass-fill-strong);
+  color: var(--fg-on-glass);
+  font-weight: 600;
+}
+.tab-count {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+}
+
+/* ---------- Lists (routines, rewards) ---------- */
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.list-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.list-title {
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reward-emoji {
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+.balance {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.good,
+.card p.good {
+  font-size: var(--text-xs);
+  color: var(--status-ok);
+}
+
+/* ---------- Start form ---------- */
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.inline-field .select {
+  width: 9rem;
+}
+.cut-warning,
+.card p.cut-warning {
+  font-size: var(--text-xs);
+  color: var(--status-warn);
+}
+.link-button {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }

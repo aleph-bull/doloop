@@ -1,22 +1,41 @@
 import {
   advance,
   DEFAULT_BACKGROUND_ID,
+  DEFAULT_SETTINGS,
+  describeCut,
   formatClock,
+  modeForPlan,
   pathLabel,
+  pomodoroCut,
   viewTimer,
   type AdvanceOptions,
+  type RoutineOccurrence,
+  type SessionDurationKind,
+  type SessionStyle,
   type TimerEvent,
   type TimerState,
 } from '@doloop/core';
-import { ExternalLink, Pause, Play, SkipForward, Square } from 'lucide-react';
+import {
+  Check,
+  ExternalLink,
+  Gift,
+  ListChecks,
+  Pause,
+  Play,
+  SkipForward,
+  Square,
+  Timer,
+} from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import {
   applyUserTheme,
   Backdrop,
   Button,
   Chip,
+  fireRewardBurst,
   Glass,
   resolveExtensionBackdrop,
+  Segmented,
 } from '@doloop/ui';
 import { resolveTheme as resolveThemeSafe } from '@doloop/ui';
 import { getAll, onChange, set, type Stored } from '../lib/storage';
@@ -43,6 +62,8 @@ const PHASE: Record<TimerState['phase'], string> = {
   ended: 'Ended',
 };
 
+type Tab = NonNullable<Stored['tab']>;
+
 function todayLocal(tz: string | null): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: tz ?? undefined,
@@ -50,6 +71,40 @@ function todayLocal(tz: string | null): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
+}
+
+function fmtLength(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+function plusMinutesLocalTime(min: number): string {
+  const d = new Date(Date.now() + min * 60_000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+function todayAtLocal(time: string): string {
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h ?? 0, m ?? 0, 0, 0);
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+  return d.toISOString();
+}
+
+function minutesUntilLocal(time: string): number {
+  return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
+}
+
+/** "Mon 3 Mar" for an overdue occurrence, so a backfill says which day it lands on. */
+function shortDate(date: string): string {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1));
 }
 
 export function Popup() {
@@ -67,11 +122,23 @@ export function Popup() {
     badges: string[];
     endedEarly: boolean;
   } | null>(null);
-  const [startMode, setStartMode] = useState<'pomodoro' | 'unlimited'>('pomodoro');
+  const [style, setStyle] = useState<SessionStyle>('pomodoro');
+  const [duration, setDuration] = useState<SessionDurationKind>('unlimited');
+  const [minutes, setMinutes] = useState('60');
+  const [endTime, setEndTime] = useState(() => plusMinutesLocalTime(60));
+  /** Set when the chosen length cuts a block short; cleared by confirming. */
+  const [confirmCut, setConfirmCut] = useState<string | null>(null);
   const [startNode, setStartNode] = useState('');
+  const [tab, setTab] = useState<Tab>('focus');
+  /** Transient feedback under the routine list after a tick. */
+  const [tickNote, setTickNote] = useState<string | null>(null);
+  const [redeemed, setRedeemed] = useState<string | null>(null);
 
   useEffect(() => {
-    void getAll().then(setStore);
+    void getAll().then((s) => {
+      setStore(s);
+      if (s.tab) setTab(s.tab);
+    });
     const off = onChange(() => void getAll().then(setStore));
     void send({ type: 'poll' }).catch(() => {});
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -80,6 +147,10 @@ export function Popup() {
       window.clearInterval(id);
     };
   }, []);
+
+  const snapshot = store?.snapshot ?? null;
+  const active = snapshot?.active ?? null;
+  const settings = snapshot?.settings ?? null;
 
   // Daily quote, once per day (spec §12).
   useEffect(() => {
@@ -102,13 +173,10 @@ export function Popup() {
       .catch(() => {});
   }, [store?.connection, store?.snapshot, store?.quoteShownOn]);
 
-  const snapshot = store?.snapshot ?? null;
-  const active = snapshot?.active ?? null;
   const nodesById = useMemo(
     () => new Map((snapshot?.nodes ?? []).map((n) => [n.id, n] as const)),
     [snapshot?.nodes],
   );
-  const settings = snapshot?.settings ?? null;
 
   // Same theme, accent, background, and panel surface as the portal.
   useEffect(() => {
@@ -129,15 +197,11 @@ export function Popup() {
 
   const opts = useMemo<AdvanceOptions>(
     () => ({
-      pomodoro: active?.session.pomodoroConfigSnapshot ??
-        settings?.pomodoro ?? {
-          workMin: 25,
-          shortBreakMin: 5,
-          longBreakMin: 15,
-          cyclesBeforeLong: 4,
-        },
-      autoStartBreaks: settings?.pomodoro.autoStartBreaks ?? true,
-      autoStartWork: settings?.pomodoro.autoStartWork ?? false,
+      pomodoro:
+        active?.session.pomodoroConfigSnapshot ?? settings?.pomodoro ?? DEFAULT_SETTINGS.pomodoro,
+      autoStartBreaks:
+        settings?.pomodoro.autoStartBreaks ?? DEFAULT_SETTINGS.pomodoro.autoStartBreaks,
+      autoStartWork: settings?.pomodoro.autoStartWork ?? DEFAULT_SETTINGS.pomodoro.autoStartWork,
     }),
     [active?.session.pomodoroConfigSnapshot, settings?.pomodoro],
   );
@@ -195,6 +259,12 @@ export function Popup() {
   const portal = store?.connection?.portalUrl ?? 'http://localhost:5173';
   const open = (path = '/') => chrome.tabs.create({ url: `${portal}${path}` });
 
+  const goTab = (next: Tab) => {
+    setTab(next);
+    setError(null);
+    void set({ tab: next });
+  };
+
   if (!store) return <div className="popup" />;
 
   if (!store.connection) {
@@ -210,6 +280,8 @@ export function Popup() {
       </div>
     );
   }
+
+  /* ---------- Moments that take over the whole popup ---------- */
 
   if (summary) {
     return (
@@ -292,7 +364,10 @@ export function Popup() {
     );
   }
 
-  if (active && timer && view) {
+  /* ---------- Focus tab ---------- */
+
+  const runningView = () => {
+    if (!active || !timer || !view) return null;
     const digits =
       timer.mode === 'unlimited'
         ? formatClock(view.workSeconds)
@@ -300,59 +375,51 @@ export function Popup() {
           ? formatClock(view.phaseRemainingSeconds)
           : formatClock(view.phaseElapsedSeconds);
     const inBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
+    const path = pathLabel(nodesById, active.session.nodeId);
     return (
-      <div className="popup">
-        {backdrop}
-        <Glass className="card stack">
-          <div className="phase">{PHASE[timer.phase]}</div>
-          {pathLabel(nodesById, active.session.nodeId) && (
-            <p className="hint">{pathLabel(nodesById, active.session.nodeId)}</p>
-          )}
-          <h1 className="title">{active.nodeTitle}</h1>
-          <div className="digits tabular">{timer.showTimer ? digits : '· · ·'}</div>
-          <div className="row">
-            <Chip tone="neutral">
-              {timer.mode === 'pomodoro' ? `Cycle ${timer.cycle + 1}` : timer.mode}
-            </Chip>
-            <span className="hint tabular">{formatClock(view.workSeconds)} focused</span>
-          </div>
-          <div className="row">
-            {(timer.phase === 'work' || inBreak) && (
-              <Button size="sm" onClick={() => event({ type: 'pause' })} disabled={busy}>
-                <Pause size={14} aria-hidden /> Pause
-              </Button>
-            )}
-            {timer.phase === 'paused' && (
-              <Button
-                size="sm"
-                variant="primary"
-                onClick={() => event({ type: 'resume' })}
-                disabled={busy}
-              >
-                <Play size={14} aria-hidden /> Resume
-              </Button>
-            )}
-            {timer.mode === 'pomodoro' &&
-              (inBreak || (timer.phase === 'paused' && timer.resumePhase !== 'work')) && (
-                <Button size="sm" onClick={() => event({ type: 'skip-break' })} disabled={busy}>
-                  <SkipForward size={14} aria-hidden /> Skip
-                </Button>
-              )}
-            <span className="grow" />
-            <Button size="sm" variant="danger" onClick={stop} disabled={busy}>
-              <Square size={12} aria-hidden /> End
+      <Glass className="card stack">
+        <div className="phase">{PHASE[timer.phase]}</div>
+        {path && <p className="hint">{path}</p>}
+        <h1 className="title">{active.nodeTitle}</h1>
+        <div className="digits tabular">{timer.showTimer ? digits : '· · ·'}</div>
+        <div className="row">
+          <Chip tone="neutral">
+            {timer.mode === 'pomodoro' ? `Cycle ${timer.cycle + 1}` : timer.mode}
+          </Chip>
+          <span className="hint tabular">{formatClock(view.workSeconds)} focused</span>
+        </div>
+        <div className="row">
+          {(timer.phase === 'work' || inBreak) && (
+            <Button size="sm" onClick={() => event({ type: 'pause' })} disabled={busy}>
+              <Pause size={14} aria-hidden /> Pause
             </Button>
-          </div>
-          {error && <p className="error">{error}</p>}
-        </Glass>
-        <button type="button" className="link" onClick={() => open('/')}>
-          Open portal <ExternalLink size={12} aria-hidden />
-        </button>
-      </div>
+          )}
+          {timer.phase === 'paused' && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => event({ type: 'resume' })}
+              disabled={busy}
+            >
+              <Play size={14} aria-hidden /> Resume
+            </Button>
+          )}
+          {timer.mode === 'pomodoro' &&
+            (inBreak || (timer.phase === 'paused' && timer.resumePhase !== 'work')) && (
+              <Button size="sm" onClick={() => event({ type: 'skip-break' })} disabled={busy}>
+                <SkipForward size={14} aria-hidden /> Skip
+              </Button>
+            )}
+          <span className="grow" />
+          <Button size="sm" variant="danger" onClick={stop} disabled={busy}>
+            <Square size={12} aria-hidden /> End
+          </Button>
+        </div>
+        {error && <p className="error">{error}</p>}
+      </Glass>
     );
-  }
+  };
 
-  // Idle: start a session.
   const nodes = (snapshot?.nodes ?? []).filter((n) => n.kind !== 'course' && !n.completedAt);
   const plan = snapshot?.plan ?? [];
   const ordered = [
@@ -361,9 +428,51 @@ export function Popup() {
   ] as typeof nodes;
   const selected = startNode || ordered[0]?.id || '';
 
-  return (
-    <div className="popup">
-      {backdrop}
+  /** How long the session will run, or null when it is unlimited. */
+  const plannedMinutes =
+    duration === 'unlimited'
+      ? null
+      : duration === 'for'
+        ? Math.max(0, Math.round(Number(minutes) || 0))
+        : minutesUntilLocal(endTime);
+
+  // Only a pomodoro has blocks to cut short; a continuous session can stop anywhere.
+  const cut =
+    style === 'pomodoro' && plannedMinutes !== null && settings
+      ? pomodoroCut(plannedMinutes, settings.pomodoro)
+      : null;
+  const cutMessage = describeCut(cut);
+
+  const plannedEndAt = (): string | null => {
+    if (duration === 'unlimited') return null;
+    if (duration === 'until') return todayAtLocal(endTime);
+    return new Date(Date.now() + (plannedMinutes ?? 0) * 60_000).toISOString();
+  };
+
+  const startSession = async () => {
+    if (!selected) return;
+    if (plannedMinutes !== null && plannedMinutes <= 0) {
+      setError('Pick a length in the future');
+      return;
+    }
+    const end = plannedEndAt();
+    await run({
+      type: 'start',
+      nodeId: selected,
+      mode: modeForPlan({ style, plannedEndAt: end }),
+      plannedEndAt: end,
+    });
+    setConfirmCut(null);
+  };
+
+  const go = () => {
+    // Confirm once when the length does not land on a block boundary.
+    if (cutMessage && confirmCut !== cutMessage) return setConfirmCut(cutMessage);
+    void startSession();
+  };
+
+  const startView = () => (
+    <>
       {quote && (
         <Glass className="card quote">
           <p>{quote.text}</p>
@@ -390,38 +499,259 @@ export function Popup() {
             ))}
           </select>
         )}
-        <div className="segmented">
-          <button
-            type="button"
-            className="segmented-item"
-            aria-pressed={startMode === 'pomodoro'}
-            onClick={() => setStartMode('pomodoro')}
-          >
-            Pomodoro
-          </button>
-          <button
-            type="button"
-            className="segmented-item"
-            aria-pressed={startMode === 'unlimited'}
-            onClick={() => setStartMode('unlimited')}
-          >
-            Unlimited
-          </button>
-        </div>
-        <Button
-          variant="primary"
-          disabled={!selected || busy}
-          loading={busy}
-          onClick={() => run({ type: 'start', nodeId: selected, mode: startMode })}
-        >
-          <Play size={14} aria-hidden /> Start
+
+        <Segmented
+          ariaLabel="Session style"
+          value={style}
+          onChange={(v) => {
+            setStyle(v);
+            setConfirmCut(null);
+          }}
+          options={[
+            { value: 'pomodoro', label: 'Pomodoro' },
+            { value: 'continuous', label: 'Continuous' },
+          ]}
+        />
+        <Segmented
+          ariaLabel="Session length"
+          value={duration}
+          onChange={(v) => {
+            setDuration(v);
+            setConfirmCut(null);
+          }}
+          options={[
+            { value: 'unlimited', label: 'Open' },
+            { value: 'for', label: 'For' },
+            { value: 'until', label: 'Until' },
+          ]}
+        />
+
+        {duration === 'for' && (
+          <label className="inline-field">
+            <span className="hint">Minutes</span>
+            <input
+              className="select"
+              type="number"
+              min={1}
+              max={1440}
+              step={5}
+              value={minutes}
+              onChange={(e) => {
+                setMinutes(e.target.value);
+                setConfirmCut(null);
+              }}
+            />
+          </label>
+        )}
+        {duration === 'until' && (
+          <label className="inline-field">
+            <span className="hint">Stop at</span>
+            <input
+              className="select"
+              type="time"
+              value={endTime}
+              onChange={(e) => {
+                setEndTime(e.target.value);
+                setConfirmCut(null);
+              }}
+            />
+          </label>
+        )}
+        {plannedMinutes !== null && plannedMinutes > 0 && (
+          <p className="hint">{fmtLength(plannedMinutes)} of session.</p>
+        )}
+
+        {cutMessage && (
+          <p className="cut-warning" role="alert">
+            {cutMessage}
+            {cut && cut.previousBoundaryMinutes > 0 && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    setDuration('for');
+                    setMinutes(String(cut.previousBoundaryMinutes));
+                    setConfirmCut(null);
+                  }}
+                >
+                  Use {fmtLength(cut.previousBoundaryMinutes)} instead
+                </button>
+              </>
+            )}
+          </p>
+        )}
+
+        <Button variant="primary" disabled={!selected || busy} loading={busy} onClick={go}>
+          <Play size={14} aria-hidden /> {confirmCut ? 'Start anyway' : 'Start'}
         </Button>
         {store.lastError && <p className="error">{store.lastError}</p>}
         {error && <p className="error">{error}</p>}
       </Glass>
-      <button type="button" className="link" onClick={() => open('/')}>
-        Open portal <ExternalLink size={12} aria-hidden />
-      </button>
+    </>
+  );
+
+  /* ---------- Routines tab ---------- */
+
+  const routines = snapshot?.routines ?? null;
+
+  const tickRoutine = async (o: RoutineOccurrence) => {
+    setTickNote(null);
+    const r = await run<{ xpAwarded: number; cappedByDailyLimit: boolean; badges: string[] }>({
+      type: 'tick-routine',
+      routineId: o.routineId,
+      date: o.date,
+    });
+    if (!r) return;
+    const parts = [`+${r.xpAwarded} XP`];
+    if (r.cappedByDailyLimit) parts.push("that's today's routine XP maxed out");
+    if (r.badges.length) parts.push(`badge unlocked: ${r.badges.join(', ')}`);
+    setTickNote(parts.join(' · '));
+  };
+
+  const routinesView = () => {
+    if (!routines) {
+      return (
+        <Glass className="card stack">
+          <h1>Routines</h1>
+          <p className="hint">Loading your routines…</p>
+        </Glass>
+      );
+    }
+    return (
+      <Glass className="card stack">
+        <h1>Routines</h1>
+        {routines.due.length === 0 ? (
+          <p className="hint">Nothing outstanding. Every routine due is ticked off.</p>
+        ) : (
+          <ul className="list">
+            {routines.due.map((o) => (
+              <li className="list-row" key={`${o.routineId}:${o.date}`}>
+                <div className="list-main">
+                  <span className="list-title">{o.title}</span>
+                  <span className="hint">
+                    {o.estimatedMinutes} min
+                    {o.overdue ? ` · from ${shortDate(o.date)}` : ''}
+                  </span>
+                </div>
+                <Button size="sm" onClick={() => tickRoutine(o)} disabled={busy}>
+                  <Check size={14} aria-hidden /> Tick
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {routines.xpToday > 0 && (
+          <p className="hint">{routines.xpToday} XP banked from routines today.</p>
+        )}
+        {tickNote && <p className="good">{tickNote}</p>}
+        {error && <p className="error">{error}</p>}
+      </Glass>
+    );
+  };
+
+  /* ---------- Rewards tab ---------- */
+
+  const rewards = snapshot?.rewards ?? null;
+
+  const redeem = async (id: string, name: string, emoji: string | null) => {
+    setRedeemed(null);
+    const r = await run<{ spent: number }>({ type: 'redeem', rewardId: id });
+    if (!r) return;
+    fireRewardBurst({ glyphs: emoji ? [emoji, '🎉', '✨'] : undefined });
+    setRedeemed(`${name} redeemed for ${r.spent} XP. Go enjoy it.`);
+  };
+
+  const rewardsView = () => {
+    if (!rewards) {
+      return (
+        <Glass className="card stack">
+          <h1>Rewards</h1>
+          <p className="hint">Loading your shelf…</p>
+        </Glass>
+      );
+    }
+    const items = rewards.items.filter((r) => !r.archived);
+    return (
+      <Glass className="card stack">
+        <div className="row">
+          <h1 className="grow">Rewards</h1>
+          <span className="balance tabular">{rewards.xp} XP</span>
+        </div>
+        {items.length === 0 ? (
+          <p className="hint">No rewards yet. Set one up in the portal and spend XP on it.</p>
+        ) : (
+          <ul className="list">
+            {items.map((r) => (
+              <li className="list-row" key={r.id}>
+                <span className="reward-emoji" aria-hidden>
+                  {r.emoji ?? '🎁'}
+                </span>
+                <div className="list-main">
+                  <span className="list-title">{r.name}</span>
+                  <span className="hint">
+                    {r.costXp} XP
+                    {r.availableOn
+                      ? ` · back on ${shortDate(r.availableOn)}`
+                      : r.affordable
+                        ? ''
+                        : ` · ${r.costXp - rewards.xp} to go`}
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant={r.redeemable ? 'primary' : 'secondary'}
+                  disabled={!r.redeemable || busy}
+                  onClick={() => redeem(r.id, r.name, r.emoji)}
+                >
+                  <Gift size={14} aria-hidden /> Redeem
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {redeemed && <p className="good">{redeemed}</p>}
+        {error && <p className="error">{error}</p>}
+      </Glass>
+    );
+  };
+
+  /* ---------- Shell ---------- */
+
+  const tabs: Array<{ id: Tab; label: string; icon: typeof Timer }> = [
+    { id: 'focus', label: 'Focus', icon: Timer },
+    { id: 'routines', label: 'Routines', icon: ListChecks },
+    { id: 'rewards', label: 'Rewards', icon: Gift },
+  ];
+  const dueCount = routines?.due.length ?? 0;
+
+  return (
+    <div className="popup">
+      {backdrop}
+      <div className="content">
+        {tab === 'focus' && (active ? runningView() : startView())}
+        {tab === 'routines' && routinesView()}
+        {tab === 'rewards' && rewardsView()}
+        <button type="button" className="link" onClick={() => open('/')}>
+          Open portal <ExternalLink size={12} aria-hidden />
+        </button>
+      </div>
+      <nav className="tabs" aria-label="Sections">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className="tab"
+            aria-current={tab === t.id ? 'page' : undefined}
+            onClick={() => goTab(t.id)}
+          >
+            <t.icon size={16} aria-hidden />
+            {t.label}
+            {t.id === 'routines' && dueCount > 0 && <span className="tab-count">{dueCount}</span>}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

@@ -1,6 +1,9 @@
 import type {
+  CustomReward,
   NodePace,
   PlanItem,
+  RewardView,
+  RoutineOccurrence,
   Session,
   StudyNode,
   TimerEvent,
@@ -79,8 +82,12 @@ export const api = {
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
   pace: () => request<{ pace: Record<string, NodePace>; plan: PlanItem[] }>('GET', '/api/pace'),
   nodes: () => request<{ nodes: StudyNode[] }>('GET', '/api/nodes'),
-  start: (input: { nodeId: string; mode: Session['mode']; plannedEndAt?: string | null }) =>
-    request<{ now: string; active: ActiveSession }>('POST', '/api/sessions', input),
+  start: (input: {
+    nodeId: string;
+    mode: Session['mode'];
+    plannedEndAt?: string | null;
+    showTimer?: boolean;
+  }) => request<{ now: string; active: ActiveSession }>('POST', '/api/sessions', input),
   event: (id: string, event: TimerEvent) =>
     request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/events`, event),
   end: (id: string, body: { review?: Record<string, unknown> | null }) =>
@@ -100,4 +107,32 @@ export const api = {
         item: { text: string; author?: string; citation?: string };
       } | null;
     }>('GET', '/api/quote'),
+
+  /**
+   * Routines. The window is pinned to today so the response stays small: `due` is computed
+   * from its own grace period and does not depend on it.
+   */
+  routines: (today: string) =>
+    request<{
+      today: string;
+      due: RoutineOccurrence[];
+      xpToday: number;
+      xpRemainingToday: number;
+    }>('GET', `/api/routines?from=${today}&to=${today}`),
+  tickRoutine: (id: string, date: string) =>
+    request<{
+      xpAwarded: number;
+      xpTotal: number;
+      cappedByDailyLimit: boolean;
+      badges: string[];
+    }>('POST', `/api/routines/${id}/tick`, { date }),
+  untickRoutine: (id: string, date: string) =>
+    request<{ xpTotal: number }>('DELETE', `/api/routines/${id}/tick/${date}`),
+
+  rewards: () => request<{ rewards: RewardView[]; xp: number }>('GET', '/api/rewards'),
+  redeem: (id: string) =>
+    request<{ reward: CustomReward; xp: number; spent: number; rewards: RewardView[] }>(
+      'POST',
+      `/api/rewards/${id}/redeem`,
+    ),
 };

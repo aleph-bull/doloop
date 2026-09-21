@@ -1,5 +1,7 @@
 import {
   advance,
+  DEFAULT_SETTINGS,
+  toLocalDate,
   viewTimer,
   type AdvanceOptions,
   type TimerEvent,
@@ -57,10 +59,14 @@ type Msg =
       nodeId: string;
       mode: 'pomodoro' | 'unlimited' | 'scheduled';
       plannedEndAt?: string | null;
+      showTimer?: boolean;
     }
   | { type: 'event'; sessionId: string; event: TimerEvent }
   | { type: 'end'; sessionId: string; review: Record<string, unknown> | null }
-  | { type: 'quote' };
+  | { type: 'quote' }
+  | { type: 'tick-routine'; routineId: string; date: string }
+  | { type: 'untick-routine'; routineId: string; date: string }
+  | { type: 'redeem'; rewardId: string };
 
 chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
   handle(msg)
@@ -90,6 +96,7 @@ async function handle(msg: Msg): Promise<unknown> {
         nodeId: msg.nodeId,
         mode: msg.mode,
         plannedEndAt: msg.plannedEndAt ?? null,
+        ...(msg.showTimer === undefined ? {} : { showTimer: msg.showTimer }),
       });
       await applyActive(res.active, res.now);
       return res.active;
@@ -109,6 +116,25 @@ async function handle(msg: Msg): Promise<unknown> {
     }
     case 'quote':
       return api.quote();
+    case 'tick-routine': {
+      const out = await api.tickRoutine(msg.routineId, msg.date);
+      await refreshRoutines();
+      await refreshRewards(); // the tick moved XP, so affordability may have changed
+      return out;
+    }
+    case 'untick-routine': {
+      const out = await api.untickRoutine(msg.routineId, msg.date);
+      await refreshRoutines();
+      await refreshRewards();
+      return out;
+    }
+    case 'redeem': {
+      const out = await api.redeem(msg.rewardId);
+      await patchSnapshot((s) => {
+        s.rewards = { items: out.rewards, xp: out.xp };
+      });
+      return out;
+    }
   }
 }
 
@@ -117,6 +143,7 @@ async function handle(msg: Msg): Promise<unknown> {
 async function poll(): Promise<Snapshot | null> {
   const conn = await get('connection');
   if (!conn) return null;
+  const previous = await get('snapshot');
   try {
     const [me, active, pace, nodes] = await Promise.all([
       api.me(),
@@ -149,9 +176,16 @@ async function poll(): Promise<Snapshot | null> {
           parentId: n.parentId,
           completedAt: n.completedAt,
         })),
+      // Carried over, then refreshed below: neither is allowed to fail the timer's poll.
+      routines: previous?.routines ?? null,
+      rewards: previous?.rewards ?? null,
       updatedAt: active.now,
     };
     await set({ snapshot, lastError: null });
+    await Promise.all([
+      refreshRoutines(toLocalDate(active.now, me.user.timezone)),
+      refreshRewards(),
+    ]);
     // Uploaded background: download once per change, drop when no longer in use.
     const th = me.user.settings.theme;
     const wantsUpload =
@@ -184,6 +218,47 @@ async function poll(): Promise<Snapshot | null> {
   }
 }
 
+/** Read-modify-write one slice of the stored snapshot. No-ops when nothing is stored yet. */
+async function patchSnapshot(mutate: (s: Snapshot) => void): Promise<void> {
+  const snapshot = await get('snapshot');
+  if (!snapshot) return;
+  mutate(snapshot);
+  await set({ snapshot });
+}
+
+/**
+ * Routines and rewards are secondary to the timer: a failure here leaves the last known
+ * values in place rather than blanking the tabs or failing the poll.
+ */
+async function refreshRoutines(today?: string): Promise<void> {
+  const date = today ?? (await get('snapshot'))?.routines?.today;
+  if (!date) return;
+  try {
+    const r = await api.routines(date);
+    await patchSnapshot((s) => {
+      s.routines = {
+        today: r.today,
+        due: r.due,
+        xpToday: r.xpToday,
+        xpRemainingToday: r.xpRemainingToday,
+      };
+    });
+  } catch {
+    /* keep whatever we had */
+  }
+}
+
+async function refreshRewards(): Promise<void> {
+  try {
+    const r = await api.rewards();
+    await patchSnapshot((s) => {
+      s.rewards = { items: r.rewards, xp: r.xp };
+    });
+  } catch {
+    /* keep whatever we had */
+  }
+}
+
 async function applyActive(active: ActiveSession | null, now: string) {
   const snapshot = await get('snapshot');
   if (!snapshot) return;
@@ -199,15 +274,9 @@ function advanceOptions(
   settings: UserSettings | null,
   snapshot: Snapshot['active'],
 ): AdvanceOptions {
-  const p = settings?.pomodoro ?? {
-    workMin: 25,
-    shortBreakMin: 5,
-    longBreakMin: 15,
-    cyclesBeforeLong: 4,
-    autoStartBreaks: true,
-    autoStartWork: false,
-    showTimerByDefault: true,
-  };
+  // Core's defaults, never a local copy: a hand-written fallback drifted once already and
+  // left the badge paused after every break while the server had looped back into work.
+  const p = settings?.pomodoro ?? DEFAULT_SETTINGS.pomodoro;
   return {
     pomodoro: snapshot?.session.pomodoroConfigSnapshot ?? p,
     autoStartBreaks: p.autoStartBreaks,

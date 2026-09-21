@@ -1,4 +1,10 @@
-import type { TimerState, UserSettings, Session } from '@doloop/core';
+import type {
+  RewardView,
+  RoutineOccurrence,
+  TimerState,
+  UserSettings,
+  Session,
+} from '@doloop/core';
 
 /** Everything the extension persists, all in chrome.storage.local. */
 export interface Connection {
@@ -34,6 +40,16 @@ export interface Snapshot {
     parentId: string | null;
     completedAt: string | null;
   }>;
+  /** Routine occurrences still outstanding today or in the recent past. */
+  routines: {
+    /** Today in the user's timezone, which is the date a tick is banked against. */
+    today: string;
+    due: RoutineOccurrence[];
+    xpToday: number;
+    xpRemainingToday: number;
+  } | null;
+  /** The reward shelf, with affordability and cooldown already resolved by the server. */
+  rewards: { items: RewardView[]; xp: number } | null;
   updatedAt: string;
 }
 
@@ -47,6 +63,8 @@ export interface Stored {
   lastError?: string | null;
   /** Cached uploaded background, keyed by the API's updatedAt. */
   customBackground?: { dataUrl: string; updatedAt: string } | null;
+  /** The popup tab to reopen on, so a glance at routines is not undone by closing it. */
+  tab?: 'focus' | 'routines' | 'rewards';
 }
 
 export async function get<K extends keyof Stored>(key: K): Promise<Stored[K]> {

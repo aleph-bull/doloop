@@ -207,3 +207,46 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 - **Motion lives in core, not the component.** `packages/core/src/glow.ts` holds the attack/decay, the breathing wave and the reach curve. An animation frame only fires when the page is being painted, so a canvas cannot be used to verify any of it — in the Claude browser pane `requestAnimationFrame` fires zero times a second. Seventeen unit tests cover it instead.
 - **Settings split as asked**: on/off, intensity and opacity in Settings only; colour in both Settings and a swatch on the focus screen that appears with the chrome and auto-hides. Both write `settings.visualizer.color`, so the two are the same value rather than two copies kept in step.
 - **Reduced motion** renders one frame at a flat resting level and stops the loop, rather than animating more slowly.
+
+## Extension catch-up: routines, rewards, session lengths (2026-09-21)
+
+The extension had not moved since the timer-and-blocking build, so it was a phase or two
+behind the portal. Four things changed.
+
+- **The popup is tabbed now: Focus, Routines, Rewards.** The canvas stays 360x480, so the
+  section scrolls and the tab bar is pinned. The chosen tab is stored, because a glance at
+  what is due should survive closing the popup. Routines carries a count badge; the other
+  two do not, since neither is something you are behind on.
+- **Routines are ticked from the popup, not managed there.** Only what is outstanding is
+  listed — today's occurrences plus the grace window — with the estimate and, when overdue,
+  the date the tick banks against. Creating, editing and importing stay in the portal.
+  The window is pinned to `from=to=today` so the response stays small; `due` is computed
+  from its own grace period and does not depend on it.
+- **Rewards are redeemed from the popup, not created there.** The server has already
+  resolved affordability and cooldown, so the popup renders the verdict rather than
+  recomputing it — including the shelf returned by the redeem call itself, which is how the
+  new cooldown appears without a refetch.
+- **Both are secondary to the timer.** They are fetched outside the poll's `Promise.all` and
+  each failure is swallowed, keeping the last known values: a routines outage must not stop
+  the badge from counting down. A poll carries the previous values forward rather than
+  blanking the tabs while it refetches.
+- **Session style and length reached the popup.** Same two axes as the portal, same
+  `modeForPlan`, and the same block-boundary warning with its one-click snap and explicit
+  second press. All of it comes from `packages/core/src/session-plan.ts`; none of it was
+  reimplemented.
+
+### Two bugs found on the way
+
+- **The extension kept its own copy of the pomodoro defaults**, which still said
+  `autoStartWork: false` after core changed to `true`. The badge and popup therefore showed
+  a session paused after every break while the server had already looped back into work.
+  Both sites now read `DEFAULT_SETTINGS.pomodoro`, so there is no second copy left to drift.
+- **`.card p` is as specific as a bare class**, so `.error` inside a card lost to it and
+  error text rendered muted grey instead of red. The utility classes now name the element
+  as well. This was pre-existing, not introduced by the tabs.
+
+### What was already fine
+
+The background work needed nothing: `backgroundById` falls back to Graphite for an unknown
+id and photos already resolve through `assetBase`, so the new ids and the five new Graphite
+siblings work in the extension as they stand.
