@@ -132,7 +132,11 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 - **Favicon** is `apps/portal/public/favicon.svg`, drawn to match the existing extension icon (gradient squircle, open white loop with the gap at 1 o'clock). The gradient stops were sampled from `icon128.png` so tab and extension icon read as the same mark. `apple-touch-icon.png` reuses that PNG.
 - **Custom backgrounds are upload-only.** `theme.customBackgroundUrl` narrows to `'upload' | null` and the settings schema rejects anything else, so a remote image URL can no longer be stored or rendered. This reverses the earlier "the URL option remains for hosted images" decision, at the user's request.
-- **Pomodoro durations are editable again, but only between sessions.** The user asked for them to be changeable "outside of break sessions", read as: not while a session is running. `PATCH /api/me/settings` rejects a duration change when an active session exists, and the fields disable themselves. `POMODORO_LIMITS` keeps work at 10–90 min so the original anti-farming reason — clearing the "no XP before the first work interval" gate with a 1-minute interval — still cannot happen. This supersedes the "durations are locked" decision above.
+- **Pomodoro durations are freely editable, with no restriction at all.** The user asked for the durations to be unlocked and then, when offered a narrower reading, for the restriction to be removed outright. `POMODORO_LIMITS` is now sanity bounds only (work 1–180 min, matching the original schema) shared by the settings form and the API schema; there is no active-session check.
+
+  This is safe because a pomodoro session writes `pomodoroConfigSnapshot` at start and every later operation reads `advanceOptions(user, row.pomodoroConfigSnapshot)`, i.e. `snapshot ?? settings.pomodoro` — so changing the setting mid-session cannot move the running timer's contract. It applies to the next session. Verified against a live session: the PATCH returns 200 and the running snapshot stays 25/5/15/4.
+
+  The dropped 10-minute floor was there so the "no XP before the first work interval" gate could not be cleared with a 1-minute interval. Accepting that: XP is proportional to focused minutes, so a 1-minute pomodoro earns 2 XP base and nothing is farmed — the only thing a short interval buys is avoiding the ended-early penalty on work you genuinely did not do, which only cheats the user. This supersedes both the "durations are locked" decision and the "editable between sessions only" one.
 
 ### Custom rewards
 

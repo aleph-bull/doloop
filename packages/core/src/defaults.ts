@@ -1,24 +1,24 @@
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
- * Bounds on the pomodoro interval lengths the user may choose.
+ * Input bounds for the pomodoro interval lengths — sanity limits only, shared by the
+ * settings form and the API schema so the two agree.
  *
- * Durations are editable, but only between sessions: the server rejects a change while a
- * session is running so the running timer's contract cannot move under it. The lower bound
- * on `workMin` also keeps the "no XP before the first work interval" rule meaningful — a
- * one-minute work interval would clear that gate for free.
+ * Durations are freely editable, including while a session is running: a session snapshots
+ * its config in `pomodoroConfigSnapshot` at the start, so changing the setting never moves
+ * the running timer's contract under it. It takes effect on the next session.
  */
 export const POMODORO_LIMITS: Record<
   'workMin' | 'shortBreakMin' | 'longBreakMin' | 'cyclesBeforeLong',
   { min: number; max: number }
 > = {
-  workMin: { min: 10, max: 90 },
-  shortBreakMin: { min: 1, max: 30 },
-  longBreakMin: { min: 5, max: 60 },
-  cyclesBeforeLong: { min: 2, max: 8 },
+  workMin: { min: 1, max: 180 },
+  shortBreakMin: { min: 1, max: 60 },
+  longBreakMin: { min: 1, max: 120 },
+  cyclesBeforeLong: { min: 1, max: 12 },
 };
 
-/** The pomodoro fields that are locked while a session is running. */
+/** The four interval-length fields, in the order the settings form shows them. */
 export const POMODORO_DURATION_KEYS = [
   'workMin',
   'shortBreakMin',

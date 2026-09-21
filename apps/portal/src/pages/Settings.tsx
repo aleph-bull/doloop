@@ -75,7 +75,6 @@ function NumberField({
   max,
   step = 1,
   hint,
-  disabled,
 }: {
   label: string;
   value: number;
@@ -84,7 +83,6 @@ function NumberField({
   max: number;
   step?: number;
   hint?: string;
-  disabled?: boolean;
 }) {
   const [v, setV] = useState(String(value));
   useEffect(() => setV(String(value)), [value]);
@@ -96,7 +94,6 @@ function NumberField({
       min={min}
       max={max}
       step={step}
-      disabled={disabled}
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => {
@@ -327,15 +324,14 @@ export function Settings() {
               value={s.pomodoro[k]}
               min={POMODORO_LIMITS[k].min}
               max={POMODORO_LIMITS[k].max}
-              disabled={sessionRunning}
               onCommit={(v) => patch({ pomodoro: { [k]: v } })}
             />
           ))}
         </div>
         <p className="field-hint">
           {sessionRunning
-            ? 'Interval lengths are locked while a session is running. Finish or stop it to change them.'
-            : `Editable between sessions only. Work is ${POMODORO_LIMITS.workMin.min}–${POMODORO_LIMITS.workMin.max} min; the floor keeps the "no XP before the first work interval" rule meaningful.`}{' '}
+            ? 'Your running session keeps the lengths it started with; these apply to the next one.'
+            : 'Applies to your next session.'}{' '}
           A pomodoro ended before its first work interval, or a scheduled session stopped before its
           planned end, earns no XP.
         </p>

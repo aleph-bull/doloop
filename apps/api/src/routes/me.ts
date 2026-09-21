@@ -1,14 +1,8 @@
 import type { FastifyInstance } from 'fastify';
-import {
-  isAccentUnlocked,
-  isBackgroundAvailable,
-  isValidTimezone,
-  POMODORO_DURATION_KEYS,
-} from '@doloop/core';
+import { isAccentUnlocked, isBackgroundAvailable, isValidTimezone } from '@doloop/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { viewPolicy } from '../services/rest-days';
-import { getActiveRow } from '../services/sessions';
 import {
   deleteUser,
   regenerateIcsToken,
@@ -52,12 +46,6 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
 
   app.patch('/api/me/settings', async (req) => {
     const patch = settingsSchema.parse(req.body);
-    // Interval lengths are fixed for the duration of a session, so the running timer's
-    // contract cannot move under it. Everything else is editable at any time.
-    if (patch.pomodoro && POMODORO_DURATION_KEYS.some((k) => patch.pomodoro![k] !== undefined)) {
-      if (await getActiveRow(db, req.user.id))
-        throw badRequest('Finish or stop your session before changing interval lengths.');
-    }
     const accent = patch.theme?.accent;
     if (accent && !accent.startsWith('custom:') && !isAccentUnlocked(accent, req.user.level))
       throw badRequest('That accent unlocks at a higher level');
