@@ -1,0 +1,332 @@
+import type { Routine, RoutineOccurrence } from '@doloop/core';
+import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@doloop/core';
+import { Check, Pencil, Plus, Repeat, Trash2, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@doloop/ui';
+import { ErrorPanel } from '../components/ErrorState';
+import { IcsImportDialog } from '../components/IcsImportDialog';
+import { RoutineDialog } from '../components/RoutineDialog';
+import { fmtDate } from '../lib/format';
+import {
+  useCreateRoutine,
+  useDeleteRoutine,
+  useImportRoutineIcs,
+  useNodes,
+  useRoutines,
+  useTickRoutine,
+  useUntickRoutine,
+  useUpdateRoutine,
+} from '../lib/queries';
+
+const DAY_LABEL = (date: string, today: string) => {
+  if (date === today) return 'Today';
+  if (date === addDays(today, -1)) return 'Yesterday';
+  if (date === addDays(today, 1)) return 'Tomorrow';
+  return fmtDate(`${date}T12:00:00`);
+};
+
+/** One tickable occurrence. */
+function OccurrenceRow({
+  occ,
+  today,
+  busy,
+  onToggle,
+}: {
+  occ: RoutineOccurrence;
+  today: string;
+  busy: boolean;
+  onToggle: () => void;
+}) {
+  const future = occ.date > today;
+  return (
+    <li className="routine-row">
+      <button
+        type="button"
+        className="routine-tick"
+        role="checkbox"
+        aria-checked={occ.done}
+        aria-label={`${occ.done ? 'Untick' : 'Tick off'} ${occ.title} for ${occ.date}`}
+        disabled={future || busy}
+        onClick={onToggle}
+      >
+        {occ.done && <Check size={14} aria-hidden />}
+      </button>
+      <span className={`flex-1 min-w-0 truncate${occ.done ? ' routine-done' : ''}`}>
+        {occ.title}
+      </span>
+      {occ.overdue && <Chip tone="warn">missed</Chip>}
+      {occ.done && occ.xpAwarded !== null && (
+        <span className="subtle text-xs tabular">+{occ.xpAwarded} XP</span>
+      )}
+      <span className="muted text-sm tabular">{occ.estimatedMinutes}m</span>
+    </li>
+  );
+}
+
+export function Routines() {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const q = useRoutines();
+  const nodes = useNodes();
+  const create = useCreateRoutine();
+  const update = useUpdateRoutine();
+  const remove = useDeleteRoutine();
+  const tick = useTickRoutine();
+  const untick = useUntickRoutine();
+  const importIcs = useImportRoutineIcs();
+  const { toast } = useToast();
+
+  const [dialog, setDialog] = useState<{ open: boolean; routine: Routine | null }>({
+    open: false,
+    routine: null,
+  });
+  const [importing, setImporting] = useState(false);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  if (q.isError)
+    return (
+      <ErrorPanel
+        message={q.error instanceof Error ? q.error.message : 'Could not load your routines.'}
+        onRetry={() => q.refetch()}
+      />
+    );
+  if (!q.data)
+    return (
+      <div className="flex justify-center p-12">
+        <Spinner />
+      </div>
+    );
+
+  const { today, routines, occurrences, due, adherence, xpToday, xpRemainingToday, limits } =
+    q.data;
+  const nodeIndex = new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n]));
+  // "Biology › Unit 3 › Osmosis" for a linked node, so the routine's context is visible.
+  const nodeTitle = (id: string) => {
+    const n = nodeIndex.get(id);
+    if (!n) return '';
+    const parents = pathLabel(nodeIndex, id);
+    return parents ? `${parents} › ${n.title}` : n.title;
+  };
+  const weekStart = addDays(startOfWeekMonday(today), weekOffset * 7);
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const byDay = new Map<string, RoutineOccurrence[]>();
+  for (const o of occurrences) {
+    if (!byDay.has(o.date)) byDay.set(o.date, []);
+    byDay.get(o.date)!.push(o);
+  }
+
+  const toggle = async (occ: RoutineOccurrence) => {
+    const key = `${occ.routineId}:${occ.date}`;
+    setBusyKey(key);
+    try {
+      if (occ.done) {
+        await untick.mutateAsync({ id: occ.routineId, date: occ.date });
+      } else {
+        const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
+        if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
+        else if (res.cappedByDailyLimit)
+          toast(`Ticked off. You have hit the ${limits.maxXpPerDay} XP daily routine cap.`);
+      }
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not update that.');
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const del = async (routine: Routine) => {
+    if (!window.confirm(`Delete "${routine.title}" and all its ticks?`)) return;
+    try {
+      await remove.mutateAsync(routine.id);
+      toast('Routine deleted', { tone: 'ok' });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not delete that.');
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <h1 className="text-3xl">Routines</h1>
+        <div className="flex gap-2">
+          <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
+            <Upload size={15} aria-hidden /> Import .ics
+          </Button>
+          <Button size="sm" onClick={() => setDialog({ open: true, routine: null })}>
+            <Plus size={15} aria-hidden /> New routine
+          </Button>
+        </div>
+      </div>
+
+      {routines.length === 0 ? (
+        <Glass className="p-8 text-center flex flex-col items-center gap-3">
+          <span aria-hidden style={{ color: 'var(--fg-subtle)' }}>
+            <Repeat size={32} />
+          </span>
+          <h2 className="text-xl">The things that repeat</h2>
+          <p className="muted" style={{ maxWidth: '46ch' }}>
+            Daily reading, a weekly problem set, a monthly review. Give each one an estimate and
+            tick it off — a tick is worth {limits.xpPerMinute} XP a minute, up to{' '}
+            {limits.maxXpPerDay} XP a day.
+          </p>
+          <div className="flex gap-2">
+            <Button variant="primary" onClick={() => setDialog({ open: true, routine: null })}>
+              Add your first
+            </Button>
+            <Button variant="secondary" onClick={() => setImporting(true)}>
+              Import a calendar
+            </Button>
+          </div>
+        </Glass>
+      ) : (
+        <>
+          <Glass className="p-5 flex flex-col gap-3">
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <h2 className="text-lg flex-1">Due now</h2>
+              <span className="muted text-sm tabular">
+                {xpToday} XP today · {xpRemainingToday} left under the cap
+              </span>
+            </div>
+            {due.length === 0 ? (
+              <p className="muted">Nothing outstanding. Everything due is ticked off.</p>
+            ) : (
+              <ul className="routine-list">
+                {due.map((o) => (
+                  <OccurrenceRow
+                    key={`${o.routineId}:${o.date}`}
+                    occ={o}
+                    today={today}
+                    busy={busyKey === `${o.routineId}:${o.date}`}
+                    onToggle={() => void toggle(o)}
+                  />
+                ))}
+              </ul>
+            )}
+            {adherence.rate !== null && (
+              <div>
+                <ProgressBar value={adherence.rate} label="Last four weeks" />
+                <p className="subtle text-xs mt-1 tabular">
+                  {adherence.done} of {adherence.due} ticked off over the last four weeks
+                </p>
+              </div>
+            )}
+          </Glass>
+
+          <Panel className="p-5 flex flex-col gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h2 className="text-lg flex-1">Week of {fmtDate(`${weekStart}T12:00:00`)}</h2>
+              <Button size="sm" variant="ghost" onClick={() => setWeekOffset(weekOffset - 1)}>
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={weekOffset === 0}
+                onClick={() => setWeekOffset(0)}
+              >
+                This week
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setWeekOffset(weekOffset + 1)}>
+                Next
+              </Button>
+            </div>
+            <div className="routine-week">
+              {weekDays.map((d) => {
+                const items = byDay.get(d) ?? [];
+                return (
+                  <div key={d} className={`routine-day${d === today ? ' is-today' : ''}`}>
+                    <div className="routine-day-head">
+                      <span className="font-medium text-sm">{DAY_LABEL(d, today)}</span>
+                      {items.length > 0 && (
+                        <span className="subtle text-xs tabular">
+                          {items.filter((i) => i.done).length}/{items.length}
+                        </span>
+                      )}
+                    </div>
+                    {items.length === 0 ? (
+                      <p className="subtle text-xs">—</p>
+                    ) : (
+                      <ul className="routine-list">
+                        {items.map((o) => (
+                          <OccurrenceRow
+                            key={`${o.routineId}:${o.date}`}
+                            occ={o}
+                            today={today}
+                            busy={busyKey === `${o.routineId}:${o.date}`}
+                            onToggle={() => void toggle(o)}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            {weekOffset !== 0 && (
+              <p className="subtle text-xs">
+                Occurrences load for two weeks either side of today; navigate back to this week to
+                tick anything off.
+              </p>
+            )}
+          </Panel>
+
+          <Panel className="p-5 flex flex-col gap-3">
+            <h2 className="text-lg">All routines</h2>
+            <ul className="flex flex-col">
+              {routines.map((r) => (
+                <li key={r.id} className="tree-row">
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{r.title}</div>
+                    <div className="muted text-sm">
+                      {describeRecurrence(r)} · {r.estimatedMinutes} min
+                      {r.nodeId && nodeTitle(r.nodeId) && ` · ${nodeTitle(r.nodeId)}`}
+                      {r.source === 'ics' && ' · from a calendar'}
+                    </div>
+                  </div>
+                  <div className="row-actions flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon
+                      aria-label={`Edit ${r.title}`}
+                      onClick={() => setDialog({ open: true, routine: r })}
+                    >
+                      <Pencil size={15} aria-hidden />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon
+                      aria-label={`Delete ${r.title}`}
+                      onClick={() => void del(r)}
+                    >
+                      <Trash2 size={15} aria-hidden />
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </>
+      )}
+
+      <RoutineDialog
+        key={dialog.routine?.id ?? 'new'}
+        open={dialog.open}
+        routine={dialog.routine}
+        nodes={nodes.data?.nodes ?? []}
+        today={today}
+        onClose={() => setDialog({ open: false, routine: null })}
+        onSave={async (input) => {
+          if (dialog.routine) await update.mutateAsync({ id: dialog.routine.id, patch: input });
+          else await create.mutateAsync(input);
+          toast(dialog.routine ? 'Routine saved' : 'Routine added', { tone: 'ok' });
+        }}
+      />
+      <IcsImportDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+        onImport={(ics, defaultEstimate) => importIcs.mutateAsync({ ics, defaultEstimate })}
+      />
+    </div>
+  );
+}

@@ -8,6 +8,7 @@ import { Hint } from '../components/Hint';
 import { NodeCard } from '../components/NodeCard';
 import { PlanCard } from '../components/PlanCard';
 import { QuoteCard } from '../components/QuoteCard';
+import { RoutinesDueCard } from '../components/RoutinesDueCard';
 import { RewardOverlay } from '../components/RewardOverlay';
 import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
@@ -112,6 +113,7 @@ export function Today() {
         />
       )}
 
+      <RoutinesDueCard />
       <FollowUpPrompt />
       <QuoteCard />
 

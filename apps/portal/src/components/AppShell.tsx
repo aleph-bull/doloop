@@ -11,6 +11,7 @@ import { ErrorBoundary } from './ErrorState';
 const links = [
   { to: '/', label: 'Today' },
   { to: '/tasks', label: 'Tasks' },
+  { to: '/routines', label: 'Routines' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/analytics', label: 'Analytics' },
   { to: '/achievements', label: 'Achievements' },

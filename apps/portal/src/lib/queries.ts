@@ -21,6 +21,9 @@ export const keys = {
   google: ['calendar', 'google'] as const,
   shop: ['shop'] as const,
   background: ['me', 'background'] as const,
+  rewards: ['rewards'] as const,
+  routines: (from?: string, to?: string) => ['routines', from ?? '', to ?? ''] as const,
+  routineList: ['routines', 'list'] as const,
 };
 
 export function useMe() {
@@ -158,6 +161,90 @@ export function useShop() {
 
 export function useRestDays() {
   return useQuery({ queryKey: keys.restDays, queryFn: api.restDays, staleTime: 30_000 });
+}
+
+/* ---------- custom rewards ---------- */
+
+export function useRewards() {
+  return useQuery({ queryKey: keys.rewards, queryFn: () => api.rewards(), staleTime: 15_000 });
+}
+
+function useRewardMutation<T, R>(fn: (input: T) => Promise<R>) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => invalidate(keys.rewards, keys.me, keys.shop),
+  });
+}
+
+export function useCreateReward() {
+  return useRewardMutation(api.createReward);
+}
+
+export function useUpdateReward() {
+  return useRewardMutation(
+    ({ id, patch }: { id: string; patch: Parameters<typeof api.updateReward>[1] }) =>
+      api.updateReward(id, patch),
+  );
+}
+
+export function useDeleteReward() {
+  return useRewardMutation((id: string) => api.deleteReward(id));
+}
+
+export function useRedeemReward() {
+  return useRewardMutation((id: string) => api.redeemReward(id));
+}
+
+/* ---------- recurring tasks ---------- */
+
+export function useRoutines(from?: string, to?: string) {
+  return useQuery({
+    queryKey: keys.routines(from, to),
+    queryFn: () => api.routines(from, to),
+    staleTime: 15_000,
+  });
+}
+
+function useRoutineMutation<T, R>(fn: (input: T) => Promise<R>) {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => invalidate(['routines'], keys.me, keys.shop),
+  });
+}
+
+export function useCreateRoutine() {
+  return useRoutineMutation(api.createRoutine);
+}
+
+export function useUpdateRoutine() {
+  return useRoutineMutation(
+    ({ id, patch }: { id: string; patch: Parameters<typeof api.updateRoutine>[1] }) =>
+      api.updateRoutine(id, patch),
+  );
+}
+
+export function useDeleteRoutine() {
+  return useRoutineMutation((id: string) => api.deleteRoutine(id));
+}
+
+export function useTickRoutine() {
+  return useRoutineMutation(({ id, date }: { id: string; date: string }) =>
+    api.tickRoutine(id, date),
+  );
+}
+
+export function useUntickRoutine() {
+  return useRoutineMutation(({ id, date }: { id: string; date: string }) =>
+    api.untickRoutine(id, date),
+  );
+}
+
+export function useImportRoutineIcs() {
+  return useRoutineMutation(({ ics, defaultEstimate }: { ics: string; defaultEstimate?: number }) =>
+    api.importRoutineIcs(ics, defaultEstimate),
+  );
 }
 
 function useInvalidate() {

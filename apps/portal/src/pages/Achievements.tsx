@@ -15,6 +15,7 @@ import {
   useToast,
 } from '@doloop/ui';
 import { ErrorPanel } from '../components/ErrorState';
+import { RewardShelf } from '../components/RewardShelf';
 import { api } from '../lib/api';
 import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop } from '../lib/queries';
@@ -76,14 +77,19 @@ export function Achievements() {
         <ProgressBar value={lp.ratio} label="Progress to next level" />
         <p className="muted text-sm">
           Levels unlock accent colours (5, 10, 20) and backgrounds (3, 8). XP is only ever earned by
-          studying.
+          studying or ticking off a routine — never by buying anything.
         </p>
       </Glass>
 
       <section className="flex flex-col gap-3" aria-labelledby="badges-h">
-        <h2 id="badges-h" className="text-lg">
-          Badges
-        </h2>
+        <div className="flex items-baseline gap-3">
+          <h2 id="badges-h" className="text-lg flex-1">
+            Badges
+          </h2>
+          <span className="muted text-sm tabular">
+            {unlocked.size} of {s.badges.length} unlocked
+          </span>
+        </div>
         <div className="card-grid">
           {s.badges.map((b) => {
             const at = unlocked.get(b.key);
@@ -110,6 +116,8 @@ export function Achievements() {
           })}
         </div>
       </section>
+
+      <RewardShelf />
 
       <section className="flex flex-col gap-3" aria-labelledby="shop-h">
         <h2 id="shop-h" className="text-lg">

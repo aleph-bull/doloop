@@ -202,6 +202,214 @@
   gap: 8px;
 }
 
+/* ---------- custom rewards ---------- */
+
+.reward-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+.reward-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.reward-card-glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--fg-subtle);
+}
+.reward-card-tools {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.reward-card:hover .reward-card-tools,
+.reward-card:focus-within .reward-card-tools {
+  opacity: 1;
+}
+.reward-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+}
+.reward-history > summary {
+  cursor: pointer;
+  color: var(--fg-muted);
+}
+
+.emoji-pick {
+  font-size: 18px;
+  line-height: 1;
+  padding: 5px 7px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+}
+.emoji-pick[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.emoji-input {
+  width: 4.5rem;
+  text-align: center;
+}
+
+/* ---------- recurring tasks ---------- */
+
+.routine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.routine-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+}
+.routine-row:hover {
+  background: var(--accent-soft);
+}
+.routine-tick {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  color: var(--accent-fg);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.routine-tick[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.routine-tick:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.routine-done {
+  text-decoration: line-through;
+  color: var(--fg-subtle);
+}
+
+.routine-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+.routine-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  min-width: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.routine-day.is-today {
+  border-color: var(--accent);
+}
+.routine-day-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+}
+/* In the week grid the columns are narrow, so the rows stack instead of clipping. */
+.routine-day .routine-row {
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+@media (max-width: 900px) {
+  .routine-week {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 540px) {
+  .routine-week {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.day-pick {
+  min-width: 2.4rem;
+  padding: 5px 8px;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.day-pick[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.monthday-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.reward-redeemed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+.reward-redeemed-glyph {
+  font-size: 64px;
+  line-height: 1;
+  animation: reward-pop 620ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+}
+@keyframes reward-pop {
+  0% {
+    transform: scale(0.2) rotate(-18deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18) rotate(6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+/* Respect the motion setting: the burst is already suppressed, so still the glyph too. */
+:root[data-motion='off'] .reward-redeemed-glyph {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .reward-redeemed-glyph {
+    animation: none;
+  }
+}
+
 .hint {
   display: flex;
   align-items: flex-start;
@@ -231,7 +439,8 @@
 
 /* Touch devices cannot hover: keep row actions visible. */
 @media (hover: none) {
-  .tree-row .row-actions {
+  .tree-row .row-actions,
+  .reward-card .reward-card-tools {
     opacity: 1;
   }
 }

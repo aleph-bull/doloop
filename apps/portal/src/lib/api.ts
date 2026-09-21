@@ -21,6 +21,10 @@ import type {
   CourseAnalytics,
   EstimateAccuracy,
   WeeklyReview,
+  CustomReward,
+  RewardView,
+  Routine,
+  RoutineOccurrence,
 } from '@doloop/core';
 
 export class ApiError extends Error {
@@ -306,4 +310,108 @@ export const api = {
     ),
   dismissFollowUp: (id: string) =>
     request<{ ok: boolean }>('POST', `/api/nodes/${id}/outcome-dismiss`),
+
+  rewards: (archived = false) =>
+    request<RewardsResponse>('GET', `/api/rewards${archived ? '?archived=true' : ''}`),
+  createReward: (input: RewardInput) =>
+    request<{ reward: CustomReward }>('POST', '/api/rewards', input),
+  updateReward: (id: string, patch: Partial<RewardInput> & { archived?: boolean }) =>
+    request<{ reward: CustomReward }>('PATCH', `/api/rewards/${id}`, patch),
+  deleteReward: (id: string) => request<void>('DELETE', `/api/rewards/${id}`),
+  redeemReward: (id: string) =>
+    request<{ reward: CustomReward; xp: number; spent: number; rewards: RewardView[] }>(
+      'POST',
+      `/api/rewards/${id}/redeem`,
+    ),
+
+  routines: (from?: string, to?: string) => {
+    const q = new URLSearchParams();
+    if (from) q.set('from', from);
+    if (to) q.set('to', to);
+    const qs = q.toString();
+    return request<RoutinesResponse>('GET', `/api/routines${qs ? `?${qs}` : ''}`);
+  },
+  routineList: (archived = false) =>
+    request<{ routines: Routine[] }>(
+      'GET',
+      `/api/routines/list${archived ? '?archived=true' : ''}`,
+    ),
+  createRoutine: (input: RoutineInput) =>
+    request<{ routine: Routine }>('POST', '/api/routines', input),
+  updateRoutine: (id: string, patch: Partial<RoutineInput> & { archived?: boolean }) =>
+    request<{ routine: Routine }>('PATCH', `/api/routines/${id}`, patch),
+  deleteRoutine: (id: string) => request<void>('DELETE', `/api/routines/${id}`),
+  tickRoutine: (id: string, date: string) =>
+    request<TickResponse>('POST', `/api/routines/${id}/tick`, { date }),
+  untickRoutine: (id: string, date: string) =>
+    request<{ xpTotal: number; xpRemoved: number }>('DELETE', `/api/routines/${id}/tick/${date}`),
+  importRoutineIcs: (ics: string, defaultEstimate?: number) =>
+    request<ImportIcsResponse>('POST', '/api/routines/import-ics', { ics, defaultEstimate }),
 };
+
+export interface RewardInput {
+  name: string;
+  note?: string | null;
+  emoji?: string | null;
+  costXp: number;
+  cooldownDays?: number;
+}
+
+export interface RewardsResponse {
+  rewards: RewardView[];
+  xp: number;
+  limits: {
+    minCostXp: number;
+    maxCostXp: number;
+    maxActive: number;
+    maxCooldownDays: number;
+  };
+  history: Array<{
+    at: string;
+    rewardId: string | null;
+    name: string;
+    emoji: string | null;
+    costXp: number;
+  }>;
+}
+
+export interface RoutineInput {
+  title: string;
+  note?: string | null;
+  nodeId?: string | null;
+  estimatedMinutes: number;
+  freq: Routine['freq'];
+  interval?: number;
+  byWeekday?: number[];
+  byMonthday?: number[];
+  startDate: string;
+  endDate?: string | null;
+}
+
+export interface RoutinesResponse {
+  today: string;
+  from: string;
+  to: string;
+  routines: Routine[];
+  occurrences: RoutineOccurrence[];
+  due: RoutineOccurrence[];
+  adherence: { due: number; done: number; rate: number | null };
+  xpToday: number;
+  xpRemainingToday: number;
+  limits: { xpPerMinute: number; maxXpPerTick: number; maxXpPerDay: number };
+}
+
+export interface TickResponse {
+  completion: { id: string; routineId: string; date: string; minutes: number; xpAwarded: number };
+  xpAwarded: number;
+  xpTotal: number;
+  cappedByDailyLimit: boolean;
+  badges: string[];
+}
+
+export interface ImportIcsResponse {
+  created: number;
+  updated: number;
+  routines: Routine[];
+  skipped: Array<{ summary: string; reason: string }>;
+}

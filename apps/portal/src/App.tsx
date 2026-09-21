@@ -16,6 +16,7 @@ const Onboarding = lazy(() =>
   import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })),
 );
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
+const Routines = lazy(() => import('./pages/Routines').then((m) => ({ default: m.Routines })));
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Analytics = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
 const WeeklyReviewPage = lazy(() =>
@@ -107,6 +108,7 @@ export function App() {
           >
             <Route path="/" element={<Today />} />
             <Route path="/tasks" element={<Tasks />} />
+            <Route path="/routines" element={<Routines />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/analytics/review" element={<WeeklyReviewPage />} />

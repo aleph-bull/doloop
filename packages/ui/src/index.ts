@@ -28,4 +28,5 @@ export {
 } from './theme';
 export { BACKGROUND_DEFS, backgroundById, type BackgroundDef } from './backgrounds';
 export { fireConfetti } from './confetti';
+export { fireRewardBurst, type BurstOptions } from './burst';
 export * from './contrast';
