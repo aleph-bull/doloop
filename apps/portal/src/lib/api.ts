@@ -25,6 +25,10 @@ import type {
   RewardView,
   Routine,
   RoutineOccurrence,
+  LifetimeStats,
+  Heatmap as StudyHeatmapData,
+  RhythmProfile,
+  Insight,
 } from '@doloop/core';
 
 export class ApiError extends Error {
@@ -234,6 +238,14 @@ export const api = {
       courses: CourseAnalytics[];
       estimateAccuracy: EstimateAccuracy;
     }>('GET', `/api/analytics/advanced${weekStart ? `?weekStart=${weekStart}` : ''}`),
+  overviewAnalytics: (weeks?: number) =>
+    request<{
+      lifetime: LifetimeStats;
+      heatmap: StudyHeatmapData;
+      timeOfDay: RhythmProfile;
+      weekday: RhythmProfile;
+      insights: Insight[];
+    }>('GET', `/api/analytics/overview${weeks ? `?weeks=${weeks}` : ''}`),
   weeklyReview: (weekStart?: string) =>
     request<{ review: WeeklyReview; note: string | null }>(
       'GET',

@@ -557,3 +557,79 @@ a:hover {
   font-weight: 500;
   font-size: var(--text-xs);
 }
+
+/* ---------- Contribution heatmap ---------- */
+.heatmap {
+  overflow-x: auto;
+}
+.heatmap-axis {
+  font-size: 10px;
+}
+/*
+ * A single-hue sequential ramp built from the accent, so the grid reads as one scale
+ * rather than five categories. `--heat-0` is a neutral "nothing here", distinct from the
+ * lightest filled step at every theme and accent.
+ */
+.heatmap-cell {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.heatmap-cell[role='button'] {
+  cursor: pointer;
+}
+.heatmap-cell[role='button']:hover {
+  opacity: 0.75;
+}
+.heatmap-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.heatmap-l0,
+.heatmap-lf {
+  fill: var(--heat-0);
+}
+.heatmap-lf {
+  opacity: 0.45;
+}
+.heatmap-l1 {
+  fill: var(--heat-1);
+}
+.heatmap-l2 {
+  fill: var(--heat-2);
+}
+.heatmap-l3 {
+  fill: var(--heat-3);
+}
+.heatmap-l4 {
+  fill: var(--heat-4);
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.heatmap-legend .chart-label {
+  fill: none;
+  color: var(--fg-muted);
+}
+.heatmap-swatch {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  border-radius: 2.5px;
+  background: var(--heat-0);
+}
+.heatmap-swatch.heatmap-l1 {
+  background: var(--heat-1);
+}
+.heatmap-swatch.heatmap-l2 {
+  background: var(--heat-2);
+}
+.heatmap-swatch.heatmap-l3 {
+  background: var(--heat-3);
+}
+.heatmap-swatch.heatmap-l4 {
+  background: var(--heat-4);
+}

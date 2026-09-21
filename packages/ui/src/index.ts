@@ -16,6 +16,7 @@ export {
 } from './components/Small';
 export { ToastProvider, useToast } from './components/Toast';
 export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './components/Charts';
+export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatmap';
 export { Backdrop, sampleImage } from './components/Backdrop';
 export { cn } from './cn';
 export {

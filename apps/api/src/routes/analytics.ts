@@ -1,12 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  buildInsights,
   courseAnalytics,
   estimateAccuracy,
   getHighlights,
+  lifetimeStats,
   nodeAnalytics,
   pendingFollowUps,
   startOfWeekMonday,
+  studyHeatmap,
+  timeOfDayProfile,
   toLocalDate,
+  weekdayProfile,
   weeklyReview,
 } from '@doloop/core';
 import { and, eq } from 'drizzle-orm';
@@ -55,6 +60,35 @@ export function analyticsRoutes(app: FastifyInstance, db: Db, clock: () => strin
       now,
       weekStart,
     });
+  });
+
+  /**
+   * Long-range view: lifetime totals, the contribution grid, when the user actually works,
+   * and the explained insights derived from all three.
+   */
+  app.get('/api/analytics/overview', async (req) => {
+    const now = clock();
+    const { weeks } = z
+      .object({ weeks: z.coerce.number().int().min(4).max(106).optional() })
+      .parse(req.query);
+    const sessions = await loadCompletedSessions(db, req.user.id);
+    const tz = req.user.timezone;
+    const lifetime = lifetimeStats({
+      sessions,
+      timezone: tz,
+      now,
+      joinedAt: req.user.createdAt.toISOString(),
+    });
+    const heatmap = studyHeatmap({ sessions, timezone: tz, now, weeks: weeks ?? 53 });
+    const timeOfDay = timeOfDayProfile(sessions, tz);
+    const weekday = weekdayProfile(sessions, tz);
+    return {
+      lifetime,
+      heatmap,
+      timeOfDay,
+      weekday,
+      insights: buildInsights({ lifetime, heatmap, timeOfDay, weekday, sessions, timezone: tz }),
+    };
   });
 
   /** Everything, shown neutrally (spec §11b). */

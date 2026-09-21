@@ -202,6 +202,67 @@
   gap: 8px;
 }
 
+/* ---------- analytics ---------- */
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin: 0;
+}
+.stat-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.stat-row dt {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.stat-row dd {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.insight-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.insight {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.insight-headline {
+  margin: 0;
+}
+/* The dot is a quiet direction cue; the sentence itself always says which way things went. */
+.insight-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--fg-subtle);
+}
+.insight-good {
+  background: var(--status-ok);
+}
+.insight-watch {
+  background: var(--status-warn);
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
 /* ---------- custom rewards ---------- */
 
 .reward-card {

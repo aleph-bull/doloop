@@ -11,8 +11,12 @@ export function fmtMinutes(min: number | null | undefined): string {
   return `${h} h ${r} m`;
 }
 
-/** "9.5 h" for analytics-style copy. */
+/**
+ * "9.5 h" for analytics-style copy, falling back to minutes under an hour so a short
+ * history reads as "20 m" rather than the uninformative "0.3 h".
+ */
 export function fmtHours(min: number): string {
+  if (min > 0 && min < 60) return `${Math.max(1, Math.round(min))} m`;
   const h = min / 60;
   return `${h % 1 === 0 ? h : h.toFixed(1)} h`;
 }

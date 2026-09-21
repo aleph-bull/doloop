@@ -78,6 +78,17 @@
   --chart-4: #eda100;
   --chart-5: #e87ba4;
 
+  /*
+   * Sequential ramp for the study heatmap. Built from the accent hue so it follows the
+   * user's accent, with `--heat-0` a neutral "no study" that is never mistaken for the
+   * lightest filled step.
+   */
+  --heat-0: rgb(15 18 32 / 0.07);
+  --heat-1: hsl(var(--accent-h) var(--accent-s) 84%);
+  --heat-2: hsl(var(--accent-h) var(--accent-s) 72%);
+  --heat-3: hsl(var(--accent-h) var(--accent-s) 58%);
+  --heat-4: hsl(var(--accent-h) var(--accent-s) 42%);
+
   /* ---------- Focus ring ---------- */
   --ring: 0 0 0 2px var(--bg-base), 0 0 0 4px var(--accent);
 }
@@ -155,6 +166,12 @@
   --chart-4: #c98500;
   --chart-5: #d55181;
 
+  --heat-0: rgb(255 255 255 / 0.06);
+  --heat-1: hsl(var(--accent-h) var(--accent-s) 26%);
+  --heat-2: hsl(var(--accent-h) var(--accent-s) 38%);
+  --heat-3: hsl(var(--accent-h) var(--accent-s) 52%);
+  --heat-4: hsl(var(--accent-h) var(--accent-s) 68%);
+
   --bg-base: #0b0d14;
   --bg-elevated: #151827;
   --bg-sunken: #070810;
@@ -188,6 +205,12 @@
     --chart-3: #199e70;
     --chart-4: #c98500;
     --chart-5: #d55181;
+
+    --heat-0: rgb(255 255 255 / 0.06);
+    --heat-1: hsl(var(--accent-h) var(--accent-s) 26%);
+    --heat-2: hsl(var(--accent-h) var(--accent-s) 38%);
+    --heat-3: hsl(var(--accent-h) var(--accent-s) 52%);
+    --heat-4: hsl(var(--accent-h) var(--accent-s) 68%);
 
     --bg-base: #0b0d14;
     --bg-elevated: #151827;

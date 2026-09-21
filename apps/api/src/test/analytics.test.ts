@@ -119,3 +119,44 @@ describe('analytics', () => {
     expect(res.json().followUps).toEqual([]);
   });
 });
+
+describe('overview analytics', () => {
+  it('reports lifetime totals counted from the account start', async () => {
+    const res = await t.api({ method: 'GET', url: '/api/analytics/overview' });
+    expect(res.statusCode).toBe(200);
+    const { lifetime } = res.json();
+    // The two sessions in beforeAll are 30 and 40 minutes on the same day.
+    expect(lifetime.totalMinutes).toBe(70);
+    expect(lifetime.totalSessions).toBe(2);
+    expect(lifetime.activeDays).toBe(1);
+    expect(lifetime.bestDay).toMatchObject({ date: '2026-09-15', minutes: 70 });
+    expect(lifetime.headline).toContain('since you started using Doloop');
+  });
+
+  it('returns a Monday-first grid ending on the current week', () => {
+    return t.api({ method: 'GET', url: '/api/analytics/overview?weeks=4' }).then((res) => {
+      const { heatmap } = res.json();
+      expect(heatmap.weeks).toHaveLength(4);
+      expect(heatmap.weeks.every((w: unknown[]) => w.length === 7)).toBe(true);
+      expect(heatmap.activeDays).toBe(1);
+      const studied = heatmap.weeks.flat().find((c: { date: string }) => c.date === '2026-09-15');
+      expect(studied.minutes).toBe(70);
+      expect(studied.level).toBeGreaterThan(0);
+    });
+  });
+
+  it('profiles when the work happened and explains each insight', async () => {
+    const res = await t.api({ method: 'GET', url: '/api/analytics/overview' });
+    const body = res.json();
+    expect(body.timeOfDay.peak.label).toBe('Morning (9-12)');
+    expect(body.weekday.peak.label).toBe('Tuesday');
+    expect(body.insights[0].key).toBe('lifetime');
+    // Every insight states the figures behind it.
+    expect(body.insights.every((i: { evidence: string }) => i.evidence.length > 0)).toBe(true);
+  });
+
+  it('rejects an out-of-range window', async () => {
+    const res = await t.api({ method: 'GET', url: '/api/analytics/overview?weeks=500' });
+    expect(res.statusCode).toBe(400);
+  });
+});

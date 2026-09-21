@@ -13,10 +13,19 @@ import {
   Spinner,
   StackedBars,
 } from '@doloop/ui';
+import { AnalyticsOverview } from '../components/AnalyticsOverview';
 import { ErrorPanel } from '../components/ErrorState';
 import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtHours, fmtMinutes, pct } from '../lib/format';
 import { useAdvancedAnalytics, useWeekHighlights } from '../lib/queries';
+
+/** Prose for a pace/planning line that would otherwise be a bare pair of numbers. */
+function plannedVsNeeded(planned: number, needed: number | null): string {
+  if (needed === null) return 'No estimate, so there is nothing to be behind on.';
+  if (needed <= 0) return 'Nothing left to schedule.';
+  if (planned >= needed) return 'You have scheduled enough time to finish this.';
+  return `You are ${fmtMinutes(needed - planned)} short of the time you would need.`;
+}
 
 function HighlightCard({ h }: { h: Highlight }) {
   return (
@@ -113,6 +122,10 @@ function Advanced() {
     <div className="flex flex-col gap-6">
       <Panel className="p-5 flex flex-col gap-4">
         <h2 className="text-lg">Hours by course, this week vs last</h2>
+        <p className="muted text-sm">
+          Where the time actually went. Each bar is one course split by its parts, so a course that
+          looks busy but is all one topic shows up as a single wide band.
+        </p>
         {courses.length === 0 && <p className="muted text-sm">No courses yet.</p>}
         {courses.map((c) => {
           const series = c.children.map((k) => k.title).slice(0, 5);
@@ -156,6 +169,11 @@ function Advanced() {
         )}
         {estimateAccuracy.samples.length > 0 && (
           <>
+            <p className="muted text-sm">
+              Each bar is logged time divided by what you estimated, for one finished task. 1× means
+              you called it exactly; above 1× means it took longer than you thought. Only finished
+              tasks with an estimate appear here.
+            </p>
             <Bars
               ariaLabel="Logged divided by estimated, per completed task"
               unit="×"
@@ -224,9 +242,18 @@ function Advanced() {
             {node.pace?.progress != null && (
               <ProgressBar value={node.pace.progress} label={`${node.title} progress`} />
             )}
+            <p className="muted text-sm">
+              {plannedVsNeeded(node.plannedMinutes, node.neededMinutes)}
+              {node.distractionRate !== null &&
+                ` You reported a distraction in ${Math.round(node.distractionRate * 100)}% of the sessions you answered for.`}
+            </p>
             {node.preparedness.length > 0 && (
               <div>
                 <h3 className="text-sm font-medium mb-1">Preparedness over time</h3>
+                <p className="muted text-sm mb-1">
+                  How prepared you said you felt at the end of each session on this task, 1 to 5. It
+                  is your own read, not a score.
+                </p>
                 <LineChart
                   ariaLabel={`Preparedness ratings for ${node.title}`}
                   min={1}
@@ -258,9 +285,19 @@ function Advanced() {
   );
 }
 
+const TABS = ['week', 'overview', 'advanced'] as const;
+type Tab = (typeof TABS)[number];
+
+const BLURB: Record<Tab, string> = {
+  week: 'What went well in the last seven days. Wins only — the full picture is in the other two tabs.',
+  overview: 'The long view: everything you have logged since you started, and what it adds up to.',
+  advanced: 'Course by course and task by task, stated plainly and without judgement.',
+};
+
 export function Analytics() {
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'advanced' ? 'advanced' : 'week';
+  const raw = params.get('tab');
+  const tab: Tab = (TABS as readonly string[]).includes(raw ?? '') ? (raw as Tab) : 'week';
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -271,11 +308,13 @@ export function Analytics() {
           onChange={(v) => setParams(v === 'week' ? {} : { tab: v })}
           options={[
             { value: 'week', label: 'This week' },
-            { value: 'advanced', label: 'Advanced' },
+            { value: 'overview', label: 'All time' },
+            { value: 'advanced', label: 'By task' },
           ]}
         />
       </div>
-      {tab === 'week' ? <ThisWeek /> : <Advanced />}
+      <p className="muted text-sm -mt-2">{BLURB[tab]}</p>
+      {tab === 'week' ? <ThisWeek /> : tab === 'overview' ? <AnalyticsOverview /> : <Advanced />}
     </div>
   );
 }

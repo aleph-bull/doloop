@@ -14,6 +14,7 @@ export const keys = {
   blocks: (from?: string, to?: string) => ['blocks', from ?? '', to ?? ''] as const,
   weekHighlights: (w?: string) => ['analytics', 'week', w ?? 'current'] as const,
   advanced: (w?: string) => ['analytics', 'advanced', w ?? 'current'] as const,
+  overview: (weeks?: number) => ['analytics', 'overview', weeks ?? 'default'] as const,
   weeklyReview: (w?: string) => ['analytics', 'review', w ?? 'current'] as const,
   followUps: ['follow-ups'] as const,
   busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
@@ -71,6 +72,14 @@ export function useAdvancedAnalytics(weekStart?: string) {
   return useQuery({
     queryKey: keys.advanced(weekStart),
     queryFn: () => api.advancedAnalytics(weekStart),
+    staleTime: 60_000,
+  });
+}
+
+export function useOverviewAnalytics(weeks?: number) {
+  return useQuery({
+    queryKey: keys.overview(weeks),
+    queryFn: () => api.overviewAnalytics(weeks),
     staleTime: 60_000,
   });
 }
