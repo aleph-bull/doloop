@@ -71,6 +71,18 @@ export function fmtHoursWord(minutes: number): string {
   return `${n} hour${rounded === 1 ? '' : 's'}`;
 }
 
+/**
+ * Prose duration that drops to minutes under an hour. `fmtHoursWord` rounds anything short
+ * to "0 hours", which reads as though nothing happened — never what a highlight should say.
+ */
+export function fmtDurationWord(minutes: number): string {
+  if (minutes > 0 && minutes < 60) {
+    const m = Math.max(1, Math.round(minutes));
+    return `${m} minute${m === 1 ? '' : 's'}`;
+  }
+  return fmtHoursWord(minutes);
+}
+
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const workMin = (s: Session) => s.workSeconds / 60;
@@ -124,21 +136,26 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
   const lastWork = lastWeek.reduce((a, s) => a + workMin(s), 0);
 
   // hours-total (anchor)
-  if (thisWork > 0) {
+  if (thisWork >= T.MIN_WIN_MINUTES) {
     push({
       key: 'hours-total',
-      headline: `You studied ${fmtHoursWord(thisWork)} this week`,
+      headline: `You studied ${fmtDurationWord(thisWork)} this week`,
       detail: `${thisWeek.length} session${thisWeek.length === 1 ? '' : 's'}`,
       magnitude: 1,
     });
   }
 
   // hours-up
-  if (lastWeek.length >= 1 && lastWork > 0 && thisWork >= lastWork * T.HOURS_UP_RATIO) {
+  if (
+    lastWeek.length >= 1 &&
+    lastWork > 0 &&
+    thisWork >= lastWork * T.HOURS_UP_RATIO &&
+    thisWork - lastWork >= T.HOURS_UP_MIN_DELTA_MINUTES
+  ) {
     push({
       key: 'hours-up',
-      headline: `${fmtHoursWord(thisWork - lastWork)} more than last week`,
-      detail: `${fmtHoursWord(thisWork)} vs ${fmtHoursWord(lastWork)}`,
+      headline: `${fmtDurationWord(thisWork - lastWork)} more than last week`,
+      detail: `${fmtDurationWord(thisWork)} vs ${fmtDurationWord(lastWork)}`,
       magnitude: (thisWork - lastWork) / lastWork,
     });
   }
@@ -333,14 +350,16 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
       const p = paceNow.get(n.id);
       if (!p || p.aggregated || p.progress == null || p.status === 'done' || n.completedAt)
         continue;
-      if (p.progress > 0 && (!best || p.progress > best.progress))
+      if (p.progress >= T.GOAL_PROGRESS_MIN && (!best || p.progress > best.progress))
         best = { title: n.title, progress: p.progress };
     }
     if (best) {
+      // Stated as ground covered, not ground remaining: "40% through" is a win, "60% from
+      // finishing" is a reminder of how much is left, which is not what this panel is for.
       push({
         key: 'goal-progress',
-        headline: `You're ${Math.round((1 - best.progress) * 100)}% from finishing ${best.title}`,
-        detail: `${Math.round(best.progress * 100)}% of the estimate logged`,
+        headline: `You're ${Math.round(best.progress * 100)}% through ${best.title}`,
+        detail: 'Of the time you estimated for it',
         magnitude: best.progress,
       });
     }
@@ -356,7 +375,7 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
         push({
           key: 'on-pace',
           headline: `${n.title} is back on track`,
-          detail: `Was ${a.status} at the start of the week`,
+          detail: 'You pulled it back this week',
           magnitude: 0.8,
         });
         break;
@@ -425,7 +444,12 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
     push({
       key: 'streak',
       headline: `${input.streak.current}-day streak`,
-      detail: isMilestone ? 'A milestone' : `Longest so far: ${input.streak.longest}`,
+      // Never compare a live streak unfavourably with a past one; say how it is going.
+      detail: isMilestone
+        ? 'A milestone'
+        : input.streak.current >= input.streak.longest
+          ? 'Your longest run yet'
+          : `${input.streak.current} days and counting`,
       magnitude: Math.min(1, input.streak.current / 30) + (isMilestone ? 0.2 : 0),
     });
   }
@@ -444,11 +468,16 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
         bestDay = d;
       }
     }
-    if (record > 0 && bestDay && bestMin > record) {
+    if (
+      record > 0 &&
+      bestDay &&
+      bestMin >= T.BEST_DAY_MIN_MINUTES &&
+      bestMin >= record + T.BEST_DAY_MARGIN_MINUTES
+    ) {
       push({
         key: 'best-day',
         headline: `${DAY_NAMES[dayOfWeek(bestDay)]} was your biggest study day yet`,
-        detail: `${fmtHoursWord(bestMin)}, previous record ${fmtHoursWord(record)}`,
+        detail: `${fmtDurationWord(bestMin)}, previous record ${fmtDurationWord(record)}`,
         magnitude: 0.85,
       });
     }
@@ -471,7 +500,7 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
         prevBest = Math.max(prevBest, x);
       }
     }
-    if (prevWeeks >= 1 && thisXp > prevBest) {
+    if (prevWeeks >= 1 && thisXp > prevBest && thisXp >= T.XP_WEEK_MIN) {
       push({
         key: 'xp-week',
         headline: "Most XP you've earned in a week",

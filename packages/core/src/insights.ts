@@ -7,7 +7,7 @@ import {
   startOfWeekMonday,
   toLocalDate,
 } from './dates';
-import { fmtHoursWord } from './highlights';
+import { fmtDurationWord } from './highlights';
 import type { ISODate, ISODateTime, Session } from './types';
 
 /**
@@ -17,18 +17,6 @@ import type { ISODate, ISODateTime, Session } from './types';
  */
 
 const workMin = (s: Session) => s.workSeconds / 60;
-
-/**
- * Prose duration that degrades to minutes under an hour. `fmtHoursWord` rounds a short
- * history down to "0 hours", which reads as though nothing was logged at all.
- */
-export function fmtDurationWord(minutes: number): string {
-  if (minutes > 0 && minutes < 60) {
-    const m = Math.max(1, Math.round(minutes));
-    return `${m} minute${m === 1 ? '' : 's'}`;
-  }
-  return fmtHoursWord(minutes);
-}
 
 export interface LifetimeStats {
   /** When the account was created, which is what "since you started" counts from. */

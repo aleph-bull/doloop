@@ -424,8 +424,15 @@ describe('goal-progress', () => {
     const b = node({ title: 'B', estimatedMinutes: 100 });
     const s = [session(a.id, '2026-09-15', 20), session(b.id, '2026-09-15', 80)];
     expect(find(input({ nodes: [a, b], sessions: s }), 'goal-progress')?.headline).toBe(
-      "You're 20% from finishing B",
+      "You're 80% through B",
     );
+  });
+
+  it('says nothing until real progress has been made', () => {
+    // 5% of the estimate is not a win, and "95% from finishing" is the opposite of one.
+    const a = node({ title: 'A', estimatedMinutes: 100 });
+    const s = [session(a.id, '2026-09-15', 5)];
+    expect(find(input({ nodes: [a], sessions: s }), 'goal-progress')).toBeUndefined();
   });
   it('does not show for nodes without progress', () => {
     expect(keys(input({ nodes: [node({ estimatedMinutes: 100 })] }))).not.toContain(
@@ -603,5 +610,83 @@ describe('xp-week', () => {
     expect(
       keys(input({ nodes: [n], sessions: [session(n.id, '2026-09-15', 30, { xpAwarded: 30 })] })),
     ).not.toContain('xp-week');
+  });
+});
+
+describe('wins only: nothing degenerate or discouraging', () => {
+  const a = node({ title: 'Test 1', estimatedMinutes: 100 });
+
+  /** A near-zero week: one session of a few seconds, and a near-zero week before it. */
+  const trivial = input({
+    nodes: [a],
+    sessions: [
+      session(a.id, '2026-09-08', 0.2, { xpAwarded: 0 }),
+      session(a.id, '2026-09-15', 0.35, { xpAwarded: 0 }),
+    ],
+  });
+
+  it('shows no cards at all for a week with only seconds logged', () => {
+    const r = getHighlights(trivial);
+    expect(r.highlights).toEqual([]);
+    expect(r.fallback).not.toBeNull();
+  });
+
+  it('never renders a duration as "0 hours"', () => {
+    // Anything that does survive must read as a real quantity.
+    const r = getHighlights(
+      input({
+        nodes: [a],
+        sessions: [session(a.id, '2026-09-15', 45), session(a.id, '2026-09-16', 50)],
+      }),
+    );
+    for (const h of r.highlights) {
+      expect(`${h.headline} ${h.detail}`).not.toMatch(/\b0 hours\b/);
+    }
+  });
+
+  it('does not claim a record day off a trivial previous best', () => {
+    expect(find(trivial, 'best-day')).toBeUndefined();
+    // A real day against a real previous best still counts.
+    const real = input({
+      nodes: [a],
+      sessions: [session(a.id, '2026-09-08', 40), session(a.id, '2026-09-15', 90)],
+    });
+    expect(find(real, 'best-day')?.headline).toContain('biggest study day yet');
+  });
+
+  it('does not claim "more than last week" for a handful of minutes', () => {
+    const barely = input({
+      nodes: [a],
+      sessions: [session(a.id, '2026-09-08', 60), session(a.id, '2026-09-15', 68)],
+    });
+    // 8 minutes up clears the ratio but not the absolute floor.
+    expect(find(barely, 'hours-up')).toBeUndefined();
+  });
+
+  it('frames progress as ground covered, never as ground remaining', () => {
+    const r = getHighlights(input({ nodes: [a], sessions: [session(a.id, '2026-09-15', 60)] }));
+    const goal = r.highlights.find((h) => h.key === 'goal-progress');
+    expect(goal?.headline).toBe("You're 60% through Test 1");
+    for (const h of r.highlights) {
+      expect(`${h.headline} ${h.detail}`).not.toMatch(/from finishing|behind|critical|overdue/i);
+    }
+  });
+
+  it('never compares a live streak unfavourably with a past one', () => {
+    const r = getHighlights(
+      input({
+        nodes: [a],
+        sessions: [session(a.id, '2026-09-15', 60)],
+        streak: {
+          current: 4,
+          longest: 30,
+          lastCountedDate: '2026-09-15',
+          freezesHeld: 0,
+          breakDaysHeld: 0,
+        },
+      }),
+    );
+    const streak = r.highlights.find((h) => h.key === 'streak');
+    expect(streak?.detail).toBe('4 days and counting');
   });
 });

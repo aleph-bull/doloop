@@ -288,12 +288,6 @@ function Advanced() {
 const TABS = ['week', 'overview', 'advanced'] as const;
 type Tab = (typeof TABS)[number];
 
-const BLURB: Record<Tab, string> = {
-  week: 'What went well in the last seven days. Wins only — the full picture is in the other two tabs.',
-  overview: 'The long view: everything you have logged since you started, and what it adds up to.',
-  advanced: 'Course by course and task by task, stated plainly and without judgement.',
-};
-
 export function Analytics() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('tab');
@@ -313,7 +307,6 @@ export function Analytics() {
           ]}
         />
       </div>
-      <p className="muted text-sm -mt-2">{BLURB[tab]}</p>
       {tab === 'week' ? <ThisWeek /> : tab === 'overview' ? <AnalyticsOverview /> : <Advanced />}
     </div>
   );

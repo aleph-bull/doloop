@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { zonedTimeUtc } from './dates';
+import { fmtDurationWord } from './highlights';
 import {
   buildInsights,
-  fmtDurationWord,
   lifetimeStats,
   studyHeatmap,
   timeOfDayProfile,

@@ -1,7 +1,21 @@
 /** Every threshold for the positive-only weekly highlights (spec §11a), in one place. */
 export const HIGHLIGHT_THRESHOLDS = {
+  /**
+   * The floor for anything time-based. A win has to be worth reporting: below this, a card
+   * reads as "you studied 0 hours this week", which is the opposite of a highlight.
+   */
+  MIN_WIN_MINUTES: 15,
   /** hours-up: this week's work must be at least this multiple of last week's. */
   HOURS_UP_RATIO: 1.1,
+  /** hours-up: and beat it by at least this many minutes, so tiny weeks cannot qualify. */
+  HOURS_UP_MIN_DELTA_MINUTES: 15,
+  /** best-day: the day itself must be a real session, and clear the old record by a margin. */
+  BEST_DAY_MIN_MINUTES: 30,
+  BEST_DAY_MARGIN_MINUTES: 10,
+  /** goal-progress: only worth saying once a real dent has been made. */
+  GOAL_PROGRESS_MIN: 0.25,
+  /** xp-week: ignore record-setting weeks that are records only because history is empty. */
+  XP_WEEK_MIN: 50,
   /** sessions-up: at least this many more sessions than last week. */
   SESSIONS_UP_DELTA: 2,
   /** throughput-up: completed per minute at least this multiple of the previous session. */
