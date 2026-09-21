@@ -82,12 +82,13 @@ export function startTimer(input: StartTimerInput): TimerState {
     showTimer: input.showTimer ?? true,
     endedAt: null,
   };
+  // A planned end is independent of the style: either can be open-ended or run to a time.
+  base.plannedEndAt = input.plannedEndAt ?? null;
   if (input.mode === 'pomodoro') {
+    // The first work interval; the planned end, if any, cuts the session short later.
     base.phaseEndsAt = iso(ms(input.now) + intervalMs('work', input.pomodoro));
-  } else if (input.mode === 'scheduled') {
-    const planned = input.plannedEndAt ?? null;
-    base.plannedEndAt = planned;
-    base.phaseEndsAt = planned;
+  } else {
+    base.phaseEndsAt = base.plannedEndAt;
   }
   return base;
 }
@@ -126,26 +127,26 @@ export function advance(state: TimerState, now: ISODateTime, opts: AdvanceOption
   if (state.phase === 'ended') return state;
   let s = state;
 
-  if (s.mode === 'scheduled') {
-    if (s.plannedEndAt && (s.phase === 'work' || s.phase === 'paused')) {
-      const hardEnd = ms(s.plannedEndAt) + SCHEDULED_GRACE_SECONDS * 1000;
-      if (ms(now) >= hardEnd) {
-        // Work is credited up to the planned end, not through the grace period.
-        const at =
-          s.phase === 'work'
-            ? iso(Math.max(ms(s.phaseStartedAt), ms(s.plannedEndAt)))
-            : s.phaseStartedAt;
-        s = bank({ ...s, phaseStartedAt: s.phaseStartedAt }, at);
-        return {
-          ...s,
-          phase: 'ended',
-          endedAt: s.plannedEndAt,
-          autoEnded: true,
-          phaseEndsAt: null,
-        };
-      }
+  /**
+   * A planned end applies to either style: a continuous session runs straight to it, and a
+   * pomodoro runs its intervals until it arrives. Reaching it ends the session regardless
+   * of which interval is in progress — which is exactly why the start dialog warns when
+   * the chosen length would cut a block short.
+   */
+  if (s.plannedEndAt && s.phase !== 'ended') {
+    const hardEnd = ms(s.plannedEndAt) + SCHEDULED_GRACE_SECONDS * 1000;
+    if (ms(now) >= hardEnd) {
+      // Time is credited up to the planned end, not through the grace period.
+      const at = iso(Math.max(ms(s.phaseStartedAt), ms(s.plannedEndAt)));
+      s = bank(s, at);
+      return {
+        ...s,
+        phase: 'ended',
+        endedAt: s.plannedEndAt,
+        autoEnded: true,
+        phaseEndsAt: null,
+      };
     }
-    return s;
   }
 
   if (s.mode !== 'pomodoro') return s;

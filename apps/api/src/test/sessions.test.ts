@@ -352,3 +352,81 @@ describe('early cancellation', () => {
     expect(res.json().summary.xp.base).toBe(40);
   });
 });
+
+describe('a pomodoro with a planned end', () => {
+  it('runs its intervals and then stops at the planned end', async () => {
+    const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
+    const node = (
+      await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Mixed' } })
+    ).json().node;
+
+    // 40 minutes cuts the second work block short: 25 work, 5 break, then 10 of 25.
+    const plannedEndAt = new Date(Date.parse(t2.clock.now) + 40 * 60_000).toISOString();
+    const start = await t2.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'pomodoro', plannedEndAt },
+    });
+    expect(start.statusCode).toBe(201);
+    const s = start.json().active.session;
+    expect(s.mode).toBe('pomodoro');
+    expect(s.plannedEndAt).toBe(plannedEndAt);
+    // The first interval still ends at the work length, not at the planned end.
+    expect(start.json().active.timer.phaseEndsAt).toBe(
+      new Date(Date.parse('2026-09-21T14:00:00.000Z') + 25 * 60_000).toISOString(),
+    );
+
+    // Past the planned end plus the grace period, the session has closed itself.
+    advanceClock(t2, 42);
+    const active = await t2.api({ method: 'GET', url: '/api/sessions/active' });
+    expect(active.json().active).toBeNull();
+
+    const list = await t2.api({ method: 'GET', url: `/api/sessions?nodeId=${node.id}` });
+    const done = list.json().sessions[0];
+    expect(done.endedAt).toBe(plannedEndAt);
+    // It ran to the end it promised, so it is not an early finish and XP is paid.
+    expect(done.xpAwarded).toBeGreaterThan(0);
+    await t2.close();
+  });
+
+  it('withholds XP when a pomodoro with a planned end is stopped early', async () => {
+    const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
+    const node = (
+      await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Bailed' } })
+    ).json().node;
+    const plannedEndAt = new Date(Date.parse(t2.clock.now) + 60 * 60_000).toISOString();
+    const s = (
+      await t2.api({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: { nodeId: node.id, mode: 'pomodoro', plannedEndAt },
+      })
+    ).json().active.session.id;
+    advanceClock(t2, 30); // a full work interval, but well short of the hour promised
+    const end = await t2.api({
+      method: 'POST',
+      url: `/api/sessions/${s}/end`,
+      payload: { review: { skipped: true } },
+    });
+    expect(end.json().summary.endedEarly).toBe(true);
+    expect(end.json().summary.xp.total).toBe(0);
+    await t2.close();
+  });
+
+  it('refuses a planned end in the past for either style', async () => {
+    const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
+    const node = (
+      await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Past' } })
+    ).json().node;
+    const past = new Date(Date.parse(t2.clock.now) - 60_000).toISOString();
+    for (const mode of ['pomodoro', 'scheduled']) {
+      const res = await t2.api({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: { nodeId: node.id, mode, plannedEndAt: past },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+    await t2.close();
+  });
+});

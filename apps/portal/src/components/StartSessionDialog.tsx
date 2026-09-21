@@ -1,4 +1,5 @@
-import type { SessionMode, StudyNode } from '@doloop/core';
+import type { SessionDurationKind, SessionStyle, StudyNode } from '@doloop/core';
+import { describeCut, modeForPlan, pomodoroCut } from '@doloop/core';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@doloop/ui';
@@ -11,7 +12,7 @@ export interface StartSessionDialogProps {
   nodes: StudyNode[];
   /** Preselected node. */
   node?: StudyNode | null;
-  /** Suggested minutes (from the daily plan) used to prefill scheduled mode. */
+  /** Suggested minutes (from the daily plan) used to prefill the length. */
   suggestedMinutes?: number | null;
 }
 
@@ -28,6 +29,18 @@ function todayAtLocal(time: string): string {
   return d.toISOString();
 }
 
+/** Minutes from now until the given local clock time, for the boundary check. */
+function minutesUntilLocal(time: string): number {
+  return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
+}
+
+function fmtLength(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 export function StartSessionDialog({
   open,
   onClose,
@@ -42,9 +55,13 @@ export function StartSessionDialog({
   const settings = me.data?.user.settings;
 
   const [nodeId, setNodeId] = useState('');
-  const [mode, setMode] = useState<SessionMode>('pomodoro');
+  const [style, setStyle] = useState<SessionStyle>('pomodoro');
+  const [duration, setDuration] = useState<SessionDurationKind>('unlimited');
+  const [minutes, setMinutes] = useState('60');
   const [endTime, setEndTime] = useState('');
   const [showTimer, setShowTimer] = useState(true);
+  /** Set when the chosen length cuts a block short; cleared by confirming. */
+  const [confirmCut, setConfirmCut] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -54,20 +71,45 @@ export function StartSessionDialog({
         nodes[0]?.id ??
         '',
     );
-    setMode('pomodoro');
+    setStyle('pomodoro');
+    setDuration('unlimited');
+    setMinutes(String(suggestedMinutes ?? 60));
     setEndTime(plusMinutesLocalTime(suggestedMinutes ?? 60));
     setShowTimer(settings?.pomodoro.showTimerByDefault ?? true);
+    setConfirmCut(null);
   }, [open, node, nodes, suggestedMinutes, settings]);
 
   const leaves = nodes.filter((n) => !n.completedAt);
 
-  const go = async () => {
+  /** How long the session will run, or null when it is unlimited. */
+  const plannedMinutes =
+    duration === 'unlimited'
+      ? null
+      : duration === 'for'
+        ? Math.max(0, Math.round(Number(minutes) || 0))
+        : minutesUntilLocal(endTime);
+
+  // Only a pomodoro has blocks to cut short; a continuous session can stop anywhere.
+  const cut =
+    style === 'pomodoro' && plannedMinutes !== null && settings
+      ? pomodoroCut(plannedMinutes, settings.pomodoro)
+      : null;
+  const cutMessage = describeCut(cut);
+
+  const plannedEndAt = () => {
+    if (duration === 'unlimited') return null;
+    if (duration === 'until') return todayAtLocal(endTime);
+    return new Date(Date.now() + (plannedMinutes ?? 0) * 60_000).toISOString();
+  };
+
+  const submit = async () => {
     if (!nodeId) return toast('Pick something to study');
+    if (plannedMinutes !== null && plannedMinutes <= 0) return toast('Pick a length in the future');
     try {
       await start.mutateAsync({
         nodeId,
-        mode,
-        plannedEndAt: mode === 'scheduled' ? todayAtLocal(endTime) : null,
+        mode: modeForPlan({ style, plannedEndAt: plannedEndAt() }),
+        plannedEndAt: plannedEndAt(),
         showTimer,
       });
       onClose();
@@ -78,14 +120,23 @@ export function StartSessionDialog({
     }
   };
 
-  const modeHelp: Record<SessionMode, string> = {
-    pomodoro: settings
-      ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break, long break every ${settings.pomodoro.cyclesBeforeLong}`
-      : '',
-    unlimited: 'Runs until you stop. Shows elapsed time only.',
-    scheduled:
-      'Pick an end time. A chime plays, then the session ends after a minute unless you extend.',
+  const go = () => {
+    // Confirm once when the length does not land on a block boundary.
+    if (cutMessage && confirmCut !== cutMessage) return setConfirmCut(cutMessage);
+    void submit();
   };
+
+  const styleHelp =
+    style === 'pomodoro'
+      ? settings
+        ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break, long break every ${settings.pomodoro.cyclesBeforeLong}.`
+        : ''
+      : 'Straight through, no breaks. Stop whenever you like.';
+
+  const durationHelp =
+    duration === 'unlimited'
+      ? 'Runs until you stop it.'
+      : 'A chime plays at the end, then the session closes after a minute unless you extend it.';
 
   return (
     <Modal
@@ -98,7 +149,7 @@ export function StartSessionDialog({
             Cancel
           </Button>
           <Button variant="primary" onClick={go} loading={start.isPending}>
-            Start
+            {confirmCut ? 'Start anyway' : 'Start'}
           </Button>
         </>
       }
@@ -111,29 +162,98 @@ export function StartSessionDialog({
             </option>
           ))}
         </Select>
+
         <div className="field">
-          <span className="field-label">Mode</span>
+          <span className="field-label">How you work</span>
           <Segmented
-            ariaLabel="Session mode"
-            value={mode}
-            onChange={setMode}
+            ariaLabel="Session style"
+            value={style}
+            onChange={(v) => {
+              setStyle(v as SessionStyle);
+              setConfirmCut(null);
+            }}
             options={[
               { value: 'pomodoro', label: 'Pomodoro' },
-              { value: 'unlimited', label: 'Unlimited' },
-              { value: 'scheduled', label: 'Until a time' },
+              { value: 'continuous', label: 'Continuous' },
             ]}
           />
-          <span className="field-hint">{modeHelp[mode]}</span>
+          <span className="field-hint">{styleHelp}</span>
         </div>
-        {mode === 'scheduled' && (
+
+        <div className="field">
+          <span className="field-label">How long</span>
+          <Segmented
+            ariaLabel="Session length"
+            value={duration}
+            onChange={(v) => {
+              setDuration(v as SessionDurationKind);
+              setConfirmCut(null);
+            }}
+            options={[
+              { value: 'unlimited', label: 'Unlimited' },
+              { value: 'for', label: 'For a while' },
+              { value: 'until', label: 'Until a time' },
+            ]}
+          />
+          <span className="field-hint">{durationHelp}</span>
+        </div>
+
+        {duration === 'for' && (
+          <Input
+            label="Minutes"
+            type="number"
+            min={1}
+            max={1440}
+            step={5}
+            value={minutes}
+            onChange={(e) => {
+              setMinutes(e.target.value);
+              setConfirmCut(null);
+            }}
+            hint={plannedMinutes ? `That is ${fmtLength(plannedMinutes)}` : undefined}
+          />
+        )}
+
+        {duration === 'until' && (
           <Input
             label="Stop at"
             type="time"
             value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            hint={`You'll stop at ${endTime}`}
+            onChange={(e) => {
+              setEndTime(e.target.value);
+              setConfirmCut(null);
+            }}
+            hint={
+              plannedMinutes && plannedMinutes > 0
+                ? `${fmtLength(plannedMinutes)} from now`
+                : undefined
+            }
           />
         )}
+
+        {cutMessage && (
+          <p className="cut-warning" role="alert">
+            {cutMessage}
+            {cut && cut.previousBoundaryMinutes > 0 && (
+              <>
+                {' '}
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    // Snap to the clean length just below.
+                    setDuration('for');
+                    setMinutes(String(cut.previousBoundaryMinutes));
+                    setConfirmCut(null);
+                  }}
+                >
+                  Use {fmtLength(cut.previousBoundaryMinutes)} instead
+                </button>
+              </>
+            )}
+          </p>
+        )}
+
         <Toggle
           checked={showTimer}
           onChange={setShowTimer}

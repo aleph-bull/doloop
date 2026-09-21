@@ -127,11 +127,13 @@ export interface EndedEarlyInput {
  * stopped before its planned end, counts as ended early. Unlimited sessions never do.
  */
 export function isEndedEarly(t: EndedEarlyInput): boolean {
-  if (t.mode === 'pomodoro') return t.cycle < 1;
-  if (t.mode === 'scheduled') {
-    if (t.autoEnded || !t.plannedEndAt || !t.endedAt) return false;
+  // A planned end is the promise that was made, whichever style the session ran in.
+  if (t.plannedEndAt) {
+    if (t.autoEnded || !t.endedAt) return false;
     return Date.parse(t.endedAt) < Date.parse(t.plannedEndAt);
   }
+  // An open-ended pomodoro instead promises one work interval.
+  if (t.mode === 'pomodoro') return t.cycle < 1;
   return false;
 }
 

@@ -145,11 +145,12 @@ export async function startSession(
       now,
     );
   }
-  if (input.mode === 'scheduled') {
-    if (!input.plannedEndAt) throw badRequest('Scheduled sessions need plannedEndAt');
-    if (Date.parse(input.plannedEndAt) <= Date.parse(now))
-      throw badRequest('plannedEndAt must be in the future');
-  }
+  if (input.mode === 'scheduled' && !input.plannedEndAt)
+    throw badRequest('Scheduled sessions need plannedEndAt');
+  // A planned end is optional for a pomodoro and required for a scheduled session, but
+  // wherever it is given it has to be in the future.
+  if (input.plannedEndAt && Date.parse(input.plannedEndAt) <= Date.parse(now))
+    throw badRequest('plannedEndAt must be in the future');
   const settings = settingsOf(user);
   const snapshot = {
     workMin: settings.pomodoro.workMin,
