@@ -18,7 +18,6 @@ const Onboarding = lazy(() =>
 );
 const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
 const Routines = lazy(() => import('./pages/Routines').then((m) => ({ default: m.Routines })));
-const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Analytics = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
 const WeeklyReviewPage = lazy(() =>
@@ -96,16 +95,6 @@ export function App() {
               <RequireAuth>
                 <Gate>
                   <Onboarding />
-                </Gate>
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/focus"
-            element={
-              <RequireAuth>
-                <Gate>
-                  <Focus />
                 </Gate>
               </RequireAuth>
             }

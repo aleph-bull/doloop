@@ -392,65 +392,6 @@ export function Settings() {
         </div>
       </Section>
 
-      <Section id="visualizer" title="Focus screen glow">
-        <p className="field-hint">
-          The focus screen can show a soft glow along the left and right edges that follows whatever
-          your computer is playing. The browser only exposes system audio through a screen-share
-          prompt, so it asks once per visit; until then the glow just breathes.
-        </p>
-        <Toggle
-          checked={s.visualizer.enabled}
-          onChange={(v) => patch({ visualizer: { enabled: v } })}
-          label="Show the glow"
-        />
-        {s.visualizer.enabled && (
-          <>
-            <div className="field">
-              <span className="field-label">
-                Intensity {Math.round(s.visualizer.intensity * 100)}%
-              </span>
-              <Slider
-                min={0}
-                max={1}
-                step={0.05}
-                value={s.visualizer.intensity}
-                onChange={(v) => patch({ visualizer: { intensity: v } })}
-                aria-label="Glow intensity"
-              />
-              <span className="field-hint">
-                How far the glow rises, and how strongly it answers the music.
-              </span>
-            </div>
-            <div className="field">
-              <span className="field-label">Opacity {Math.round(s.visualizer.opacity * 100)}%</span>
-              <Slider
-                min={0}
-                max={1}
-                step={0.05}
-                value={s.visualizer.opacity}
-                onChange={(v) => patch({ visualizer: { opacity: v } })}
-                aria-label="Glow opacity"
-              />
-              <span className="field-hint">How solid the glow is overall.</span>
-            </div>
-            <div className="field">
-              <span className="field-label">Colour</span>
-              <div className="pill-row items-center">
-                <input
-                  type="color"
-                  aria-label="Glow colour"
-                  value={s.visualizer.color}
-                  onChange={(e) => patch({ visualizer: { color: e.target.value } })}
-                />
-                <span className="muted text-sm">
-                  Also changeable on the focus screen itself; the two stay in sync.
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </Section>
-
       <Section id="sounds" title="Sounds">
         <Toggle
           checked={s.sounds.enabled}

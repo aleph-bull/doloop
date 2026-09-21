@@ -54,7 +54,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
     panelAlpha: 0.92,
     extensionBackground: 'same',
   },
-  visualizer: { enabled: true, intensity: 0.6, opacity: 0.55, color: '#6366f1' },
   blocking: { enabled: false, domains: [] },
   calendar: {
     googleConnected: false,

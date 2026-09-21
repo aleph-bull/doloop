@@ -12,9 +12,8 @@ import {
   type UserSettings,
 } from '@doloop/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Maximize2, Pause, Play, SkipForward, Square } from 'lucide-react';
+import { Eye, EyeOff, Pause, Play, SkipForward, Square } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
 import { Button, Chip, Glass, Modal, useToast } from '@doloop/ui';
 import { api, type ActiveSession, type EndSummary, type ReviewInput } from '../lib/api';
 import { fmtTime } from '../lib/format';
@@ -230,9 +229,6 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
               )}
             </div>
           </div>
-          <Link to="/focus" className="btn btn-ghost btn-sm btn-icon" aria-label="Focus screen">
-            <Maximize2 size={16} aria-hidden />
-          </Link>
           <Button
             variant="ghost"
             size="sm"
