@@ -171,3 +171,29 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 ### Badges
 
 - **Seventeen added** across volume (hours, sessions, deep work), rhythm (night owl, weekend warrior, full week, marathon), habits (routine ticks, a perfect routine week), reflection (reviews, weekly notes) and rewards. Twenty-nine total. A "perfect week" only counts weeks that have finished and that actually had something due.
+
+## Backgrounds, highlights, session types (user request, 2026-09-21)
+
+### Backgrounds
+
+- **Only Graphite survived.** The other nine gradients were dropped at the user's request and replaced by nineteen supplied photographs, plus five new siblings for Graphite (Slate, Ash, Onyx, Basalt, Fog) built to its recipe: one soft light source over a quiet two-stop base, neutral hues only.
+- **Photographs ship as 2560px WebP**, 5.0 MB for all nineteen, produced by `packages/ui/scripts/prepare-backgrounds.ts`. The pipeline is committed so the set can be regenerated; the source photos are not in the repo.
+- **Average colour and a 20px LQIP are baked in at build time** (`src/photos.generated.ts`). That is what lets a twenty-five-tile picker render with zero network requests, a chosen background paint without a flash, and the contrast audit check photos without the images present.
+- **`adaptGlassToBackdrop` in contrast.ts is the single place** the glass fill and text colour are derived from a backdrop colour — used live for a user's upload, ahead of time for shipped photos, and by the audit. Every photo clears 4.5:1 at the base 45% fill.
+- **Ids resolve through `resolveBackgroundId`.** Every existing user had a now-deleted id, so an unknown id reads as Graphite, in core and normalised server-side in `settingsOf`. Graphite is also the new default.
+- **The extension takes an `assetBase`** so photo paths resolve against the portal origin instead of `chrome-extension://`. Photos are not bundled into the extension.
+- **Licensing**: the Unsplash photographs are used under the Unsplash License and credited in `public/backgrounds/CREDITS.md`. `still-water` was supplied by the user from an unidentified source and its licence is not verified — flagged rather than assumed.
+
+### Weekly highlights
+
+- **Wins only, enforced at source.** Relative thresholds with no absolute floor let a week of seconds beat a previous week of seconds, producing "You studied 0 hours this week" and "biggest study day yet — 0 hours". Everything time-based now clears `MIN_WIN_MINUTES`; increases need an absolute delta as well as a ratio; a record day needs a real day and a margin.
+- **`fmtDurationWord` drops to minutes under the hour**, shared by highlights and the all-time insights, so no card can read "0 hours".
+- **Progress is stated as ground covered, never ground remaining.** "You're 60% through Test 1", not "40% from finishing" — and only once a real dent has been made. A live streak is never compared unfavourably with a longer past one, and "back on track" does not name the status it recovered from.
+
+### Session types
+
+- **Style and length are separate axes.** Style is pomodoro or continuous; length is unlimited, a number of minutes, or a clock time. This replaces the single Pomodoro / Unlimited / Until-a-time choice, which had no way to express a pomodoro with an end time.
+- **No migration.** `SessionMode` still stores the three original combinations unchanged; the new one is mode `pomodoro` with `plannedEndAt` set. `modeForPlan`/`styleForMode` map between the plan and the stored mode.
+- **A planned end applies to either style.** `advance()` ends any session at its planned end, and `isEndedEarly` judges a session with a planned end against that end; an open-ended pomodoro still promises one work interval.
+- **A length that does not land on a block boundary asks first**: "Are you sure? This will end your work block 15 minutes early", with a one-click snap to the clean length below, and an explicit second click to start. Continuous sessions have no blocks, so they never warn.
+- **Glass highlight halved** (0.5 to 0.26 light, 0.12 to 0.06 dark) — the top sheen read as a visible band on panels over the photographic backgrounds.
