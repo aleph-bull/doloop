@@ -49,7 +49,7 @@ export function AppShell() {
   const customImageUrl =
     settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD
       ? (uploaded.data?.dataUrl ?? null)
-      : (settings?.theme.customBackgroundUrl ?? null);
+      : null;
 
   const user = me.data?.user;
   const lp = user ? levelProgressView(user.xp) : null;

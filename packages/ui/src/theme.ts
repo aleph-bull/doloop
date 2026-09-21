@@ -169,7 +169,6 @@ export function resolveExtensionBackdrop(
   if (choice === 'upload')
     return { backgroundId: theme.backgroundId, customImageUrl: uploadedDataUrl };
   if (choice !== 'same') return { backgroundId: choice, customImageUrl: null };
-  const custom =
-    theme.customBackgroundUrl === 'upload' ? uploadedDataUrl : theme.customBackgroundUrl;
-  return { backgroundId: theme.backgroundId, customImageUrl: custom ?? null };
+  const custom = theme.customBackgroundUrl === 'upload' ? uploadedDataUrl : null;
+  return { backgroundId: theme.backgroundId, customImageUrl: custom };
 }

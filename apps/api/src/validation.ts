@@ -1,3 +1,4 @@
+import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS } from '@doloop/core';
 import { z } from 'zod';
 
 export const isoDateTime = z.iso.datetime({ offset: true });
@@ -79,11 +80,14 @@ export const vacationSchema = z.object({
   label: z.string().max(80).default(''),
 });
 
+const minutes = (k: keyof typeof POMODORO_LIMITS) =>
+  z.number().int().min(POMODORO_LIMITS[k].min).max(POMODORO_LIMITS[k].max);
+
 const pomodoro = z.object({
-  workMin: z.number().int().min(1).max(180),
-  shortBreakMin: z.number().int().min(1).max(60),
-  longBreakMin: z.number().int().min(1).max(120),
-  cyclesBeforeLong: z.number().int().min(1).max(12),
+  workMin: minutes('workMin'),
+  shortBreakMin: minutes('shortBreakMin'),
+  longBreakMin: minutes('longBreakMin'),
+  cyclesBeforeLong: minutes('cyclesBeforeLong'),
   autoStartBreaks: z.boolean(),
   autoStartWork: z.boolean(),
   showTimerByDefault: z.boolean(),
@@ -120,7 +124,8 @@ export const settingsSchema = z
         mode: z.enum(['system', 'light', 'dark']),
         accent: z.string().max(32),
         backgroundId: z.string().max(32),
-        customBackgroundUrl: z.string().max(2000).nullable(),
+        // Only the uploaded image (or none). Remote URLs are deliberately not accepted.
+        customBackgroundUrl: z.literal(CUSTOM_BACKGROUND_UPLOAD).nullable(),
         panel: z.enum(['opaque', 'glass', 'custom']),
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),

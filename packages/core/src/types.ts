@@ -50,8 +50,11 @@ export interface UserSettings {
     mode: ThemeMode;
     accent: string;
     backgroundId: string;
-    /** A URL, or the sentinel 'upload' meaning the image stored via /api/me/background. */
-    customBackgroundUrl: string | null;
+    /**
+     * The sentinel 'upload' when the image stored via /api/me/background is in use, else null.
+     * Remote image URLs are not supported: an uploaded file is the only custom background.
+     */
+    customBackgroundUrl: typeof CUSTOM_BACKGROUND_UPLOAD | null;
     /** Surface for dense panels (task tree, tables, settings). */
     panel: PanelStyle;
     /** Hex colour for panel 'custom'. */

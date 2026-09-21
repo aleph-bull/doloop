@@ -3,6 +3,8 @@ import {
   BACKGROUNDS,
   isAccentUnlocked,
   isBackgroundAvailable,
+  POMODORO_DURATION_KEYS,
+  POMODORO_LIMITS,
   type UserSettings,
 } from '@doloop/core';
 import { useEffect, useState } from 'react';
@@ -33,6 +35,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import {
+  useActiveSession,
   useAddVacation,
   useMe,
   useRemoveVacation,
@@ -71,6 +74,7 @@ function NumberField({
   max,
   step = 1,
   hint,
+  disabled,
 }: {
   label: string;
   value: number;
@@ -79,6 +83,7 @@ function NumberField({
   max: number;
   step?: number;
   hint?: string;
+  disabled?: boolean;
 }) {
   const [v, setV] = useState(String(value));
   useEffect(() => setV(String(value)), [value]);
@@ -90,6 +95,7 @@ function NumberField({
       min={min}
       max={max}
       step={step}
+      disabled={disabled}
       value={v}
       onChange={(e) => setV(e.target.value)}
       onBlur={() => {
@@ -100,6 +106,13 @@ function NumberField({
     />
   );
 }
+
+const POMODORO_LABELS: Record<(typeof POMODORO_DURATION_KEYS)[number], string> = {
+  workMin: 'Work (min)',
+  shortBreakMin: 'Short break',
+  longBreakMin: 'Long break',
+  cyclesBeforeLong: 'Cycles before long',
+};
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -120,6 +133,8 @@ export function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const restDays = useRestDays();
+  const active = useActiveSession();
+  const sessionRunning = !!active.data?.active;
   const qc = useQueryClient();
   const setWeekly = useSetWeeklyRestDays();
   const addVacation = useAddVacation();
@@ -132,7 +147,6 @@ export function Settings() {
   const [weekly, setWeeklyLocal] = useState<number[] | null>(null);
   const [vac, setVac] = useState({ from: '', to: '', label: '' });
   const [domains, setDomains] = useState<string | null>(null);
-  const [customBg, setCustomBg] = useState<string | null>(null);
   const [advanced, setAdvanced] = useState(false);
 
   useEffect(() => {
@@ -290,7 +304,7 @@ export function Settings() {
           checked={advanced || !!s.theme.customBackgroundUrl}
           onChange={setAdvanced}
           label="Advanced"
-          description="Use your own image. Text colour and glass opacity adapt to it automatically."
+          description="Upload your own image. Text colour and glass opacity adapt to it automatically."
         />
         {(advanced || !!s.theme.customBackgroundUrl) && (
           <BackgroundUpload
@@ -301,53 +315,28 @@ export function Settings() {
             }}
           />
         )}
-        {(advanced || !!s.theme.customBackgroundUrl) && (
-          <div className="flex gap-2 items-end">
-            <Input
-              label="Image URL"
-              placeholder="https://…"
-              value={
-                customBg ??
-                (s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD
-                  ? ''
-                  : (s.theme.customBackgroundUrl ?? ''))
-              }
-              onChange={(e) => setCustomBg(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={() =>
-                patch({ theme: { customBackgroundUrl: (customBg ?? '').trim() || null } })
-              }
-            >
-              Apply
-            </Button>
-            {s.theme.customBackgroundUrl && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setCustomBg('');
-                  void patch({ theme: { customBackgroundUrl: null } });
-                }}
-              >
-                Remove
-              </Button>
-            )}
-          </div>
-        )}
       </Section>
 
       <Section id="timer" title="Timer">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <Input label="Work (min)" value={s.pomodoro.workMin} disabled readOnly />
-          <Input label="Short break" value={s.pomodoro.shortBreakMin} disabled readOnly />
-          <Input label="Long break" value={s.pomodoro.longBreakMin} disabled readOnly />
-          <Input label="Cycles before long" value={s.pomodoro.cyclesBeforeLong} disabled readOnly />
+          {POMODORO_DURATION_KEYS.map((k) => (
+            <NumberField
+              key={k}
+              label={POMODORO_LABELS[k]}
+              value={s.pomodoro[k]}
+              min={POMODORO_LIMITS[k].min}
+              max={POMODORO_LIMITS[k].max}
+              disabled={sessionRunning}
+              onCommit={(v) => patch({ pomodoro: { [k]: v } })}
+            />
+          ))}
         </div>
         <p className="field-hint">
-          Interval lengths are fixed so XP cannot be farmed with short intervals. A pomodoro ended
-          before its first work interval, or a scheduled session stopped before its planned end,
-          earns no XP.
+          {sessionRunning
+            ? 'Interval lengths are locked while a session is running. Finish or stop it to change them.'
+            : `Editable between sessions only. Work is ${POMODORO_LIMITS.workMin.min}–${POMODORO_LIMITS.workMin.max} min; the floor keeps the "no XP before the first work interval" rule meaningful.`}{' '}
+          A pomodoro ended before its first work interval, or a scheduled session stopped before its
+          planned end, earns no XP.
         </p>
         <Toggle
           checked={s.pomodoro.autoStartBreaks}
