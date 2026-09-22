@@ -49,12 +49,15 @@
   padding: 8px 12px;
 }
 .nav-link {
+  position: relative;
+  z-index: 1;
   padding: 6px 12px;
   border-radius: var(--radius-pill);
   color: var(--fg-muted);
   font-size: var(--text-sm);
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   transition:
     background var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out);
@@ -67,6 +70,33 @@
 .nav-link[aria-current='page'] {
   background: var(--accent);
   color: var(--accent-fg);
+}
+
+/* Primary tabs share one pill that slides between them, so the links themselves
+   stay transparent and let the indicator behind them do the highlighting. */
+.nav-primary {
+  position: relative;
+}
+.nav-primary .nav-link[aria-current='page'],
+.nav-primary .nav-link[aria-current='page']:hover {
+  background: transparent;
+}
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  pointer-events: none;
+  will-change: transform, width;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.nav-indicator.is-animated {
+  transition:
+    transform var(--dur-base) var(--ease-out),
+    width var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
 }
 .brand {
   display: flex;

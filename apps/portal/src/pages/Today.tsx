@@ -1,4 +1,4 @@
-import type { StudyNode } from '@doloop/core';
+import { standsInForChildren, type StudyNode } from '@doloop/core';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Glass, Spinner } from '@doloop/ui';
@@ -67,9 +67,11 @@ export function Today() {
     }
     return cur.id === n.id ? undefined : cur.title;
   };
-  const leaves = list.filter(
-    (n) => n.kind !== 'course' && !n.completedAt && !pace.data.pace[n.id]?.aggregated,
-  );
+  const leaves = list.filter((n) => {
+    if (n.kind === 'course' || n.completedAt) return false;
+    const p = pace.data.pace[n.id];
+    return !p || !standsInForChildren(p);
+  });
   const totalToday = pace.data.plan.reduce((s, p) => s + p.suggestedMinutes, 0);
   const anyDue = list.some((n) => n.dueAt);
 

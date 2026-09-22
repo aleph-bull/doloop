@@ -73,10 +73,17 @@ function Row({ node, depth, childrenOf, pace, onEdit, onAdd, onStart, onToggleDo
           </div>
           <div className="text-xs muted flex gap-2 flex-wrap mt-0.5 tabular">
             {node.dueAt && <span>{fmtDue(node.dueAt)}</span>}
-            {p?.estimatedMinutes != null && (
+            {p?.estimatedMinutes != null ? (
               <span>
                 {fmtMinutes(p.loggedWorkMinutes)} / {fmtMinutes(p.estimatedMinutes)}
               </span>
+            ) : (
+              // No estimate here or under it: hours logged is the only honest number.
+              // Gated on the rounded value so a few seconds do not render "0 m studied".
+              p != null &&
+              Math.round(p.loggedWorkMinutes) > 0 && (
+                <span>{fmtMinutes(p.loggedWorkMinutes)} studied</span>
+              )
             )}
             {p?.requiredPerDay != null && !done && (
               <span>· need {fmtMinutes(p.requiredPerDay)}/day</span>

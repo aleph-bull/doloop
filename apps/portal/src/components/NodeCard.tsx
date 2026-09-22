@@ -60,7 +60,7 @@ export function NodeCard({
         {pace && <StatusChip status={pace.status} />}
       </div>
 
-      {est != null && pace && (
+      {est != null && pace ? (
         <div>
           <ProgressBar value={pace.progress ?? 0} label={`${node.title} progress`} />
           <div className="flex justify-between text-xs muted mt-1 tabular">
@@ -70,6 +70,12 @@ export function NodeCard({
             <span>{pct(pace.progress)}</span>
           </div>
         </div>
+      ) : (
+        // Nothing to measure against, so report the hours instead of an empty bar.
+        pace != null &&
+        Math.round(pace.loggedWorkMinutes) > 0 && (
+          <div className="text-xs muted tabular">{fmtMinutes(pace.loggedWorkMinutes)} studied</div>
+        )
       )}
 
       <div className="flex items-center gap-2 flex-wrap text-xs muted">

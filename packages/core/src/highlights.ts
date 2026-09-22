@@ -1,6 +1,6 @@
 import { addDays, dayOfWeek, diffDays, toLocalDate } from './dates';
 import { HIGHLIGHT_FALLBACK, HIGHLIGHT_THRESHOLDS as T } from './highlights-thresholds';
-import { computePace, type PaceContext } from './pace';
+import { computePace, standsInForChildren, type PaceContext } from './pace';
 import type {
   ISODate,
   ISODateTime,
@@ -348,7 +348,13 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
     let best: { title: string; progress: number } | null = null;
     for (const n of leaves) {
       const p = paceNow.get(n.id);
-      if (!p || p.aggregated || p.progress == null || p.status === 'done' || n.completedAt)
+      if (
+        !p ||
+        standsInForChildren(p) ||
+        p.progress == null ||
+        p.status === 'done' ||
+        n.completedAt
+      )
         continue;
       if (p.progress >= T.GOAL_PROGRESS_MIN && (!best || p.progress > best.progress))
         best = { title: n.title, progress: p.progress };
@@ -370,7 +376,7 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
     for (const n of leaves) {
       const a = paceStart.get(n.id);
       const b = paceNow.get(n.id);
-      if (!a || !b || a.aggregated) continue;
+      if (!a || !b || standsInForChildren(a)) continue;
       if ((a.status === 'behind' || a.status === 'critical') && b.status === 'on-track') {
         push({
           key: 'on-pace',
@@ -416,7 +422,12 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
   for (const n of leaves) {
     if (!n.completedAt || !inRange(toLocalDate(n.completedAt, tz), weekStart, weekEnd)) continue;
     const p = paceNow.get(n.id);
-    if (p && !p.aggregated && n.estimatedMinutes && p.loggedWorkMinutes < n.estimatedMinutes) {
+    if (
+      p &&
+      !standsInForChildren(p) &&
+      n.estimatedMinutes &&
+      p.loggedWorkMinutes < n.estimatedMinutes
+    ) {
       push({
         key: 'estimate-beat',
         headline: `Finished ${n.title} in ${fmtHoursWord(p.loggedWorkMinutes)}, estimated ${fmtHoursWord(n.estimatedMinutes)}`,

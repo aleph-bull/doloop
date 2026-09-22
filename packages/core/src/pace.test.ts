@@ -295,6 +295,68 @@ describe('computePace aggregation', () => {
     expect(c.remainingMinutes).toBe(150);
   });
 
+  it("keeps the parent's own estimate when a child is estimated too", () => {
+    // The reported bug: estimating one unit at 1 h rewrote the 16 h test above it.
+    const course = node({ kind: 'course', title: 'ECO220' });
+    const test1 = node({
+      parentId: course.id,
+      kind: 'assessment',
+      title: 'Test 1',
+      estimatedMinutes: 960,
+    });
+    const unit1 = node({ parentId: test1.id, title: 'Unit 1', estimatedMinutes: 60 });
+    const paces = computePace([course, test1, unit1], [session(unit1.id, 30)], ctx());
+
+    const t = paces.get(test1.id)!;
+    expect(t.estimatedMinutes).toBe(960);
+    expect(t.aggregated).toBe(false);
+    expect(t.contributingChildren).toEqual([unit1.id]);
+    expect(t.loggedWorkMinutes).toBe(30);
+    expect(t.remainingMinutes).toBe(930);
+    expect(t.progress).toBeCloseTo(30 / 960);
+
+    // The course has no estimate of its own, so it takes the sum of its direct children.
+    const c = paces.get(course.id)!;
+    expect(c.aggregated).toBe(true);
+    expect(c.estimatedMinutes).toBe(960);
+    expect(c.progress).toBeCloseTo(30 / 960);
+  });
+
+  it('still surfaces a struggling child on a parent that has its own estimate', () => {
+    const test1 = node({ estimatedMinutes: 960, dueAt: localNoon('2026-10-30') });
+    const unit1 = node({
+      parentId: test1.id,
+      estimatedMinutes: 60,
+      dueAt: localNoon('2026-09-10'),
+    });
+    const paces = computePace([test1, unit1], [], ctx());
+    expect(paces.get(unit1.id)!.status).toBe('overdue');
+    expect(paces.get(test1.id)!.status).toBe('overdue');
+    expect(paces.get(test1.id)!.estimatedMinutes).toBe(960);
+  });
+
+  it('gives a node with no estimate anywhere in its subtree hours but no percentage', () => {
+    const course = node({ kind: 'course' });
+    const note = node({ parentId: course.id });
+    const paces = computePace([course, note], [session(note.id, 45)], ctx());
+    const c = paces.get(course.id)!;
+    expect(c.estimatedMinutes).toBeNull();
+    expect(c.progress).toBeNull();
+    expect(c.loggedWorkMinutes).toBe(45);
+    expect(c.status).toBe('no-estimate');
+  });
+
+  it('sums only the direct children, not every descendant', () => {
+    // Test 1 (16 h) breaks down into two units; the course must see 16 h, not 16 h + 3 h.
+    const course = node({ kind: 'course' });
+    const test1 = node({ parentId: course.id, estimatedMinutes: 960 });
+    const unitA = node({ parentId: test1.id, estimatedMinutes: 60 });
+    const unitB = node({ parentId: test1.id, estimatedMinutes: 120 });
+    const paces = computePace([course, test1, unitA, unitB], [], ctx());
+    expect(paces.get(course.id)!.estimatedMinutes).toBe(960);
+    expect(paces.get(course.id)!.contributingChildren).toEqual([test1.id]);
+  });
+
   it('marks a completed parent done regardless of children', () => {
     const course = node({ kind: 'course', completedAt: NOW });
     const a = node({ parentId: course.id, estimatedMinutes: 60, dueAt: localNoon('2026-09-10') });

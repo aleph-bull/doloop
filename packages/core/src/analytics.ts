@@ -1,5 +1,5 @@
 import { addDays, toLocalDate } from './dates';
-import { computePaceFromIndex, type NodePace, type PaceContext } from './pace';
+import { computePaceFromIndex, standsInForChildren, type NodePace, type PaceContext } from './pace';
 import { countedEditsInMonth } from './rest-day-changes';
 import { buildIndex, descendantIds, type NodeIndex } from './tree';
 import type {
@@ -169,7 +169,7 @@ export function estimateAccuracy(input: AnalyticsInput): EstimateAccuracy {
   for (const n of input.nodes) {
     if (!n.completedAt || !n.estimatedMinutes || n.archived) continue;
     const p = paces.get(n.id);
-    if (!p || p.aggregated) continue;
+    if (!p || standsInForChildren(p)) continue;
     samples.push({
       nodeId: n.id,
       title: n.title,

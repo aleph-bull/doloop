@@ -41,8 +41,9 @@ export interface NodePace {
   /** Average work minutes per study day over the recent window. */
   avgPerStudyDayRecent: number;
   status: PaceStatus;
-  /** True when the values were rolled up from children rather than computed from own estimate. */
+  /** True when the values were rolled up from children because the node has no estimate of its own. */
   aggregated: boolean;
+  /** Direct children that carry an estimate, whether or not they set this node's numbers. */
   contributingChildren: string[];
 }
 
@@ -59,6 +60,16 @@ export function worstStatus(statuses: PaceStatus[]): PaceStatus {
   let worst: PaceStatus = 'done';
   for (const s of statuses) if (SEVERITY[s] > SEVERITY[worst]) worst = s;
   return worst;
+}
+
+/**
+ * True when the node's numbers cover work that children account for separately - either
+ * rolled up from them, or its own estimate broken down by them. Callers that want one row
+ * per piece of work (the daily plan, estimate accuracy, weekly highlights) skip these, or
+ * they would count the same hours twice.
+ */
+export function standsInForChildren(p: NodePace): boolean {
+  return p.aggregated || p.contributingChildren.length > 0;
 }
 
 /**
@@ -183,9 +194,13 @@ function leafPace(node: StudyNode, index: NodeIndex, ctx: PaceContext): NodePace
 }
 
 /**
- * Pace for every non-archived node. Parents with children that carry estimates are
- * aggregated: required per day is the sum, remaining is the sum, status is the worst child.
- * A parent's own estimate is ignored when children carry estimates (see DECISIONS.md).
+ * Pace for every non-archived node.
+ *
+ * A node's own estimate always wins: children are a breakdown of the parent's work, not a
+ * replacement for it, so "16 h for Test 1" stays 16 h after one unit under it is estimated
+ * at 1 h. Only a node with no estimate of its own is aggregated, and then from the sum of
+ * its direct children's estimates against all the time logged in the subtree. A node with
+ * neither has no percentage at all - just the hours logged (see DECISIONS.md).
  */
 export function computePace(
   nodes: StudyNode[],
@@ -202,10 +217,24 @@ export function computePaceFromIndex(index: NodeIndex, ctx: PaceContext): Map<st
   const visit = (node: StudyNode): NodePace => {
     const kids = childrenOf(index, node.id);
     const kidPaces = kids.map(visit);
-    const contributing = kidPaces.filter(
-      (k) => k.estimatedMinutes !== null || (k.aggregated && k.contributingChildren.length > 0),
-    );
+    // A child contributes if it has an estimate of its own or rolled one up from its children.
+    const contributing = kidPaces.filter((k) => k.estimatedMinutes !== null);
+    const contributingChildren = contributing.map((k) => k.nodeId);
     const own = leafPace(node, index, ctx);
+
+    if (own.estimatedMinutes !== null) {
+      // The node's own estimate is authoritative. Children still colour the status, so a
+      // unit that is overdue is not hidden by a parent whose own deadline is comfortable.
+      const withKids: NodePace = {
+        ...own,
+        status: node.completedAt
+          ? 'done'
+          : worstStatus([own.status, ...contributing.map((k) => k.status)]),
+        contributingChildren,
+      };
+      out.set(node.id, withKids);
+      return withKids;
+    }
 
     if (contributing.length === 0) {
       out.set(node.id, own);
@@ -235,7 +264,7 @@ export function computePaceFromIndex(index: NodeIndex, ctx: PaceContext): Map<st
       studyDaysRemaining: own.studyDaysRemaining,
       status,
       aggregated: true,
-      contributingChildren: contributing.map((k) => k.nodeId),
+      contributingChildren,
     };
     out.set(node.id, agg);
     return agg;
@@ -275,7 +304,7 @@ export function getDailyPlan(
   const paces = computePaceFromIndex(index, ctx);
   const items: PlanItem[] = [];
   for (const [id, p] of paces) {
-    if (p.aggregated) continue;
+    if (standsInForChildren(p)) continue;
     if (p.estimatedMinutes === null || p.remainingMinutes === null) continue;
     if (p.status === 'done' || p.remainingMinutes <= 0) continue;
     const node = index.byId.get(id)!;

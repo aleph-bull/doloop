@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { Flame, LogOut, Settings as SettingsIcon, WifiOff } from 'lucide-react';
 import { applyTheme, applyUserTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
 import { CUSTOM_BACKGROUND_UPLOAD, levelProgress as levelProgressView } from '@doloop/core';
@@ -45,6 +45,63 @@ export function AppShell() {
     return () => mq.removeEventListener('change', onChange);
   }, [settings]);
 
+  // The active pill is one element that slides and resizes between links, so a tab
+  // change reads as movement rather than a jump.
+  const navRef = useRef<HTMLElement | null>(null);
+  const [indicator, setIndicator] = useState({ left: 0, width: 0, animate: false });
+  const location = useLocation();
+
+  const placeIndicator = useCallback((target: HTMLElement) => {
+    const left = target.offsetLeft;
+    const width = target.offsetWidth;
+    setIndicator((prev) =>
+      prev.left === left && prev.width === width
+        ? prev
+        : // Never animate the very first placement, or it would fly in from the edge.
+          { left, width, animate: prev.width > 0 },
+    );
+  }, []);
+
+  const measureIndicator = useCallback(() => {
+    const active = navRef.current?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
+    if (!active) {
+      // No primary tab is active (Settings, say) — fade the pill out where it stands.
+      setIndicator((prev) => (prev.width === 0 ? prev : { ...prev, width: 0, animate: true }));
+      return;
+    }
+    placeIndicator(active);
+  }, [placeIndicator]);
+
+  // Move on the click itself: waiting for the route to commit would stall the slide
+  // behind however long the next page takes to render.
+  const onNavClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+      if (event.button !== 0 || modified) return;
+      placeIndicator(event.currentTarget);
+    },
+    [placeIndicator],
+  );
+
+  useLayoutEffect(() => {
+    measureIndicator();
+  }, [measureIndicator, location.pathname]);
+
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    // Window resizes, the nav's own reflow, and late web fonts all move the links.
+    const ro = new ResizeObserver(() => measureIndicator());
+    ro.observe(nav);
+    for (const child of Array.from(nav.children)) ro.observe(child);
+    window.addEventListener('resize', measureIndicator);
+    void document.fonts?.ready.then(() => measureIndicator());
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measureIndicator);
+    };
+  }, [measureIndicator]);
+
   const theme = resolveTheme(settings?.theme.mode ?? 'system');
   const uploaded = useCustomBackground(
     settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD,
@@ -73,9 +130,28 @@ export function AppShell() {
             <span className="brand-mark" aria-hidden />
             <span>Doloop</span>
           </NavLink>
-          <nav className="flex items-center gap-1 ml-2" aria-label="Primary">
+          <nav
+            ref={navRef}
+            className="nav-primary flex items-center gap-1 ml-2"
+            aria-label="Primary"
+          >
+            <span
+              className={`nav-indicator${indicator.animate ? ' is-animated' : ''}`}
+              style={{
+                opacity: indicator.width ? 1 : 0,
+                width: `${indicator.width}px`,
+                transform: `translate3d(${indicator.left}px, 0, 0)`,
+              }}
+              aria-hidden
+            />
             {links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.to === '/'} className="nav-link">
+              <NavLink
+                key={l.to}
+                to={l.to}
+                end={l.to === '/'}
+                className="nav-link"
+                onClick={onNavClick}
+              >
                 {l.label}
               </NavLink>
             ))}
