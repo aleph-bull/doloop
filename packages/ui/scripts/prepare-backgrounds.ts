@@ -17,6 +17,7 @@ import sharp from 'sharp';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { prepareThumbs } from './prepare-thumbs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const UI_SRC = resolve(HERE, '../src');
@@ -268,6 +269,7 @@ async function main() {
         `    name: '${photo.name.replace(/'/g, "\\'")}',`,
         `    category: '${photo.category}',`,
         `    src: 'backgrounds/${photo.id}.webp',`,
+        `    thumb: 'backgrounds/thumbs/${photo.id}.webp',`,
         `    avg: [${avg.join(', ')}],`,
         `    lqip:\n      '${lqip}',`,
         `  },`,
@@ -284,7 +286,7 @@ async function main() {
  *
  * \`avg\` is the photograph's average colour, used to pick the glass fill and text colour
  * without sampling in the browser. \`lqip\` is a 20px placeholder shown while the full
- * image loads.
+ * image loads. \`thumb\` is the picker preview, written by scripts/prepare-thumbs.ts.
  */
 
 export interface PhotoBackground {
@@ -293,6 +295,8 @@ export interface PhotoBackground {
   category: string;
   /** Path relative to the app root; the extension prefixes it with the portal origin. */
   src: string;
+  /** 640px picker thumbnail, same path convention as \`src\`. */
+  thumb: string;
   avg: [number, number, number];
   lqip: string;
 }
@@ -322,6 +326,15 @@ ${rows.join('\n')}
 
   console.log(
     `\n${PHOTOS.length} photos, ${(totalBytes / 1024 / 1024).toFixed(1)} MB total -> ${PUBLIC_DIR}`,
+  );
+
+  // From the list just written, not the imported module, which predates this run.
+  await prepareThumbs(
+    PHOTOS.map((p) => ({
+      id: p.id,
+      src: `backgrounds/${p.id}.webp`,
+      thumb: `backgrounds/thumbs/${p.id}.webp`,
+    })),
   );
 }
 

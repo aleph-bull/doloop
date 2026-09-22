@@ -150,6 +150,9 @@ function overlapsBlock(s: Session, blocks: PlannedBlock[]): boolean {
   return blocks.some(
     (bl) =>
       !bl.cancelled &&
+      // Time set aside in the app; a session's own record of itself is not a plan.
+      bl.source === 'app' &&
+      s.nodeId !== null &&
       bl.nodeId === s.nodeId &&
       Date.parse(bl.startAt) < b &&
       Date.parse(bl.endAt) > a,
@@ -173,7 +176,8 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   // estimate-oracle: completed nodes with estimate, logged within ±10%.
   const loggedByNode = new Map<string, number>();
   for (const s of sessions)
-    loggedByNode.set(s.nodeId, (loggedByNode.get(s.nodeId) ?? 0) + s.workSeconds / 60);
+    if (s.nodeId !== null)
+      loggedByNode.set(s.nodeId, (loggedByNode.get(s.nodeId) ?? 0) + s.workSeconds / 60);
   let oracle = 0;
   for (const n of input.nodes) {
     if (!n.completedAt || !n.estimatedMinutes) continue;

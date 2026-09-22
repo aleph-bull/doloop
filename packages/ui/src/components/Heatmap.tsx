@@ -9,6 +9,7 @@ import { useId } from 'react';
 
 export interface HeatmapDay {
   date: string;
+  /** Study minutes, or a tracker's own unit when `format` is supplied. */
   minutes: number;
   level: 0 | 1 | 2 | 3 | 4;
   future: boolean;
@@ -19,15 +20,19 @@ export interface HeatmapProps {
   weeks: HeatmapDay[][];
   monthLabels: Array<{ column: number; label: string }>;
   ariaLabel: string;
-  /** Minute thresholds behind levels 1-3, for the legend tooltip. */
+  /** Thresholds behind levels 1-3, for the legend tooltip. */
   thresholds?: [number, number, number];
+  /**
+   * How a day's value reads in a tooltip. Defaults to study time ("1.5 h"); a tracker
+   * passes its own unit ("12 pages") so the same grid serves anything countable.
+   */
+  format?: (value: number) => string;
+  /** Smaller cells for a board of several grids side by side. */
+  compact?: boolean;
   onSelect?: (day: HeatmapDay) => void;
 }
 
 const ROW_LABELS = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun'];
-const CELL = 11;
-const GAP = 3;
-const STEP = CELL + GAP;
 const LABEL_W = 26;
 const LABEL_H = 14;
 
@@ -49,10 +54,20 @@ function pretty(date: string): string {
   });
 }
 
-export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }: HeatmapProps) {
+export function Heatmap({
+  weeks,
+  monthLabels,
+  ariaLabel,
+  thresholds,
+  format = fmt,
+  compact = false,
+  onSelect,
+}: HeatmapProps) {
   const id = useId();
-  const width = LABEL_W + weeks.length * STEP;
-  const height = LABEL_H + 7 * STEP;
+  const cell = compact ? 9 : 11;
+  const step = cell + (compact ? 2 : 3);
+  const width = LABEL_W + weeks.length * step;
+  const height = LABEL_H + 7 * step;
   const labelFor = new Map(monthLabels.map((m) => [m.column, m.label]));
 
   return (
@@ -62,13 +77,13 @@ export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }:
         role="img"
         aria-label={ariaLabel}
         width="100%"
-        style={{ maxWidth: width, minWidth: Math.min(width, 560) }}
+        style={{ maxWidth: width, minWidth: Math.min(width, compact ? 420 : 560) }}
       >
         {weeks.map((_, col) =>
           labelFor.has(col) ? (
             <text
               key={`m-${col}`}
-              x={LABEL_W + col * STEP}
+              x={LABEL_W + col * step}
               y={10}
               className="chart-label heatmap-axis"
             >
@@ -81,7 +96,7 @@ export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }:
             <text
               key={`r-${row}`}
               x={LABEL_W - 6}
-              y={LABEL_H + row * STEP + CELL - 2}
+              y={LABEL_H + row * step + cell - 2}
               textAnchor="end"
               className="chart-label heatmap-axis"
             >
@@ -93,10 +108,10 @@ export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }:
           week.map((day, row) => (
             <rect
               key={`${id}-${day.date}`}
-              x={LABEL_W + col * STEP}
-              y={LABEL_H + row * STEP}
-              width={CELL}
-              height={CELL}
+              x={LABEL_W + col * step}
+              y={LABEL_H + row * step}
+              width={cell}
+              height={cell}
               rx={2.5}
               className={`heatmap-cell heatmap-l${day.future ? 'f' : day.level}`}
               tabIndex={onSelect && !day.future ? 0 : undefined}
@@ -116,7 +131,7 @@ export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }:
               <title>
                 {day.future
                   ? `${pretty(day.date)}: upcoming`
-                  : `${pretty(day.date)}: ${fmt(day.minutes)}`}
+                  : `${pretty(day.date)}: ${format(day.minutes)}`}
               </title>
             </rect>
           )),
@@ -132,8 +147,8 @@ export function Heatmap({ weeks, monthLabels, ariaLabel, thresholds, onSelect }:
             title={
               thresholds && l > 0
                 ? l === 4
-                  ? `${fmt(thresholds[2])} or more`
-                  : `under ${fmt(thresholds[l - 1]!)}`
+                  ? `${format(thresholds[2])} or more`
+                  : `under ${format(thresholds[l - 1]!)}`
                 : undefined
             }
           />

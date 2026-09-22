@@ -21,6 +21,8 @@ const session = (date: string, localHour: number, minutes: number): Session => {
     id: `s${seq++}`,
     userId: 'u1',
     nodeId: 'n1',
+    routineId: null,
+    routineDate: null,
     startedAt,
     endedAt: new Date(Date.parse(startedAt) + minutes * 60_000).toISOString(),
     mode: 'pomodoro',

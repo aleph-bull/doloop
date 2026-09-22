@@ -12,13 +12,14 @@ import {
   connectionStatus,
   disconnect,
   syncGoogle,
-  unlinkedBlocks,
+  importedCommitments,
   type CalendarDeps,
 } from '../services/calendar-sync';
 import { buildIcs } from '../services/ics';
 import { listNodes } from '../services/nodes';
 import { loadCompletedSessions, paceContext } from '../services/pace';
 import { listBlocks } from '../services/planned-blocks';
+import { listRoutines } from '../services/routines';
 import { toPlannedBlock } from '../services/sessions-mapper';
 import { isoDateTime } from '../validation';
 
@@ -102,9 +103,12 @@ export function calendarRoutes(
     return { busy: await busyTimes(db, opts.deps, req.user.id, q.from, q.to) };
   });
 
-  /** Imported Google events with no node yet. */
-  app.get('/api/calendar/unlinked', async (req) => ({
-    blocks: (await unlinkedBlocks(db, req.user.id, clock())).map(toPlannedBlock),
+  /**
+   * Commitments imported from the connected calendar. Context for planning around, not
+   * study time: nothing here is offered up to be turned into a task.
+   */
+  app.get('/api/calendar/commitments', async (req) => ({
+    blocks: (await importedCommitments(db, req.user.id, clock())).map(toPlannedBlock),
   }));
 
   /** Free-slot suggestions for a given length, using Google busy times, existing blocks, and rest days. */
@@ -142,14 +146,15 @@ export function calendarRoutes(
   /** One-shot download (authenticated). */
   app.get('/api/calendar/export.ics', async (req, reply) => {
     const q = z.object({ sessions: z.enum(['true', 'false']).optional() }).parse(req.query);
-    const [blocks, nodes, sessions] = await Promise.all([
+    const [blocks, nodes, sessions, routines] = await Promise.all([
       listBlocks(db, req.user.id),
       listNodes(db, req.user.id, true),
       q.sessions === 'true' ? loadCompletedSessions(db, req.user.id) : Promise.resolve([]),
+      listRoutines(db, req.user.id, true),
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
     reply.header('content-disposition', 'attachment; filename="doloop.ics"');
-    return buildIcs({ blocks, nodes, sessions, now: clock() });
+    return buildIcs({ blocks, nodes, sessions, routines, now: clock() });
   });
 
   /** Per-user secret feed URL (public route, token-authenticated). */
@@ -159,13 +164,14 @@ export function calendarRoutes(
       .parse(req.query);
     const user = await db.query.users.findFirst({ where: eq(users.icsToken, q.token) });
     if (!user) throw notFound('Unknown feed');
-    const [blocks, nodes, sessions] = await Promise.all([
+    const [blocks, nodes, sessions, routines] = await Promise.all([
       listBlocks(db, user.id),
       listNodes(db, user.id, true),
       q.sessions === 'true' ? loadCompletedSessions(db, user.id) : Promise.resolve([]),
+      listRoutines(db, user.id, true),
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
     reply.header('cache-control', 'private, max-age=300');
-    return buildIcs({ blocks, nodes, sessions, now: clock() });
+    return buildIcs({ blocks, nodes, sessions, routines, now: clock() });
   });
 }

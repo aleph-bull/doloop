@@ -80,6 +80,9 @@ export async function createNode(
       color: input.color ?? null,
       countUnit: input.countUnit ?? null,
       countUnitLabel: input.countUnitLabel ?? null,
+      gradeMode: input.gradeMode ?? null,
+      gradeOverall: input.gradeOverall ?? null,
+      gradeCredits: input.gradeCredits ?? null,
       createdAt: dt(now),
       updatedAt: dt(now),
     })
@@ -120,6 +123,9 @@ export async function updateNode(
     'countUnit',
     'countUnitLabel',
     'outcomeRating',
+    'gradeMode',
+    'gradeOverall',
+    'gradeCredits',
   ] as const) {
     if (patch[key] === undefined) continue;
     const v = patch[key];

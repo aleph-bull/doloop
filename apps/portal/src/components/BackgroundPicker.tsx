@@ -17,10 +17,16 @@ export interface BackgroundPickerProps {
   leading?: React.ReactNode;
 }
 
-/** What the tile says when it is not yet available. */
+/** What the tile says when it is not yet available. Prices live in the shop, not here. */
 function lockLabel(b: BackgroundMeta): string {
-  if (b.costXp !== null) return `${b.costXp} XP`;
+  if (b.costXp !== null) return 'In the shop';
   return `Level ${b.minLevel}`;
+}
+
+/** Where to go to unlock it. */
+function lockHint(b: BackgroundMeta): string {
+  if (b.costXp !== null) return 'buy it in Achievements';
+  return `unlocks at level ${b.minLevel}`;
 }
 
 /**
@@ -57,7 +63,7 @@ export function BackgroundPicker({
                   label={b.name}
                   badge={available ? undefined : lockLabel(b)}
                   ariaLabel={available ? b.name : `${b.name}, ${lockLabel(b)}`}
-                  title={available ? b.name : `${b.name} — ${lockLabel(b)}`}
+                  title={available ? b.name : `${b.name} — ${lockHint(b)}`}
                   selected={value === b.id}
                   disabled={!available}
                   onClick={() => onChange(b.id)}

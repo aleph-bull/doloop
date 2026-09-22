@@ -56,13 +56,22 @@ type Msg =
   | { type: 'poll' }
   | {
       type: 'start';
-      nodeId: string;
+      /** A task, or one occurrence of a routine. */
+      nodeId?: string;
+      routineId?: string;
+      routineDate?: string;
       mode: 'pomodoro' | 'unlimited' | 'scheduled';
       plannedEndAt?: string | null;
       showTimer?: boolean;
     }
   | { type: 'event'; sessionId: string; event: TimerEvent }
-  | { type: 'end'; sessionId: string; review: Record<string, unknown> | null }
+  | {
+      type: 'end';
+      sessionId: string;
+      review: Record<string, unknown> | null;
+      /** Completes the task, or ticks off a routine session's occurrence. */
+      markComplete?: boolean;
+    }
   | { type: 'quote' }
   | { type: 'tick-routine'; routineId: string; date: string }
   | { type: 'untick-routine'; routineId: string; date: string }
@@ -93,7 +102,9 @@ async function handle(msg: Msg): Promise<unknown> {
       return poll();
     case 'start': {
       const res = await api.start({
-        nodeId: msg.nodeId,
+        ...(msg.routineId
+          ? { routineId: msg.routineId, routineDate: msg.routineDate }
+          : { nodeId: msg.nodeId }),
         mode: msg.mode,
         plannedEndAt: msg.plannedEndAt ?? null,
         ...(msg.showTimer === undefined ? {} : { showTimer: msg.showTimer }),
@@ -109,7 +120,10 @@ async function handle(msg: Msg): Promise<unknown> {
       return res.active;
     }
     case 'end': {
-      const res = await api.end(msg.sessionId, { review: msg.review });
+      const res = await api.end(msg.sessionId, {
+        review: msg.review,
+        ...(msg.markComplete === undefined ? {} : { markComplete: msg.markComplete }),
+      });
       await applyActive(null, new Date().toISOString());
       await poll();
       return res.summary;

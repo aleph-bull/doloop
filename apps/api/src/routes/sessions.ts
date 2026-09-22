@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Db } from '../db/client';
+import type { CalendarDeps } from '../services/calendar-sync';
 import {
   applySessionEvent,
   endSession,
@@ -19,7 +20,12 @@ import {
 
 const idParams = z.object({ id: uuid });
 
-export function sessionRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function sessionRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  calendar: CalendarDeps | null = null,
+) {
   app.get('/api/sessions/active', async (req) => {
     const now = clock();
     return { now, active: await getActive(db, req.user, now) };
@@ -42,7 +48,7 @@ export function sessionRoutes(app: FastifyInstance, db: Db, clock: () => string)
   app.post('/api/sessions/:id/end', async (req) => {
     const { id } = idParams.parse(req.params);
     const body = endSessionSchema.parse(req.body ?? {});
-    return { summary: await endSession(db, req.user, id, body, clock()) };
+    return { summary: await endSession(db, req.user, id, body, clock(), calendar) };
   });
 
   app.get('/api/sessions', async (req) => {

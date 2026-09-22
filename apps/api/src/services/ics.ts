@@ -32,6 +32,8 @@ export interface IcsInput {
   nodes: StudyNode[];
   /** Optional past sessions to include as events. */
   sessions?: Session[];
+  /** Names routine sessions, which have no node. */
+  routines?: Array<{ id: string; title: string }>;
   calendarName?: string;
   now: string;
 }
@@ -40,6 +42,8 @@ export interface IcsInput {
 export function buildIcs(input: IcsInput): string {
   const titleOf = (id: string | null) =>
     id ? (input.nodes.find((n) => n.id === id)?.title ?? 'Study') : 'Study';
+  const routineTitleOf = (id: string) =>
+    input.routines?.find((r) => r.id === id)?.title ?? 'a routine';
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -51,6 +55,10 @@ export function buildIcs(input: IcsInput): string {
   const stamp = icsDate(input.now);
   for (const b of input.blocks) {
     if (b.cancelled) continue;
+    // Only study the user planned here. Commitments came from their calendar in the first
+    // place - handing them back would be an echo, and with a subscribed feed, a loop.
+    // Sessions are published from the session list below, so they are not duplicated here.
+    if (b.source !== 'app') continue;
     lines.push(
       'BEGIN:VEVENT',
       `UID:block-${b.id}@doloop`,
@@ -70,7 +78,7 @@ export function buildIcs(input: IcsInput): string {
       `DTSTAMP:${stamp}`,
       `DTSTART:${icsDate(s.startedAt)}`,
       `DTEND:${icsDate(s.endedAt)}`,
-      `SUMMARY:${esc(`Studied: ${titleOf(s.nodeId)}`)}`,
+      `SUMMARY:${esc(`Studied: ${s.routineId ? routineTitleOf(s.routineId) : titleOf(s.nodeId)}`)}`,
       `DESCRIPTION:${esc(`${Math.round(s.workSeconds / 60)} min of focused work`)}`,
       'END:VEVENT',
     );

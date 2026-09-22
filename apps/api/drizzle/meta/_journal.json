@@ -29,6 +29,27 @@
       "when": 1790002632388,
       "tag": "0003_rewards_and_routines",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790103993843,
+      "tag": "0004_trackers_and_grades",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790107201981,
+      "tag": "0005_calendar_blocks",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790114192129,
+      "tag": "0006_routine_sessions",
+      "breakpoints": true
     }
   ]
 }

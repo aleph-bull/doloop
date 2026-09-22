@@ -21,7 +21,6 @@ export function FollowUpPrompt() {
       aria-label="Assessment follow-up"
     >
       <div>
-        <div className="subtle text-xs uppercase tracking-wide">Follow-up</div>
         <h2 className="text-lg">How did {node.title} go?</h2>
         <p className="muted text-sm">Shown next to your preparedness curve. Asked once.</p>
       </div>

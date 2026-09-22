@@ -12,13 +12,14 @@ function defaultDue(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-/** Three steps to a running timer (spec §13). */
+/** Four steps to a running timer (spec §13): who you are, then what you are studying. */
 export function Onboarding() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { toast } = useToast();
   const me = useMe();
   const [step, setStep] = useState(0);
+  const [name, setName] = useState('');
   const [course, setCourse] = useState('');
   const [task, setTask] = useState('');
   const [due, setDue] = useState(defaultDue);
@@ -28,6 +29,8 @@ export function Onboarding() {
   const finish = async (startNow: boolean) => {
     setBusy(true);
     try {
+      const trimmedName = name.trim();
+      if (trimmedName) await api.updateSettings({ profile: { name: trimmedName } });
       const c = await api.createNode({ title: course.trim() || 'My course', kind: 'course' });
       const t = await api.createNode({
         title: task.trim() || 'First assignment',
@@ -55,8 +58,8 @@ export function Onboarding() {
       <Backdrop backgroundId="aurora" theme={theme} />
       <main className="min-h-screen flex items-center justify-center p-4">
         <Glass className="p-8 w-full max-w-md flex flex-col gap-6" strong>
-          <div className="flex gap-1" aria-label={`Step ${step + 1} of 3`}>
-            {[0, 1, 2].map((i) => (
+          <div className="flex gap-1" aria-label={`Step ${step + 1} of 4`}>
+            {[0, 1, 2, 3].map((i) => (
               <span
                 key={i}
                 className="h-1 flex-1 rounded-full"
@@ -73,12 +76,14 @@ export function Onboarding() {
                 setStep(1);
               }}
             >
-              <h1 className="text-2xl">What are you studying?</h1>
+              <h1 className="text-2xl">What should we call you?</h1>
               <Input
-                label="Course or subject"
-                placeholder="e.g. EAS101"
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
+                label="Name"
+                hint="Only used to say hello on your Today page. Change it any time in settings."
+                placeholder="e.g. Zach"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={60}
                 autoFocus
                 required
               />
@@ -94,6 +99,34 @@ export function Onboarding() {
               onSubmit={(e) => {
                 e.preventDefault();
                 setStep(2);
+              }}
+            >
+              <h1 className="text-2xl">What are you studying?</h1>
+              <Input
+                label="Course or subject"
+                placeholder="e.g. EAS101"
+                value={course}
+                onChange={(e) => setCourse(e.target.value)}
+                autoFocus
+                required
+              />
+              <div className="flex gap-2">
+                <Button variant="ghost" onClick={() => setStep(0)}>
+                  Back
+                </Button>
+                <Button type="submit" variant="primary" size="lg" className="flex-1">
+                  Next
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {step === 2 && (
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setStep(3);
               }}
             >
               <h1 className="text-2xl">What's the next thing due?</h1>
@@ -123,7 +156,7 @@ export function Onboarding() {
                 />
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" onClick={() => setStep(0)}>
+                <Button variant="ghost" onClick={() => setStep(1)}>
                   Back
                 </Button>
                 <Button type="submit" variant="primary" size="lg" className="flex-1">
@@ -133,9 +166,9 @@ export function Onboarding() {
             </form>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="flex flex-col gap-4">
-              <h1 className="text-2xl">Ready.</h1>
+              <h1 className="text-2xl">Ready{name.trim() ? `, ${name.trim()}` : ''}.</h1>
               <p className="muted">
                 {task || 'First assignment'} in {course || 'your course'}, due {due}, about{' '}
                 {hours || 0} h. Start a 25-minute focus block now, or set things up first.

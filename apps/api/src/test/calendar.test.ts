@@ -255,11 +255,19 @@ describe('Google Calendar sync', () => {
     const imported = blocks.find((b) => b.googleEventId === extId)!;
     expect(imported.source).toBe('google');
     expect(imported.nodeId).toBeNull();
-    const unlinked = await api({ method: 'GET', url: '/api/calendar/unlinked' });
-    expect(unlinked.json().blocks.map((b: { id: string }) => b.id)).toEqual([imported.id]);
-    // Linking via PATCH clears it from the unlinked list.
-    await api({ method: 'PATCH', url: `/api/planned-blocks/${imported.id}`, payload: { nodeId } });
-    expect((await api({ method: 'GET', url: '/api/calendar/unlinked' })).json().blocks).toEqual([]);
+    // The import is a commitment: listed so the week can be planned around it, never
+    // offered up as study time.
+    const commitments = await api({ method: 'GET', url: '/api/calendar/commitments' });
+    expect(commitments.json().blocks.map((b: { id: string }) => b.id)).toEqual([imported.id]);
+    const link = await api({
+      method: 'PATCH',
+      url: `/api/planned-blocks/${imported.id}`,
+      payload: { nodeId },
+    });
+    expect(link.statusCode).toBe(400);
+    // ...and it is not counted as time set aside to study.
+    const pace = await api({ method: 'GET', url: '/api/pace' });
+    expect(pace.json().plannedMinutes[nodeId]).toBe(90); // only the app block, 16:00-17:30
     // Delete in Google -> cancelled here.
     google.externalDelete(evId);
     sync = await api({ method: 'POST', url: '/api/calendar/google/sync' });
@@ -314,6 +322,19 @@ describe('Google Calendar sync', () => {
 
 describe('.ics', () => {
   it('serves the secret feed publicly and the export with auth', async () => {
+    // A block of its own: earlier tests leave HW1's blocks cancelled or imported.
+    const hw1 = (await api({ method: 'GET', url: '/api/nodes' }))
+      .json()
+      .nodes.find((n: { title: string }) => n.title === 'HW1');
+    await api({
+      method: 'POST',
+      url: '/api/planned-blocks',
+      payload: {
+        nodeId: hw1.id,
+        startAt: '2026-09-30T14:00:00.000Z',
+        endAt: '2026-09-30T15:00:00.000Z',
+      },
+    });
     const me = await api({ method: 'GET', url: '/api/me' });
     const feedToken = me.json().icsToken as string;
     const feed = await api({ method: 'GET', url: `/calendar.ics?token=${feedToken}`, auth: false });

@@ -29,7 +29,6 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
   return (
     <Glass className="p-5 flex flex-col gap-4" as="section" aria-label="Suggested next session">
       <div>
-        <div className="subtle text-xs uppercase tracking-wide">Up next</div>
         {topPath && (
           <div className="muted text-sm mt-1 truncate" aria-label="In">
             {topPath}

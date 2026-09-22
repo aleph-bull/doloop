@@ -28,6 +28,12 @@ import type {
   LifetimeStats,
   Heatmap as StudyHeatmapData,
   RhythmProfile,
+  Tracker,
+  TrackerEntry,
+  TrackerWidget,
+  CourseGrade,
+  GradeComponent,
+  Gpa,
   Insight,
 } from '@doloop/core';
 
@@ -94,6 +100,7 @@ export interface ActiveSession {
   session: Session;
   timer: TimerState;
   view: TimerView;
+  /** What is being studied: the task, or the routine for a routine session. */
   nodeTitle: string;
 }
 
@@ -107,6 +114,8 @@ export interface EndSummary {
   streak: { current: number; longest: number; message: string | null; milestonesReached: number[] };
   statusAfter: PaceStatus;
   nodeCompleted: boolean;
+  /** A routine session whose occurrence was ticked off as it ended. */
+  routineTicked: boolean;
   phrase: Phrase | null;
   badges: string[];
   confetti: boolean;
@@ -140,6 +149,9 @@ export interface NodeInput {
   completedAt?: string | null;
   archived?: boolean;
   outcomeRating?: number | null;
+  gradeMode?: StudyNode['gradeMode'];
+  gradeOverall?: number | null;
+  gradeCredits?: number | null;
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -174,8 +186,11 @@ export const api = {
 
   activeSession: () =>
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
+  /** For a task (nodeId), or for one occurrence of a routine (routineId + routineDate). */
   startSession: (input: {
-    nodeId: string;
+    nodeId?: string;
+    routineId?: string;
+    routineDate?: string;
     mode: Session['mode'];
     plannedEndAt?: string | null;
     showTimer?: boolean;
@@ -314,7 +329,8 @@ export const api = {
       'GET',
       `/api/calendar/busy?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     ),
-  unlinkedBlocks: () => request<{ blocks: PlannedBlock[] }>('GET', '/api/calendar/unlinked'),
+  /** Imported commitments: context to plan around, never study time. */
+  commitments: () => request<{ blocks: PlannedBlock[] }>('GET', '/api/calendar/commitments'),
   suggestSlots: (minutes: number, from: string, days = 7) =>
     request<{ slots: Array<{ start: string; end: string }> }>(
       'GET',
@@ -348,6 +364,23 @@ export const api = {
       'GET',
       `/api/routines/list${archived ? '?archived=true' : ''}`,
     ),
+  trackers: (weeks?: number) =>
+    request<TrackerBoard>('GET', `/api/trackers${weeks ? `?weeks=${weeks}` : ''}`),
+  createTracker: (input: TrackerInput) =>
+    request<{ tracker: Tracker }>('POST', '/api/trackers', input),
+  updateTracker: (id: string, patch: Partial<TrackerInput> & { archived?: boolean }) =>
+    request<{ tracker: Tracker }>('PATCH', `/api/trackers/${id}`, patch),
+  deleteTracker: (id: string) => request<void>('DELETE', `/api/trackers/${id}`),
+  logTracker: (id: string, input: LogTrackerInput) =>
+    request<{ entry: TrackerEntry | null }>('POST', `/api/trackers/${id}/log`, input),
+
+  grades: () => request<GradeBookResponse>('GET', '/api/grades'),
+  createComponent: (input: ComponentInput) =>
+    request<{ component: GradeComponent }>('POST', '/api/grades/components', input),
+  updateComponent: (id: string, patch: Partial<Omit<ComponentInput, 'nodeId'>>) =>
+    request<{ component: GradeComponent }>('PATCH', `/api/grades/components/${id}`, patch),
+  deleteComponent: (id: string) => request<void>('DELETE', `/api/grades/components/${id}`),
+
   createRoutine: (input: RoutineInput) =>
     request<{ routine: Routine }>('POST', '/api/routines', input),
   updateRoutine: (id: string, patch: Partial<RoutineInput> & { archived?: boolean }) =>
@@ -426,4 +459,36 @@ export interface ImportIcsResponse {
   updated: number;
   routines: Routine[];
   skipped: Array<{ summary: string; reason: string }>;
+}
+
+export interface TrackerBoard {
+  trackers: Tracker[];
+  widgets: TrackerWidget[];
+}
+
+export interface TrackerInput {
+  title: string;
+  unitLabel: string;
+  dailyGoal?: number | null;
+  color?: string | null;
+}
+
+export interface LogTrackerInput {
+  amount: number;
+  date?: string;
+  /** 'set' replaces the day's total, 'add' adds to it. */
+  mode?: 'set' | 'add';
+  note?: string | null;
+}
+
+export interface GradeBookResponse {
+  courses: Array<{ node: StudyNode; grade: CourseGrade; components: GradeComponent[] }>;
+  gpa: Gpa;
+}
+
+export interface ComponentInput {
+  nodeId: string;
+  title: string;
+  weight: number;
+  score?: number | null;
 }

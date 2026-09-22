@@ -23,3 +23,22 @@ describe('withDefaults', () => {
     expect(DEFAULT_SETTINGS.blocking.domains).toEqual([]);
   });
 });
+
+describe('withDefaults list repair', () => {
+  it('reads a list that was stored as an object back as a list', () => {
+    // An older writer spread an array into an object, persisting {"0": "xp"}.
+    const s = withDefaults({ dismissed: { 0: 'xp', 1: 'calendar' } } as never);
+    expect(s.dismissed).toEqual(['xp', 'calendar']);
+  });
+
+  it('falls back to the default scale when grading.scale is not a list', () => {
+    const s = withDefaults({ grading: { scale: null } } as never);
+    expect(s.grading.scale[0]).toMatchObject({ letter: 'A+', points: 4 });
+  });
+
+  it('leaves real lists alone', () => {
+    const s = withDefaults({ dismissed: ['xp'], blocking: { domains: ['x.com'] } });
+    expect(s.dismissed).toEqual(['xp']);
+    expect(s.blocking.domains).toEqual(['x.com']);
+  });
+});

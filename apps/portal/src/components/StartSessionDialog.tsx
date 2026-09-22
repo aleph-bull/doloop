@@ -1,10 +1,11 @@
-import type { SessionDurationKind, SessionStyle, StudyNode } from '@doloop/core';
+import type { RoutineOccurrence, SessionDurationKind, SessionStyle, StudyNode } from '@doloop/core';
 import { describeCut, modeForPlan, pomodoroCut } from '@doloop/core';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@doloop/ui';
 import { ApiError } from '../lib/api';
-import { useMe, useStartSession } from '../lib/queries';
+import { fmtDate } from '../lib/format';
+import { useMe, useRoutines, useStartSession } from '../lib/queries';
 
 export interface StartSessionDialogProps {
   open: boolean;
@@ -12,6 +13,8 @@ export interface StartSessionDialogProps {
   nodes: StudyNode[];
   /** Preselected node. */
   node?: StudyNode | null;
+  /** Preselected routine occurrence, instead of a node. */
+  routine?: RoutineOccurrence | null;
   /** Suggested minutes (from the daily plan) used to prefill the length. */
   suggestedMinutes?: number | null;
 }
@@ -34,6 +37,11 @@ function minutesUntilLocal(time: string): number {
   return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
 }
 
+/** The picker's value: a task, or one occurrence of a routine. */
+const nodeKey = (id: string) => `node:${id}`;
+const routineKey = (o: Pick<RoutineOccurrence, 'routineId' | 'date'>) =>
+  `routine:${o.routineId}:${o.date}`;
+
 function fmtLength(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
@@ -46,15 +54,17 @@ export function StartSessionDialog({
   onClose,
   nodes,
   node,
+  routine,
   suggestedMinutes,
 }: StartSessionDialogProps) {
   const me = useMe();
+  const routines = useRoutines();
   const start = useStartSession();
   const navigate = useNavigate();
   const { toast } = useToast();
   const settings = me.data?.user.settings;
 
-  const [nodeId, setNodeId] = useState('');
+  const [subject, setSubject] = useState('');
   const [style, setStyle] = useState<SessionStyle>('pomodoro');
   const [duration, setDuration] = useState<SessionDurationKind>('unlimited');
   const [minutes, setMinutes] = useState('60');
@@ -65,21 +75,33 @@ export function StartSessionDialog({
 
   useEffect(() => {
     if (!open) return;
-    setNodeId(
-      node?.id ??
-        nodes.find((n) => !n.completedAt && n.kind !== 'course')?.id ??
-        nodes[0]?.id ??
-        '',
-    );
-    setStyle('pomodoro');
-    setDuration('unlimited');
-    setMinutes(String(suggestedMinutes ?? 60));
-    setEndTime(plusMinutesLocalTime(suggestedMinutes ?? 60));
+    if (routine) {
+      // A routine already says how long it takes, so the session defaults to that. One
+      // shorter than a work block runs straight through rather than being cut short.
+      const est = routine.estimatedMinutes;
+      setSubject(routineKey(routine));
+      setStyle(settings && est < settings.pomodoro.workMin ? 'continuous' : 'pomodoro');
+      setDuration('for');
+      setMinutes(String(est));
+      setEndTime(plusMinutesLocalTime(est));
+    } else {
+      const first = node ?? nodes.find((n) => !n.completedAt && n.kind !== 'course') ?? nodes[0];
+      setSubject(first ? nodeKey(first.id) : '');
+      setStyle('pomodoro');
+      setDuration('unlimited');
+      setMinutes(String(suggestedMinutes ?? 60));
+      setEndTime(plusMinutesLocalTime(suggestedMinutes ?? 60));
+    }
     setShowTimer(settings?.pomodoro.showTimerByDefault ?? true);
     setConfirmCut(null);
-  }, [open, node, nodes, suggestedMinutes, settings]);
+  }, [open, node, routine, nodes, suggestedMinutes, settings]);
 
   const leaves = nodes.filter((n) => !n.completedAt);
+  // Outstanding occurrences; the preselected one stays listed even if the query lags.
+  const due = routines.data?.due ?? [];
+  const routineOptions =
+    routine && !due.some((o) => routineKey(o) === routineKey(routine)) ? [routine, ...due] : due;
+  const today = routines.data?.today;
 
   /** How long the session will run, or null when it is unlimited. */
   const plannedMinutes =
@@ -103,11 +125,12 @@ export function StartSessionDialog({
   };
 
   const submit = async () => {
-    if (!nodeId) return toast('Pick something to study');
+    if (!subject) return toast('Pick something to study');
     if (plannedMinutes !== null && plannedMinutes <= 0) return toast('Pick a length in the future');
+    const [kind, id, date] = subject.split(':');
     try {
       await start.mutateAsync({
-        nodeId,
+        ...(kind === 'routine' ? { routineId: id, routineDate: date } : { nodeId: id }),
         mode: modeForPlan({ style, plannedEndAt: plannedEndAt() }),
         plannedEndAt: plannedEndAt(),
         showTimer,
@@ -155,12 +178,32 @@ export function StartSessionDialog({
       }
     >
       <div className="flex flex-col gap-4">
-        <Select label="Studying" value={nodeId} onChange={(e) => setNodeId(e.target.value)}>
-          {leaves.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.title}
-            </option>
-          ))}
+        <Select label="Studying" value={subject} onChange={(e) => setSubject(e.target.value)}>
+          {routineOptions.length > 0 ? (
+            <>
+              <optgroup label="Tasks">
+                {leaves.map((n) => (
+                  <option key={n.id} value={nodeKey(n.id)}>
+                    {n.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Routines">
+                {routineOptions.map((o) => (
+                  <option key={routineKey(o)} value={routineKey(o)}>
+                    {o.title}
+                    {today && o.date !== today ? ` (from ${fmtDate(`${o.date}T12:00:00`)})` : ''}
+                  </option>
+                ))}
+              </optgroup>
+            </>
+          ) : (
+            leaves.map((n) => (
+              <option key={n.id} value={nodeKey(n.id)}>
+                {n.title}
+              </option>
+            ))
+          )}
         </Select>
 
         <div className="field">

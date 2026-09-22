@@ -21,7 +21,7 @@ import { fmtTime } from '../lib/format';
 import { useIdleDetection } from '../lib/idle';
 import { keys } from '../lib/queries';
 import { playSound, preloadSounds } from '../lib/sounds';
-import { ReviewDialog } from './ReviewDialog';
+import { ReviewDialog, type ReviewSubject } from './ReviewDialog';
 
 export interface TimerCardProps {
   active: ActiveSession;
@@ -65,6 +65,15 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
   useEffect(() => setTimer(active.timer), [active.timer]);
 
   const node = nodes.find((n) => n.id === active.session.nodeId);
+  const routineSession = active.session.routineId !== null;
+  const subject: ReviewSubject | null = node
+    ? { kind: 'task', node }
+    : routineSession
+      ? { kind: 'routine', title: active.nodeTitle }
+      : null;
+  // The review, when there is one. With reviews off, a routine still asks whether to tick.
+  const reviews = settings.review.mode !== 'off' && subject !== null;
+  const asksTick = !reviews && routineSession;
   const index = useMemo(() => buildIndex(nodes), [nodes]);
   const underAssessment = node ? isUnderAssessment(index, node.id) : false;
   const nodePath = node ? pathLabel(index.byId, node.id) : '';
@@ -176,6 +185,8 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
       void qc.invalidateQueries({ queryKey: keys.pace });
       void qc.invalidateQueries({ queryKey: keys.me });
       void qc.invalidateQueries({ queryKey: keys.nodes });
+      // A routine session may have just ticked its occurrence off.
+      if (routineSession) void qc.invalidateQueries({ queryKey: ['routines'] });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not end the session');
       endingRef.current = false;
@@ -203,15 +214,15 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
     if (timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break') {
       await send({ type: 'pause' });
     }
-    if (settings.review.mode === 'off') await finish(null, false);
-    else setReviewOpen(true);
+    if (reviews || asksTick) setReviewOpen(true);
+    else await finish(null, false);
   };
 
   // Scheduled auto-end: run the end flow with the review once the grace period elapses.
   useEffect(() => {
     if (timer.phase === 'ended' && !reviewOpen && !endingRef.current) {
-      if (settings.review.mode === 'off') void finish(null, false);
-      else setReviewOpen(true);
+      if (reviews || asksTick) setReviewOpen(true);
+      else void finish(null, false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timer.phase]);
@@ -235,7 +246,7 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
       <Glass as="section" className="p-6 flex flex-col gap-5" strong aria-label="Current session">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <div className="subtle text-xs uppercase tracking-wide">{PHASE_LABEL[timer.phase]}</div>
+            <div className="subtle text-sm">{PHASE_LABEL[timer.phase]}</div>
             {nodePath && <div className="muted text-sm truncate">{nodePath}</div>}
             <h2 className="text-xl truncate">{active.nodeTitle}</h2>
             <div className="muted text-sm mt-1 flex gap-2 flex-wrap">
@@ -331,15 +342,15 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
               Keep going
             </Button>
             <Button variant="danger" onClick={() => stop(true)}>
-              End without XP
+              End early
             </Button>
           </>
         }
       >
         <p className="muted">
           {timer.mode === 'pomodoro'
-            ? 'The first work interval is not finished. Ending now logs the minutes but earns no XP.'
-            : 'The planned end has not arrived. Ending now logs the minutes but earns no XP.'}
+            ? 'The first work interval is not finished. Ending now still logs the minutes, but the session will not count toward your level.'
+            : 'The planned end has not arrived. Ending now still logs the minutes, but the session will not count toward your level.'}
         </p>
       </Modal>
 
@@ -362,11 +373,31 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
         </p>
       </Modal>
 
-      {node && settings.review.mode !== 'off' && (
+      {asksTick && (
+        <Modal
+          open={reviewOpen}
+          onClose={() => finish(null, false)}
+          title={`Done with ${active.nodeTitle}?`}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => finish(null, false)} disabled={busy}>
+                Not yet
+              </Button>
+              <Button variant="primary" onClick={() => finish(null, true)} loading={busy}>
+                Tick it off
+              </Button>
+            </>
+          }
+        >
+          <p className="muted">The minutes count either way. Not yet leaves it on your list.</p>
+        </Modal>
+      )}
+
+      {reviews && subject && settings.review.mode !== 'off' && (
         <ReviewDialog
           open={reviewOpen}
           mode={settings.review.mode}
-          node={node}
+          subject={subject}
           underAssessment={underAssessment}
           busy={busy}
           onSubmit={(review, markComplete) => finish(review, markComplete)}

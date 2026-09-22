@@ -23,7 +23,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 - **A session is credited to the local calendar day it started**, even if it runs past midnight. This is what a late-night studier expects ("today's" session).
 - **Streak evaluation advances `lastCountedDate` through every judged day** (counted, rest, frozen, reset), which is what makes lazy re-evaluation idempotent. A freeze is never spent when `current` is already 0. A quiet "today" is left unjudged until it is over.
-- **Parent aggregation:** a node's own estimate always wins - children are a breakdown of the parent's work, not a replacement for it, so estimating one unit at 1 h leaves the 16 h test above it at 16 h. Only a node with *no* estimate of its own is aggregated, from the sum of its **direct** children's (already effective) estimates against every session logged in the subtree. A node with neither gets no percentage, just hours logged. A parent with its own estimate takes the worst of its own status and its children's, so an overdue unit is not hidden by a comfortable parent deadline; a completed parent is `done` regardless of children. Anything that wants one row per piece of work (daily plan, estimate accuracy, weekly highlights) filters on `standsInForChildren`, not `aggregated`. *(Reversed 2026-09-22: the parent's estimate used to be discarded whenever a child carried one.)*
+- **Parent aggregation:** a node's own estimate always wins - children are a breakdown of the parent's work, not a replacement for it, so estimating one unit at 1 h leaves the 16 h test above it at 16 h. Only a node with _no_ estimate of its own is aggregated, from the sum of its **direct** children's (already effective) estimates against every session logged in the subtree. A node with neither gets no percentage, just hours logged. A parent with its own estimate takes the worst of its own status and its children's, so an overdue unit is not hidden by a comfortable parent deadline; a completed parent is `done` regardless of children. Anything that wants one row per piece of work (daily plan, estimate accuracy, weekly highlights) filters on `standsInForChildren`, not `aggregated`. _(Reversed 2026-09-22: the parent's estimate used to be discarded whenever a child carried one.)_
 - **A node with no estimate** is `no-estimate`, except `done` when completed and `overdue` when past due and not completed.
 - **Due today with nothing studied recently** yields `behind` (the §3 formula: required exceeds 1.25 x 0 and study days remaining is 0 <= 3). `critical` still wins if required exceeds the comfortable maximum.
 - **Rest-day edit limit** counts weekly-pattern changes and vacation additions. Vacation removals and purchased break-day applications do not count (removal is "anytime" per spec; break days already cost XP). A weekly pattern must leave at least one study day. Unchanged submissions are no-ops and are not logged.
@@ -250,3 +250,166 @@ behind the portal. Four things changed.
 The background work needed nothing: `backgroundById` falls back to Graphite for an unknown
 id and photos already resolve through `assetBase`, so the new ids and the five new Graphite
 siblings work in the extension as they stand.
+
+## Trackers, grades, greeting, settings navigation (user request, 2026-09-22)
+
+- **Custom trackers are a general contribution grid, not a second heatmap.** `trackers.ts`
+  holds `buildGrid`, which turns any map of day -> number into the same grid shape the
+  study heatmap uses, so "pages read" and "days focused" render through one component.
+  `insights.studyHeatmap` keeps its own copy over session minutes rather than being
+  rewritten, because it also produces analytics fields (`longestRun`, `activeDays`) that
+  the overview endpoint's response shape already promises.
+- **A tracker's ramp follows its daily goal when it has one**, and quartiles of the user's
+  own logged days when it does not. A fixed scale washes out anyone who logs 5 of something
+  a day; quartiles alone mean a good day and a bad day can look the same once the history
+  is long enough. With a goal, hitting it always looks the same shade.
+- **One entry row per tracker per day.** Logging is `set` by default (the widget's field
+  writes the day's total) with `add` for the +/- buttons, and an amount of zero deletes the
+  row, so an empty day is empty rather than a zero that still counts as "active".
+- **Grades hang off course nodes**, with `gradeMode` choosing between one final mark and
+  weighted components. Ungraded components are excluded from the running mark rather than
+  counted as zero: two weeks in, "88% of the 20% that has been marked" is true and "17.6%"
+  is not. `weightGraded` rides along so the UI can say how much of the course that is.
+- **The grading scale is a list of bands (floor percentage, name, points)** stored in
+  settings, defaulting to the U of T undergraduate scale. That shape covers other
+  universities and a plain pass/fail scheme without a second concept.
+- **The greeting is bucketed like session phrases**, in `greetings.ts`, and seeded with the
+  local date so it is one greeting per day rather than a new one per render. The bucket
+  order runs rarest-first, so a 100-day streak is never buried under "what are we working
+  on?". Signals are computed on the client from data Today already has, which costs no
+  extra request.
+- **Dismissals moved from localStorage to `settings.dismissed`.** Closing a prompt means
+  never again; a new browser or a cleared cache is not the user asking to see it a second
+  time. localStorage stays as a mirror so a dismissal takes effect before the request
+  lands.
+- **Settings is a sidebar of groups plus search, showing one group at a time.** Search
+  reads an explicit keyword list per group rather than rendered text, so "dark mode" finds
+  Appearance even though those words never appear together on screen. Hash links
+  (`/settings#rest-days`) still select a group.
+- **Small all-caps eyebrows are gone.** Two were redundant with the heading directly below
+  them ("Up next", "Follow-up") and were deleted; the ones that carry real information (the
+  timer phase, the weekly-review stat labels) kept their words and lost the shouting.
+
+### Bugs found while building this
+
+- `updateNodeSchema` was `createNodeSchema.partial()`, and Zod applies a field's `.default()`
+  even through `.partial()`. Every PATCH that left `kind` out therefore rewrote the node to
+  `task` — renaming a course silently demoted it. The shared fields now live in a
+  `nodeFields` schema with no defaults, and `.default('task')` is applied only on create.
+- `updateSettings` merged every object-valued key with a spread, and an array is an object,
+  so a list setting persisted as `{"0": "xp"}`. Arrays and scalars now replace outright.
+
+## Dashboard merge, calendar semantics, session logging (user request, 2026-09-22)
+
+- **Today and Dashboard are one page, named Dashboard.** `/dashboard` redirects to `/`.
+  The page is the day (greeting, plan or timer, what is coming up, routines) followed by
+  the long view (the grids). Upcoming due dates sit under the plan, filtered the same way
+  the daily plan is: a parent standing in for its children is a heading, not a deadline.
+- **The greeting is two lines.** "Hello Zachary" is the heading; the chosen line is body
+  text under it. The phrase bank holds only the line, each written as its own sentence, so
+  the salutation is composed once rather than baked into fifty templates.
+- **Grids size themselves to the history.** `weeksForHistory` picks the number of columns
+  from the first day anything was logged, with a floor of 8 weeks and the chosen range as
+  the ceiling. A year of empty squares on someone's second day reads as "you have done
+  nothing", which is not what a contribution grid is for. The range control defaults to
+  "So far"; the fixed ranges are still there once there is something to look back on.
+- **The shading explainer is gone.** A legend that needs a paragraph is not a legend.
+- **Grading can be switched off per course** (`gradeMode: 'off'`) for an audit or a
+  pass/fail elective. Such a course is still _listed_ on the Grades page - hiding it would
+  hide the switch that turns it back on - but carries no grade and is skipped by the
+  average.
+- **"Weights add to 0%" is replaced by what it meant**: "Your items are worth 70% of the
+  final grade, so 30% of the course is still unaccounted for", and, when nothing has a
+  weight yet, a sentence saying what a weight is for.
+
+### The calendar, in one direction
+
+An imported calendar says where the user has to _be_. It says nothing about when they
+intend to study, and treating it as though it does is how a study app ends up scheduling
+revision during someone's shift. So:
+
+- **Doloop -> external is the only direction that carries study time.** Blocks the user
+  plans here (`source: 'app'`) and sessions they finish (`source: 'session'`) are pushed to
+  the Study calendar. Nothing else is.
+- **External -> Doloop imports commitments** (`source: 'google'`), which are drawn on the
+  grid as hatched, muted, unclickable bands. They are never linked to a task - `updateBlock`
+  rejects it outright - never counted in `plannedMinutes`, never counted as "kept to the
+  plan" for XP, and never re-exported to the .ics feed (which would be an echo, and with a
+  subscribed feed, a loop). They _are_ fed to the free-slot suggester as busy time, which
+  is the whole point of importing them: planning around them.
+- **Only the routines ICS import creates anything that asks for the user's time.** That is
+  a separate, explicit flow.
+- **Overlaps are marked, not prevented.** A block that shares time with another gets a
+  coloured edge. There is no warning, no confirmation and no refusal: studying through a
+  lecture you have decided to skip is a legitimate choice.
+- **A finished session is written to the calendar** as the block of study it was, carrying
+  its session id so re-finalising updates rather than duplicates. Under a minute is not
+  recorded. Controlled by `calendar.logSessions` (on by default); the push to Google also
+  respects `calendar.syncPlannedBlocks`. The write is best effort in a try/catch - a
+  calendar that will not accept it must never cost the user the session or its XP.
+
+### Bug found while building this
+
+- Modal dialogs opened in the top-left corner. A native `<dialog>` is centred by the user
+  agent's `margin: auto`, and Tailwind's preflight zeroes the margin on every element, so
+  the centring has to be re-declared. `.modal` now sets `margin: auto` and caps its height
+  to the viewport.
+
+## Routine sessions, XP out of the way, new logo, sharp thumbnails (user request, 2026-09-22)
+
+### Routines can run under the timer
+
+- **A session belongs to a task or a routine, never both.** `sessions.node_id` is now
+  nullable, with `routine_id` and `routine_date` beside it and a CHECK that exactly one of
+  node and routine is set (migration `0006_routine_sessions`). `routine_date` is the
+  occurrence the session is for, so an overdue one ticks the right day.
+- **Same flow as a task.** The play button on a due routine (Today's card, the Routines
+  page, the extension's Routines tab) opens the same Start-a-session dialog, which now also
+  lists due routines under their own group. It defaults to the routine's estimate as a
+  "for a while" length, continuous when that is shorter than a work block. The timer card,
+  review and reward overlay are the same ones a task uses.
+- **Ticking happens at the end.** The review's "Mark as done" becomes "Tick off", on by
+  default because starting a routine's session is the intent to do it. With reviews off, a
+  routine session still asks "Done with …?" instead of ending silently.
+- **Never paid twice, never worth less than a plain tick.** The session earns session XP
+  for its minutes as usual. The tick then only tops up to what a plain tick would have
+  paid (`max(0, plainTick - sessionXp)`), so running the timer is never a worse deal than
+  ticking, and a long session does not collect the tick on top.
+- **Study is study.** Routine sessions count toward the streak, the calendar log (titled
+  with the routine) and daily totals, but toward no task: pace, per-task analytics, the
+  estimate badge and the per-node highlights skip sessions with no node.
+- Fixed on the way: the "kept to the plan" badge counted a session's own calendar record
+  as a plan. `overlapsBlock` now only looks at blocks the user set aside (`source: 'app'`),
+  matching the API's `overlapsPlannedBlock`.
+
+### XP lives on Achievements
+
+- Outside Achievements (and the extension's Rewards tab, which is its shop), nothing quotes
+  XP amounts any more: no "+N XP" toasts on ticks, no XP breakdown or "N XP to level" after
+  a session, no XP column in the per-task session table, no XP prices on locked
+  backgrounds in Settings ("In the shop" instead), no "N XP a tick" hint, no daily routine
+  XP cap line. The end-of-session overlay leads with the minutes focused and keeps the
+  level bar and a level-up chip. Levels are still named where they unlock something.
+- The weekly highlight "Most XP you've earned in a week" became "Your biggest study week
+  yet", measured in time, so the wins pool keeps its size.
+
+### Logo
+
+- The mark is the user's looped ribbon (their `doloop.png`), traced to a single path in a
+  100-unit box: under 0.2% of pixels differ from the original. The shadow where the stem
+  crosses the bar is two clipped radial gradients fitted to the original, not baked in, so
+  the mark can take any colour. The source of truth is `packages/ui/src/logo.ts`.
+- In the app it is `LogoMark`, in `currentColor`, so it is white on dark glass and ink on
+  light; the crossing shade follows `--logo-shade`, which leans toward the surface behind.
+- The favicon is the bare mark and swaps ink for white with the browser's colour scheme.
+  The apple-touch icon and extension icons put the white mark on a graphite tile, because a
+  white mark alone disappears on a light toolbar. All of them come from
+  `pnpm --filter @doloop/ui prepare:icons`. This supersedes the gradient-squircle favicon
+  decision above.
+
+### Background thumbnails
+
+- Pickers painted each photo from its 20px LQIP, which is a placeholder, not a preview.
+  Each photo now has a 640px WebP thumbnail (`public/backgrounds/thumbs/`, 435 KB for all
+  19), lazy-loaded over the placeholder. `prepare:thumbs` derives them from the shipped
+  2560px images, so it runs without the source photos; `prepare:backgrounds` calls it.

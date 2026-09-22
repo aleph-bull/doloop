@@ -38,6 +38,9 @@ const node = (over: Partial<StudyNode> = {}): StudyNode => ({
   countUnit: null,
   countUnitLabel: null,
   outcomeRating: null,
+  gradeMode: null,
+  gradeOverall: null,
+  gradeCredits: null,
   ...over,
 });
 
@@ -50,6 +53,8 @@ const session = (
   id: `s${++seq}`,
   userId: 'u1',
   nodeId,
+  routineId: null,
+  routineDate: null,
   startedAt,
   endedAt: startedAt,
   mode: 'unlimited',

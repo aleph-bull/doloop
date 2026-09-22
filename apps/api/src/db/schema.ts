@@ -10,6 +10,7 @@ import type {
 import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -64,6 +65,9 @@ export const nodes = pgTable(
     countUnitLabel: text('count_unit_label'),
     outcomeRating: integer('outcome_rating'),
     outcomeAskedAt: ts('outcome_asked_at'),
+    gradeMode: text('grade_mode', { enum: ['off', 'overall', 'components'] }),
+    gradeOverall: real('grade_overall'),
+    gradeCredits: real('grade_credits'),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
@@ -77,9 +81,11 @@ export const sessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    nodeId: uuid('node_id')
-      .notNull()
-      .references(() => nodes.id, { onDelete: 'cascade' }),
+    /** The task studied. Null for a routine session; exactly one of the two is set. */
+    nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'cascade' }),
+    routineId: uuid('routine_id').references(() => routines.id, { onDelete: 'cascade' }),
+    /** A routine session's occurrence (local date): the one ticked off if it gets done. */
+    routineDate: text('routine_date'),
     startedAt: ts('started_at').notNull(),
     endedAt: ts('ended_at'),
     mode: text('mode', { enum: ['pomodoro', 'unlimited', 'scheduled'] }).notNull(),
@@ -99,6 +105,8 @@ export const sessions = pgTable(
   (t) => [
     index('sessions_user_started_idx').on(t.userId, t.startedAt),
     index('sessions_node_idx').on(t.nodeId),
+    index('sessions_routine_idx').on(t.routineId),
+    check('sessions_one_subject', sql`(node_id IS NULL) <> (routine_id IS NULL)`),
     // One active (un-ended) session per user.
     uniqueIndex('sessions_one_active_idx')
       .on(t.userId)
@@ -116,9 +124,18 @@ export const plannedBlocks = pgTable(
     nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'set null' }),
     startAt: ts('start_at').notNull(),
     endAt: ts('end_at').notNull(),
-    source: text('source', { enum: ['app', 'google'] })
+    /**
+     * 'app' is study time the user scheduled here (and the only kind pushed out to
+     * Google). 'google' is an imported commitment: context to plan around, never a study
+     * plan. 'session' is a block of study that actually happened.
+     */
+    source: text('source', { enum: ['app', 'google', 'session'] })
       .notNull()
       .default('app'),
+    /** Title for imported commitments, so the grid can show what the time is taken by. */
+    title: text('title'),
+    /** Set on 'session' blocks: the session that was logged. */
+    sessionId: uuid('session_id').references(() => sessions.id, { onDelete: 'cascade' }),
     googleEventId: text('google_event_id'),
     cancelled: boolean('cancelled').notNull().default(false),
     createdAt: ts('created_at').notNull().defaultNow(),
@@ -341,6 +358,73 @@ export const googleCalendar = pgTable('google_calendar', {
   lastSyncAt: ts('last_sync_at'),
 });
 
+/** A user-defined thing to count daily, rendered as its own contribution grid. */
+export const trackers = pgTable(
+  'trackers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    unitLabel: text('unit_label').notNull(),
+    dailyGoal: real('daily_goal'),
+    color: text('color'),
+    sortOrder: real('sort_order').notNull().default(0),
+    archived: boolean('archived').notNull().default(false),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('trackers_user_idx').on(t.userId)],
+);
+
+/** One day's amount for one tracker. The unique index makes logging idempotent per day. */
+export const trackerEntries = pgTable(
+  'tracker_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    trackerId: uuid('tracker_id')
+      .notNull()
+      .references(() => trackers.id, { onDelete: 'cascade' }),
+    /** Calendar day in the user's timezone, YYYY-MM-DD. */
+    date: text('date').notNull(),
+    amount: real('amount').notNull(),
+    note: text('note'),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('tracker_entries_user_idx').on(t.userId),
+    uniqueIndex('tracker_entries_day_idx').on(t.trackerId, t.date),
+  ],
+);
+
+/** One weighted piece of a course's grade. */
+export const gradeComponents = pgTable(
+  'grade_components',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    nodeId: uuid('node_id')
+      .notNull()
+      .references(() => nodes.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    weight: real('weight').notNull(),
+    score: real('score'),
+    sortOrder: real('sort_order').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('grade_components_user_idx').on(t.userId),
+    index('grade_components_node_idx').on(t.nodeId),
+  ],
+);
+
 export const schema = {
   users,
   nodes,
@@ -358,6 +442,9 @@ export const schema = {
   customRewards,
   routines,
   routineCompletions,
+  trackers,
+  trackerEntries,
+  gradeComponents,
 };
 
 export type UserRow = typeof users.$inferSelect;
@@ -368,3 +455,6 @@ export type RestDayPolicyRow = typeof restDayPolicies.$inferSelect;
 export type CustomRewardRow = typeof customRewards.$inferSelect;
 export type RoutineRow = typeof routines.$inferSelect;
 export type RoutineCompletionRow = typeof routineCompletions.$inferSelect;
+export type TrackerRow = typeof trackers.$inferSelect;
+export type TrackerEntryRow = typeof trackerEntries.$inferSelect;
+export type GradeComponentRow = typeof gradeComponents.$inferSelect;

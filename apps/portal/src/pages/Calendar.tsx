@@ -2,20 +2,12 @@ import { addDays, startOfWeekMonday, toLocalDate, type PlannedBlock } from '@dol
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, Glass, Panel, Spinner, useToast } from '@doloop/ui';
+import { Button, Chip, Panel, Spinner, useToast } from '@doloop/ui';
 import { BlockDialog } from '../components/BlockDialog';
 import { ErrorPanel } from '../components/ErrorState';
 import { api } from '../lib/api';
 import { fmtDate, fmtMinutes, fmtTime } from '../lib/format';
-import {
-  useBlocks,
-  useBusy,
-  useCreateBlock,
-  useMe,
-  useNodes,
-  usePace,
-  useUnlinkedBlocks,
-} from '../lib/queries';
+import { useBlocks, useBusy, useCreateBlock, useMe, useNodes, usePace } from '../lib/queries';
 
 const HOUR_START = 6;
 const HOUR_END = 24;
@@ -50,7 +42,6 @@ export function Calendar() {
   const to = new Date(localDayStart(days[6]!).getTime() + 86_400_000).toISOString();
   const blocks = useBlocks(from, to);
   const busy = useBusy(from, to);
-  const unlinked = useUnlinkedBlocks();
   const [dialog, setDialog] = useState<{
     block?: PlannedBlock | null;
     draft?: { startAt: string; endAt: string; nodeId?: string | null } | null;
@@ -82,6 +73,51 @@ export function Calendar() {
   const list = nodes.data.nodes;
   const byId = new Map(list.map((n) => [n.id, n]));
   const planTop = pace.data?.plan[0];
+
+  /** Non-cancelled blocks that start on this day, in start order. */
+  const dayBlocks = (day: string) =>
+    blocks
+      .data!.blocks.filter((b) => !b.cancelled && toLocalDate(b.startAt, tz) === day)
+      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+
+  /**
+   * Lay a day out in lanes.
+   *
+   * Overlapping is allowed and never blocked - sometimes you do intend to study through a
+   * lecture you have decided to skip - so nothing here warns or refuses. It only makes the
+   * overlap visible: blocks that share time sit side by side instead of on top of each
+   * other, so you can see what you are double-booking against, and each one gets a marked
+   * edge.
+   */
+  const laidOut = (day: string) => {
+    const items = dayBlocks(day);
+    const lanes: PlannedBlock[][] = [];
+    const placed = items.map((b) => {
+      const start = Date.parse(b.startAt);
+      const end = Date.parse(b.endAt);
+      const overlaps = items.some(
+        (o) => o.id !== b.id && Date.parse(o.startAt) < end && Date.parse(o.endAt) > start,
+      );
+      // First lane whose last block has already finished.
+      let lane = lanes.findIndex((l) => Date.parse(l[l.length - 1]!.endAt) <= start);
+      if (lane === -1) {
+        lane = lanes.length;
+        lanes.push([]);
+      }
+      lanes[lane]!.push(b);
+      return { block: b, lane, overlaps };
+    });
+    // A block only shares the width of the cluster it actually collides with.
+    return placed.map((p) => {
+      const start = Date.parse(p.block.startAt);
+      const end = Date.parse(p.block.endAt);
+      const cluster = placed.filter(
+        (o) => Date.parse(o.block.startAt) < end && Date.parse(o.block.endAt) > start,
+      );
+      const width = Math.max(...cluster.map((o) => o.lane)) + 1;
+      return { ...p, lane: p.lane, width };
+    });
+  };
 
   const minutesFromEvent = (e: React.MouseEvent, col: HTMLElement) => {
     const rect = col.getBoundingClientRect();
@@ -132,7 +168,8 @@ export function Calendar() {
         <div>
           <h1 className="text-3xl">Calendar</h1>
           <p className="muted text-sm mt-1">
-            Drag on the grid to plan a block. Blocks fill a task's planned hours.
+            Drag on the grid to plan a block. Anything imported from your calendar is shown as a
+            commitment, so you can plan around it.
           </p>
         </div>
         <div className="flex gap-2 items-center">
@@ -163,19 +200,6 @@ export function Calendar() {
           </Button>
         </div>
       </div>
-
-      {unlinked.data && unlinked.data.blocks.length > 0 && (
-        <Glass className="p-4 text-sm flex items-center gap-3 flex-wrap">
-          <span className="flex-1">
-            {unlinked.data.blocks.length} event{unlinked.data.blocks.length === 1 ? '' : 's'} from
-            your Study calendar {unlinked.data.blocks.length === 1 ? 'is' : 'are'} not linked to a
-            task yet.
-          </span>
-          <Button size="sm" onClick={() => setDialog({ block: unlinked.data!.blocks[0] })}>
-            Link
-          </Button>
-        </Glass>
-      )}
 
       <Panel className="p-3 overflow-x-auto">
         <div
@@ -251,40 +275,53 @@ export function Calendar() {
                     />
                   );
                 })}
-              {blocks.data.blocks
-                .filter((b) => !b.cancelled && toLocalDate(b.startAt, tz) === d)
-                .map((b) => {
-                  const top = Math.max(0, minutesInto(b.startAt, d) - HOUR_START * 60);
-                  const bottom = Math.min(
-                    (HOUR_END - HOUR_START) * 60,
-                    minutesInto(b.endAt, d) - HOUR_START * 60,
-                  );
-                  const node = b.nodeId ? byId.get(b.nodeId) : null;
-                  return (
-                    <button
-                      key={b.id}
-                      type="button"
-                      data-block
-                      className="absolute left-1 right-1 rounded-md text-left px-2 py-1 text-xs overflow-hidden"
-                      style={{
-                        top: (top / 60) * HOUR_PX,
-                        height: Math.max(18, ((bottom - top) / 60) * HOUR_PX - 2),
-                        background:
-                          node?.color ?? (b.nodeId ? 'var(--accent)' : 'var(--fg-subtle)'),
-                        color: '#fff',
-                        border:
-                          b.source === 'google' ? '1px dashed rgb(255 255 255 / 0.7)' : 'none',
-                      }}
-                      onClick={() => setDialog({ block: b })}
-                      aria-label={`${node?.title ?? 'Unlinked block'} ${fmtTime(b.startAt)} to ${fmtTime(b.endAt)}`}
-                    >
-                      <div className="font-medium truncate">{node?.title ?? 'Link to a task'}</div>
-                      <div className="opacity-80 tabular">
+              {laidOut(d).map(({ block: b, lane, width, overlaps: clash }) => {
+                const top = Math.max(0, minutesInto(b.startAt, d) - HOUR_START * 60);
+                const bottom = Math.min(
+                  (HOUR_END - HOUR_START) * 60,
+                  minutesInto(b.endAt, d) - HOUR_START * 60,
+                );
+                const node = b.nodeId ? byId.get(b.nodeId) : null;
+                const commitment = b.source === 'google';
+                const done = b.source === 'session';
+                const label = commitment
+                  ? (b.title ?? 'Busy')
+                  : (node?.title ?? b.title ?? 'Study');
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    data-block
+                    className={`cal-block${commitment ? ' cal-block-commitment' : ''}${
+                      done ? ' cal-block-done' : ''
+                    }${clash ? ' cal-block-clash' : ''}`}
+                    style={{
+                      top: (top / 60) * HOUR_PX,
+                      height: Math.max(18, ((bottom - top) / 60) * HOUR_PX - 2),
+                      // Lanes split the column's inner width, with a 2px gap between them.
+                      left: `calc(4px + ${lane} * (100% - 8px) / ${width})`,
+                      width: `calc((100% - 8px) / ${width} - ${width > 1 ? 2 : 0}px)`,
+                      right: 'auto',
+                      ...(commitment ? {} : { background: node?.color ?? 'var(--accent)' }),
+                    }}
+                    onClick={() => !commitment && setDialog({ block: b })}
+                    aria-disabled={commitment || undefined}
+                    aria-label={
+                      `${commitment ? 'Commitment' : done ? 'Studied' : 'Planned'}: ${label}, ` +
+                      `${fmtTime(b.startAt)} to ${fmtTime(b.endAt)}` +
+                      (clash ? ', overlapping something else' : '')
+                    }
+                  >
+                    <div className="font-medium truncate">{label}</div>
+                    {/* A shared lane is too narrow for the times; they stay in the label. */}
+                    {width < 3 && (
+                      <div className="opacity-80 tabular truncate">
                         {fmtTime(b.startAt)}–{fmtTime(b.endAt)}
                       </div>
-                    </button>
-                  );
-                })}
+                    )}
+                  </button>
+                );
+              })}
               {drag && drag.day === d && (
                 <div
                   className="absolute left-1 right-1 rounded-md"

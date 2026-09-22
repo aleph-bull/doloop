@@ -84,7 +84,7 @@ export function nodeAnalytics(input: AnalyticsInput, nodeId: string): NodeAnalyt
   const pace = paces.get(nodeId) ?? null;
   const ids = new Set([nodeId, ...descendantIds(index, nodeId)]);
   const sessions = input.sessions
-    .filter((s) => ids.has(s.nodeId) && s.endedAt)
+    .filter((s) => s.nodeId !== null && ids.has(s.nodeId) && s.endedAt)
     .sort((a, b) => (a.startedAt < b.startedAt ? 1 : -1));
   const nowMs = Date.parse(input.ctx.now);
   const plannedMinutes = input.plannedBlocks
@@ -125,8 +125,8 @@ export function courseAnalytics(input: AnalyticsInput, weekStart: ISODate): Cour
       return {
         nodeId: k.id,
         title: k.title,
-        thisWeek: work(thisWeek.filter((s) => ids.has(s.nodeId))),
-        lastWeek: work(lastWeek.filter((s) => ids.has(s.nodeId))),
+        thisWeek: work(thisWeek.filter((s) => s.nodeId !== null && ids.has(s.nodeId))),
+        lastWeek: work(lastWeek.filter((s) => s.nodeId !== null && ids.has(s.nodeId))),
       };
     });
     const own = {

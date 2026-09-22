@@ -27,6 +27,9 @@ const node = (over: Partial<StudyNode> = {}): StudyNode => ({
   countUnit: null,
   countUnitLabel: null,
   outcomeRating: null,
+  gradeMode: null,
+  gradeOverall: null,
+  gradeCredits: null,
   ...over,
 });
 const session = (
@@ -38,6 +41,8 @@ const session = (
   id: `s${++seq}`,
   userId: 'u',
   nodeId,
+  routineId: null,
+  routineDate: null,
   startedAt,
   endedAt: new Date(Date.parse(startedAt) + workMinutes * 60_000).toISOString(),
   mode: 'unlimited',
@@ -147,6 +152,8 @@ describe('badges', () => {
       startAt: `2026-09-${String(1 + i).padStart(2, '0')}T14:00:00Z`,
       endAt: `2026-09-${String(1 + i).padStart(2, '0')}T15:00:00Z`,
       source: 'app',
+      title: null,
+      sessionId: null,
       googleEventId: null,
       cancelled: false,
     }));

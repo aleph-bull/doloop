@@ -264,7 +264,7 @@ function Advanced() {
             )}
             <DataTable
               caption={`Sessions on ${node.title}`}
-              columns={['When', 'Work', 'Break', 'Idle', 'Distracted', 'XP']}
+              columns={['When', 'Work', 'Break', 'Idle', 'Distracted']}
               rows={node.sessions
                 .slice(0, 30)
                 .map((s) => [
@@ -275,7 +275,6 @@ function Advanced() {
                   s.review && !s.review.skipped && s.review.distracted
                     ? s.review.distracted.replace('-', ' ')
                     : '–',
-                  s.xpAwarded,
                 ])}
             />
           </div>

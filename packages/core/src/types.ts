@@ -8,12 +8,26 @@ export type ISODate = string; // e.g. "2026-09-20" (calendar day in the user's t
 
 export type NodeKind = 'course' | 'assessment' | 'task' | 'other';
 export type SessionMode = 'pomodoro' | 'unlimited' | 'scheduled';
-export type PlannedBlockSource = 'app' | 'google';
+/**
+ * Where a calendar block came from.
+ * - 'app': study time the user scheduled in Doloop. The only kind pushed to Google.
+ * - 'google': an imported commitment - a lecture, a shift, a dentist. Shown so the user
+ *   can plan around it; never treated as study time and never used to tell them to study.
+ * - 'session': study that actually happened, logged after the timer ended.
+ */
+export type PlannedBlockSource = 'app' | 'google' | 'session';
 export type Distracted = 'no' | 'a-little' | 'a-lot';
 export type PaceStatus = 'done' | 'overdue' | 'critical' | 'behind' | 'on-track' | 'no-estimate';
 
 /** Unit used for "activities completed" in a full review. */
 export type CountUnit = 'problems' | 'pages' | 'cards' | 'custom';
+
+/**
+ * How a course's grade is arrived at: one final mark, weighted components, or not at all.
+ * 'off' hides the course from the Grades page and leaves it out of the average - a
+ * pass/fail elective or an audit has no mark worth tracking.
+ */
+export type GradeMode = 'off' | 'overall' | 'components';
 
 export interface PomodoroConfig {
   workMin: number;
@@ -33,6 +47,10 @@ export type PanelStyle = 'opaque' | 'glass' | 'custom';
 export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
 
 export interface UserSettings {
+  profile: {
+    /** What the greeting calls you. Asked at onboarding, editable in settings. */
+    name: string | null;
+  };
   pomodoro: PomodoroConfig;
   review: { mode: ReviewMode };
   idle: { enabled: boolean; thresholdMin: number };
@@ -76,9 +94,33 @@ export interface UserSettings {
   calendar: {
     googleConnected: boolean;
     studyCalendarId: string | null;
+    /** Push study blocks you plan here out to the connected calendar. */
     syncPlannedBlocks: boolean;
     readBusyTimes: boolean;
+    /** Record each finished session on the calendar as the block of study it was. */
+    logSessions: boolean;
   };
+  grading: {
+    /** Percentage bands, highest first. Defaults to the U of T scale. */
+    scale: GradeBand[];
+    /** Shown against your running GPA when set. */
+    goalGpa: number | null;
+  };
+  /**
+   * Keys of one-off prompts and hints the user has closed. Server-side so a dismissal
+   * holds across devices and reinstalls - closing a prompt means never again, not
+   * "until this browser forgets".
+   */
+  dismissed: string[];
+}
+
+/** One row of a grading scale: everything from `minPercent` up to the next band. */
+export interface GradeBand {
+  /** Inclusive lower bound, 0-100. */
+  minPercent: number;
+  letter: string;
+  /** Grade points on the user's scale (4.0 by default). */
+  points: number;
 }
 
 export interface StreakState {
@@ -118,6 +160,12 @@ export interface StudyNode {
   countUnitLabel: string | null;
   /** Post-assessment "How did it go?" 1-5, asked one day after dueAt. */
   outcomeRating: number | null;
+  /** Courses only: one final mark, or weighted components. Null until grades are used. */
+  gradeMode: GradeMode | null;
+  /** The final mark in percent, used when `gradeMode` is 'overall'. */
+  gradeOverall: number | null;
+  /** Credit weight for the GPA average, e.g. 0.5 for a half course. */
+  gradeCredits: number | null;
 }
 
 export interface SessionReview {
@@ -139,7 +187,12 @@ export type PomodoroSnapshot = Pick<
 export interface Session {
   id: string;
   userId: string;
-  nodeId: string;
+  /** The task studied. Null for a routine session: exactly one of the two is set. */
+  nodeId: string | null;
+  /** The routine done under the timer, for a routine session. */
+  routineId: string | null;
+  /** The routine occurrence the session was for; it is what gets ticked off. */
+  routineDate: ISODate | null;
   startedAt: ISODateTime;
   endedAt: ISODateTime | null;
   mode: SessionMode;
@@ -160,8 +213,20 @@ export interface PlannedBlock {
   startAt: ISODateTime;
   endAt: ISODateTime;
   source: PlannedBlockSource;
+  /**
+   * What an imported commitment is called, or the routine a routine session was for.
+   * Null for task blocks, which use the node.
+   */
+  title: string | null;
+  /** The session a 'session' block records. */
+  sessionId: string | null;
   googleEventId: string | null;
   cancelled: boolean;
+}
+
+/** True when a block is study time - planned or actually done - rather than a commitment. */
+export function isStudyBlock(block: Pick<PlannedBlock, 'source'>): boolean {
+  return block.source === 'app' || block.source === 'session';
 }
 
 export interface Vacation {
@@ -213,4 +278,49 @@ export interface ResearchTip {
   text: string;
   citation: string;
   tags: string[];
+}
+
+/**
+ * A user-defined thing to count daily - pages read, problems drilled, kilometres run.
+ * Each one renders as its own contribution grid next to the focus grid.
+ */
+export interface Tracker {
+  id: string;
+  userId: string;
+  title: string;
+  /** Plural noun for one unit, e.g. "pages". Used in the widget and its tooltips. */
+  unitLabel: string;
+  /**
+   * A day's target. When set, the colour ramp is fixed fractions of it, so a good day
+   * always looks the same; when null the ramp uses quartiles of your own logged days.
+   */
+  dailyGoal: number | null;
+  color: string | null;
+  sortOrder: number;
+  archived: boolean;
+  createdAt: ISODateTime;
+}
+
+/** One logged amount on one day. At most one row per tracker per day; logging again adds to it. */
+export interface TrackerEntry {
+  id: string;
+  userId: string;
+  trackerId: string;
+  date: ISODate;
+  amount: number;
+  note: string | null;
+  updatedAt: ISODateTime;
+}
+
+/** One weighted piece of a course's grade: a midterm, a problem set, participation. */
+export interface GradeComponent {
+  id: string;
+  userId: string;
+  nodeId: string;
+  title: string;
+  /** Share of the final grade, in percent. */
+  weight: number;
+  /** Percent earned, or null while it is still ungraded. */
+  score: number | null;
+  sortOrder: number;
 }

@@ -29,6 +29,8 @@ export function buildIndex(nodes: StudyNode[], sessions: Session[] = []): NodeIn
 
   const sessionsByNode = new Map<string, Session[]>();
   for (const s of sessions) {
+    // A routine session belongs to no task, so it is in no task's tally.
+    if (s.nodeId === null) continue;
     const list = sessionsByNode.get(s.nodeId) ?? [];
     list.push(s);
     sessionsByNode.set(s.nodeId, list);

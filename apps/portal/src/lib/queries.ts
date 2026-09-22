@@ -18,13 +18,15 @@ export const keys = {
   weeklyReview: (w?: string) => ['analytics', 'review', w ?? 'current'] as const,
   followUps: ['follow-ups'] as const,
   busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
-  unlinked: ['calendar', 'unlinked'] as const,
+  commitments: ['calendar', 'commitments'] as const,
   google: ['calendar', 'google'] as const,
   shop: ['shop'] as const,
   background: ['me', 'background'] as const,
   rewards: ['rewards'] as const,
   routines: (from?: string, to?: string) => ['routines', from ?? '', to ?? ''] as const,
   routineList: ['routines', 'list'] as const,
+  trackers: (weeks?: number) => ['trackers', weeks ?? 'default'] as const,
+  grades: ['grades'] as const,
 };
 
 export function useMe() {
@@ -121,8 +123,8 @@ export function useBusy(from: string, to: string) {
   });
 }
 
-export function useUnlinkedBlocks() {
-  return useQuery({ queryKey: keys.unlinked, queryFn: api.unlinkedBlocks, staleTime: 60_000 });
+export function useCommitments() {
+  return useQuery({ queryKey: keys.commitments, queryFn: api.commitments, staleTime: 60_000 });
 }
 
 export function useGoogleStatus() {
@@ -133,7 +135,7 @@ export function useCreateBlock() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: api.createBlock,
-    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.commitments),
   });
 }
 
@@ -142,7 +144,7 @@ export function useUpdateBlock() {
   return useMutation({
     mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateBlock>[1] }) =>
       api.updateBlock(id, patch),
-    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.commitments),
   });
 }
 
@@ -150,7 +152,7 @@ export function useDeleteBlock() {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: (id: string) => api.deleteBlock(id),
-    onSuccess: () => invalidate(['blocks'], keys.pace, keys.unlinked),
+    onSuccess: () => invalidate(['blocks'], keys.pace, keys.commitments),
   });
 }
 
@@ -325,5 +327,75 @@ export function useRemoveVacation() {
   return useMutation({
     mutationFn: (from: string) => api.removeVacation(from),
     onSuccess: () => invalidate(keys.restDays, keys.me, keys.pace),
+  });
+}
+
+export function useTrackers(weeks?: number) {
+  return useQuery({
+    queryKey: keys.trackers(weeks),
+    queryFn: () => api.trackers(weeks),
+  });
+}
+
+export function useCreateTracker() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: api.createTracker,
+    onSuccess: () => invalidate(['trackers']),
+  });
+}
+
+export function useUpdateTracker() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateTracker>[1] }) =>
+      api.updateTracker(id, patch),
+    onSuccess: () => invalidate(['trackers']),
+  });
+}
+
+export function useDeleteTracker() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTracker(id),
+    onSuccess: () => invalidate(['trackers']),
+  });
+}
+
+export function useLogTracker() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.logTracker>[1] }) =>
+      api.logTracker(id, input),
+    onSuccess: () => invalidate(['trackers']),
+  });
+}
+
+export function useGrades() {
+  return useQuery({ queryKey: keys.grades, queryFn: api.grades });
+}
+
+export function useCreateComponent() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: api.createComponent,
+    onSuccess: () => invalidate(keys.grades),
+  });
+}
+
+export function useUpdateComponent() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Parameters<typeof api.updateComponent>[1] }) =>
+      api.updateComponent(id, patch),
+    onSuccess: () => invalidate(keys.grades),
+  });
+}
+
+export function useDeleteComponent() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteComponent(id),
+    onSuccess: () => invalidate(keys.grades),
   });
 }

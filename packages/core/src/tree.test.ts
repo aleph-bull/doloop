@@ -28,6 +28,9 @@ const n = (id: string, parentId: string | null, over: Partial<StudyNode> = {}): 
   countUnit: null,
   countUnitLabel: null,
   outcomeRating: null,
+  gradeMode: null,
+  gradeOverall: null,
+  gradeCredits: null,
   ...over,
 });
 
@@ -35,6 +38,8 @@ const s = (id: string, nodeId: string): Session => ({
   id,
   userId: 'u',
   nodeId,
+  routineId: null,
+  routineDate: null,
   startedAt: '2026-09-20T00:00:00Z',
   endedAt: null,
   mode: 'unlimited',

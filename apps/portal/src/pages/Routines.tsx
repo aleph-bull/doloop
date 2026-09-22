@@ -1,13 +1,15 @@
 import type { Routine, RoutineOccurrence } from '@doloop/core';
 import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@doloop/core';
-import { Check, Pencil, Plus, Repeat, Trash2, Upload } from 'lucide-react';
+import { Check, Pencil, Play, Plus, Repeat, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@doloop/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { IcsImportDialog } from '../components/IcsImportDialog';
 import { RoutineDialog } from '../components/RoutineDialog';
+import { StartSessionDialog } from '../components/StartSessionDialog';
 import { fmtDate } from '../lib/format';
 import {
+  useActiveSession,
   useCreateRoutine,
   useDeleteRoutine,
   useImportRoutineIcs,
@@ -25,17 +27,19 @@ const DAY_LABEL = (date: string, today: string) => {
   return fmtDate(`${date}T12:00:00`);
 };
 
-/** One tickable occurrence. */
+/** One tickable occurrence, and optionally startable as a timed session. */
 function OccurrenceRow({
   occ,
   today,
   busy,
   onToggle,
+  onStart,
 }: {
   occ: RoutineOccurrence;
   today: string;
   busy: boolean;
   onToggle: () => void;
+  onStart?: () => void;
 }) {
   const future = occ.date > today;
   return (
@@ -55,10 +59,19 @@ function OccurrenceRow({
         {occ.title}
       </span>
       {occ.overdue && <Chip tone="warn">missed</Chip>}
-      {occ.done && occ.xpAwarded !== null && (
-        <span className="subtle text-xs tabular">+{occ.xpAwarded} XP</span>
-      )}
       <span className="muted text-sm tabular">{occ.estimatedMinutes}m</span>
+      {onStart && !occ.done && !future && (
+        <Button
+          variant="ghost"
+          size="sm"
+          icon
+          aria-label={`Start a session for ${occ.title}`}
+          title="Start a session"
+          onClick={onStart}
+        >
+          <Play size={14} aria-hidden />
+        </Button>
+      )}
     </li>
   );
 }
@@ -67,6 +80,7 @@ export function Routines() {
   const [weekOffset, setWeekOffset] = useState(0);
   const q = useRoutines();
   const nodes = useNodes();
+  const active = useActiveSession();
   const create = useCreateRoutine();
   const update = useUpdateRoutine();
   const remove = useDeleteRoutine();
@@ -81,6 +95,7 @@ export function Routines() {
   });
   const [importing, setImporting] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [startFor, setStartFor] = useState<RoutineOccurrence | null>(null);
 
   if (q.isError)
     return (
@@ -96,8 +111,9 @@ export function Routines() {
       </div>
     );
 
-  const { today, routines, occurrences, due, adherence, xpToday, xpRemainingToday, limits } =
-    q.data;
+  const { today, routines, occurrences, due, adherence } = q.data;
+  // One session at a time: while one runs, the rows only tick.
+  const canStart = !active.data?.active;
   const nodeIndex = new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n]));
   // "Biology › Unit 3 › Osmosis" for a linked node, so the routine's context is visible.
   const nodeTitle = (id: string) => {
@@ -118,14 +134,8 @@ export function Routines() {
     const key = `${occ.routineId}:${occ.date}`;
     setBusyKey(key);
     try {
-      if (occ.done) {
-        await untick.mutateAsync({ id: occ.routineId, date: occ.date });
-      } else {
-        const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
-        if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
-        else if (res.cappedByDailyLimit)
-          toast(`Ticked off. You have hit the ${limits.maxXpPerDay} XP daily routine cap.`);
-      }
+      if (occ.done) await untick.mutateAsync({ id: occ.routineId, date: occ.date });
+      else await tick.mutateAsync({ id: occ.routineId, date: occ.date });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not update that.');
     } finally {
@@ -164,9 +174,8 @@ export function Routines() {
           </span>
           <h2 className="text-xl">The things that repeat</h2>
           <p className="muted" style={{ maxWidth: '46ch' }}>
-            Daily reading, a weekly problem set, a monthly review. Give each one an estimate and
-            tick it off — a tick is worth {limits.xpPerMinute} XP a minute, up to{' '}
-            {limits.maxXpPerDay} XP a day.
+            Daily reading, a weekly problem set, a monthly review. Give each one an estimate, then
+            tick it off — or start it as a timed session and tick it off at the end.
           </p>
           <div className="flex gap-2">
             <Button variant="primary" onClick={() => setDialog({ open: true, routine: null })}>
@@ -180,12 +189,7 @@ export function Routines() {
       ) : (
         <>
           <Glass className="p-5 flex flex-col gap-3">
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <h2 className="text-lg flex-1">Due now</h2>
-              <span className="muted text-sm tabular">
-                {xpToday} XP today · {xpRemainingToday} left under the cap
-              </span>
-            </div>
+            <h2 className="text-lg">Due now</h2>
             {due.length === 0 ? (
               <p className="muted">Nothing outstanding. Everything due is ticked off.</p>
             ) : (
@@ -197,6 +201,7 @@ export function Routines() {
                     today={today}
                     busy={busyKey === `${o.routineId}:${o.date}`}
                     onToggle={() => void toggle(o)}
+                    onStart={canStart ? () => setStartFor(o) : undefined}
                   />
                 ))}
               </ul>
@@ -321,6 +326,12 @@ export function Routines() {
           else await create.mutateAsync(input);
           toast(dialog.routine ? 'Routine saved' : 'Routine added', { tone: 'ok' });
         }}
+      />
+      <StartSessionDialog
+        open={startFor !== null}
+        onClose={() => setStartFor(null)}
+        nodes={nodes.data?.nodes ?? []}
+        routine={startFor}
       />
       <IcsImportDialog
         open={importing}

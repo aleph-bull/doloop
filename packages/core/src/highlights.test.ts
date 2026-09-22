@@ -25,6 +25,9 @@ const node = (over: Partial<StudyNode> = {}): StudyNode => ({
   countUnit: null,
   countUnitLabel: null,
   outcomeRating: null,
+  gradeMode: null,
+  gradeOverall: null,
+  gradeCredits: null,
   ...over,
 });
 
@@ -50,6 +53,8 @@ const session = (
   id: `s${++seq}`,
   userId: 'u',
   nodeId,
+  routineId: null,
+  routineDate: null,
   startedAt: `${date}T16:00:00.000Z`,
   endedAt: `${date}T17:00:00.000Z`,
   mode: 'unlimited',
@@ -486,6 +491,8 @@ describe('planned-kept', () => {
     startAt: `${date}T16:00:00.000Z`,
     endAt: `${date}T17:00:00.000Z`,
     source: 'app',
+    title: null,
+    sessionId: null,
     googleEventId: null,
     cancelled: false,
     ...over,
@@ -587,29 +594,35 @@ describe('best-day', () => {
   });
 });
 
-describe('xp-week', () => {
+describe('best-week', () => {
   const n = node();
   it('qualifies only for a record week', () => {
     const s = [
-      session(n.id, '2026-09-08', 30, { xpAwarded: 40 }),
-      session(n.id, '2026-09-15', 30, { xpAwarded: 30 }),
-      session(n.id, '2026-09-16', 30, { xpAwarded: 30 }),
+      session(n.id, '2026-09-08', 100),
+      session(n.id, '2026-09-15', 90),
+      session(n.id, '2026-09-16', 90),
     ];
-    expect(find(input({ nodes: [n], sessions: s }), 'xp-week')?.detail).toBe(
-      '60 XP, previous best 40',
+    expect(find(input({ nodes: [n], sessions: s }), 'best-week')?.detail).toBe(
+      '3 hours, previous record 1.7 hours',
     );
   });
-  it('does not qualify when a previous week was higher', () => {
-    const s = [
-      session(n.id, '2026-09-08', 30, { xpAwarded: 100 }),
-      session(n.id, '2026-09-15', 30, { xpAwarded: 30 }),
-    ];
-    expect(keys(input({ nodes: [n], sessions: s }))).not.toContain('xp-week');
+  it('does not qualify when a previous week was bigger, or only just smaller', () => {
+    const bigger = [session(n.id, '2026-09-08', 300), session(n.id, '2026-09-15', 200)];
+    expect(keys(input({ nodes: [n], sessions: bigger }))).not.toContain('best-week');
+    const close = [session(n.id, '2026-09-08', 190), session(n.id, '2026-09-15', 200)];
+    expect(keys(input({ nodes: [n], sessions: close }))).not.toContain('best-week');
   });
-  it('needs a previous week', () => {
-    expect(
-      keys(input({ nodes: [n], sessions: [session(n.id, '2026-09-15', 30, { xpAwarded: 30 })] })),
-    ).not.toContain('xp-week');
+  it('needs a previous week, and a week worth the name', () => {
+    expect(keys(input({ nodes: [n], sessions: [session(n.id, '2026-09-15', 300)] }))).not.toContain(
+      'best-week',
+    );
+    const small = [session(n.id, '2026-09-08', 20), session(n.id, '2026-09-15', 90)];
+    expect(keys(input({ nodes: [n], sessions: small }))).not.toContain('best-week');
+  });
+  it('never mentions XP', () => {
+    const s = [session(n.id, '2026-09-08', 100), session(n.id, '2026-09-15', 180)];
+    for (const h of getHighlights(input({ nodes: [n], sessions: s })).highlights)
+      expect(`${h.headline} ${h.detail}`).not.toMatch(/XP/);
   });
 });
 

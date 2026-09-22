@@ -38,6 +38,8 @@ export interface BackgroundPhoto {
   src: string;
   /** Average colour of the photograph, for the glass adaptation. */
   avg: [number, number, number];
+  /** 640px preview for the pickers. Same path convention as `src`. */
+  thumb: string;
   /** 20px placeholder, shown until the full image decodes. */
   lqip: string;
 }
@@ -176,7 +178,7 @@ function photoDef(p: (typeof PHOTO_BACKGROUNDS)[number]): BackgroundDef {
     id: p.id,
     name: p.name,
     category: p.category as BackgroundCategory,
-    photo: { src: p.src, avg: p.avg, lqip: p.lqip },
+    photo: { src: p.src, thumb: p.thumb, avg: p.avg, lqip: p.lqip },
     // Used only as a fallback fill while the image loads, and by the contrast audit.
     light: { css: scrim('light'), luminance: 0.6 },
     dark: { css: scrim('dark'), luminance: 0.2 },

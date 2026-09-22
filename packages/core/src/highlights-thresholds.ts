@@ -14,8 +14,9 @@ export const HIGHLIGHT_THRESHOLDS = {
   BEST_DAY_MARGIN_MINUTES: 10,
   /** goal-progress: only worth saying once a real dent has been made. */
   GOAL_PROGRESS_MIN: 0.25,
-  /** xp-week: ignore record-setting weeks that are records only because history is empty. */
-  XP_WEEK_MIN: 50,
+  /** best-week: a week worth calling a record, clearing the old one by a margin. */
+  BEST_WEEK_MIN_MINUTES: 120,
+  BEST_WEEK_MARGIN_MINUTES: 15,
   /** sessions-up: at least this many more sessions than last week. */
   SESSIONS_UP_DELTA: 2,
   /** throughput-up: completed per minute at least this multiple of the previous session. */

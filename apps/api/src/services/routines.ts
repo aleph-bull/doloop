@@ -278,6 +278,79 @@ export async function tickRoutine(
   };
 }
 
+/**
+ * The routine a session is about to be started for, checked the way a tick would be: a
+ * session for a day that cannot be ticked would have nothing to tick at the end.
+ * `date` defaults to today.
+ */
+export async function routineForSession(
+  db: Db,
+  user: { id: string; timezone: string },
+  id: string,
+  date: string | undefined,
+  now: string,
+): Promise<{ routine: Routine; date: string }> {
+  const routine = toRoutine(await getRoutineRow(db, user.id, id));
+  if (routine.archived) throw badRequest('That routine is archived.');
+  const today = toLocalDate(now, user.timezone);
+  const day = date ?? today;
+  const allowed = canTick(routine, day, today);
+  if (!allowed.ok) throw badRequest(allowed.reason);
+  return { routine, date: day };
+}
+
+/**
+ * Tick an occurrence off at the end of a session spent on it.
+ *
+ * The session has already paid for its minutes, so the tick only tops up to what a plain
+ * tick would have paid: doing a routine under the timer is never worth less than ticking it,
+ * and never paid twice. The top-up is logged here; the caller adds it to the user's total
+ * alongside the session's own XP, so the level is worked out once.
+ *
+ * Returns ticked: false instead of throwing when the occurrence cannot be ticked any more
+ * (archived meanwhile, already ticked) — the session itself must still finish.
+ */
+export async function tickFromSession(
+  db: Db,
+  user: { id: string; timezone: string },
+  routineId: string,
+  date: string,
+  opts: { minutes: number; sessionXp: number },
+  now: string,
+): Promise<{ ticked: boolean; xpAwarded: number }> {
+  const row = await db.query.routines.findFirst({
+    where: and(eq(routines.id, routineId), eq(routines.userId, user.id)),
+  });
+  if (!row || row.archived) return { ticked: false, xpAwarded: 0 };
+  const routine = toRoutine(row);
+  if (!canTick(routine, date, toLocalDate(now, user.timezone)).ok)
+    return { ticked: false, xpAwarded: 0 };
+
+  const earned = await routineXpEarnedOn(db, user.id, date);
+  const plainTick = routineXp({ estimatedMinutes: routine.estimatedMinutes, earnedToday: earned });
+  const award = Math.max(0, plainTick - opts.sessionXp);
+
+  const [inserted] = await db
+    .insert(routineCompletions)
+    .values({
+      userId: user.id,
+      routineId,
+      date,
+      completedAt: dt(now),
+      minutes: opts.minutes,
+      xpAwarded: award,
+    })
+    .onConflictDoNothing()
+    .returning();
+  if (!inserted) return { ticked: false, xpAwarded: 0 };
+  if (award > 0) {
+    await db
+      .insert(xpTransactions)
+      .values({ userId: user.id, at: dt(now), delta: award, kind: 'routine', ref: inserted.id });
+  }
+  return { ticked: true, xpAwarded: award };
+}
+
 /** Undo a tick, taking back exactly the XP that was paid for it. */
 export async function untickRoutine(
   db: Db,

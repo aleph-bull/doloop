@@ -16,7 +16,9 @@
     "typecheck": "tsc -p tsconfig.json",
     "build": "tsc -p tsconfig.json",
     "audit:contrast": "tsx scripts/contrast-audit.ts",
-    "prepare:backgrounds": "tsx scripts/prepare-backgrounds.ts"
+    "prepare:backgrounds": "tsx scripts/prepare-backgrounds.ts",
+    "prepare:thumbs": "tsx scripts/prepare-thumbs.ts",
+    "prepare:icons": "tsx scripts/prepare-icons.ts"
   },
   "peerDependencies": {
     "react": "*",

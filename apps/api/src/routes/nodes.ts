@@ -42,7 +42,11 @@ export function nodeRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.get('/api/pace', async (req) => {
     const now = clock();
     const snap = await paceSnapshot(db, req.user, now);
-    const blocks = (await listBlocks(db, req.user.id, now)).filter((b) => !b.cancelled && b.nodeId);
+    // "Planned" means time the user set aside ahead of them: not a commitment imported
+    // from their calendar, and not a session they have already sat through.
+    const blocks = (await listBlocks(db, req.user.id, now)).filter(
+      (b) => !b.cancelled && b.nodeId && b.source === 'app',
+    );
     const index = buildIndex(snap.nodes);
     const planned: Record<string, number> = {};
     for (const n of snap.nodes) {

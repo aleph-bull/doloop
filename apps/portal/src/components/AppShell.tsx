@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { Flame, LogOut, Settings as SettingsIcon, WifiOff } from 'lucide-react';
-import { applyTheme, applyUserTheme, Backdrop, Button, Glass, resolveTheme } from '@doloop/ui';
-import { CUSTOM_BACKGROUND_UPLOAD, levelProgress as levelProgressView } from '@doloop/core';
+import {
+  applyTheme,
+  applyUserTheme,
+  Backdrop,
+  Button,
+  Glass,
+  LogoMark,
+  resolveTheme,
+} from '@doloop/ui';
+import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
 import { useAuth } from '../lib/auth';
 import { useOnlineStatus } from '../lib/local-state';
 import { useCustomBackground, useMe } from '../lib/queries';
@@ -10,9 +18,10 @@ import { useExtensionStatus } from '../lib/extension-bridge';
 import { ErrorBoundary } from './ErrorState';
 
 const links = [
-  { to: '/', label: 'Today' },
+  { to: '/', label: 'Dashboard' },
   { to: '/tasks', label: 'Tasks' },
   { to: '/routines', label: 'Routines' },
+  { to: '/grades', label: 'Grades' },
   { to: '/calendar', label: 'Calendar' },
   { to: '/analytics', label: 'Analytics' },
   { to: '/achievements', label: 'Achievements' },
@@ -112,7 +121,6 @@ export function AppShell() {
       : null;
 
   const user = me.data?.user;
-  const lp = user ? levelProgressView(user.xp) : null;
 
   return (
     <>
@@ -127,7 +135,7 @@ export function AppShell() {
       <Glass as="header" className="nav" strong>
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Doloop home">
-            <span className="brand-mark" aria-hidden />
+            <LogoMark size={22} />
             <span>Doloop</span>
           </NavLink>
           <nav
@@ -164,7 +172,7 @@ export function AppShell() {
                 <span className="tabular">{user.streak.current}</span>
                 <span className="sr-only">day streak</span>
               </span>
-              <span className="tabular" title={`${lp?.toNext} XP to level ${(lp?.level ?? 0) + 1}`}>
+              <span className="tabular" title={`Level ${user.level}`}>
                 Lv {user.level}
               </span>
             </div>

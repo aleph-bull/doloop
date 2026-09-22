@@ -83,20 +83,24 @@ export const api = {
   pace: () => request<{ pace: Record<string, NodePace>; plan: PlanItem[] }>('GET', '/api/pace'),
   nodes: () => request<{ nodes: StudyNode[] }>('GET', '/api/nodes'),
   start: (input: {
-    nodeId: string;
+    nodeId?: string;
+    routineId?: string;
+    routineDate?: string;
     mode: Session['mode'];
     plannedEndAt?: string | null;
     showTimer?: boolean;
   }) => request<{ now: string; active: ActiveSession }>('POST', '/api/sessions', input),
   event: (id: string, event: TimerEvent) =>
     request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/events`, event),
-  end: (id: string, body: { review?: Record<string, unknown> | null }) =>
+  end: (id: string, body: { review?: Record<string, unknown> | null; markComplete?: boolean }) =>
     request<{
       summary: {
+        session: Session;
         xp: { total: number };
         phrase: { text: string } | null;
         badges: string[];
         streak: { current: number };
+        routineTicked: boolean;
       };
     }>('POST', `/api/sessions/${id}/end`, body),
   quote: () =>

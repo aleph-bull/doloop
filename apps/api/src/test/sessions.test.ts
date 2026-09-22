@@ -429,4 +429,65 @@ describe('a pomodoro with a planned end', () => {
     }
     await t2.close();
   });
+
+  it('records a finished session on the calendar as study that happened', async () => {
+    const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
+    const node = (
+      await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Reading' } })
+    ).json().node;
+    const s = (
+      await t2.api({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: { nodeId: node.id, mode: 'pomodoro' },
+      })
+    ).json().active.session.id;
+    advanceClock(t2, 25);
+    await t2.api({
+      method: 'POST',
+      url: `/api/sessions/${s}/end`,
+      payload: { review: { skipped: true } },
+    });
+
+    const blocks = (await t2.api({ method: 'GET', url: '/api/planned-blocks' })).json().blocks;
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]).toMatchObject({
+      nodeId: node.id,
+      source: 'session',
+      sessionId: s,
+      startAt: '2026-09-21T14:00:00.000Z',
+    });
+
+    // Logged study is not "time set aside": it has already happened.
+    const pace = await t2.api({ method: 'GET', url: '/api/pace' });
+    expect(pace.json().plannedMinutes[node.id]).toBe(0);
+    await t2.close();
+  });
+
+  it('does not touch the calendar when session logging is off', async () => {
+    const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
+    await t2.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { calendar: { logSessions: false } },
+    });
+    const node = (
+      await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Quiet' } })
+    ).json().node;
+    const s = (
+      await t2.api({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: { nodeId: node.id, mode: 'pomodoro' },
+      })
+    ).json().active.session.id;
+    advanceClock(t2, 25);
+    await t2.api({
+      method: 'POST',
+      url: `/api/sessions/${s}/end`,
+      payload: { review: { skipped: true } },
+    });
+    expect((await t2.api({ method: 'GET', url: '/api/planned-blocks' })).json().blocks).toEqual([]);
+    await t2.close();
+  });
 });

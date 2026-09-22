@@ -61,7 +61,7 @@ export function WeeklyReviewPage() {
 
       <div className="card-grid">
         <Glass className="p-5">
-          <div className="subtle text-xs uppercase">Actual vs planned</div>
+          <div className="subtle text-sm">Actual vs planned</div>
           <div className="text-2xl tabular mt-1">
             {fmtHours(r.actualMinutes)}{' '}
             <span className="muted text-base">of {fmtHours(r.plannedMinutes)} planned</span>
@@ -73,7 +73,7 @@ export function WeeklyReviewPage() {
           </p>
         </Glass>
         <Glass className="p-5">
-          <div className="subtle text-xs uppercase">Streak</div>
+          <div className="subtle text-sm">Streak</div>
           <div className="text-2xl tabular mt-1">{r.streak.current} days</div>
           <p className="muted text-sm mt-1">
             Longest {r.streak.longest}.{' '}

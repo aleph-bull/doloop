@@ -1,11 +1,20 @@
-import { standsInForChildren, type StudyNode } from '@doloop/core';
+import {
+  standsInForChildren,
+  type NodePace,
+  type RoutineOccurrence,
+  type Session,
+  type StudyNode,
+} from '@doloop/core';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Glass, Spinner } from '@doloop/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { Hint } from '../components/Hint';
+import { NamePrompt } from '../components/NamePrompt';
 import { NodeCard } from '../components/NodeCard';
+import { TrackerBoard } from '../components/TrackerBoard';
+import { UpcomingDue } from '../components/UpcomingDue';
 import { PlanCard } from '../components/PlanCard';
 import { QuoteCard } from '../components/QuoteCard';
 import { RoutinesDueCard } from '../components/RoutinesDueCard';
@@ -14,7 +23,14 @@ import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TimerCard } from '../components/TimerCard';
 import { fmtMinutes } from '../lib/format';
+import { useGreeting } from '../lib/greeting';
 import { useActiveSession, useMe, useNodes, usePace, useSessions } from '../lib/queries';
+
+// Stable empty references, so the greeting is not recomputed on every render while the
+// queries are still in flight.
+const EMPTY_SESSIONS: Session[] = [];
+const EMPTY_NODES: StudyNode[] = [];
+const EMPTY_PACE: Record<string, NodePace> = {};
 
 export function Today() {
   const me = useMe();
@@ -24,6 +40,7 @@ export function Today() {
   const sessions = useSessions(undefined, 50);
   const [startFor, setStartFor] = useState<{
     node: StudyNode | null;
+    routine?: RoutineOccurrence;
     minutes: number | null;
   } | null>(null);
   const [summary, setSummary] = useState<EndSummary | null>(null);
@@ -34,6 +51,13 @@ export function Today() {
   );
   const settings = me.data?.user.settings;
   const sessionCount = sessions.data?.sessions.filter((s) => s.endedAt).length ?? 0;
+  const greeting = useGreeting({
+    name: settings?.profile.name ?? null,
+    streak: me.data?.user.streak.current ?? 0,
+    sessions: sessions.data?.sessions ?? EMPTY_SESSIONS,
+    nodes: nodes.data?.nodes ?? EMPTY_NODES,
+    pace: pace.data?.pace ?? EMPTY_PACE,
+  });
 
   const failed = [me, nodes, pace].find((q) => q.isError);
   if (failed && (!settings || !nodes.data || !pace.data)) {
@@ -78,12 +102,13 @@ export function Today() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-3xl">Today</h1>
+        <div className="min-w-0">
+          <h1 className="text-3xl">{greeting.salutation}</h1>
+          <p className="greeting-line">{greeting.line}</p>
           {totalToday > 0 && (
             <p className="muted text-sm mt-1">
               About {fmtMinutes(totalToday)} across {pace.data.plan.length} item
-              {pace.data.plan.length === 1 ? '' : 's'}.
+              {pace.data.plan.length === 1 ? '' : 's'} today.
             </p>
           )}
         </div>
@@ -93,6 +118,8 @@ export function Today() {
           </Button>
         )}
       </div>
+
+      <NamePrompt />
 
       {me.data?.streakMessage && (
         <Glass className="p-4 text-sm" role="status">
@@ -115,7 +142,14 @@ export function Today() {
         />
       )}
 
-      <RoutinesDueCard />
+      <UpcomingDue nodes={list} pace={pace.data.pace} />
+      <RoutinesDueCard
+        onStart={
+          active.data?.active
+            ? undefined
+            : (routine) => setStartFor({ node: null, routine, minutes: null })
+        }
+      />
       <FollowUpPrompt />
       <QuoteCard />
 
@@ -140,11 +174,11 @@ export function Today() {
           </Link>
         }
       >
-        Your streak is growing. A streak freeze (150 XP) covers one missed day automatically.
+        Your streak is growing. A streak freeze from the shop covers one missed day automatically.
       </Hint>
       <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
-        Every session earns XP. Honest reviews and focused blocks earn a little more. Levels unlock
-        accent colours.
+        Every session moves you toward the next level, and levels unlock accent colours and
+        backgrounds. Achievements has the details.
       </Hint>
       <Hint id="calendar" when={anyDue && sessionCount >= 2}>
         Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
@@ -174,6 +208,8 @@ export function Today() {
         </section>
       )}
 
+      <TrackerBoard />
+
       {roots.length === 0 && (
         <Glass className="p-6 text-center">
           <p className="muted">No courses yet.</p>
@@ -194,6 +230,7 @@ export function Today() {
         onClose={() => setStartFor(null)}
         nodes={list}
         node={startFor?.node}
+        routine={startFor?.routine}
         suggestedMinutes={startFor?.minutes}
       />
     </div>

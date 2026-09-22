@@ -1,3 +1,4 @@
+import { UOFT_GRADE_SCALE } from './grades';
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
@@ -28,6 +29,7 @@ export const POMODORO_DURATION_KEYS = [
 
 /** Default settings for a new user (spec §9). Theme defaults to dark per kickoff decision. */
 export const DEFAULT_SETTINGS: UserSettings = {
+  profile: { name: null },
   pomodoro: {
     workMin: 25,
     shortBreakMin: 5,
@@ -66,10 +68,25 @@ export const DEFAULT_SETTINGS: UserSettings = {
     studyCalendarId: null,
     syncPlannedBlocks: true,
     readBusyTimes: true,
+    logSessions: true,
   },
+  grading: { scale: UOFT_GRADE_SCALE, goalGpa: null },
+  dismissed: [],
 };
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+
+/**
+ * Settings are stored as a JSON blob, so a value can come back in a shape the types
+ * promise it is not - an older writer, a hand-edited row, a half-migrated record. A list
+ * that arrives as {"0": "x"} is read back as ["x"] rather than handed to a caller that
+ * will try to call .includes on it.
+ */
+function asList<T>(value: unknown, fallback: T[]): T[] {
+  if (Array.isArray(value)) return value as T[];
+  if (value && typeof value === 'object') return Object.values(value as object) as T[];
+  return fallback;
+}
 
 /** Merge a partial settings object over the defaults. One level of nesting is enough for §9. */
 export function withDefaults(partial: DeepPartial<UserSettings> | null | undefined): UserSettings {
@@ -82,5 +99,10 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
       out[key] = value;
     }
   }
-  return out as unknown as UserSettings;
+
+  const settings = out as unknown as UserSettings;
+  settings.dismissed = asList<string>(settings.dismissed, []);
+  settings.blocking.domains = asList<string>(settings.blocking.domains, []);
+  settings.grading.scale = asList(settings.grading.scale, DEFAULT_SETTINGS.grading.scale);
+  return settings;
 }

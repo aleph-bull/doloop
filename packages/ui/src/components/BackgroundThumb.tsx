@@ -14,14 +14,17 @@ export interface BackgroundThumbProps {
   title?: string;
   /** Corner marker, e.g. what unlocks a locked background. */
   badge?: string;
+  /** Origin the photo paths resolve against; empty means the app's own. */
+  assetBase?: string;
   className?: string;
   onClick?: () => void;
 }
 
 /**
- * One background in a picker. A gradient paints from its CSS; a photograph paints from its
- * 20px placeholder, which is already inlined — so a grid of twenty-five thumbnails costs
- * no network requests at all, and the full images are only fetched once one is chosen.
+ * One background in a picker. A gradient paints from its CSS. A photograph paints its
+ * inlined 20px placeholder straight away, with the 640px thumbnail loaded lazily on top —
+ * the placeholder alone is a smear at tile size, and the full 2560px image is only fetched
+ * once one is chosen.
  */
 export function BackgroundThumb({
   id,
@@ -32,6 +35,7 @@ export function BackgroundThumb({
   ariaLabel,
   title,
   badge,
+  assetBase = '',
   className,
   onClick,
 }: BackgroundThumbProps) {
@@ -56,6 +60,16 @@ export function BackgroundThumb({
       style={{ ...style, opacity: disabled ? 0.5 : 1 }}
       onClick={onClick}
     >
+      {def.photo && (
+        <img
+          className="bg-thumb-img"
+          src={`${assetBase}/${def.photo.thumb}`}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+        />
+      )}
       <span className="bg-thumb-label">{label ?? def.name}</span>
       {badge && <span className="bg-thumb-badge">{badge}</span>}
     </button>

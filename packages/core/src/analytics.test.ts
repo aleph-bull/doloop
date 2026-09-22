@@ -29,6 +29,9 @@ const node = (over: Partial<StudyNode> = {}): StudyNode => ({
   countUnit: null,
   countUnitLabel: null,
   outcomeRating: null,
+  gradeMode: null,
+  gradeOverall: null,
+  gradeCredits: null,
   ...over,
 });
 const session = (
@@ -40,6 +43,8 @@ const session = (
   id: `s${++seq}`,
   userId: 'u',
   nodeId,
+  routineId: null,
+  routineDate: null,
   startedAt: `${date}T16:00:00.000Z`,
   endedAt: `${date}T17:00:00.000Z`,
   mode: 'unlimited',
@@ -65,6 +70,8 @@ const block = (
   startAt: `${date}T16:00:00.000Z`,
   endAt: `${date}T${16 + hours}:00:00.000Z`,
   source: 'app',
+  title: null,
+  sessionId: null,
   googleEventId: null,
   cancelled: false,
   ...over,

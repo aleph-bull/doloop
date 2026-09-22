@@ -3,7 +3,7 @@
  *
  * `avg` is the photograph's average colour, used to pick the glass fill and text colour
  * without sampling in the browser. `lqip` is a 20px placeholder shown while the full
- * image loads.
+ * image loads. `thumb` is the picker preview, written by scripts/prepare-thumbs.ts.
  */
 
 export interface PhotoBackground {
@@ -12,6 +12,8 @@ export interface PhotoBackground {
   category: string;
   /** Path relative to the app root; the extension prefixes it with the portal origin. */
   src: string;
+  /** 640px picker thumbnail, same path convention as `src`. */
+  thumb: string;
   avg: [number, number, number];
   lqip: string;
 }
@@ -22,6 +24,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Fuji',
     category: 'mountains',
     src: 'backgrounds/fuji.webp',
+    thumb: 'backgrounds/thumbs/fuji.webp',
     avg: [65, 71, 68],
     lqip: 'data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoUAA0APt1cqE0opSQiMAgBEBuJZwAAXFjifoUS7vZQAAD7pEK05bxuWZ9LDShcKttL/k/zbl+G09YQgGRXqhscAAA=',
   },
@@ -30,6 +33,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Alpenglow',
     category: 'mountains',
     src: 'backgrounds/alpenglow.webp',
+    thumb: 'backgrounds/thumbs/alpenglow.webp',
     avg: [33, 37, 51],
     lqip: 'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADwAwCdASoUAA0APt1ep00opSOiMAgBEBuJYwCdACHgOaieIKW1lVcAAP7Q5ME823I5hDJmo5bhRC0Rxmf6IWWarX0sCNAHiwAvggAA',
   },
@@ -38,6 +42,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Alpine Pass',
     category: 'mountains',
     src: 'backgrounds/alpine-pass.webp',
+    thumb: 'backgrounds/thumbs/alpine-pass.webp',
     avg: [125, 157, 155],
     lqip: 'data:image/webp;base64,UklGRoAAAABXRUJQVlA4IHQAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZgCdMoADTZpuNvk+wAD+6vL0T+nUFdREX1n4ZTJdoA+AtypozLphIEJ6CpYMxWvCAsLwZSXkoOtynqYr7znv7ZAErAcOTrN+eVbhbzvnbv+hwJqXiH8GaFH8AA==',
   },
@@ -46,6 +51,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Kirkjufell',
     category: 'mountains',
     src: 'backgrounds/kirkjufell.webp',
+    thumb: 'backgrounds/thumbs/kirkjufell.webp',
     avg: [115, 118, 97],
     lqip: 'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdMoADgYsM1KTEpBMnwADh1EqBL/Jn85YFSRaJOVEfBch20m3649pcbA/MQQLjZ+H59atO8YOyYciH+Uzm6DxURjLr7ZD9I8/vMHdTgJAM1pcnwm1ijXpX8ypZbVeCbBZTQAA=',
   },
@@ -54,6 +60,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Still Water',
     category: 'night',
     src: 'backgrounds/still-water.webp',
+    thumb: 'backgrounds/thumbs/still-water.webp',
     avg: [13, 17, 18],
     lqip: 'data:image/webp;base64,UklGRkYAAABXRUJQVlA4IDoAAAAQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZwAAetEIGAAA/vDHNbz3w6qpi+k3LQQBzuMZD72HAAAA',
   },
@@ -62,6 +69,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Milky Way',
     category: 'night',
     src: 'backgrounds/milky-way.webp',
+    thumb: 'backgrounds/thumbs/milky-way.webp',
     avg: [56, 71, 100],
     lqip: 'data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJYgCdACHh4qKN/+f9rYIkwAD+2r7YBQXX7yJr55Kyo5BDT5h1PKoId/1wgie8Fj1Ym6GLpW1CBJUDHvQ1dgXoWxwi1VOXtgbFuD/SLI1V2uyvjZdlfFcAAAA=',
   },
@@ -70,6 +78,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Ice Canyon',
     category: 'night',
     src: 'backgrounds/ice-canyon.webp',
+    thumb: 'backgrounds/thumbs/ice-canyon.webp',
     avg: [9, 43, 63],
     lqip: 'data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAABwBACdASoUAA0APt1apkyopSOiMAgBEBuJZgCdMoRwJoADqy9jS9C/v7G5AAD+8YBuxN2erM2iytUgLLVD2Vm1+b27AULIODx88NYwZlQeoGM0kYYvhys5x9zvg+Qt77ygJvHfOirUfm5HZjmjgdAA',
   },
@@ -78,6 +87,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Vestrahorn',
     category: 'coast',
     src: 'backgrounds/vestrahorn.webp',
+    thumb: 'backgrounds/thumbs/vestrahorn.webp',
     avg: [91, 88, 132],
     lqip: 'data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdIMgByPCSazcUzAAA+oPAlVflzaDYMIHEKIXRUBx1BJjC7M49ZIB6lAAYjPQGHH3rEo+avYvazRNLjVUvS6kPNkCTiupKYxuESxld/tUgAAA=',
   },
@@ -86,6 +96,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Stormlight',
     category: 'coast',
     src: 'backgrounds/stormlight.webp',
+    thumb: 'backgrounds/thumbs/stormlight.webp',
     avg: [71, 56, 59],
     lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAABwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwAAP99O0hv3Q/QA/qw+7M5EF/r5L9T85VW7FTJZzlYzy1l8mRm42I9dE7nXBnx/uVNJLlTDd9xkne9uZw0rnWASf9AoWZGf/DP3haqQAA==',
   },
@@ -94,6 +105,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Shipwreck',
     category: 'coast',
     src: 'backgrounds/shipwreck.webp',
+    thumb: 'backgrounds/thumbs/shipwreck.webp',
     avg: [30, 135, 153],
     lqip: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADwAwCdASoUAAsAPt1cp0yopSOiMAgBEBuJagCdMoAC6CvmmutznWAAAP5w+hHjDdKr4hmdxB/wrxZbNaLoP/I22RFP9Wka8CNfhVukSG8BL2GDWVW1nGlgAAA=',
   },
@@ -102,6 +114,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Redwood',
     category: 'forest',
     src: 'backgrounds/redwood.webp',
+    thumb: 'backgrounds/thumbs/redwood.webp',
     avg: [26, 26, 16],
     lqip: 'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZwAAW+xIpQp1z2f+gAD+9IiKkceaMKFaQxT1YJARJWnRiIYnL9G/6+F5KeVfynFCF9RjQEz1zAAA',
   },
@@ -110,6 +123,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Frozen Lake',
     category: 'forest',
     src: 'backgrounds/frozen-lake.webp',
+    thumb: 'backgrounds/thumbs/frozen-lake.webp',
     avg: [95, 83, 76],
     lqip: 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAADQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZQC7AywBNngKzS3qc0AA/unzKoxUfWW9KDdos9UlCBiQrs+8Pfp9EbvssOsTXFdGWDlC9dLyS7SF7ACawzHLNt5EU9y/iAAAAA==',
   },
@@ -118,6 +132,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Cloud Valley',
     category: 'country',
     src: 'backgrounds/cloud-valley.webp',
+    thumb: 'backgrounds/thumbs/cloud-valley.webp',
     avg: [98, 133, 135],
     lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADwAwCdASoUAA4APt1apkyopSOiMAgBEBuJbACdMoADTg2w+48kCI94AP2cx48/HVRNnL2ek0jL4Lj6G4AWdlywho7AijzS0ssexCI72UZL1gVfUI5aSMQK73zShnlvyGDdkde5TuJgAA==',
   },
@@ -126,6 +141,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Ridgeline',
     category: 'country',
     src: 'backgrounds/ridgeline.webp',
+    thumb: 'backgrounds/thumbs/ridgeline.webp',
     avg: [142, 144, 138],
     lqip: 'data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBdgBDxCefr/pbr9SgD+7fnc9OhClakFo6lsI43H0Uu7799iA5hvvtYyYX84a6OXvGtR2LzLdYHmAIfpytVSTSjiaEVzUAA=',
   },
@@ -134,6 +150,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Emberlight',
     category: 'country',
     src: 'backgrounds/emberlight.webp',
+    thumb: 'backgrounds/thumbs/emberlight.webp',
     avg: [142, 69, 65],
     lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoADKMHhTxbEArjmQAD+qEMHJwpJzjSEQsvEQnHAzyYvf7G7WctLnw+M3y7840gz5nRksKLxYHSPYa43EJE4UyFbPt5WYk050lgAAA==',
   },
@@ -142,6 +159,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Badlands',
     category: 'country',
     src: 'backgrounds/badlands.webp',
+    thumb: 'backgrounds/thumbs/badlands.webp',
     avg: [121, 112, 102],
     lqip: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAABwAwCdASoUAAwAPt1apkyopSOiMAgBEBuJZQCsAB40h3numAAA/tD8lSyz96ktZZmsOLYT7FVs+XwUxp5LEU2D105OrzBJdKpBDt6nvCYQX+V5tUh9pYYYAAA=',
   },
@@ -150,6 +168,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Hallstatt',
     category: 'cities',
     src: 'backgrounds/hallstatt.webp',
+    thumb: 'backgrounds/thumbs/hallstatt.webp',
     avg: [33, 47, 46],
     lqip: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4IG4AAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwCw7CHwf48NCXvr3F7wAP7qDcJqMoiA+IkSwhcMx4RUsILQThP5GM7k1bRy+YZeW16Xkb2dP2ZByrT7i3VnjQK4M+q3NZtNnbbf7b4vLxZfViMAAA==',
   },
@@ -158,6 +177,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Victoria Peak',
     category: 'cities',
     src: 'backgrounds/victoria-peak.webp',
+    thumb: 'backgrounds/thumbs/victoria-peak.webp',
     avg: [83, 82, 101],
     lqip: 'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJZACdMoACgAusKXgLAQPyAAD+JXwD649B5u+PGiOYrR/1kTPY+1bp+cIOhcbzIXirP4emRS6Zwxz/eeyKAcO/0EiGkZOHHRzOWLBWastbkRLAxRv1APKrgRecO/x9vmMYQAAA',
   },
@@ -166,6 +186,7 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     name: 'Lanterns',
     category: 'minimal',
     src: 'backgrounds/lanterns.webp',
+    thumb: 'backgrounds/thumbs/lanterns.webp',
     avg: [175, 176, 166],
     lqip: 'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZwDE2YwS7Nbyy6d8eh2HEAD+sOLjG8Gp0ISNcevAO1gKtlSbJ4eZ7XYkW4ZK/yuOHSt3g4QdtCyVpqI9jOHGn4DTACTzb7NbewWCi0VncjeLO3TrfxWGt56bSWXXhx1lBwAA',
   },

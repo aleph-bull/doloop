@@ -200,9 +200,15 @@ export async function updateSettings(db: Db, row: UserRow, patch: SettingsPatch)
   const current = row.settings ?? {};
   const merged: Record<string, unknown> = { ...current };
   for (const [k, v] of Object.entries(patch)) {
-    if (v && typeof v === 'object') {
-      merged[k] = { ...((current as Record<string, unknown>)[k] as object), ...v };
-    }
+    if (v === undefined) continue;
+    // A group of settings merges field by field, so a patch of one field leaves its
+    // siblings alone. An array or a scalar replaces outright: spreading an array into an
+    // object would store {"0": "..."} instead of a list, and there is no sensible way to
+    // "merge" two lists of dismissed prompts other than taking the newer one.
+    merged[k] =
+      v && typeof v === 'object' && !Array.isArray(v)
+        ? { ...((current as Record<string, unknown>)[k] as object), ...v }
+        : v;
   }
   const [updated] = await db
     .update(users)

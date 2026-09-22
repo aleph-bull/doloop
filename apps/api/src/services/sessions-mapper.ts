@@ -13,6 +13,8 @@ export function toSession(row: SessionRow): Session {
     id: row.id,
     userId: row.userId,
     nodeId: row.nodeId,
+    routineId: row.routineId,
+    routineDate: row.routineDate,
     startedAt: row.startedAt.toISOString(),
     endedAt: iso(row.endedAt),
     mode: row.mode,
@@ -43,6 +45,9 @@ export function toNode(row: NodeRow): StudyNode {
     countUnit: row.countUnit,
     countUnitLabel: row.countUnitLabel,
     outcomeRating: row.outcomeRating,
+    gradeMode: row.gradeMode,
+    gradeOverall: row.gradeOverall,
+    gradeCredits: row.gradeCredits,
   };
 }
 
@@ -54,6 +59,8 @@ export function toPlannedBlock(row: PlannedBlockRow): PlannedBlock {
     startAt: row.startAt.toISOString(),
     endAt: row.endAt.toISOString(),
     source: row.source,
+    title: row.title,
+    sessionId: row.sessionId,
     googleEventId: row.googleEventId,
     cancelled: row.cancelled,
   };

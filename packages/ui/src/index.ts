@@ -19,6 +19,8 @@ export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './compone
 export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatmap';
 export { Backdrop, sampleImage } from './components/Backdrop';
 export { BackgroundThumb, type BackgroundThumbProps } from './components/BackgroundThumb';
+export { LogoMark, type LogoMarkProps } from './components/LogoMark';
+export { LOGO_PATH, LOGO_VIEWBOX, logoSvg } from './logo';
 export { cn } from './cn';
 export {
   applyPanelStyle,

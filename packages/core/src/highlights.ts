@@ -30,7 +30,7 @@ export type HighlightKey =
   | 'streak'
   | 'best-day'
   | 'early-finish'
-  | 'xp-week';
+  | 'best-week';
 
 export interface Highlight {
   key: HighlightKey;
@@ -174,7 +174,7 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
   const seenNode = new Set<string>();
   for (let i = thisWeek.length - 1; i >= 0; i--) {
     const s = thisWeek[i]!;
-    if (seenNode.has(s.nodeId)) continue;
+    if (s.nodeId === null || seenNode.has(s.nodeId)) continue;
     seenNode.add(s.nodeId);
     const r = s.review;
     if (!r || r.skipped) continue;
@@ -494,28 +494,26 @@ export function getHighlights(input: HighlightsInput): HighlightsResult {
     }
   }
 
-  // xp-week
+  // best-week: measured in time, like everything else here. XP stays on Achievements.
   {
     const byWeek = new Map<ISODate, number>();
     for (const s of all) {
       const d = dayOf(s, tz);
       const monday = addDays(d, -((dayOfWeek(d) + 6) % 7));
-      byWeek.set(monday, (byWeek.get(monday) ?? 0) + s.xpAwarded);
+      byWeek.set(monday, (byWeek.get(monday) ?? 0) + workMin(s));
     }
-    const thisXp = byWeek.get(weekStart) ?? 0;
-    let prevBest = 0;
-    let prevWeeks = 0;
-    for (const [w, x] of byWeek) {
-      if (w < weekStart) {
-        prevWeeks++;
-        prevBest = Math.max(prevBest, x);
-      }
-    }
-    if (prevWeeks >= 1 && thisXp > prevBest && thisXp >= T.XP_WEEK_MIN) {
+    const weekMin = byWeek.get(weekStart) ?? 0;
+    let record = 0;
+    for (const [w, m] of byWeek) if (w < weekStart) record = Math.max(record, m);
+    if (
+      record > 0 &&
+      weekMin >= T.BEST_WEEK_MIN_MINUTES &&
+      weekMin >= record + T.BEST_WEEK_MARGIN_MINUTES
+    ) {
       push({
-        key: 'xp-week',
-        headline: "Most XP you've earned in a week",
-        detail: `${thisXp} XP, previous best ${prevBest}`,
+        key: 'best-week',
+        headline: 'Your biggest study week yet',
+        detail: `${fmtDurationWord(weekMin)}, previous record ${fmtDurationWord(record)}`,
         magnitude: 0.7,
       });
     }

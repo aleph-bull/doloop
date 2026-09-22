@@ -121,7 +121,7 @@ export function RoutineDialog({
             max={ROUTINES.MAX_ESTIMATE_MIN}
             value={minutes}
             onChange={(e) => setMinutes(e.target.value)}
-            hint={`Worth ${Math.min(Number(minutes) || 0, ROUTINES.MAX_XP_PER_TICK)} XP a tick`}
+            hint="Also how long a session for it runs by default"
           />
           <Select
             label="Part of"

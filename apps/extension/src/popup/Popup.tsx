@@ -36,6 +36,7 @@ import {
   Glass,
   resolveExtensionBackdrop,
   Segmented,
+  Toggle,
 } from '@doloop/ui';
 import { resolveTheme as resolveThemeSafe } from '@doloop/ui';
 import { getAll, onChange, set, type Stored } from '../lib/storage';
@@ -93,6 +94,11 @@ function todayAtLocal(time: string): string {
   return d.toISOString();
 }
 
+/** The instant a given number of minutes from now. */
+function isoInMinutes(min: number): string {
+  return new Date(Date.now() + min * 60_000).toISOString();
+}
+
 function minutesUntilLocal(time: string): number {
   return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
 }
@@ -113,14 +119,18 @@ export function Popup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quote, setQuote] = useState<{ text: string; by: string } | null>(null);
-  const [review, setReview] = useState<{ sessionId: string; distracted: string | null } | null>(
-    null,
-  );
+  const [review, setReview] = useState<{
+    sessionId: string;
+    distracted: string | null;
+    /** Tick the routine off at the end; null when the session is for a task. */
+    tick: boolean | null;
+  } | null>(null);
   const [summary, setSummary] = useState<{
-    xp: number;
+    workMinutes: number;
     phrase: string | null;
     badges: string[];
     endedEarly: boolean;
+    routineTicked: boolean;
   } | null>(null);
   const [style, setStyle] = useState<SessionStyle>('pomodoro');
   const [duration, setDuration] = useState<SessionDurationKind>('unlimited');
@@ -230,29 +240,39 @@ export function Popup() {
     if (!active || !timer) return;
     if (timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break')
       await event({ type: 'pause' });
-    if (settings?.review.mode === 'off') await finish(null);
-    else setReview({ sessionId: active.session.id, distracted: null });
+    // With reviews off there is nothing to ask about a task; a routine still asks to tick.
+    const routineSession = active.session.routineId !== null;
+    if (settings?.review.mode === 'off' && !routineSession) await finish(null, false);
+    else
+      setReview({
+        sessionId: active.session.id,
+        distracted: null,
+        tick: routineSession ? true : null,
+      });
   };
 
-  const finish = async (rev: Record<string, unknown> | null) => {
+  const finish = async (rev: Record<string, unknown> | null, markComplete: boolean) => {
     if (!active) return;
     const r = await run<{
-      xp: { total: number };
+      session: { workSeconds: number };
       phrase: { text: string } | null;
       badges: string[];
       endedEarly?: boolean;
+      routineTicked?: boolean;
     }>({
       type: 'end',
       sessionId: active.session.id,
       review: rev,
+      markComplete,
     });
     setReview(null);
     if (r)
       setSummary({
-        xp: r.xp.total,
+        workMinutes: Math.round(r.session.workSeconds / 60),
         phrase: r.phrase?.text ?? null,
         badges: r.badges ?? [],
         endedEarly: r.endedEarly ?? false,
+        routineTicked: r.routineTicked ?? false,
       });
   };
 
@@ -289,8 +309,9 @@ export function Popup() {
         {backdrop}
         <Glass className="card stack">
           {summary.phrase && <h1>{summary.phrase}</h1>}
-          <div className="xp">+{summary.xp} XP</div>
-          {summary.endedEarly && <p>Ended early, so no XP this time.</p>}
+          <div className="xp">{fmtLength(summary.workMinutes)} focused</div>
+          {summary.endedEarly && <p>Ended early. The minutes still count.</p>}
+          {summary.routineTicked && <p>Ticked off.</p>}
           {summary.badges.length > 0 && <p>Badge unlocked: {summary.badges.join(', ')}</p>}
           <p>Session saved. Details are in the portal.</p>
           <Button variant="primary" onClick={() => setSummary(null)}>
@@ -301,7 +322,29 @@ export function Popup() {
     );
   }
 
+  if (review && settings?.review.mode === 'off') {
+    // Reviews are off, but a routine session still gets asked whether it is done.
+    return (
+      <div className="popup">
+        {backdrop}
+        <Glass className="card stack">
+          <h1>Done with {active?.nodeTitle ?? 'it'}?</h1>
+          <p className="hint">The minutes count either way. Not yet leaves it on your list.</p>
+          <div className="row end">
+            <Button variant="ghost" onClick={() => finish(null, false)} disabled={busy}>
+              Not yet
+            </Button>
+            <Button variant="primary" onClick={() => finish(null, true)} loading={busy}>
+              Tick it off
+            </Button>
+          </div>
+        </Glass>
+      </div>
+    );
+  }
+
   if (review) {
+    const markComplete = review.tick === true;
     return (
       <div className="popup">
         {backdrop}
@@ -319,14 +362,25 @@ export function Popup() {
               </Button>
             ))}
           </div>
-          <p className="hint">The full review is in the portal. Skipping never costs XP.</p>
+          {review.tick !== null && (
+            <Toggle
+              checked={review.tick}
+              onChange={(tick) => setReview({ ...review, tick })}
+              label={`Tick off ${active?.nodeTitle ?? 'the routine'}`}
+            />
+          )}
+          <p className="hint">The full review is in the portal. Skipping costs nothing.</p>
           <div className="row end">
-            <Button variant="ghost" onClick={() => finish({ skipped: true })} disabled={busy}>
+            <Button
+              variant="ghost"
+              onClick={() => finish({ skipped: true }, markComplete)}
+              disabled={busy}
+            >
               Skip
             </Button>
             <Button
               variant="primary"
-              onClick={() => finish({ distracted: review.distracted })}
+              onClick={() => finish({ distracted: review.distracted }, markComplete)}
               loading={busy}
             >
               Save
@@ -375,7 +429,7 @@ export function Popup() {
           ? formatClock(view.phaseRemainingSeconds)
           : formatClock(view.phaseElapsedSeconds);
     const inBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
-    const path = pathLabel(nodesById, active.session.nodeId);
+    const path = active.session.nodeId ? pathLabel(nodesById, active.session.nodeId) : 'Routine';
     return (
       <Glass className="card stack">
         <div className="phase">{PHASE[timer.phase]}</div>
@@ -598,16 +652,31 @@ export function Popup() {
 
   const tickRoutine = async (o: RoutineOccurrence) => {
     setTickNote(null);
-    const r = await run<{ xpAwarded: number; cappedByDailyLimit: boolean; badges: string[] }>({
+    const r = await run<{ badges: string[] }>({
       type: 'tick-routine',
       routineId: o.routineId,
       date: o.date,
     });
     if (!r) return;
-    const parts = [`+${r.xpAwarded} XP`];
-    if (r.cappedByDailyLimit) parts.push("that's today's routine XP maxed out");
+    const parts = [`Ticked off ${o.title}`];
     if (r.badges.length) parts.push(`badge unlocked: ${r.badges.join(', ')}`);
     setTickNote(parts.join(' · '));
+  };
+
+  /** Run a routine under the timer, for as long as it says it takes, then show the timer. */
+  const startRoutine = async (o: RoutineOccurrence) => {
+    setTickNote(null);
+    const est = o.estimatedMinutes;
+    const workMin = settings?.pomodoro.workMin ?? DEFAULT_SETTINGS.pomodoro.workMin;
+    const end = isoInMinutes(est);
+    const started = await run({
+      type: 'start',
+      routineId: o.routineId,
+      routineDate: o.date,
+      mode: modeForPlan({ style: est < workMin ? 'continuous' : 'pomodoro', plannedEndAt: end }),
+      plannedEndAt: end,
+    });
+    if (started) goTab('focus');
   };
 
   const routinesView = () => {
@@ -635,15 +704,25 @@ export function Popup() {
                     {o.overdue ? ` · from ${shortDate(o.date)}` : ''}
                   </span>
                 </div>
+                {!active && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon
+                    aria-label={`Start a session for ${o.title}`}
+                    title="Start a session"
+                    onClick={() => startRoutine(o)}
+                    disabled={busy}
+                  >
+                    <Play size={14} aria-hidden />
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => tickRoutine(o)} disabled={busy}>
                   <Check size={14} aria-hidden /> Tick
                 </Button>
               </li>
             ))}
           </ul>
-        )}
-        {routines.xpToday > 0 && (
-          <p className="hint">{routines.xpToday} XP banked from routines today.</p>
         )}
         {tickNote && <p className="good">{tickNote}</p>}
         {error && <p className="error">{error}</p>}

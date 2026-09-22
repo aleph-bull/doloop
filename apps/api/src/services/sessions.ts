@@ -28,6 +28,7 @@ import type { Db } from '../db/client';
 import {
   estimateChanges,
   nodes,
+  routines,
   sessions,
   users,
   xpTransactions,
@@ -37,8 +38,10 @@ import {
 import { badRequest, conflict, notFound } from '../errors';
 import type { endSessionSchema, reviewSchema, startSessionSchema } from '../validation';
 import { getNodeRow } from './nodes';
+import { routineForSession, tickFromSession } from './routines';
 import { loadCompletedSessions, paceContext } from './pace';
-import { overlapsPlannedBlock } from './planned-blocks';
+import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
+import { pushBlockCreated, type CalendarDeps } from './calendar-sync';
 import { dt, dtn, toNode, toSession } from './sessions-mapper';
 import { settingsOf, syncStreak } from './users';
 import { unlockNewBadges } from './achievements';
@@ -47,6 +50,7 @@ export interface SessionView {
   session: Session;
   timer: TimerState;
   view: TimerView;
+  /** What is being studied: the task's title, or the routine's for a routine session. */
   nodeTitle: string;
 }
 
@@ -97,13 +101,25 @@ async function view(db: Db, user: UserRow, row: SessionRow, now: string): Promis
   const opts = advanceOptions(user, row.pomodoroConfigSnapshot);
   const advanced = advance(row.timer, now, opts);
   const persisted = await persistTimer(db, row, advanced, now);
-  const node = await db.query.nodes.findFirst({ where: eq(nodes.id, row.nodeId) });
   return {
     session: toSession(persisted),
     timer: advanced,
     view: viewTimer(advanced, now),
-    nodeTitle: node?.title ?? '',
+    nodeTitle: await subjectTitle(db, row),
   };
+}
+
+/** Title of what a session is for: its task, or its routine. */
+async function subjectTitle(db: Db, row: SessionRow): Promise<string> {
+  if (row.nodeId) {
+    const node = await db.query.nodes.findFirst({ where: eq(nodes.id, row.nodeId) });
+    return node?.title ?? '';
+  }
+  if (row.routineId) {
+    const routine = await db.query.routines.findFirst({ where: eq(routines.id, row.routineId) });
+    return routine?.title ?? '';
+  }
+  return '';
 }
 
 export async function getActive(db: Db, user: UserRow, now: string): Promise<SessionView | null> {
@@ -130,8 +146,25 @@ export async function startSession(
   input: z.infer<typeof startSessionSchema>,
   now: string,
 ): Promise<SessionView> {
-  const node = await getNodeRow(db, user.id, input.nodeId);
-  if (node.archived) throw badRequest('Cannot study an archived node');
+  // A task, or one occurrence of a routine. The schema guarantees exactly one was given.
+  let subject: { nodeId: string | null; routineId: string | null; routineDate: string | null };
+  let title: string;
+  if (input.routineId) {
+    const { routine, date } = await routineForSession(
+      db,
+      user,
+      input.routineId,
+      input.routineDate,
+      now,
+    );
+    subject = { nodeId: null, routineId: routine.id, routineDate: date };
+    title = routine.title;
+  } else {
+    const node = await getNodeRow(db, user.id, input.nodeId!);
+    if (node.archived) throw badRequest('Cannot study an archived node');
+    subject = { nodeId: node.id, routineId: null, routineDate: null };
+    title = node.title;
+  }
   const active = await getActiveRow(db, user.id);
   if (active) {
     // Finalize a stale auto-ended scheduled session, otherwise refuse.
@@ -169,7 +202,7 @@ export async function startSession(
     .insert(sessions)
     .values({
       userId: user.id,
-      nodeId: node.id,
+      ...subject,
       startedAt: dt(now),
       mode: input.mode,
       pomodoroConfigSnapshot: input.mode === 'pomodoro' ? snapshot : null,
@@ -178,7 +211,7 @@ export async function startSession(
       ...derivedColumns(timer),
     })
     .returning();
-  return { session: toSession(row!), timer, view: viewTimer(timer, now), nodeTitle: node.title };
+  return { session: toSession(row!), timer, view: viewTimer(timer, now), nodeTitle: title };
 }
 
 export async function applySessionEvent(
@@ -200,12 +233,11 @@ export async function applySessionEvent(
     // "Still studying? No" ends the session; finalize with no review.
     await finalize(db, user, persisted, { review: null }, now);
   }
-  const node = await db.query.nodes.findFirst({ where: eq(nodes.id, row.nodeId) });
   return {
     session: toSession(persisted),
     timer: next,
     view: viewTimer(next, now),
-    nodeTitle: node?.title ?? '',
+    nodeTitle: await subjectTitle(db, row),
   };
 }
 
@@ -219,6 +251,8 @@ export interface EndSummary {
   streak: { current: number; longest: number; message: string | null; milestonesReached: number[] };
   statusAfter: PaceStatus;
   nodeCompleted: boolean;
+  /** A routine session whose occurrence was ticked off as it ended. */
+  routineTicked: boolean;
   phrase: Phrase | null;
   badges: string[];
   confetti: boolean;
@@ -233,6 +267,7 @@ export async function endSession(
   id: string,
   input: z.infer<typeof endSessionSchema>,
   now: string,
+  calendar: CalendarDeps | null = null,
 ): Promise<EndSummary> {
   const row = await db.query.sessions.findFirst({
     where: and(eq(sessions.id, id), eq(sessions.userId, user.id)),
@@ -242,7 +277,7 @@ export async function endSession(
   const opts = advanceOptions(user, row.pomodoroConfigSnapshot);
   const ended = applyEvent(row.timer, { type: 'end' }, now, opts);
   const persisted = await persistTimer(db, row, ended, now);
-  return finalize(db, user, persisted, input, now);
+  return finalize(db, user, persisted, input, now, calendar);
 }
 
 function normaliseReview(r: z.infer<typeof reviewSchema> | null | undefined): SessionReview | null {
@@ -271,23 +306,40 @@ function normaliseReview(r: z.infer<typeof reviewSchema> | null | undefined): Se
   };
 }
 
-/**
- * The end-of-session pipeline: review -> node updates -> pace -> streak -> XP -> phrase.
- * Safe to call once per session; guarded by the caller's endedAt check.
- */
-async function finalize(
+/** What finishing a session did to its task. A routine session has no task. */
+interface TaskOutcome {
+  statusAfter: PaceStatus;
+  loggedAfter: number;
+  estimatedMinutes: number | null;
+  nodeCompleted: boolean;
+  isFirstSessionOnNode: boolean;
+  isAssessment: boolean;
+  /** Earlier "how prepared" ratings on the same task, oldest first, for the phrase. */
+  preparedPrev: number[];
+}
+
+const NO_TASK: TaskOutcome = {
+  statusAfter: 'no-estimate',
+  loggedAfter: 0,
+  estimatedMinutes: null,
+  nodeCompleted: false,
+  isFirstSessionOnNode: false,
+  isAssessment: false,
+  preparedPrev: [],
+};
+
+/** The task half of finalize: review side effects, completion, and pace afterwards. */
+async function finishTask(
   db: Db,
   user: UserRow,
   row: SessionRow,
-  input: z.infer<typeof endSessionSchema>,
+  nodeId: string,
+  review: SessionReview | null,
+  markComplete: boolean,
   now: string,
-): Promise<EndSummary> {
-  const review = normaliseReview(input.review);
-  const reviewSubmitted = review !== null && !review.skipped;
-
-  // Review side effects on the node.
-  let node = await getNodeRow(db, user.id, row.nodeId);
-  if (reviewSubmitted && review.extraMinutesAdded && review.extraMinutesAdded > 0) {
+): Promise<TaskOutcome> {
+  let node = await getNodeRow(db, user.id, nodeId);
+  if (review && !review.skipped && review.extraMinutesAdded && review.extraMinutesAdded > 0) {
     const from = node.estimatedMinutes;
     const to = (from ?? 0) + review.extraMinutesAdded;
     await db.insert(estimateChanges).values({
@@ -308,7 +360,7 @@ async function finalize(
   }
   const wasCompleted = node.completedAt !== null;
   let nodeCompleted = false;
-  if (input.markComplete && !wasCompleted) {
+  if (markComplete && !wasCompleted) {
     node = (
       await db
         .update(nodes)
@@ -329,24 +381,54 @@ async function finalize(
   const index = buildIndex(studyNodes, completed);
   const pace = computePace(studyNodes, completed, ctx);
   const nodePace = pace.get(node.id);
-  const statusAfter: PaceStatus = nodePace?.status ?? 'no-estimate';
-  const loggedAfter = nodePace?.loggedWorkMinutes ?? 0;
   const sessionsOnNode = completed.filter((s) => s.nodeId === node.id);
-  const isFirstSessionOnNode = sessionsOnNode.length === 1;
-  // Auto-complete when the estimate is met and the node has no children? No: completion is
-  // the user's call. Only the explicit markComplete flag completes a node.
+  // Completion is the user's call: only the explicit markComplete flag completes a node,
+  // never an estimate that has been met.
+  return {
+    statusAfter: nodePace?.status ?? 'no-estimate',
+    loggedAfter: nodePace?.loggedWorkMinutes ?? 0,
+    estimatedMinutes: node.estimatedMinutes,
+    nodeCompleted,
+    isFirstSessionOnNode: sessionsOnNode.length === 1,
+    isAssessment: isUnderAssessment(index, node.id),
+    preparedPrev: sessionsOnNode
+      .filter((s) => s.id !== row.id && s.review && !s.review.skipped && s.review.prepared !== null)
+      .map((s) => s.review!.prepared!),
+  };
+}
+
+/**
+ * The end-of-session pipeline: review -> task or routine -> streak -> XP -> phrase.
+ * Safe to call once per session; guarded by the caller's endedAt check.
+ */
+async function finalize(
+  db: Db,
+  user: UserRow,
+  row: SessionRow,
+  input: z.infer<typeof endSessionSchema>,
+  now: string,
+  calendar: CalendarDeps | null = null,
+): Promise<EndSummary> {
+  const review = normaliseReview(input.review);
+  const reviewSubmitted = review !== null && !review.skipped;
+
+  const task = row.nodeId
+    ? await finishTask(db, user, row, row.nodeId, review, input.markComplete ?? false, now)
+    : NO_TASK;
 
   // Streak (lazy; also picks up today's session).
   const streakSync = await syncStreak(db, user, now);
 
   // XP.
-  const overlaps = await overlapsPlannedBlock(
-    db,
-    user.id,
-    node.id,
-    row.startedAt.toISOString(),
-    row.endedAt?.toISOString() ?? now,
-  );
+  const overlaps = row.nodeId
+    ? await overlapsPlannedBlock(
+        db,
+        user.id,
+        row.nodeId,
+        row.startedAt.toISOString(),
+        row.endedAt?.toISOString() ?? now,
+      )
+    : false;
   const endedEarly = isEndedEarly({
     mode: row.timer.mode,
     cycle: row.timer.cycle,
@@ -360,14 +442,31 @@ async function finalize(
     reviewSubmitted,
     distracted: review?.distracted ?? null,
     overlapsPlannedBlock: overlaps,
-    statusAfter,
-    nodeJustCompleted: nodeCompleted,
-    loggedWorkMinutesAfter: loggedAfter,
-    estimatedMinutes: node.estimatedMinutes,
+    statusAfter: task.statusAfter,
+    nodeJustCompleted: task.nodeCompleted,
+    loggedWorkMinutesAfter: task.loggedAfter,
+    estimatedMinutes: task.estimatedMinutes,
     streakCurrent: streakSync.streak.current,
   });
+
+  // A routine session ticks its occurrence off when the user says it got done.
+  let routineTicked = false;
+  let tickXp = 0;
+  if (row.routineId && row.routineDate && input.markComplete) {
+    const tick = await tickFromSession(
+      db,
+      user,
+      row.routineId,
+      row.routineDate,
+      { minutes: Math.round(row.workSeconds / 60), sessionXp: xp.total },
+      now,
+    );
+    routineTicked = tick.ticked;
+    tickXp = tick.xpAwarded;
+  }
+
   const levelBefore = user.level;
-  const xpTotal = user.xp + xp.total;
+  const xpTotal = user.xp + xp.total + tickXp;
   const levelAfter = levelForXp(xpTotal);
   await db.update(users).set({ xp: xpTotal, level: levelAfter }).where(eq(users.id, user.id));
   await db
@@ -376,20 +475,43 @@ async function finalize(
   user.xp = xpTotal;
   user.level = levelAfter;
 
-  // Phrase.
   const settings = settingsOf(user);
+
+  // Put the session on the calendar as what it was: study that happened. Best effort -
+  // a calendar that will not take it must never cost the user the session or its XP.
+  if (settings.calendar.logSessions) {
+    try {
+      const block = await logSessionBlock(
+        db,
+        user.id,
+        {
+          id: row.id,
+          nodeId: row.nodeId,
+          // A routine has no node to name the block after, so the block carries the title.
+          title: row.routineId ? await subjectTitle(db, row) : null,
+          startedAt: row.startedAt,
+          endedAt: row.endedAt,
+        },
+        now,
+      );
+      if (block && settings.calendar.syncPlannedBlocks) {
+        await pushBlockCreated(db, calendar, block);
+      }
+    } catch {
+      /* the calendar is a record of the session, never a condition of it */
+    }
+  }
+
+  // Phrase.
   let phrase: Phrase | null = null;
   if (settings.effects.phrases) {
-    const preparedPrev = sessionsOnNode
-      .filter((s) => s.id !== row.id && s.review && !s.review.skipped && s.review.prepared !== null)
-      .map((s) => s.review!.prepared!);
     const bucket = bucketForSession({
-      isAssessment: isUnderAssessment(index, node.id),
+      isAssessment: task.isAssessment,
       preparedRating: review?.prepared ?? null,
-      preparedPrev,
-      status: statusAfter,
-      isFirstSessionOnNode,
-      nodeJustCompleted: nodeCompleted,
+      preparedPrev: task.preparedPrev,
+      status: task.statusAfter,
+      isFirstSessionOnNode: task.isFirstSessionOnNode,
+      nodeJustCompleted: task.nodeCompleted,
       distracted: review?.distracted ?? null,
       streakAfter: streakSync.streak.current,
       localHour: localHour(now, user.timezone),
@@ -409,7 +531,8 @@ async function finalize(
     settings.effects.confetti &&
     !endedEarly &&
     (review?.distracted === 'no' ||
-      nodeCompleted ||
+      task.nodeCompleted ||
+      routineTicked ||
       levelAfter > levelBefore ||
       streakSync.milestonesReached.length > 0);
 
@@ -426,12 +549,13 @@ async function finalize(
       message: streakSync.message,
       milestonesReached: streakSync.milestonesReached,
     },
-    statusAfter,
-    nodeCompleted,
+    statusAfter: task.statusAfter,
+    nodeCompleted: task.nodeCompleted,
+    routineTicked,
     phrase,
     badges,
     confetti,
-    isFirstSessionOnNode,
+    isFirstSessionOnNode: task.isFirstSessionOnNode,
     endedEarly,
   };
 }

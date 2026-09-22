@@ -17,6 +17,8 @@ import { shopRoutes } from './routes/shop';
 import { assetRoutes } from './routes/assets';
 import { rewardRoutes } from './routes/rewards';
 import { routineRoutes } from './routes/routines';
+import { trackerRoutes } from './routes/trackers';
+import { gradeRoutes } from './routes/grades';
 
 export interface BuildOptions {
   db: Db;
@@ -63,19 +65,22 @@ export async function buildServer(opts: BuildOptions) {
 
   await app.register(authPlugin, { db: opts.db, verifier: opts.verifier });
 
-  meRoutes(app, opts.db, clock);
-  nodeRoutes(app, opts.db, clock);
-  sessionRoutes(app, opts.db, clock);
   const calendar: CalendarRouteOptions = {
     deps: opts.calendar?.deps ?? null,
     stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
   };
+  meRoutes(app, opts.db, clock);
+  nodeRoutes(app, opts.db, clock);
+  // Sessions need the calendar deps: a finished session is written to the calendar.
+  sessionRoutes(app, opts.db, clock, calendar.deps);
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);
   calendarRoutes(app, opts.db, clock, calendar);
   shopRoutes(app, opts.db, clock);
   rewardRoutes(app, opts.db, clock);
   routineRoutes(app, opts.db, clock);
+  trackerRoutes(app, opts.db, clock);
+  gradeRoutes(app, opts.db, clock);
   assetRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);

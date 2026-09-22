@@ -79,14 +79,15 @@
   --chart-5: #e87ba4;
 
   /*
-   * Sequential ramp for the study heatmap. Built from the accent hue so it follows the
-   * user's accent, with `--heat-0` a neutral "no study" that is never mistaken for the
-   * lightest filled step.
+   * Sequential ramp for the contribution grids. Built from the accent hue so it follows
+   * the user's accent, with `--heat-0` a neutral "nothing here" that is never mistaken for
+   * the lightest filled step. Saturation climbs with the steps as well as lightness: a
+   * heavy day should look emphatically heavier, not one notch darker.
    */
   --heat-0: rgb(15 18 32 / 0.07);
-  --heat-1: hsl(var(--accent-h) var(--accent-s) 84%);
-  --heat-2: hsl(var(--accent-h) var(--accent-s) 72%);
-  --heat-3: hsl(var(--accent-h) var(--accent-s) 58%);
+  --heat-1: hsl(var(--accent-h) calc(var(--accent-s) * 0.55) 86%);
+  --heat-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.75) 72%);
+  --heat-3: hsl(var(--accent-h) calc(var(--accent-s) * 0.92) 56%);
   --heat-4: hsl(var(--accent-h) var(--accent-s) 42%);
 
   /* ---------- Focus ring ---------- */
@@ -139,6 +140,8 @@
   --fg-muted: #4b5168;
   --fg-subtle: #7b819a;
   --fg-on-glass: #0f1220;
+  /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
+  --logo-shade: #fff;
 
   --border: rgb(15 18 32 / 0.08);
   --border-strong: rgb(15 18 32 / 0.16);
@@ -167,10 +170,10 @@
   --chart-5: #d55181;
 
   --heat-0: rgb(255 255 255 / 0.06);
-  --heat-1: hsl(var(--accent-h) var(--accent-s) 26%);
-  --heat-2: hsl(var(--accent-h) var(--accent-s) 38%);
-  --heat-3: hsl(var(--accent-h) var(--accent-s) 52%);
-  --heat-4: hsl(var(--accent-h) var(--accent-s) 68%);
+  --heat-1: hsl(var(--accent-h) calc(var(--accent-s) * 0.6) 24%);
+  --heat-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.8) 37%);
+  --heat-3: hsl(var(--accent-h) var(--accent-s) 53%);
+  --heat-4: hsl(var(--accent-h) var(--accent-s) 70%);
 
   --bg-base: #0b0d14;
   --bg-elevated: #151827;
@@ -180,6 +183,8 @@
   --fg-muted: #b3b8cc;
   --fg-subtle: #7f8599;
   --fg-on-glass: #f2f3f8;
+  /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
+  --logo-shade: #000;
 
   --border: rgb(255 255 255 / 0.08);
   --border-strong: rgb(255 255 255 / 0.16);
@@ -207,10 +212,10 @@
     --chart-5: #d55181;
 
     --heat-0: rgb(255 255 255 / 0.06);
-    --heat-1: hsl(var(--accent-h) var(--accent-s) 26%);
-    --heat-2: hsl(var(--accent-h) var(--accent-s) 38%);
-    --heat-3: hsl(var(--accent-h) var(--accent-s) 52%);
-    --heat-4: hsl(var(--accent-h) var(--accent-s) 68%);
+    --heat-1: hsl(var(--accent-h) calc(var(--accent-s) * 0.6) 24%);
+    --heat-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.8) 37%);
+    --heat-3: hsl(var(--accent-h) var(--accent-s) 53%);
+    --heat-4: hsl(var(--accent-h) var(--accent-s) 70%);
 
     --bg-base: #0b0d14;
     --bg-elevated: #151827;
@@ -220,6 +225,8 @@
     --fg-muted: #b3b8cc;
     --fg-subtle: #7f8599;
     --fg-on-glass: #f2f3f8;
+    /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
+    --logo-shade: #000;
 
     --border: rgb(255 255 255 / 0.08);
     --border-strong: rgb(255 255 255 / 0.16);

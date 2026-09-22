@@ -77,6 +77,25 @@ describe('nodes', () => {
     const changes = await t.db.query.estimateChanges.findMany();
     expect(changes.filter((c) => c.nodeId === n.id).map((c) => c.toMinutes)).toEqual([60, 90]);
   });
+
+  it('leaves kind alone when a patch does not mention it', async () => {
+    // The create schema defaults kind to 'task'. That default must not survive into the
+    // patch schema, or renaming a course would quietly demote it to a task.
+    const course = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: { title: 'ECO220', kind: 'course' },
+      })
+    ).json().node;
+    const renamed = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { title: 'ECO220H1' },
+    });
+    expect(renamed.json().node).toMatchObject({ title: 'ECO220H1', kind: 'course' });
+    await t.api({ method: 'DELETE', url: `/api/nodes/${course.id}` });
+  });
 });
 
 describe('settings and profile', () => {
@@ -224,6 +243,39 @@ describe('custom background upload', () => {
       (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme
         .customBackgroundUrl,
     ).toBeNull();
+  });
+
+  it('stores a list setting as a list rather than merging it into an object', async () => {
+    // Spreading an array into an object would persist {"0": "xp"}, which reads back as a
+    // dismissal of nothing.
+    const first = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { dismissed: ['xp'] },
+    });
+    expect(first.json().settings.dismissed).toEqual(['xp']);
+
+    // A later patch replaces the list outright rather than leaving stale indices behind.
+    const second = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { dismissed: ['xp', 'calendar'] },
+    });
+    expect(second.json().settings.dismissed).toEqual(['xp', 'calendar']);
+
+    const me = await t.api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.dismissed).toEqual(['xp', 'calendar']);
+  });
+
+  it('keeps a name and a grading scale', async () => {
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { profile: { name: 'Zach' } },
+    });
+    expect(res.json().settings.profile.name).toBe('Zach');
+    // The default scale is U of T, and it survives a patch of an unrelated group.
+    expect(res.json().settings.grading.scale[0]).toMatchObject({ letter: 'A+', points: 4 });
   });
 
   it('accepts panel style settings', async () => {

@@ -65,6 +65,11 @@ export async function updateBlock(
     where: and(eq(plannedBlocks.id, id), eq(plannedBlocks.userId, userId)),
   });
   if (!row) throw notFound('Block not found');
+  // An imported commitment stays a commitment. Attaching a task to it would quietly turn
+  // "I have a lecture at two" into "I plan to study at two", which is not what importing a
+  // calendar means. Study time is something the user schedules here.
+  if (row.source === 'google' && patch.nodeId)
+    throw badRequest('Imported events are commitments, not study time. Plan a block instead.');
   const startAt = patch.startAt ? dt(patch.startAt) : row.startAt;
   const endAt = patch.endAt ? dt(patch.endAt) : row.endAt;
   if (endAt.getTime() <= startAt.getTime()) throw badRequest('Block must end after it starts');
@@ -103,6 +108,9 @@ export async function overlapsPlannedBlock(
     where: and(
       eq(plannedBlocks.userId, userId),
       eq(plannedBlocks.nodeId, nodeId),
+      // Only time the user set aside for this counts as "kept to the plan". A commitment
+      // imported from their calendar is the opposite of a plan to study.
+      eq(plannedBlocks.source, 'app'),
       eq(plannedBlocks.cancelled, false),
       lt(plannedBlocks.startAt, dt(endAt)),
       gte(plannedBlocks.endAt, dt(startAt)),
@@ -110,4 +118,57 @@ export async function overlapsPlannedBlock(
     limit: 1,
   });
   return rows.length > 0;
+}
+
+/**
+ * Record a finished session on the calendar.
+ *
+ * The block is what happened, not a plan: it carries the session id, so re-finalising the
+ * same session updates its block instead of stacking duplicates. Returns null when the
+ * session was too short to be worth a mark on the grid.
+ */
+export async function logSessionBlock(
+  db: Db,
+  userId: string,
+  session: {
+    id: string;
+    nodeId: string | null;
+    /** Names the block when there is no node to, as for a routine session. */
+    title?: string | null;
+    startedAt: Date;
+    endedAt: Date | null;
+  },
+  now: string,
+  minMinutes = 1,
+): Promise<PlannedBlockRow | null> {
+  const endedAt = session.endedAt ?? new Date(Date.parse(now));
+  const minutes = (endedAt.getTime() - session.startedAt.getTime()) / 60_000;
+  if (minutes < minMinutes) return null;
+
+  const existing = await db.query.plannedBlocks.findFirst({
+    where: and(eq(plannedBlocks.userId, userId), eq(plannedBlocks.sessionId, session.id)),
+  });
+  if (existing) {
+    const [updated] = await db
+      .update(plannedBlocks)
+      .set({ startAt: session.startedAt, endAt: endedAt, updatedAt: dt(now) })
+      .where(eq(plannedBlocks.id, existing.id))
+      .returning();
+    return updated!;
+  }
+  const [row] = await db
+    .insert(plannedBlocks)
+    .values({
+      userId,
+      nodeId: session.nodeId,
+      title: session.title ?? null,
+      startAt: session.startedAt,
+      endAt: endedAt,
+      source: 'session',
+      sessionId: session.id,
+      createdAt: dt(now),
+      updatedAt: dt(now),
+    })
+    .returning();
+  return row!;
 }

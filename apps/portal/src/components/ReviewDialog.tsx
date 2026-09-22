@@ -3,10 +3,16 @@ import { useEffect, useState } from 'react';
 import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@doloop/ui';
 import type { ReviewInput } from '../lib/api';
 
+/**
+ * What the session was for. A routine has no estimate to revise and nothing to be
+ * prepared for, and "done" means ticking off this occurrence.
+ */
+export type ReviewSubject = { kind: 'task'; node: StudyNode } | { kind: 'routine'; title: string };
+
 export interface ReviewDialogProps {
   open: boolean;
   mode: Exclude<ReviewMode, 'off'>;
-  node: StudyNode;
+  subject: ReviewSubject;
   /** True if the node or an ancestor is an assessment (asks "Prepared"). */
   underAssessment: boolean;
   onSubmit: (review: ReviewInput, markComplete: boolean) => void;
@@ -68,11 +74,11 @@ function Scale({
   );
 }
 
-/** End-of-session review (spec §5). Always skippable; skipping never costs XP. */
+/** End-of-session review (spec §5). Always skippable, and skipping costs nothing. */
 export function ReviewDialog({
   open,
   mode,
-  node,
+  subject,
   underAssessment,
   onSubmit,
   onSkip,
@@ -98,15 +104,18 @@ export function ReviewDialog({
     setNeedsMore(false);
     setExtraHours(1);
     setNote('');
-    setMarkComplete(false);
-  }, [open]);
+    // Starting a routine's session is the intent to do it, so the tick starts on.
+    setMarkComplete(subject.kind === 'routine');
+  }, [open, subject.kind]);
 
-  const unit = node.countUnit
+  const node = subject.kind === 'task' ? subject.node : null;
+  const title = node ? node.title : subject.kind === 'routine' ? subject.title : '';
+  const unit = node?.countUnit
     ? node.countUnit === 'custom'
       ? node.countUnitLabel || 'items'
       : UNIT_LABEL[node.countUnit]
     : 'activities';
-  const gradable = node.countUnit === 'problems' || node.countUnit === 'cards';
+  const gradable = node?.countUnit === 'problems' || node?.countUnit === 'cards';
   const completedNum = completed.trim() === '' ? null : Number(completed);
 
   const submit = () => {
@@ -121,7 +130,8 @@ export function ReviewDialog({
             ? Number(correct)
             : null,
         mood: mode === 'full' ? mood : null,
-        extraMinutesAdded: mode === 'full' && needsMore ? Math.round(extraHours * 60) : null,
+        extraMinutesAdded:
+          mode === 'full' && node && needsMore ? Math.round(extraHours * 60) : null,
         note: mode === 'full' && note.trim() ? note.trim() : null,
       },
       markComplete,
@@ -147,7 +157,7 @@ export function ReviewDialog({
       <div className="flex flex-col gap-5">
         {underAssessment && (
           <Scale
-            label={`How prepared do you feel for ${node.title}?`}
+            label={`How prepared do you feel for ${title}?`}
             value={prepared}
             onChange={setPrepared}
             low="Not yet"
@@ -200,13 +210,15 @@ export function ReviewDialog({
               low="Low"
               high="Great"
             />
-            <Toggle
-              checked={needsMore}
-              onChange={setNeedsMore}
-              label="Needs more time than planned?"
-              description="Adds hours to the estimate so your pace stays honest."
-            />
-            {needsMore && (
+            {node && (
+              <Toggle
+                checked={needsMore}
+                onChange={setNeedsMore}
+                label="Needs more time than planned?"
+                description="Adds hours to the estimate so your pace stays honest."
+              />
+            )}
+            {node && needsMore && (
               <div className="field">
                 <span className="field-label">How many extra hours? {extraHours}</span>
                 <Slider
@@ -229,12 +241,21 @@ export function ReviewDialog({
           </>
         )}
 
-        {!node.completedAt && (
+        {subject.kind === 'routine' ? (
           <Toggle
             checked={markComplete}
             onChange={setMarkComplete}
-            label={`Mark "${node.title}" as done`}
+            label={`Tick off "${title}"`}
+            description="Leave it off if you did not finish; it stays on your list."
           />
+        ) : (
+          !subject.node.completedAt && (
+            <Toggle
+              checked={markComplete}
+              onChange={setMarkComplete}
+              label={`Mark "${title}" as done`}
+            />
+          )
         )}
       </div>
     </Modal>

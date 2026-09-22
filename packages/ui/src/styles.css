@@ -397,6 +397,15 @@ a:hover {
   max-width: min(560px, calc(100vw - 32px));
   width: 100%;
   color: var(--fg-on-glass);
+  /*
+   * A native <dialog> is centred by its UA `margin: auto`. Tailwind's preflight zeroes
+   * the margin on every element, which drops the dialog into the top-left corner, so the
+   * centring has to be asked for again here.
+   */
+  margin: auto;
+  /* Long dialogs scroll inside themselves rather than running off the viewport. */
+  max-height: calc(100vh - 32px);
+  overflow: auto;
 }
 .modal::backdrop {
   background: var(--overlay-scrim);

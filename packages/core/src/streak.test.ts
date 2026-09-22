@@ -16,6 +16,8 @@ const s = (startedAt: string, workMinutes: number, over: Partial<Session> = {}):
   id: `s${++seq}`,
   userId: 'u',
   nodeId: 'n',
+  routineId: null,
+  routineDate: null,
   startedAt,
   endedAt: startedAt,
   mode: 'unlimited',
