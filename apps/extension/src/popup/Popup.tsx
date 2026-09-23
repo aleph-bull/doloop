@@ -283,6 +283,14 @@ export function Popup() {
   /** The focus screen, in the tab it is already in if there is one, else a new one. */
   const openFocus = async () => {
     const url = `${portal}/focus`;
+    await focusTab(url);
+  };
+  /** After a start: the popup cannot ask, so "ask" opens it and only "never" does not. */
+  const openFocusAfterStart = () => {
+    if (settings?.focusScreen?.openOnStart === 'never') return;
+    void openFocus();
+  };
+  const focusTab = async (url: string) => {
     try {
       const [existing] = await chrome.tabs.query({ url: `${url}*` });
       if (existing?.id !== undefined) {
@@ -527,7 +535,7 @@ export function Popup() {
   const plannedEndAt = (): string | null => {
     if (duration === 'unlimited') return null;
     if (duration === 'until') return todayAtLocal(endTime);
-    return new Date(Date.now() + (plannedMinutes ?? 0) * 60_000).toISOString();
+    return isoInMinutes(plannedMinutes ?? 0);
   };
 
   const startSession = async () => {
@@ -544,7 +552,7 @@ export function Popup() {
       plannedEndAt: end,
     });
     setConfirmCut(null);
-    if (started) void openFocus();
+    if (started) openFocusAfterStart();
   };
 
   const go = () => {
@@ -707,7 +715,7 @@ export function Popup() {
     });
     if (started) {
       goTab('focus');
-      void openFocus();
+      openFocusAfterStart();
     }
   };
 

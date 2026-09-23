@@ -186,10 +186,12 @@ export const settingsSchema = z
         enabled: z.boolean(),
         promptDismissed: z.boolean(),
         intensity: z.number().min(0).max(1),
+        opacity: z.number().min(0).max(1),
         colorMode: z.enum(['accent', 'custom', 'gradient']),
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
       })
       .partial(),
+    focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),
   })
   .partial()

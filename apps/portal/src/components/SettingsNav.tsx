@@ -78,6 +78,8 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'now playing',
       'never ask again',
       'share audio',
+      'open on start',
+      'opacity',
       'intensity',
       'colour',
       'color',

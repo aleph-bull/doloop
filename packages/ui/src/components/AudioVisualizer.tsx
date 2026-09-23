@@ -21,6 +21,8 @@ export interface AudioVisualizerProps {
   getCapture: () => AudioCapture | null;
   /** Visual amplitude, glow and responsiveness, 0..1. The analysis is not affected. */
   intensity: number;
+  /** How strongly the light shows over the background, 0..1. */
+  opacity?: number;
   palette: VisualizerPalette;
   /** When false nothing is drawn and the loop stops. */
   enabled: boolean;
@@ -45,15 +47,16 @@ const SLOW_FRAME = 0.03;
 export function AudioVisualizer({
   getCapture,
   intensity,
+  opacity = 1,
   palette,
   enabled,
   analysis = DEFAULT_ANALYSIS,
   className,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const propsRef = useRef({ getCapture, intensity, palette, analysis });
+  const propsRef = useRef({ getCapture, intensity, opacity, palette, analysis });
   useEffect(() => {
-    propsRef.current = { getCapture, intensity, palette, analysis };
+    propsRef.current = { getCapture, intensity, opacity, palette, analysis };
   });
 
   useEffect(() => {
@@ -129,7 +132,13 @@ export function AudioVisualizer({
       }
 
       if (!colors || colors.key !== paletteKey(p.palette)) colors = buildColors(ctx, p.palette);
-      renderFrame(ctx, scene, { seconds, state, intensity: p.intensity, colors });
+      renderFrame(ctx, scene, {
+        seconds,
+        state,
+        intensity: p.intensity,
+        opacity: p.opacity,
+        colors,
+      });
 
       // Under reduced motion one frame at rest is the whole animation.
       if (!still) raf = requestAnimationFrame(frame);

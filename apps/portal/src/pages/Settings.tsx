@@ -474,6 +474,23 @@ export function Settings() {
                 Starting a session opens the focus screen in its own tab: a large clock, the task
                 under it, and nothing else. These settings decide what else it shows.
               </p>
+              <div className="field">
+                <span className="field-label">Open it when a session starts</span>
+                <Segmented
+                  ariaLabel="Open the focus screen when a session starts"
+                  value={s.focusScreen.openOnStart}
+                  onChange={(openOnStart) => patch({ focusScreen: { openOnStart } })}
+                  options={[
+                    { value: 'ask', label: 'Ask' },
+                    { value: 'always', label: 'Always' },
+                    { value: 'never', label: 'Never' },
+                  ]}
+                />
+                <span className="field-hint">
+                  The timer card's expand button opens it whenever you like.
+                </span>
+              </div>
+              <div className="divider" />
               <VisualizerSettings value={s.visualizer} onChange={patch} showPromptPreference />
               <div className="divider" />
               <SpotifySettings />

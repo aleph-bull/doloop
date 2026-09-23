@@ -137,7 +137,14 @@ export function calendarRoutes(
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
     reply.header('content-disposition', 'attachment; filename="doloop.ics"');
-    return buildIcs({ blocks, nodes, sessions, routines, now: clock() });
+    return buildIcs({
+      blocks,
+      nodes,
+      sessions,
+      routines,
+      now: clock(),
+      timezone: req.user.timezone,
+    });
   });
 
   /** Per-user secret feed URL (public route, token-authenticated). */
@@ -155,6 +162,13 @@ export function calendarRoutes(
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
     reply.header('cache-control', 'private, max-age=300');
-    return buildIcs({ blocks, nodes, sessions, routines, now: clock() });
+    return buildIcs({
+      blocks,
+      nodes,
+      sessions,
+      routines,
+      now: clock(),
+      timezone: user.timezone,
+    });
   });
 }

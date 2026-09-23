@@ -583,3 +583,41 @@ extension inside Chrome (it builds).
 - **Graphite stays the fallback** for an id that no longer exists (`DEFAULT_BACKGROUND_ID`
   in core and ui): that path is about reading old settings safely, not about taste, and the
   earlier decision to make it the quiet neutral still holds.
+
+## Due dates on the calendar, focus-screen prompt, visualizer polish (user request, 2026-09-22)
+
+- **A due date set on a task shows on the week view** under the day it falls on, as a
+  small chip ("Due · Unit 1"; an assessment shows its title alone), struck through once
+  the task is done. It is drawn from the task itself, not from a block, so no sync or
+  import can touch it. The `.ics` feed and download publish the same dates as all-day
+  events on the user's local day (`due-<id>@doloop`), so a subscribed calendar shows them
+  too. They are not pushed to Google as events: the Google sync moves study blocks, and a
+  deadline is not a block of time.
+- **Nothing on the calendar is deleted by an import or a sync.** Checked rather than
+  changed: an `.ics` import upserts routines by UID; a Google sync only ever marks a block
+  cancelled when the user deleted that event in Google, and `disconnect` keeps every
+  imported block. Due-date chips are outside all of it.
+- **The clock is medium weight (500)**, up from the thin 300, which read as faint at
+  fourteen rem over a photograph.
+- **"Open the focus screen?" after a start**: Yes / No / Never ask again, governed by
+  `focusScreen.openOnStart` (`ask` | `always` | `never`) in Settings > Focus screen. The
+  question keeps the page mounted, so a start from Tasks or Routines asks first and goes
+  to the dashboard after the answer. The extension popup cannot ask, so `ask` opens the
+  tab there and only `never` holds back. The timer card's expand button ignores the
+  setting: pressing it is the answer.
+- **The accent colour is computed from the setting** (`accentHexFor` in packages/ui) rather
+  than read back from `<html>`. The first pass read the DOM during render, before the
+  theme effect had applied the accent, and so always saw the boot-time indigo.
+- **More bloom:** every ribbon and ring is stroked twice, a wide faint pass with double
+  the blur under the thin bright line. **Opacity** (`visualizer.opacity`, default 0.85)
+  multiplies every alpha in the frame; intensity still governs amplitude and glow.
+- **Six more backgrounds are gated** so levels and XP keep something to open: Summit Glow
+  (level 3), Polar Lights (5), Tokyo Haze (8), Prism (10), Kualoa (500 XP), Nebula
+  (700 XP). Velvet, the default, stays free. Anyone already on one of them keeps it;
+  availability is only checked when a background is chosen.
+
+## Glass is the default panel surface (user request, 2026-09-22)
+
+- **New accounts start with `theme.panel: 'glass'`** instead of opaque, so dense panels
+  (tasks, tables, settings) are frosted over the background like everything else. Opaque
+  and custom remain a choice in Appearance; existing users keep what they have.

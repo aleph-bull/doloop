@@ -368,6 +368,24 @@
   color: var(--fg-muted);
   cursor: default;
 }
+/* A due date set on a task, shown under the day it falls on. */
+.cal-due {
+  margin: 4px 4px 0;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--status-warn);
+  background: var(--accent-soft);
+  color: var(--fg);
+  font-size: var(--text-xs);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal-due-done {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
 /* Study that already happened, as opposed to time still set aside. */
 .cal-block-done {
   opacity: 0.85;
@@ -971,7 +989,7 @@
 }
 .focus-time {
   font-size: clamp(4.5rem, 19vw, 14rem);
-  font-weight: 300;
+  font-weight: 500;
   line-height: 1;
   letter-spacing: var(--tracking-numeric);
   /* A faint halo lifts the digits off a bright photograph without a panel behind them. */

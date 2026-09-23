@@ -337,6 +337,7 @@ describe('settings: visualizer', () => {
       enabled: true,
       promptDismissed: true,
       intensity: 0.8,
+      opacity: 0.85,
       colorMode: 'gradient',
       color: '#6366f1',
     });

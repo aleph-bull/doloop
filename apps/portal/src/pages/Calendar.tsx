@@ -72,6 +72,9 @@ export function Calendar() {
 
   const list = nodes.data.nodes;
   const byId = new Map(list.map((n) => [n.id, n]));
+  /** Tasks and assessments due on a day, as set on the task. Done ones stay, struck through. */
+  const dueOn = (day: string) =>
+    list.filter((n) => !n.archived && n.dueAt && toLocalDate(n.dueAt, tz) === day);
   const planTop = pace.data?.plan[0];
 
   /** Non-cancelled blocks that start on this day, in start order. */
@@ -215,6 +218,17 @@ export function Calendar() {
             >
               <div className="font-medium">{DAYS[i]}</div>
               <div className="tabular text-xs">{fmtDate(`${d}T12:00:00`)}</div>
+              {dueOn(d).map((n) => (
+                <div
+                  key={n.id}
+                  className={`cal-due${n.completedAt ? ' cal-due-done' : ''}`}
+                  title={`${n.kind === 'assessment' ? 'Assessment' : 'Due'}: ${n.title}`}
+                  style={{ borderColor: n.color ?? 'var(--status-warn)' }}
+                >
+                  {n.kind === 'assessment' ? '' : 'Due · '}
+                  {n.title}
+                </div>
+              ))}
             </div>
           ))}
           <div className="relative" style={{ height: (HOUR_END - HOUR_START) * HOUR_PX }}>

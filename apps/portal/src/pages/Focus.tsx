@@ -11,9 +11,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff, Pause, Play, Settings2, SkipForward, Square, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { AudioVisualizer, Backdrop, Button, Chip, Glass, Spinner, useToast } from '@doloop/ui';
+import {
+  accentHexFor,
+  AudioVisualizer,
+  Backdrop,
+  Button,
+  Chip,
+  Glass,
+  Spinner,
+  useToast,
+} from '@doloop/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
-import { accentHex, useAppearance } from '../lib/appearance';
+import { useAppearance } from '../lib/appearance';
 import { useFocusTabBeacon } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import {
@@ -132,12 +141,8 @@ export function Focus() {
     if (vis && !vis.enabled) audio.stop();
   }, [vis, audio]);
 
-  const accent = useMemo(
-    () => accentHex(),
-    // The accent lives on <html>; re-read it when the theme settings change.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [settings?.theme.accent, appearance.theme],
-  );
+  // From the setting, not the DOM: <html> is themed in an effect, after this has rendered.
+  const accent = accentHexFor(settings?.theme.accent ?? 'indigo');
   const palette = useMemo(
     () =>
       visualizerPalette({
@@ -202,6 +207,7 @@ export function Focus() {
           enabled
           getCapture={audio.getCapture}
           intensity={vis.intensity}
+          opacity={vis.opacity}
           palette={palette}
         />
       )}

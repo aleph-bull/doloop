@@ -7,6 +7,18 @@ function icsDate(iso: string): string {
     .replace(/\.\d{3}Z$/, 'Z');
 }
 
+/** YYYYMMDD in the user's timezone: an all-day event for the day the deadline falls on. */
+function icsDay(iso: string, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+    .format(new Date(iso))
+    .replace(/-/g, '');
+}
+
 function esc(s: string): string {
   return s
     .replace(/\\/g, '\\\\')
@@ -36,6 +48,8 @@ export interface IcsInput {
   routines?: Array<{ id: string; title: string }>;
   calendarName?: string;
   now: string;
+  /** For the all-day due-date events. Defaults to UTC. */
+  timezone?: string;
 }
 
 /** Build an iCalendar feed of planned blocks (and optionally completed sessions). */
@@ -67,6 +81,20 @@ export function buildIcs(input: IcsInput): string {
       `DTEND:${icsDate(b.endAt)}`,
       `SUMMARY:${esc(`Study: ${titleOf(b.nodeId)}`)}`,
       'DESCRIPTION:Planned in Doloop',
+      'END:VEVENT',
+    );
+  }
+  // Due dates set on tasks and assessments, as all-day events on the day they fall.
+  for (const n of input.nodes) {
+    if (!n.dueAt || n.archived) continue;
+    const day = icsDay(n.dueAt, input.timezone ?? 'UTC');
+    lines.push(
+      'BEGIN:VEVENT',
+      `UID:due-${n.id}@doloop`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${day}`,
+      `SUMMARY:${esc(`${n.kind === 'assessment' ? '' : 'Due: '}${n.title}`)}`,
+      `DESCRIPTION:${esc(n.completedAt ? 'Done (Doloop)' : 'Due date set in Doloop')}`,
       'END:VEVENT',
     );
   }

@@ -57,7 +57,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     accent: 'indigo',
     backgroundId: 'velvet',
     customBackgroundUrl: null,
-    panel: 'opaque',
+    panel: 'glass',
     panelColor: '#151827',
     panelAlpha: 0.92,
     extensionBackground: 'same',
@@ -75,9 +75,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
     enabled: false,
     promptDismissed: false,
     intensity: 0.6,
+    opacity: 0.85,
     colorMode: 'accent',
     color: '#6366f1',
   },
+  focusScreen: { openOnStart: 'ask' },
   dismissed: [],
 };
 

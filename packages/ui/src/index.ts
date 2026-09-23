@@ -42,6 +42,7 @@ export {
 export { LOGO_PATH, LOGO_VIEWBOX, logoSvg } from './logo';
 export { cn } from './cn';
 export {
+  accentHexFor,
   applyPanelStyle,
   applyTheme,
   applyUserTheme,

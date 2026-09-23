@@ -40,17 +40,3 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
     customImageUrl: wantsUpload ? (uploaded.data?.dataUrl ?? null) : null,
   };
 }
-
-/** The accent as hex, read back from the theme so a custom accent is honoured too. */
-export function accentHex(): string {
-  if (typeof window === 'undefined') return '#6366f1';
-  const probe = document.createElement('span');
-  probe.style.color = 'var(--accent)';
-  probe.style.display = 'none';
-  document.body.appendChild(probe);
-  const rgb = getComputedStyle(probe).color;
-  probe.remove();
-  const m = rgb.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
-  if (!m) return '#6366f1';
-  return `#${[m[1], m[2], m[3]].map((c) => Number(c).toString(16).padStart(2, '0')).join('')}`;
-}

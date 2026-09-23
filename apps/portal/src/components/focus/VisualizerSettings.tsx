@@ -83,6 +83,21 @@ export function VisualizerSettings({
             </div>
           </div>
           <div className="field">
+            <span className="field-label">Opacity</span>
+            <Slider
+              min={0.1}
+              max={1}
+              step={0.05}
+              value={value.opacity}
+              onChange={(opacity) => set({ opacity })}
+              aria-label="Visualizer opacity"
+            />
+            <div className="flex justify-between field-hint">
+              <span>Faint</span>
+              <span>Solid</span>
+            </div>
+          </div>
+          <div className="field">
             <span className="field-label">Colour</span>
             <div className="flex items-center gap-3 flex-wrap">
               <Segmented

@@ -40,6 +40,8 @@ export interface VisualizerFrame {
   state: AnalysisState;
   /** 0..1 */
   intensity: number;
+  /** 0..1: how strongly the whole layer shows over the background. */
+  opacity: number;
   colors: VisualizerColors;
 }
 
@@ -121,9 +123,14 @@ function ribbon(
     if (j === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
-  ctx.lineWidth = 1.4 + 2.4 * amp;
   ctx.strokeStyle = color;
   ctx.shadowColor = color;
+  // A wide, faint pass is the bloom; the thin pass on top is the line.
+  ctx.lineWidth = 6 + 10 * amp;
+  ctx.shadowBlur = glow * 2.2;
+  ctx.globalAlpha = alpha * 0.45;
+  ctx.stroke();
+  ctx.lineWidth = 1.4 + 2.4 * amp;
   ctx.shadowBlur = glow;
   ctx.globalAlpha = alpha;
   ctx.stroke();
@@ -153,9 +160,13 @@ function ring(
     else ctx.lineTo(x, y);
   }
   ctx.closePath();
-  ctx.lineWidth = 1.1 + 1.6 * amp;
   ctx.strokeStyle = color;
   ctx.shadowColor = color;
+  ctx.lineWidth = 4 + 6 * amp;
+  ctx.shadowBlur = glow * 2;
+  ctx.globalAlpha = alpha * 0.4;
+  ctx.stroke();
+  ctx.lineWidth = 1.1 + 1.6 * amp;
   ctx.shadowBlur = glow;
   ctx.globalAlpha = alpha;
   ctx.stroke();
@@ -182,7 +193,8 @@ export function renderFrame(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
 
-  const glow = (10 + 34 * amp) * (0.5 + k * 0.6);
+  const glow = (14 + 40 * amp) * (0.5 + k * 0.6);
+  const opacity = Math.min(1, Math.max(0, frame.opacity));
 
   // Ribbons: the lower group carries the motion, the upper group echoes it faintly.
   for (let i = 0; i < LOWER_RIBBONS; i++) {
@@ -195,7 +207,7 @@ export function renderFrame(
       amp,
       seconds,
       glow,
-      0.16 + 0.42 * amp,
+      (0.18 + 0.46 * amp) * opacity,
       colors.ribbons[i]!,
     );
   }
@@ -209,7 +221,7 @@ export function renderFrame(
       amp * 0.7,
       seconds + 7,
       glow * 0.7,
-      0.08 + 0.22 * amp,
+      (0.1 + 0.24 * amp) * opacity,
       colors.ribbons[i + LOWER_RIBBONS]!,
     );
   }
@@ -221,7 +233,7 @@ export function renderFrame(
   const split = shock * 5;
   for (let i = 0; i < RINGS; i++) {
     const radius = base + i * Math.min(width, height) * RING_STEP;
-    const alpha = 0.09 + 0.3 * amp + 0.15 * pulse;
+    const alpha = (0.1 + 0.32 * amp + 0.15 * pulse) * opacity;
     if (split > 0.4) {
       ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha * 0.6, colors.fromCss, -split);
       ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha * 0.6, colors.toCss, split);
@@ -234,7 +246,7 @@ export function renderFrame(
   const bloomAlpha = (0.04 + 0.26 * pulse + 0.18 * shock) * (0.6 + k * 0.4);
   const bloomRadius = base * (0.85 + 0.45 * pulse + 0.2 * amp);
   ctx.shadowBlur = 0;
-  ctx.globalAlpha = Math.min(0.6, bloomAlpha);
+  ctx.globalAlpha = Math.min(0.6, bloomAlpha) * opacity;
   ctx.setTransform(dpr * bloomRadius, 0, 0, dpr * bloomRadius, dpr * cx, dpr * cy);
   ctx.fillStyle = colors.bloom;
   ctx.fillRect(-1, -1, 2, 2);
@@ -249,7 +261,7 @@ export function renderFrame(
     ctx.strokeStyle = colors.toCss;
     ctx.shadowColor = colors.toCss;
     ctx.shadowBlur = 30 + 30 * life;
-    ctx.globalAlpha = 0.5 * life * k;
+    ctx.globalAlpha = 0.5 * life * k * opacity;
     ctx.stroke();
   }
 

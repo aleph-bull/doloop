@@ -118,6 +118,8 @@ export interface UserSettings {
     promptDismissed: boolean;
     /** Visual amplitude, glow and responsiveness, 0..1. Does not change the analysis. */
     intensity: number;
+    /** How strongly the light shows over the background, 0..1. */
+    opacity: number;
     colorMode: VisualizerColorMode;
     /** Hex colour for 'custom'. */
     color: string;
@@ -127,8 +129,15 @@ export interface UserSettings {
    * holds across devices and reinstalls - closing a prompt means never again, not
    * "until this browser forgets".
    */
+  /** The focus screen tab. */
+  focusScreen: {
+    /** Open the focus screen when a session starts: ask each time, always, or never. */
+    openOnStart: FocusOpenMode;
+  };
   dismissed: string[];
 }
+
+export type FocusOpenMode = 'ask' | 'always' | 'never';
 
 /** One row of a grading scale: everything from `minPercent` up to the next band. */
 export interface GradeBand {

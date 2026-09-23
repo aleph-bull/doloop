@@ -6,7 +6,7 @@ import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@dolo
 import { ApiError } from '../lib/api';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtDate } from '../lib/format';
-import { useMe, useRoutines, useStartSession } from '../lib/queries';
+import { useMe, useRoutines, useStartSession, useUpdateSettings } from '../lib/queries';
 
 export interface StartSessionDialogProps {
   open: boolean;
@@ -67,9 +67,12 @@ export function StartSessionDialog({
   const me = useMe();
   const routines = useRoutines();
   const start = useStartSession();
+  const update = useUpdateSettings();
   const navigate = useNavigate();
   const { toast } = useToast();
   const settings = me.data?.user.settings;
+  /** The "open the focus screen?" question, asked after a start when the setting says to. */
+  const [askFocus, setAskFocus] = useState(false);
 
   const [subject, setSubject] = useState('');
   const [style, setStyle] = useState<SessionStyle>('pomodoro');
@@ -145,12 +148,14 @@ export function StartSessionDialog({
       onClose();
       if (onStarted) onStarted();
       else {
-        // Still on the tail of the Start click, which is what lets a tab open.
-        void openFocusTab().then((r) => {
-          if (r === 'blocked')
-            toast('Started. Allow pop-ups to open the focus screen in its own tab.');
-        });
-        navigate('/');
+        const mode = settings?.focusScreen.openOnStart ?? 'ask';
+        if (mode === 'ask') {
+          // The question keeps this page mounted; the dashboard comes after the answer.
+          setAskFocus(true);
+        } else {
+          if (mode === 'always') void openAndReport();
+          navigate('/');
+        }
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
@@ -160,6 +165,22 @@ export function StartSessionDialog({
         if (!onStarted) void openFocusTab();
       } else toast(err instanceof Error ? err.message : 'Could not start');
     }
+  };
+
+  /** Open the focus tab on the tail of a click, which is what lets a tab open at all. */
+  const openAndReport = () =>
+    openFocusTab().then((r) => {
+      if (r === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
+    });
+
+  const answerFocus = (open: boolean, never = false) => {
+    setAskFocus(false);
+    if (open) void openAndReport();
+    if (never)
+      void update
+        .mutateAsync({ focusScreen: { openOnStart: 'never' } })
+        .catch(() => toast('Could not save that. Change it in Settings.'));
+    navigate('/');
   };
 
   const go = () => {
@@ -181,148 +202,171 @@ export function StartSessionDialog({
       : 'A chime plays at the end, then the session closes after a minute unless you extend it.';
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Start a session"
-      actions={
-        <>
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={go} loading={start.isPending}>
-            {confirmCut ? 'Start anyway' : 'Start'}
-          </Button>
-        </>
-      }
-    >
-      <div className="flex flex-col gap-4">
-        <Select label="Studying" value={subject} onChange={(e) => setSubject(e.target.value)}>
-          {routineOptions.length > 0 ? (
-            <>
-              <optgroup label="Tasks">
-                {leaves.map((n) => (
-                  <option key={n.id} value={nodeKey(n.id)}>
-                    {n.title}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label="Routines">
-                {routineOptions.map((o) => (
-                  <option key={routineKey(o)} value={routineKey(o)}>
-                    {o.title}
-                    {today && o.date !== today ? ` (from ${fmtDate(`${o.date}T12:00:00`)})` : ''}
-                  </option>
-                ))}
-              </optgroup>
-            </>
-          ) : (
-            leaves.map((n) => (
-              <option key={n.id} value={nodeKey(n.id)}>
-                {n.title}
-              </option>
-            ))
-          )}
-        </Select>
-
-        <div className="field">
-          <span className="field-label">How you work</span>
-          <Segmented
-            ariaLabel="Session style"
-            value={style}
-            onChange={(v) => {
-              setStyle(v as SessionStyle);
-              setConfirmCut(null);
-            }}
-            options={[
-              { value: 'pomodoro', label: 'Pomodoro' },
-              { value: 'continuous', label: 'Continuous' },
-            ]}
-          />
-          <span className="field-hint">{styleHelp}</span>
-        </div>
-
-        <div className="field">
-          <span className="field-label">How long</span>
-          <Segmented
-            ariaLabel="Session length"
-            value={duration}
-            onChange={(v) => {
-              setDuration(v as SessionDurationKind);
-              setConfirmCut(null);
-            }}
-            options={[
-              { value: 'unlimited', label: 'Unlimited' },
-              { value: 'for', label: 'For a while' },
-              { value: 'until', label: 'Until a time' },
-            ]}
-          />
-          <span className="field-hint">{durationHelp}</span>
-        </div>
-
-        {duration === 'for' && (
-          <Input
-            label="Minutes"
-            type="number"
-            min={1}
-            max={1440}
-            step={5}
-            value={minutes}
-            onChange={(e) => {
-              setMinutes(e.target.value);
-              setConfirmCut(null);
-            }}
-            hint={plannedMinutes ? `That is ${fmtLength(plannedMinutes)}` : undefined}
-          />
-        )}
-
-        {duration === 'until' && (
-          <Input
-            label="Stop at"
-            type="time"
-            value={endTime}
-            onChange={(e) => {
-              setEndTime(e.target.value);
-              setConfirmCut(null);
-            }}
-            hint={
-              plannedMinutes && plannedMinutes > 0
-                ? `${fmtLength(plannedMinutes)} from now`
-                : undefined
-            }
-          />
-        )}
-
-        {cutMessage && (
-          <p className="cut-warning" role="alert">
-            {cutMessage}
-            {cut && cut.previousBoundaryMinutes > 0 && (
+    <>
+      <Modal
+        open={askFocus}
+        onClose={() => answerFocus(false)}
+        title="Open the focus screen?"
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => answerFocus(false, true)}>
+              Never ask again
+            </Button>
+            <Button onClick={() => answerFocus(false)}>No</Button>
+            <Button variant="primary" onClick={() => answerFocus(true)}>
+              Yes
+            </Button>
+          </>
+        }
+      >
+        <p className="muted">
+          A tab of its own with just the clock and your task. You can change this any time in
+          Settings under Focus screen.
+        </p>
+      </Modal>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Start a session"
+        actions={
+          <>
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={go} loading={start.isPending}>
+              {confirmCut ? 'Start anyway' : 'Start'}
+            </Button>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <Select label="Studying" value={subject} onChange={(e) => setSubject(e.target.value)}>
+            {routineOptions.length > 0 ? (
               <>
-                {' '}
-                <button
-                  type="button"
-                  className="link-button"
-                  onClick={() => {
-                    // Snap to the clean length just below.
-                    setDuration('for');
-                    setMinutes(String(cut.previousBoundaryMinutes));
-                    setConfirmCut(null);
-                  }}
-                >
-                  Use {fmtLength(cut.previousBoundaryMinutes)} instead
-                </button>
+                <optgroup label="Tasks">
+                  {leaves.map((n) => (
+                    <option key={n.id} value={nodeKey(n.id)}>
+                      {n.title}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Routines">
+                  {routineOptions.map((o) => (
+                    <option key={routineKey(o)} value={routineKey(o)}>
+                      {o.title}
+                      {today && o.date !== today ? ` (from ${fmtDate(`${o.date}T12:00:00`)})` : ''}
+                    </option>
+                  ))}
+                </optgroup>
               </>
+            ) : (
+              leaves.map((n) => (
+                <option key={n.id} value={nodeKey(n.id)}>
+                  {n.title}
+                </option>
+              ))
             )}
-          </p>
-        )}
+          </Select>
 
-        <Toggle
-          checked={showTimer}
-          onChange={setShowTimer}
-          label="Show the timer"
-          description="You can hide the numbers and just study."
-        />
-      </div>
-    </Modal>
+          <div className="field">
+            <span className="field-label">How you work</span>
+            <Segmented
+              ariaLabel="Session style"
+              value={style}
+              onChange={(v) => {
+                setStyle(v as SessionStyle);
+                setConfirmCut(null);
+              }}
+              options={[
+                { value: 'pomodoro', label: 'Pomodoro' },
+                { value: 'continuous', label: 'Continuous' },
+              ]}
+            />
+            <span className="field-hint">{styleHelp}</span>
+          </div>
+
+          <div className="field">
+            <span className="field-label">How long</span>
+            <Segmented
+              ariaLabel="Session length"
+              value={duration}
+              onChange={(v) => {
+                setDuration(v as SessionDurationKind);
+                setConfirmCut(null);
+              }}
+              options={[
+                { value: 'unlimited', label: 'Unlimited' },
+                { value: 'for', label: 'For a while' },
+                { value: 'until', label: 'Until a time' },
+              ]}
+            />
+            <span className="field-hint">{durationHelp}</span>
+          </div>
+
+          {duration === 'for' && (
+            <Input
+              label="Minutes"
+              type="number"
+              min={1}
+              max={1440}
+              step={5}
+              value={minutes}
+              onChange={(e) => {
+                setMinutes(e.target.value);
+                setConfirmCut(null);
+              }}
+              hint={plannedMinutes ? `That is ${fmtLength(plannedMinutes)}` : undefined}
+            />
+          )}
+
+          {duration === 'until' && (
+            <Input
+              label="Stop at"
+              type="time"
+              value={endTime}
+              onChange={(e) => {
+                setEndTime(e.target.value);
+                setConfirmCut(null);
+              }}
+              hint={
+                plannedMinutes && plannedMinutes > 0
+                  ? `${fmtLength(plannedMinutes)} from now`
+                  : undefined
+              }
+            />
+          )}
+
+          {cutMessage && (
+            <p className="cut-warning" role="alert">
+              {cutMessage}
+              {cut && cut.previousBoundaryMinutes > 0 && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => {
+                      // Snap to the clean length just below.
+                      setDuration('for');
+                      setMinutes(String(cut.previousBoundaryMinutes));
+                      setConfirmCut(null);
+                    }}
+                  >
+                    Use {fmtLength(cut.previousBoundaryMinutes)} instead
+                  </button>
+                </>
+              )}
+            </p>
+          )}
+
+          <Toggle
+            checked={showTimer}
+            onChange={setShowTimer}
+            label="Show the timer"
+            description="You can hide the numbers and just study."
+          />
+        </div>
+      </Modal>
+    </>
   );
 }

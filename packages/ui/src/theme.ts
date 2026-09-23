@@ -101,6 +101,54 @@ export function applyPanelStyle(
   );
 }
 
+/** The preset hues, mirroring tokens.css, so an accent can be named as a colour without the DOM. */
+const ACCENT_PRESET_HSL: Record<string, [number, number, number]> = {
+  indigo: [240, 84, 62],
+  sky: [199, 89, 48],
+  mint: [160, 64, 42],
+  amber: [38, 92, 50],
+  rose: [346, 77, 56],
+  violet: [271, 81, 60],
+};
+
+function hslToHex(h: number, s: number, l: number): string {
+  const sat = s / 100;
+  const lig = l / 100;
+  const c = (1 - Math.abs(2 * lig - 1)) * sat;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = lig - c / 2;
+  const [r, g, b] =
+    h < 60
+      ? [c, x, 0]
+      : h < 120
+        ? [x, c, 0]
+        : h < 180
+          ? [0, c, x]
+          : h < 240
+            ? [0, x, c]
+            : h < 300
+              ? [x, 0, c]
+              : [c, 0, x];
+  const hex = (v: number) =>
+    Math.round((v + m) * 255)
+      .toString(16)
+      .padStart(2, '0');
+  return `#${hex(r)}${hex(g)}${hex(b)}`;
+}
+
+/**
+ * The accent setting ('indigo', or 'custom:<h>,<s>,<l>') as a hex colour. Computed from
+ * the setting rather than read back from <html>, which may not have been themed yet.
+ */
+export function accentHexFor(accent: string): string {
+  if (accent.startsWith('custom:')) {
+    const [h, s, l] = accent.slice(7).split(',').map(Number);
+    return hslToHex((((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62);
+  }
+  const preset = ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.indigo!;
+  return hslToHex(preset[0], preset[1], preset[2]);
+}
+
 export interface UserThemeLike {
   theme: {
     mode: 'system' | 'light' | 'dark';
