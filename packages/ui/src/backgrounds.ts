@@ -13,11 +13,12 @@ import { PHOTO_BACKGROUNDS } from './photos.generated';
  */
 
 export type BackgroundCategory =
-  'minimal' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
+  'minimal' | 'abstract' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
 
 /** Display order and labels for the grouped pickers. */
 export const BACKGROUND_CATEGORIES: Array<{ id: BackgroundCategory; label: string }> = [
   { id: 'minimal', label: 'Minimal' },
+  { id: 'abstract', label: 'Abstract' },
   { id: 'mountains', label: 'Mountains' },
   { id: 'night', label: 'Night' },
   { id: 'coast', label: 'Coast' },

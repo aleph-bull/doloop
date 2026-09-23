@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@doloop/ui';
 import { ApiError } from '../lib/api';
+import { openFocusTab } from '../lib/focus-tab';
 import { fmtDate } from '../lib/format';
 import { useMe, useRoutines, useStartSession } from '../lib/queries';
 
@@ -17,6 +18,11 @@ export interface StartSessionDialogProps {
   routine?: RoutineOccurrence | null;
   /** Suggested minutes (from the daily plan) used to prefill the length. */
   suggestedMinutes?: number | null;
+  /**
+   * After a successful start. The default goes to the dashboard and opens the focus tab;
+   * the focus screen itself passes a no-op, since it is already where the timer lives.
+   */
+  onStarted?: () => void;
 }
 
 function plusMinutesLocalTime(min: number): string {
@@ -56,6 +62,7 @@ export function StartSessionDialog({
   node,
   routine,
   suggestedMinutes,
+  onStarted,
 }: StartSessionDialogProps) {
   const me = useMe();
   const routines = useRoutines();
@@ -136,10 +143,22 @@ export function StartSessionDialog({
         showTimer,
       });
       onClose();
-      navigate('/');
+      if (onStarted) onStarted();
+      else {
+        // Still on the tail of the Start click, which is what lets a tab open.
+        void openFocusTab().then((r) => {
+          if (r === 'blocked')
+            toast('Started. Allow pop-ups to open the focus screen in its own tab.');
+        });
+        navigate('/');
+      }
     } catch (err) {
-      if (err instanceof ApiError && err.status === 409) toast('A session is already running');
-      else toast(err instanceof Error ? err.message : 'Could not start');
+      if (err instanceof ApiError && err.status === 409) {
+        toast('A session is already running');
+        // Starting again while one runs brings the focus screen forward instead.
+        onClose();
+        if (!onStarted) void openFocusTab();
+      } else toast(err instanceof Error ? err.message : 'Could not start');
     }
   };
 

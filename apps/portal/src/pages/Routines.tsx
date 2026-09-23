@@ -134,8 +134,12 @@ export function Routines() {
     const key = `${occ.routineId}:${occ.date}`;
     setBusyKey(key);
     try {
-      if (occ.done) await untick.mutateAsync({ id: occ.routineId, date: occ.date });
-      else await tick.mutateAsync({ id: occ.routineId, date: occ.date });
+      if (occ.done) {
+        await untick.mutateAsync({ id: occ.routineId, date: occ.date });
+      } else {
+        const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
+        if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
+      }
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not update that.');
     } finally {

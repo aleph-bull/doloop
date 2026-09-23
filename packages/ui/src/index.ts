@@ -20,6 +20,25 @@ export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatma
 export { Backdrop, sampleImage } from './components/Backdrop';
 export { BackgroundThumb, type BackgroundThumbProps } from './components/BackgroundThumb';
 export { LogoMark, type LogoMarkProps } from './components/LogoMark';
+export {
+  AudioVisualizer,
+  type AudioVisualizerProps,
+  type VisualizerPalette,
+} from './components/AudioVisualizer';
+export {
+  buildColors,
+  renderFrame,
+  type VisualizerColors,
+  type VisualizerFrame,
+  type VisualizerScene,
+} from './visualizer-render';
+export {
+  canCaptureAudio,
+  captureDisplayAudio,
+  type AudioCapture,
+  type AudioCaptureFailure,
+  type AudioCaptureResult,
+} from './audio-capture';
 export { LOGO_PATH, LOGO_VIEWBOX, logoSvg } from './logo';
 export { cn } from './cn';
 export {

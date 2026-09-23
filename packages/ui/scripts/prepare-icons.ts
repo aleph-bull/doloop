@@ -1,10 +1,10 @@
 /**
- * Writes every file-based copy of the Doloop mark from `src/logo.ts`:
+ * Writes every file-based copy of the Doloop mark from `src/logo.ts`, each one the white
+ * mark on the rounded indigo-to-violet tile:
  *
- *  - the portal favicon, an SVG that follows the browser's light or dark tab strip;
- *  - the apple-touch icon, opaque and square because iOS rounds and shadows it itself;
- *  - the extension's 16/48/128 icons, on a dark tile so the white mark holds up on a
- *    light toolbar as well as a dark one.
+ *  - the portal favicon, as SVG;
+ *  - the apple-touch icon, square-cornered because iOS rounds and shadows it itself;
+ *  - the extension's 16/48/128 icons.
  *
  * Run: pnpm --filter @doloop/ui prepare:icons
  */
@@ -18,12 +18,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const PORTAL_PUBLIC = resolve(HERE, '../../../apps/portal/public');
 const EXTENSION_ICONS = resolve(HERE, '../../../apps/extension/public/icons');
 
-/** The tile: the graphite the dark theme is built on. */
-const TILE = '#15171c';
-const INK = '#15171c';
-
 async function png(svg: string, size: number, out: string) {
-  await sharp(Buffer.from(svg), { density: 72 * Math.max(1, size / 100) * 4 })
+  // Rasterise well above the target size, then downsample, for clean edges at 16px.
+  await sharp(Buffer.from(svg), { density: Math.max(72, (72 * size * 4) / 64) })
     .resize(size, size)
     .png({ compressionLevel: 9 })
     .toFile(out);
@@ -31,32 +28,15 @@ async function png(svg: string, size: number, out: string) {
 }
 
 async function main() {
-  const favicon = logoSvg({
-    color: INK,
-    shade: '#fff',
-    css: [
-      '@media (prefers-color-scheme: dark){',
-      '.mark{fill:#fff}',
-      '.shade{stop-color:#000}',
-      '}',
-    ].join(''),
-  });
-  writeFileSync(resolve(PORTAL_PUBLIC, 'favicon.svg'), favicon + '\n');
+  writeFileSync(resolve(PORTAL_PUBLIC, 'favicon.svg'), logoSvg({ inset: 11 }) + '\n');
   console.log('portal/public/favicon.svg');
 
-  const touch = logoSvg({
-    color: '#fff',
-    shade: '#000',
-    tile: { fill: TILE, radius: 0, inset: 18 },
-  });
-  await png(touch, 180, resolve(PORTAL_PUBLIC, 'apple-touch-icon.png'));
+  await png(logoSvg({ inset: 12, radius: 0 }), 180, resolve(PORTAL_PUBLIC, 'apple-touch-icon.png'));
 
   // Small sizes get a tighter inset so the ribbon is not lost at 16px.
-  const icon = (inset: number) =>
-    logoSvg({ color: '#fff', shade: '#000', tile: { fill: TILE, radius: 22, inset } });
-  await png(icon(9), 16, resolve(EXTENSION_ICONS, 'icon16.png'));
-  await png(icon(15), 48, resolve(EXTENSION_ICONS, 'icon48.png'));
-  await png(icon(17), 128, resolve(EXTENSION_ICONS, 'icon128.png'));
+  await png(logoSvg({ inset: 7 }), 16, resolve(EXTENSION_ICONS, 'icon16.png'));
+  await png(logoSvg({ inset: 10 }), 48, resolve(EXTENSION_ICONS, 'icon48.png'));
+  await png(logoSvg({ inset: 11 }), 128, resolve(EXTENSION_ICONS, 'icon128.png'));
 }
 
 await main();

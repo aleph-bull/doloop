@@ -7,13 +7,7 @@ import globals from 'globals';
 
 export default tseslint.config(
   {
-    ignores: [
-      '**/dist/**',
-      '**/coverage/**',
-      '**/node_modules/**',
-      '**/.vite/**',
-      'docs/parked/**',
-    ],
+    ignores: ['**/dist/**', '**/coverage/**', '**/node_modules/**', '**/.vite/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

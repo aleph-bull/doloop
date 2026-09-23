@@ -37,7 +37,7 @@ export async function prepareThumbs(photos: ThumbSource[] = PHOTO_BACKGROUNDS): 
     totalBytes += info.size;
     console.log(`${photo.id.padEnd(14)} ${(info.size / 1024).toFixed(0).padStart(4)} KB thumb`);
   }
-  console.log(`${PHOTO_BACKGROUNDS.length} thumbs, ${(totalBytes / 1024).toFixed(0)} KB total`);
+  console.log(`${photos.length} thumbs, ${(totalBytes / 1024).toFixed(0)} KB total`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

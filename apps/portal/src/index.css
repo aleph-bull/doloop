@@ -111,6 +111,17 @@
 .brand:hover {
   text-decoration: none;
 }
+/* The mark on its tile, in the user's accent. */
+.brand-mark {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
 .logo-mark {
   display: block;
   flex: none;
@@ -780,14 +791,127 @@
   font-size: var(--text-sm);
 }
 
-/* Small screens: the nav scrolls sideways instead of clipping links. */
-.nav-inner nav {
+/* Anything that scrolls sideways (the nav tabs, a rail of cards) fades the side that
+   hides something and puts an arrow there. The wrapper is what shrinks; the track
+   inside scrolls; the arrows only exist on a side that hides content. */
+.scroll-edges {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.scroll-edges-track {
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
 }
-.nav-inner nav::-webkit-scrollbar {
+.scroll-edges-track::-webkit-scrollbar {
   display: none;
+}
+.scroll-edges.can-left > .scroll-edges-track {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--edge-fade, 44px));
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--edge-fade, 44px));
+}
+.scroll-edges.can-right > .scroll-edges-track {
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 var(--edge-fade, 44px));
+  mask-image: linear-gradient(to left, transparent 0, #000 var(--edge-fade, 44px));
+}
+.scroll-edges.can-left.can-right > .scroll-edges-track {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--edge-fade, 44px),
+    #000 calc(100% - var(--edge-fade, 44px)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--edge-fade, 44px),
+    #000 calc(100% - var(--edge-fade, 44px)),
+    transparent 100%
+  );
+}
+.scroll-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--glass-fill-strong);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  color: var(--fg-on-glass);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.scroll-arrow:hover {
+  background: var(--accent-soft);
+}
+.scroll-arrow-left {
+  left: 0;
+}
+.scroll-arrow-right {
+  right: 0;
+}
+
+/* A one-line row of cards. Cards keep a fixed width and snap as the row scrolls. */
+.rail {
+  --edge-fade: 64px;
+}
+.rail .scroll-arrow {
+  width: 36px;
+  height: 36px;
+}
+.rail .scroll-arrow-left {
+  left: -6px;
+}
+.rail .scroll-arrow-right {
+  right: -6px;
+}
+.rail-track {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+  scroll-snap-type: x proximity;
+  scroll-behavior: smooth;
+  /* Room for card shadows, which a scroller would otherwise clip. The scroll padding
+     keeps snapping from parking the first card 6px in. */
+  padding: 6px;
+  margin: -6px;
+  scroll-padding-inline: 6px;
+}
+/* Reads like the links beside it ("Manage"), not like a button. */
+.rail-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  cursor: pointer;
+}
+.rail-toggle:hover {
+  text-decoration: underline;
+}
+.rail-item {
+  flex: 0 0 min(320px, 86%);
+  scroll-snap-align: start;
+  display: flex;
+}
+.rail-item > * {
+  flex: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail-track {
+    scroll-behavior: auto;
+  }
 }
 @media (max-width: 640px) {
   .nav-link {
@@ -804,5 +928,315 @@
   .tree-row .row-actions,
   .reward-card .reward-card-tools {
     opacity: 1;
+  }
+}
+
+/* ---------- focus screen ---------- */
+/*
+ * Its own tab: a clock, the task under it, the elapsed time. Everything else fades once
+ * the hands are still. The visualizer canvas sits at z-index 0 behind `.focus-centre`,
+ * and the backdrop at -1 behind that, so the screen is the app's own background with
+ * light on it rather than a second product.
+ */
+.focus-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(14px, 3vw, 36px);
+  color: var(--fg-on-glass);
+  overflow: hidden;
+}
+.focus-screen.is-still {
+  cursor: none;
+}
+.focus-centre {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  min-height: 0;
+}
+.focus-phase {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+.focus-time {
+  font-size: clamp(4.5rem, 19vw, 14rem);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: var(--tracking-numeric);
+  /* A faint halo lifts the digits off a bright photograph without a panel behind them. */
+  text-shadow: 0 2px 40px rgb(0 0 0 / 0.25);
+}
+.focus-time-hidden {
+  opacity: 0.45;
+}
+.focus-context {
+  margin-top: 14px;
+  max-width: min(70ch, 100%);
+}
+.focus-subject {
+  font-size: clamp(var(--text-lg), 2.6vw, var(--text-2xl));
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.focus-child {
+  margin-top: 2px;
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
+.focus-for {
+  color: var(--fg-subtle);
+}
+
+.focus-progress {
+  margin-top: 26px;
+  width: min(360px, 80vw);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.focus-progress-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.focus-progress-expected {
+  color: var(--fg-subtle);
+}
+.focus-progress.is-over .focus-progress-expected {
+  color: var(--status-warn);
+}
+.focus-bar {
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg-on-glass) 16%, transparent);
+  overflow: hidden;
+}
+.focus-bar-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 1s linear;
+}
+.focus-progress.is-over .focus-bar-fill {
+  background: var(--status-warn);
+}
+
+/* The chrome: the bar at the top and the row of actions under the clock. */
+.focus-chrome {
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.focus-chrome.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.focus-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+}
+.focus-brand {
+  font-weight: 600;
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-muted);
+  padding: 0 6px;
+}
+.focus-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 28px;
+}
+.focus-bottom {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  min-height: 40px;
+}
+.focus-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+.focus-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+  border-radius: var(--radius-pill);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.focus-link:hover {
+  color: var(--fg-on-glass);
+  background: var(--accent-soft);
+}
+
+/* Now playing: a small card, never wider than a third of the screen. */
+.focus-spotify {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  width: min(380px, calc(100vw - 2 * clamp(14px, 3vw, 36px)));
+  border-radius: var(--radius-md);
+}
+.focus-spotify-art {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+.focus-spotify-art-empty {
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--fg-muted);
+}
+.focus-spotify-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.focus-spotify-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-spotify-title a {
+  color: inherit;
+}
+.focus-spotify-artist {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-spotify-state {
+  color: var(--fg-subtle);
+}
+.focus-spotify-bar {
+  margin-top: 4px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg-on-glass) 16%, transparent);
+  overflow: hidden;
+}
+.focus-spotify-bar-fill {
+  height: 100%;
+  background: var(--fg-muted);
+  transition: width 1s linear;
+}
+.focus-spotify-controls {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* The controls sheet, anchored under the gear. */
+.focus-sheet {
+  position: absolute;
+  top: calc(clamp(14px, 3vw, 36px) + 44px);
+  right: clamp(14px, 3vw, 36px);
+  z-index: 3;
+  width: min(380px, calc(100vw - 2 * clamp(14px, 3vw, 36px)));
+  max-height: calc(100vh - clamp(14px, 3vw, 36px) * 2 - 52px);
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fade-in var(--dur-slow) var(--ease-out);
+}
+.focus-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.focus-sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.focus-sheet-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.focus-swatch-input {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+.focus-swatch-input::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+.focus-swatch-input::-webkit-color-swatch {
+  border: none;
+  border-radius: 50%;
+}
+
+@media (max-width: 640px) {
+  .focus-progress {
+    margin-top: 18px;
+  }
+  .focus-actions .btn {
+    height: 36px;
+    padding: 0 10px;
+  }
+  .focus-spotify {
+    width: 100%;
+  }
+}
+/* Short, wide windows: tighten the vertical rhythm so the clock does not push the rest off. */
+@media (max-height: 520px) {
+  .focus-time {
+    font-size: clamp(3.5rem, 14vh, 8rem);
+  }
+  .focus-context,
+  .focus-progress,
+  .focus-actions {
+    margin-top: 8px;
   }
 }

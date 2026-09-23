@@ -32,6 +32,11 @@ export interface Env {
     clientSecret: string | undefined;
     redirectUri: string;
   };
+  spotify: {
+    clientId: string | undefined;
+    clientSecret: string | undefined;
+    redirectUri: string;
+  };
   tokenEncryptionKey: string | undefined;
   portalUrl: string;
 }
@@ -56,6 +61,11 @@ export function loadEnv(): Env {
         'GOOGLE_REDIRECT_URI',
         'http://localhost:8787/api/calendar/google/callback',
       )!,
+    },
+    spotify: {
+      clientId: str('SPOTIFY_CLIENT_ID'),
+      clientSecret: str('SPOTIFY_CLIENT_SECRET'),
+      redirectUri: str('SPOTIFY_REDIRECT_URI', 'http://localhost:8787/api/spotify/callback')!,
     },
     tokenEncryptionKey: str('TOKEN_ENCRYPTION_KEY'),
     portalUrl: str('PORTAL_URL', 'http://localhost:5173')!,

@@ -29,6 +29,7 @@ const Achievements = lazy(() =>
 );
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const Extension = lazy(() => import('./pages/Extension').then((m) => ({ default: m.Extension })));
+const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -96,6 +97,17 @@ export function App() {
               <RequireAuth>
                 <Gate>
                   <Onboarding />
+                </Gate>
+              </RequireAuth>
+            }
+          />
+          {/* The focus screen is its own tab with no nav or page chrome, so it sits outside the shell. */}
+          <Route
+            path="/focus"
+            element={
+              <RequireAuth>
+                <Gate>
+                  <Focus />
                 </Gate>
               </RequireAuth>
             }

@@ -8,6 +8,7 @@ import {
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Glass, Spinner } from '@doloop/ui';
+import { CardRail } from '../components/CardRail';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { Hint } from '../components/Hint';
@@ -94,6 +95,8 @@ export function Today() {
   const leaves = list.filter((n) => {
     if (n.kind === 'course' || n.completedAt) return false;
     const p = pace.data.pace[n.id];
+    // Finished work stays off Today: marked done, or its estimate already used up.
+    if (p?.status === 'done') return false;
     return !p || !standsInForChildren(p);
   });
   const totalToday = pace.data.plan.reduce((s, p) => s + p.suggestedMinutes, 0);
@@ -186,26 +189,26 @@ export function Today() {
       </Hint>
 
       {leaves.length > 0 && (
-        <section aria-label="Your tasks" className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg">Tasks</h2>
+        <CardRail
+          label="Your tasks"
+          heading={<h2 className="text-lg">Tasks</h2>}
+          actions={
             <Link to="/tasks" className="text-sm">
               Manage
             </Link>
-          </div>
-          <div className="card-grid">
-            {leaves.slice(0, 6).map((n) => (
-              <NodeCard
-                key={n.id}
-                node={n}
-                pace={pace.data.pace[n.id]}
-                plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
-                courseTitle={courseOf(n)}
-                onStart={(node) => setStartFor({ node, minutes: null })}
-              />
-            ))}
-          </div>
-        </section>
+          }
+        >
+          {leaves.map((n) => (
+            <NodeCard
+              key={n.id}
+              node={n}
+              pace={pace.data.pace[n.id]}
+              plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
+              courseTitle={courseOf(n)}
+              onStart={(node) => setStartFor({ node, minutes: null })}
+            />
+          ))}
+        </CardRail>
       )}
 
       <TrackerBoard />

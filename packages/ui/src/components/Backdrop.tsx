@@ -22,7 +22,6 @@ function applyGlass(avg: RGB | null): void {
     root.style.removeProperty('--fg-on-glass');
     root.style.removeProperty('--glass-fill');
     root.style.removeProperty('--glass-fill-strong');
-    root.style.removeProperty('--logo-shade');
     return;
   }
   const a = adaptGlassToBackdrop(avg);
@@ -32,7 +31,6 @@ function applyGlass(avg: RGB | null): void {
     '--glass-fill-strong',
     `rgb(${a.fill.join(' ')} / ${a.strongAlpha.toFixed(2)})`,
   );
-  root.style.setProperty('--logo-shade', `rgb(${a.fill.join(' ')})`);
 }
 
 /**

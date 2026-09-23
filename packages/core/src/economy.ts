@@ -106,7 +106,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 ];
 
 export type BackgroundCategory =
-  'minimal' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
+  'minimal' | 'abstract' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
 
 export interface BackgroundMeta {
   id: string;
@@ -159,11 +159,42 @@ export const BACKGROUNDS: BackgroundMeta[] = [
   // --- cities ---
   { id: 'hallstatt', name: 'Hallstatt', category: 'cities', minLevel: 8, costXp: null },
   { id: 'victoria-peak', name: 'Victoria Peak', category: 'cities', minLevel: 0, costXp: 800 },
+  // --- added 2026-09-22, all free: the user chose them to use, not to earn ---
+  { id: 'summit-glow', name: 'Summit Glow', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'highland', name: 'Highland', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'lookout', name: 'Lookout', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'polar-lights', name: 'Polar Lights', category: 'night', minLevel: 0, costXp: null },
+  { id: 'star-field', name: 'Star Field', category: 'night', minLevel: 0, costXp: null },
+  { id: 'canyon-stars', name: 'Canyon Stars', category: 'night', minLevel: 0, costXp: null },
+  { id: 'shoreline', name: 'Shoreline', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'pier', name: 'Pier at Dawn', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'kualoa', name: 'Kualoa', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'rain-front', name: 'Rain Front', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'autumn', name: 'Autumn', category: 'forest', minLevel: 0, costXp: null },
+  { id: 'pine-ridge', name: 'Pine Ridge', category: 'forest', minLevel: 0, costXp: null },
+  { id: 'cloudbreak', name: 'Cloudbreak', category: 'country', minLevel: 0, costXp: null },
+  { id: 'tundra', name: 'Tundra', category: 'country', minLevel: 0, costXp: null },
+  { id: 'wheatland', name: 'Wheatland', category: 'country', minLevel: 0, costXp: null },
+  { id: 'harbour-lights', name: 'Harbour Lights', category: 'cities', minLevel: 0, costXp: null },
+  { id: 'taipei', name: 'Taipei', category: 'cities', minLevel: 0, costXp: null },
+  { id: 'rooftops', name: 'Rooftops', category: 'cities', minLevel: 0, costXp: null },
+  { id: 'tokyo-haze', name: 'Tokyo Haze', category: 'cities', minLevel: 0, costXp: null },
+  { id: 'sherbet', name: 'Sherbet', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'lagoon', name: 'Lagoon', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'neon', name: 'Neon', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'spectrum', name: 'Spectrum', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'opal', name: 'Opal', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'nebula', name: 'Nebula', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'velvet', name: 'Velvet', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'prism', name: 'Prism', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'sea-glass', name: 'Sea Glass', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'swell', name: 'Swell', category: 'abstract', minLevel: 0, costXp: null },
 ];
 
 /** Display order and labels for the grouped pickers. */
 export const BACKGROUND_CATEGORY_LABELS: Array<{ id: BackgroundCategory; label: string }> = [
   { id: 'minimal', label: 'Minimal' },
+  { id: 'abstract', label: 'Abstract' },
   { id: 'mountains', label: 'Mountains' },
   { id: 'night', label: 'Night' },
   { id: 'coast', label: 'Coast' },

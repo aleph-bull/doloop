@@ -26,3 +26,5 @@ export * from './grades';
 export * from './rewards';
 export * from './routines';
 export * from './ics-parse';
+export * from './visualizer';
+export * from './focus';

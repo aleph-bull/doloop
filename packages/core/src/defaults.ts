@@ -71,6 +71,13 @@ export const DEFAULT_SETTINGS: UserSettings = {
     logSessions: true,
   },
   grading: { scale: UOFT_GRADE_SCALE, goalGpa: null },
+  visualizer: {
+    enabled: false,
+    promptDismissed: false,
+    intensity: 0.6,
+    colorMode: 'accent',
+    color: '#6366f1',
+  },
   dismissed: [],
 };
 

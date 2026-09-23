@@ -43,6 +43,8 @@ import {
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
+import { SpotifySettings } from '../components/focus/SpotifyNowPlaying';
+import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearQueryCache } from '../lib/persist';
@@ -465,6 +467,16 @@ export function Settings() {
                   ]}
                 />
               </div>
+            </Section>
+
+            <Section id="focus" title="Focus screen">
+              <p className="field-hint">
+                Starting a session opens the focus screen in its own tab: a large clock, the task
+                under it, and nothing else. These settings decide what else it shows.
+              </p>
+              <VisualizerSettings value={s.visualizer} onChange={patch} showPromptPreference />
+              <div className="divider" />
+              <SpotifySettings />
             </Section>
 
             <Section id="sounds" title="Sounds">

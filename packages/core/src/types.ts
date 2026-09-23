@@ -44,6 +44,8 @@ export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type PanelStyle = 'opaque' | 'glass' | 'custom';
+/** 'accent' follows the app accent, 'custom' is one chosen colour, 'gradient' sweeps from the accent. */
+export type VisualizerColorMode = 'accent' | 'custom' | 'gradient';
 export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
 
 export interface UserSettings {
@@ -105,6 +107,20 @@ export interface UserSettings {
     scale: GradeBand[];
     /** Shown against your running GPA when set. */
     goalGpa: number | null;
+  };
+  /** The focus screen's audio-reactive visualizer. Audio capture itself is per visit. */
+  visualizer: {
+    enabled: boolean;
+    /**
+     * "Never ask again": the focus screen stops offering to share audio on its own. The
+     * feature stays available from Settings and the focus screen's own controls.
+     */
+    promptDismissed: boolean;
+    /** Visual amplitude, glow and responsiveness, 0..1. Does not change the analysis. */
+    intensity: number;
+    colorMode: VisualizerColorMode;
+    /** Hex colour for 'custom'. */
+    color: string;
   };
   /**
    * Keys of one-off prompts and hints the user has closed. Server-side so a dismissal

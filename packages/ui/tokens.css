@@ -140,8 +140,6 @@
   --fg-muted: #4b5168;
   --fg-subtle: #7b819a;
   --fg-on-glass: #0f1220;
-  /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
-  --logo-shade: #fff;
 
   --border: rgb(15 18 32 / 0.08);
   --border-strong: rgb(15 18 32 / 0.16);
@@ -183,8 +181,6 @@
   --fg-muted: #b3b8cc;
   --fg-subtle: #7f8599;
   --fg-on-glass: #f2f3f8;
-  /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
-  --logo-shade: #000;
 
   --border: rgb(255 255 255 / 0.08);
   --border-strong: rgb(255 255 255 / 0.16);
@@ -225,8 +221,6 @@
     --fg-muted: #b3b8cc;
     --fg-subtle: #7f8599;
     --fg-on-glass: #f2f3f8;
-    /* The logo's shade where the ribbon crosses itself: toward the surface behind it. */
-    --logo-shade: #000;
 
     --border: rgb(255 255 255 / 0.08);
     --border-strong: rgb(255 255 255 / 0.16);

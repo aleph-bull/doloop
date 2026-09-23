@@ -324,6 +324,14 @@ export const api = {
       '/api/calendar/google/sync',
     ),
   googleDisconnect: () => request<void>('DELETE', '/api/calendar/google'),
+
+  spotifyStatus: () => request<SpotifyStatus>('GET', '/api/spotify/status'),
+  spotifyConnect: (returnTo: 'focus' | 'settings') =>
+    request<{ url: string }>('POST', '/api/spotify/connect', { returnTo }),
+  spotifyDisconnect: () => request<void>('DELETE', '/api/spotify'),
+  spotifyNowPlaying: () => request<NowPlaying>('GET', '/api/spotify/now-playing'),
+  spotifyControl: (action: 'play' | 'pause' | 'next' | 'previous') =>
+    request<{ ok: boolean }>('POST', '/api/spotify/player', { action }),
   busy: (from: string, to: string) =>
     request<{ busy: Array<{ start: string; end: string }> }>(
       'GET',
@@ -393,6 +401,37 @@ export const api = {
   importRoutineIcs: (ics: string, defaultEstimate?: number) =>
     request<ImportIcsResponse>('POST', '/api/routines/import-ics', { ics, defaultEstimate }),
 };
+
+export interface SpotifyStatus {
+  /** False when the server has no Spotify credentials: the feature is simply absent. */
+  available: boolean;
+  connected: boolean;
+  revoked?: boolean;
+  displayName?: string | null;
+  /** True for a Premium account, which is what play/pause/skip need. */
+  canControl?: boolean;
+}
+
+export interface NowPlayingItem {
+  title: string;
+  artist: string;
+  album: string | null;
+  artworkUrl: string | null;
+  durationMs: number;
+  url: string | null;
+  kind: 'track' | 'episode';
+}
+
+export type NowPlaying =
+  | { status: 'not-connected'; fetchedAt: string }
+  | { status: 'revoked'; fetchedAt: string }
+  | {
+      status: 'ok';
+      isPlaying: boolean;
+      progressMs: number | null;
+      item: NowPlayingItem | null;
+      fetchedAt: string;
+    };
 
 export interface RewardInput {
   name: string;

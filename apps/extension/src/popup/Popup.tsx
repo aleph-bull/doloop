@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Gift,
   ListChecks,
+  Maximize2,
   Pause,
   Play,
   SkipForward,
@@ -279,6 +280,22 @@ export function Popup() {
   const portal = store?.connection?.portalUrl ?? 'http://localhost:5173';
   const open = (path = '/') => chrome.tabs.create({ url: `${portal}${path}` });
 
+  /** The focus screen, in the tab it is already in if there is one, else a new one. */
+  const openFocus = async () => {
+    const url = `${portal}/focus`;
+    try {
+      const [existing] = await chrome.tabs.query({ url: `${url}*` });
+      if (existing?.id !== undefined) {
+        await chrome.tabs.update(existing.id, { active: true });
+        await chrome.windows.update(existing.windowId, { focused: true });
+        return;
+      }
+    } catch {
+      /* no tabs permission for that pattern; fall through and open one */
+    }
+    await chrome.tabs.create({ url });
+  };
+
   const goTab = (next: Tab) => {
     setTab(next);
     setError(null);
@@ -443,6 +460,16 @@ export function Popup() {
           <span className="hint tabular">{formatClock(view.workSeconds)} focused</span>
         </div>
         <div className="row">
+          <Button
+            size="sm"
+            variant="ghost"
+            icon
+            aria-label="Open the focus screen"
+            title="Open the focus screen"
+            onClick={() => void openFocus()}
+          >
+            <Maximize2 size={14} aria-hidden />
+          </Button>
           {(timer.phase === 'work' || inBreak) && (
             <Button size="sm" onClick={() => event({ type: 'pause' })} disabled={busy}>
               <Pause size={14} aria-hidden /> Pause
@@ -510,13 +537,14 @@ export function Popup() {
       return;
     }
     const end = plannedEndAt();
-    await run({
+    const started = await run({
       type: 'start',
       nodeId: selected,
       mode: modeForPlan({ style, plannedEndAt: end }),
       plannedEndAt: end,
     });
     setConfirmCut(null);
+    if (started) void openFocus();
   };
 
   const go = () => {
@@ -652,13 +680,14 @@ export function Popup() {
 
   const tickRoutine = async (o: RoutineOccurrence) => {
     setTickNote(null);
-    const r = await run<{ badges: string[] }>({
+    const r = await run<{ xpAwarded: number; badges: string[] }>({
       type: 'tick-routine',
       routineId: o.routineId,
       date: o.date,
     });
     if (!r) return;
     const parts = [`Ticked off ${o.title}`];
+    if (r.xpAwarded > 0) parts.push(`+${r.xpAwarded} XP`);
     if (r.badges.length) parts.push(`badge unlocked: ${r.badges.join(', ')}`);
     setTickNote(parts.join(' · '));
   };
@@ -676,7 +705,10 @@ export function Popup() {
       mode: modeForPlan({ style: est < workMin ? 'continuous' : 'pomodoro', plannedEndAt: end }),
       plannedEndAt: end,
     });
-    if (started) goTab('focus');
+    if (started) {
+      goTab('focus');
+      void openFocus();
+    }
   };
 
   const routinesView = () => {

@@ -27,7 +27,8 @@ export function RoutinesDueCard({
   const off = async (routineId: string, date: string) => {
     setBusy(`${routineId}:${date}`);
     try {
-      await tick.mutateAsync({ id: routineId, date });
+      const res = await tick.mutateAsync({ id: routineId, date });
+      if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not tick that off.');
     } finally {

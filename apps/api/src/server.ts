@@ -19,6 +19,7 @@ import { rewardRoutes } from './routes/rewards';
 import { routineRoutes } from './routes/routines';
 import { trackerRoutes } from './routes/trackers';
 import { gradeRoutes } from './routes/grades';
+import { spotifyRoutes, type SpotifyRouteOptions } from './routes/spotify';
 
 export interface BuildOptions {
   db: Db;
@@ -29,6 +30,8 @@ export interface BuildOptions {
   clock?: () => string;
   /** Google Calendar integration; null disables the connect flow. */
   calendar?: Partial<CalendarRouteOptions>;
+  /** Spotify integration for the focus screen; null disables the connect flow. */
+  spotify?: Partial<SpotifyRouteOptions>;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -70,6 +73,11 @@ export async function buildServer(opts: BuildOptions) {
     stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
   };
+  const spotify: SpotifyRouteOptions = {
+    deps: opts.spotify?.deps ?? null,
+    stateSecret: opts.spotify?.stateSecret ?? calendar.stateSecret,
+    portalUrl: opts.spotify?.portalUrl ?? calendar.portalUrl,
+  };
   meRoutes(app, opts.db, clock);
   nodeRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
@@ -85,6 +93,7 @@ export async function buildServer(opts: BuildOptions) {
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
   analyticsRoutes(app, opts.db, clock);
+  spotifyRoutes(app, opts.db, clock, spotify);
 
   return app;
 }

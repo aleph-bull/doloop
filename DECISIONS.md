@@ -385,8 +385,9 @@ revision during someone's shift. So:
 ### XP lives on Achievements
 
 - Outside Achievements (and the extension's Rewards tab, which is its shop), nothing quotes
-  XP amounts any more: no "+N XP" toasts on ticks, no XP breakdown or "N XP to level" after
-  a session, no XP column in the per-task session table, no XP prices on locked
+  XP amounts any more — with one exception the user asked back for: the "+N XP" pop-up when
+  a routine is ticked (portal toast, extension tick note). Gone: the XP breakdown or "N XP
+  to level" after a session, no XP column in the per-task session table, no XP prices on locked
   backgrounds in Settings ("In the shop" instead), no "N XP a tick" hint, no daily routine
   XP cap line. The end-of-session overlay leads with the minutes focused and keeps the
   level bar and a level-up chip. Levels are still named where they unlock something.
@@ -395,17 +396,17 @@ revision during someone's shift. So:
 
 ### Logo
 
-- The mark is the user's looped ribbon (their `doloop.png`), traced to a single path in a
-  100-unit box: under 0.2% of pixels differ from the original. The shadow where the stem
-  crosses the bar is two clipped radial gradients fitted to the original, not baked in, so
-  the mark can take any colour. The source of truth is `packages/ui/src/logo.ts`.
-- In the app it is `LogoMark`, in `currentColor`, so it is white on dark glass and ink on
-  light; the crossing shade follows `--logo-shade`, which leans toward the surface behind.
-- The favicon is the bare mark and swaps ink for white with the browser's colour scheme.
-  The apple-touch icon and extension icons put the white mark on a graphite tile, because a
-  white mark alone disappears on a light toolbar. All of them come from
-  `pnpm --filter @doloop/ui prepare:icons`. This supersedes the gradient-squircle favicon
-  decision above.
+- The mark is the user's looped ribbon, from their `doloop.svg`: one path, used verbatim in
+  its own coordinates, with a gap where the stem crosses the bar. It replaced a first
+  version traced from a PNG with a painted shadow at the crossing. The source of truth is
+  `packages/ui/src/logo.ts`.
+- **It keeps the rounded indigo-to-violet tile** the app always had, at the user's request.
+  The favicon, apple-touch icon and extension icons are the white mark on that tile
+  (`#5b55eb` to `#8a5cf6`, corners 14.5 of 64), all written by
+  `pnpm --filter @doloop/ui prepare:icons`. The apple-touch icon has square corners because
+  iOS rounds it itself.
+- In the app, `.brand-mark` is the same 22px tile as before, in the user's accent gradient,
+  with `LogoMark` (white, `currentColor`) inside instead of the old CSS-drawn ring.
 
 ### Background thumbnails
 
@@ -413,3 +414,164 @@ revision during someone's shift. So:
   Each photo now has a 640px WebP thumbnail (`public/backgrounds/thumbs/`, 435 KB for all
   19), lazy-loaded over the placeholder. `prepare:thumbs` derives them from the shipped
   2560px images, so it runs without the source photos; `prepare:backgrounds` calls it.
+
+## More backgrounds, scrollable nav and task row (user request, 2026-09-22)
+
+### Backgrounds
+
+- 29 more photographs, 48 in all. The originals were in the user's Downloads, so they were
+  processed from full resolution and credited by the name or handle in each filename
+  (Unsplash, Pexels, Pixabay — all free to use without attribution). `CREDITS.md` says so.
+- **A new Abstract category** holds the gradients: the eight Codioful gradients plus the
+  green light-leak and the teal wave. It sits right after Minimal in the pickers.
+- **All of the new ones are free** (level 0, no price): the user picked them to use, not
+  to earn. The existing locked ones keep their locks.
+- No id is `aurora`: the tests (and old settings) rely on it falling back to Graphite.
+- All 288 contrast checks still pass; the glass adapts to each photo's average colour.
+
+### Scrolling rows
+
+- **Nav:** when the bar is too narrow for every tab, the tabs scroll sideways and a round
+  arrow appears on each side that hides a tab — only that side, only while something is
+  hidden — over a fade. Arriving on a tab from elsewhere scrolls it into view. The streak
+  and level no longer wrap onto two lines when the bar is tight.
+- **Today's tasks** are one row (`CardRail`): fixed-width cards that snap as they scroll,
+  the same edge arrows, and "See all N" to unfold the row into a wrapping grid ("Show
+  less" folds it back). The old cap of six cards is gone — the row holds them all.
+- **Finished tasks stay off Today**: marked done, or with the estimate used up (pace
+  status "done").
+- Both use one hook, `useScrollEdges`, and one set of styles (`.scroll-edges`,
+  `.scroll-arrow`), so any future sideways list behaves the same way.
+
+## Focus screen, second attempt: its own tab, a visualizer, Spotify (user request, 2026-09-22)
+
+The parked first attempt (`docs/parked/focus-visualizer`, 2026-09-21) is superseded and
+deleted; git still has it. Nothing from it was moved back: the screen, the capture, the
+analysis and the drawing were all rebuilt to the new brief.
+
+### A tab, not a page
+
+- **`/focus` is a browser tab of its own, not a section of the app.** It renders outside
+  `AppShell` (no nav, no page chrome) and has no link in the navigation. Starting a session
+  anywhere opens it: the Start dialog (Today, Tasks, Routines), the timer card's expand
+  button, and the extension popup (`chrome.tabs`). Closing the tab changes nothing: the
+  server owns the session, so the dashboard card carries on and the tab can be reopened.
+- **One tab, reused.** Before opening, the caller pings a `BroadcastChannel` and waits
+  180 ms. A tab this page opened is a named window (`doloop-focus`) and can be focused
+  through `window.open('', name)`; one opened by the extension or typed in by hand
+  answers the ping but cannot be pulled forward (browsers do not let a background tab take
+  focus), so the caller says "open in another tab" rather than opening a second. The
+  focus tab refetches the session when pinged, so a session started on the dashboard
+  appears there at once rather than on the next poll.
+- **The focus tab owns the alert sounds while it is open.** It heartbeats every two
+  seconds; the dashboard mutes its own chimes while it hears one, so a block boundary
+  rings once, not twice.
+- **`useSessionController` is the timer; the card and the screen are views.** The tick,
+  the events, idle detection, sounds and the whole end flow with its four dialogs moved
+  out of `TimerCard` into `lib/session-controller.tsx`. The focus screen runs the same hook,
+  so neither surface holds timer state the other lacks, and a pause on one shows on the
+  other on its next fetch.
+- **Leaving:** Escape or the X calls `window.close()`, which only works on a tab a script
+  opened; a hand-opened tab falls through to the dashboard 150 ms later.
+
+### What the screen says
+
+- **Subject and child come from the node tree** (`focusContext` in core): the root course
+  and the task under it. A root task is its own subject with no child line; a routine
+  session shows the routine's title alone. Rendered as "ECO220 / for Unit 1".
+- **Elapsed is this session's focused time**, ticking on independently of the pomodoro
+  countdown. **Expected** is the task's estimate; without one, a length the user chose for
+  the session; without that, a routine's estimate; otherwise nothing, and there is no bar
+  (`expectedMinutes`, `focusProgress` in core). Going past the expectation fills the bar,
+  turns it amber and says "past the 1:00:00 expected" rather than clamping quietly.
+- An unlimited session's clock already is the elapsed time, so the elapsed line is
+  dropped there unless there is an expectation to measure it against.
+- **Ending on the focus screen** shows the minutes and, with phrases on, the phrase, then
+  offers "Start another" or "Close". The reward overlay stays on Today; a second copy of it
+  is not what a focus room is for.
+
+### The visualizer
+
+- **No bars.** Four ribbons drift across the bottom fifth of the screen and two fainter
+  ones across the top, three fluid rings sit around the clock, a bloom behind the digits
+  lifts on a kick, and a single ring rolls out from the centre on a drop, with the rings
+  splitting briefly into the two palette colours. Everything is stroked with
+  `shadowBlur` and composited with `lighter`, then masked so nothing ends on a hard edge.
+  The ribbon bands were moved out to 5-19% and 73-94% of the height after the first pass
+  crossed the progress text.
+- **Ring noise uses whole-number harmonics of the angle** so a ring closes on itself;
+  the free-running ribbon noise left a visible seam at the rightmost point.
+- **Analysis lives in core** (`visualizer.ts`, 19 tests) and drawing in
+  `packages/ui/src/visualizer-render.ts` as a pure function over a context; the React
+  component owns only the canvas, its size and the loop. That split is what let the
+  picture be checked at all: the Claude browser pane never fires an animation frame, so
+  the renderer was driven by hand on a full-size canvas with a scripted drop.
+- **The low end is 20-140 Hz**, RMS over those bins, never the spectrum's mean. A hit is
+  the low end at 1.4x its rolling average over the last 1.5 s _and rising this frame_
+  (a sustained kick is one hit, not one per refractory period); 2.1x is a drop. A
+  brickwalled track sits at ratio 1 and fires nothing, which the tests pin down.
+- **Attack is near-immediate, release exponential** (`smooth()`, 40/s up and 4.5/s
+  down), frame-rate independent; a stalled frame after a hidden tab is clamped to 100 ms
+  so nothing snaps. Pulse and shock are envelopes that only ever decay.
+- **Idle breathes**: three sines that never line up, so silence drifts rather than
+  freezing or pulsing. Under audio the breath stays as a floor so a quiet passage never
+  goes still.
+- **Intensity scales amplitude, glow and alpha only**; the analysis does not change.
+  **Colour** is accent (read back from `--accent`, so a custom accent counts), a custom
+  hex, or a gradient from the accent to a hue 70 degrees on (`visualizerPalette` in core).
+- **Performance:** typed arrays and a fixed ring buffer, no per-frame allocations beyond
+  the mask gradient; colour strings and the bloom gradient rebuilt only when the palette
+  changes; DPR capped at 1.5 and dropped to 1 after 45 slow frames; the loop stops on a
+  hidden tab and restarts on show; the first frame is drawn synchronously so the light is
+  there with the canvas. Reduced motion draws that one frame and stops.
+
+### Audio permission
+
+- **Display audio, never the microphone.** `getDisplayMedia({ video, audio })`, video track
+  stopped at once, audio never connected to the output. Browsers do not remember the share,
+  so the state is idle on every visit and capture only starts from a click.
+- **The modal is the click.** It appears 900 ms after the timer, once per visit, with
+  **Yes / No / Never ask again**. Yes turns the visualizer on (if it was off) and starts
+  the browser's picker on that same click; No closes it until next visit; Never sets
+  `visualizer.promptDismissed`, which only stops the automatic prompt. The controls sheet
+  and Settings can still turn the visualizer on and share audio afterwards.
+- **Four failures are states, not errors:** unsupported, dismissed, shared without audio,
+  stopped from the browser's banner. Each is a line under the Share button; the picture
+  idles through all of them. Turning the visualizer off releases the share.
+- **Settings** has the on/off toggle, "Never ask again", intensity and colour, under a
+  new "Focus screen" group; the focus screen's controls sheet shows the same component
+  plus Share audio, since the share belongs to the tab that draws.
+
+### Spotify
+
+- **The API owns the tokens, like Google Calendar.** Same separate consent flow, same
+  signed `state` (now `services/oauth-state.ts`, shared with the calendar route and
+  carrying a return-to so the callback lands on the focus screen or Settings), refresh
+  token encrypted with `TOKEN_ENCRYPTION_KEY`, in a `spotify_connections` table
+  (migration `0007_spotify`). The access token is cached encrypted with its expiry so a
+  poll every five seconds refreshes once an hour, not every time; a token that dies early
+  is retried once with a fresh one; a refresh that fails marks the row revoked and the
+  card offers Reconnect.
+- **Scopes are the three playback ones** and nothing about the library. Play, pause and
+  skip show only for a Premium account (`product` from `/me`); Spotify's refusals
+  (no active device, not premium) come back as 409 with a reason and become a toast.
+- **The portal polls `/api/spotify/now-playing` every 5 s only while the focus tab is
+  visible**, keeps the last answer on an error ("last known"), and never persists it to
+  disk (`['spotify']` is volatile). The progress bar moves by the clock between polls.
+- **Not configured on the server means not shown at all**: no "Connect" that cannot
+  work. Not connected is one quiet link; connected with nothing playing is one line.
+  Twelve API tests cover the flow with an in-memory Spotify.
+
+### Verified in the browser pane
+
+Starting from the dashboard reused the already-open focus tab; the tab picked the session
+up on the ping; countdown, elapsed and the 1:00:00 expectation from the task's estimate;
+the prompt, Yes (enable + share request), Never ask again and the reload without a prompt;
+gradient and intensity written through the sheet and read back from the API; pause on the
+focus screen showing as Paused on the dashboard, and resume; phone width and a 960x460
+window; closing the tab with the session carrying on; the stop flow through "End early?"
+and the review to the saved state. The renderer was checked by driving `renderFrame`
+directly: idle, a scripted drop (shock ring, bloom) and a loud gradient passage with no
+false hits. Not checkable here: a real screen share (the pane blocks capture), a real
+Spotify account, a new tab actually opening (the pane navigates in place), and the
+extension inside Chrome (it builds).

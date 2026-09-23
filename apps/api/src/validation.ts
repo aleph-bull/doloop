@@ -181,6 +181,15 @@ export const settingsSchema = z
         goalGpa: z.number().min(0).max(10).nullable(),
       })
       .partial(),
+    visualizer: z
+      .object({
+        enabled: z.boolean(),
+        promptDismissed: z.boolean(),
+        intensity: z.number().min(0).max(1),
+        colorMode: z.enum(['accent', 'custom', 'gradient']),
+        color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+      })
+      .partial(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),
   })
   .partial()

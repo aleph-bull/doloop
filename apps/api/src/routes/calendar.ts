@@ -1,6 +1,5 @@
 import type { FastifyInstance } from 'fastify';
 import { findFreeSlots } from '@doloop/core';
-import { createHmac, timingSafeEqual } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -17,6 +16,7 @@ import {
 } from '../services/calendar-sync';
 import { buildIcs } from '../services/ics';
 import { listNodes } from '../services/nodes';
+import { signState, verifyState } from '../services/oauth-state';
 import { loadCompletedSessions, paceContext } from '../services/pace';
 import { listBlocks } from '../services/planned-blocks';
 import { listRoutines } from '../services/routines';
@@ -28,23 +28,6 @@ export interface CalendarRouteOptions {
   /** Secret for signing the OAuth state parameter. */
   stateSecret: string;
   portalUrl: string;
-}
-
-function signState(userId: string, secret: string): string {
-  const ts = Date.now().toString(36);
-  const sig = createHmac('sha256', secret).update(`${userId}.${ts}`).digest('base64url');
-  return `${userId}.${ts}.${sig}`;
-}
-
-function verifyState(state: string, secret: string): string | null {
-  const [userId, ts, sig] = state.split('.');
-  if (!userId || !ts || !sig) return null;
-  const expect = createHmac('sha256', secret).update(`${userId}.${ts}`).digest('base64url');
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expect);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
-  if (Date.now() - parseInt(ts, 36) > 15 * 60_000) return null;
-  return userId;
 }
 
 export function calendarRoutes(

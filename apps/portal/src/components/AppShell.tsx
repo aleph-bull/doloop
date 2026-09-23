@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { Flame, LogOut, Settings as SettingsIcon, WifiOff } from 'lucide-react';
 import {
-  applyTheme,
-  applyUserTheme,
-  Backdrop,
-  Button,
-  Glass,
-  LogoMark,
-  resolveTheme,
-} from '@doloop/ui';
-import { CUSTOM_BACKGROUND_UPLOAD } from '@doloop/core';
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  LogOut,
+  Settings as SettingsIcon,
+  WifiOff,
+} from 'lucide-react';
+import { Backdrop, Button, Glass, LogoMark } from '@doloop/ui';
+import { useAppearance } from '../lib/appearance';
 import { useAuth } from '../lib/auth';
 import { useOnlineStatus } from '../lib/local-state';
-import { useCustomBackground, useMe } from '../lib/queries';
+import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
+import { useScrollEdges } from '../lib/scroll-edges';
 import { ErrorBoundary } from './ErrorState';
 
 const links = [
@@ -35,24 +35,8 @@ export function AppShell() {
   const online = useOnlineStatus();
   // Hands the session to the Chrome extension whenever the shell mounts.
   useExtensionStatus();
-
-  useEffect(() => {
-    if (settings) applyUserTheme(settings);
-  }, [settings]);
-
-  // Follow OS theme changes while in system mode.
-  useEffect(() => {
-    if (!settings || settings.theme.mode !== 'system') return;
-    const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const onChange = () =>
-      applyTheme({
-        mode: 'system',
-        accent: settings.theme.accent.startsWith('custom:') ? 'custom' : settings.theme.accent,
-        reducedMotion: settings.effects.reducedMotion,
-      });
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, [settings]);
+  // Theme, accent, motion and backdrop: the same hook the focus screen uses.
+  const appearance = useAppearance(settings);
 
   // The active pill is one element that slides and resizes between links, so a tab
   // change reads as movement rather than a jump.
@@ -92,9 +76,27 @@ export function AppShell() {
     [placeIndicator],
   );
 
+  // When the bar is too narrow for every tab, the tabs scroll sideways, with an arrow
+  // on each side that hides one.
+  const {
+    edges: overflow,
+    measure: measureOverflow,
+    scrollByPage: scrollTabs,
+  } = useScrollEdges(navRef);
+
   useLayoutEffect(() => {
     measureIndicator();
-  }, [measureIndicator, location.pathname]);
+    // Arriving on a tab from elsewhere should never leave it scrolled out of sight.
+    const nav = navRef.current;
+    const active = nav?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
+    if (nav && active) {
+      const start = active.offsetLeft;
+      const end = start + active.offsetWidth;
+      if (start < nav.scrollLeft) nav.scrollLeft = start - 32;
+      else if (end > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = end - nav.clientWidth + 32;
+    }
+    measureOverflow();
+  }, [measureIndicator, measureOverflow, location.pathname]);
 
   useEffect(() => {
     const nav = navRef.current;
@@ -111,23 +113,14 @@ export function AppShell() {
     };
   }, [measureIndicator]);
 
-  const theme = resolveTheme(settings?.theme.mode ?? 'system');
-  const uploaded = useCustomBackground(
-    settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD,
-  );
-  const customImageUrl =
-    settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD
-      ? (uploaded.data?.dataUrl ?? null)
-      : null;
-
   const user = me.data?.user;
 
   return (
     <>
       <Backdrop
-        backgroundId={settings?.theme.backgroundId ?? 'aurora'}
-        theme={theme}
-        customImageUrl={customImageUrl}
+        backgroundId={appearance.backgroundId}
+        theme={appearance.theme}
+        customImageUrl={appearance.customImageUrl}
       />
       <a href="#main" className="skip-link">
         Skip to content
@@ -135,38 +128,70 @@ export function AppShell() {
       <Glass as="header" className="nav" strong>
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Doloop home">
-            <LogoMark size={22} />
+            <span className="brand-mark" aria-hidden>
+              <LogoMark size={14} />
+            </span>
             <span>Doloop</span>
           </NavLink>
-          <nav
-            ref={navRef}
-            className="nav-primary flex items-center gap-1 ml-2"
-            aria-label="Primary"
+          <div
+            className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${
+              overflow.right ? ' can-right' : ''
+            }`}
           >
-            <span
-              className={`nav-indicator${indicator.animate ? ' is-animated' : ''}`}
-              style={{
-                opacity: indicator.width ? 1 : 0,
-                width: `${indicator.width}px`,
-                transform: `translate3d(${indicator.left}px, 0, 0)`,
-              }}
-              aria-hidden
-            />
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                end={l.to === '/'}
-                className="nav-link"
-                onClick={onNavClick}
+            {overflow.left && (
+              <button
+                type="button"
+                className="scroll-arrow scroll-arrow-left"
+                tabIndex={-1}
+                aria-hidden
+                title="More tabs"
+                onClick={() => scrollTabs(-1)}
               >
-                {l.label}
-              </NavLink>
-            ))}
-          </nav>
+                <ChevronLeft size={16} aria-hidden />
+              </button>
+            )}
+            <nav
+              ref={navRef}
+              className="nav-primary scroll-edges-track flex items-center gap-1"
+              aria-label="Primary"
+            >
+              <span
+                className={`nav-indicator${indicator.animate ? ' is-animated' : ''}`}
+                style={{
+                  opacity: indicator.width ? 1 : 0,
+                  width: `${indicator.width}px`,
+                  transform: `translate3d(${indicator.left}px, 0, 0)`,
+                }}
+                aria-hidden
+              />
+              {links.map((l) => (
+                <NavLink
+                  key={l.to}
+                  to={l.to}
+                  end={l.to === '/'}
+                  className="nav-link"
+                  onClick={onNavClick}
+                >
+                  {l.label}
+                </NavLink>
+              ))}
+            </nav>
+            {overflow.right && (
+              <button
+                type="button"
+                className="scroll-arrow scroll-arrow-right"
+                tabIndex={-1}
+                aria-hidden
+                title="More tabs"
+                onClick={() => scrollTabs(1)}
+              >
+                <ChevronRight size={16} aria-hidden />
+              </button>
+            )}
+          </div>
           <div className="flex-1" />
           {user && (
-            <div className="hidden sm:flex items-center gap-3 text-sm mr-1">
+            <div className="hidden sm:flex items-center gap-3 text-sm mr-1 shrink-0 whitespace-nowrap">
               <span className="inline-flex items-center gap-1" title="Current streak">
                 <Flame size={16} aria-hidden />
                 <span className="tabular">{user.streak.current}</span>

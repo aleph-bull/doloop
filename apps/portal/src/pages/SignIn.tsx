@@ -35,7 +35,9 @@ export function SignIn() {
       <main className="min-h-screen flex items-center justify-center p-4">
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
           <div>
-            <LogoMark size={40} className="mb-3" />
+            <div className="brand-mark mb-3" aria-hidden>
+              <LogoMark size={14} />
+            </div>
             <h1 className="text-2xl">Doloop</h1>
             <p className="muted text-sm mt-1">Plan the work. Keep the pace.</p>
           </div>

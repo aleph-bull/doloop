@@ -4,6 +4,8 @@ import { loadEnv } from './env';
 import { buildServer } from './server';
 import { createGoogleClient } from './services/google';
 import type { CalendarDeps } from './services/calendar-sync';
+import { createSpotifyClient } from './services/spotify';
+import type { SpotifyDeps } from './services/spotify-connection';
 
 const env = loadEnv();
 
@@ -47,6 +49,22 @@ if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
   );
 }
 
+let spotifyDeps: SpotifyDeps | null = null;
+if (env.spotify.clientId && env.spotify.clientSecret && env.tokenEncryptionKey) {
+  spotifyDeps = {
+    spotify: createSpotifyClient({
+      clientId: env.spotify.clientId,
+      clientSecret: env.spotify.clientSecret,
+      redirectUri: env.spotify.redirectUri,
+    }),
+    encryptionKey: env.tokenEncryptionKey,
+  };
+} else {
+  console.warn(
+    '[api] Spotify disabled (set SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, TOKEN_ENCRYPTION_KEY).',
+  );
+}
+
 const app = await buildServer({
   db,
   verifier,
@@ -57,6 +75,7 @@ const app = await buildServer({
     stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',
     portalUrl: env.portalUrl,
   },
+  spotify: { deps: spotifyDeps },
 });
 
 const shutdown = async () => {
