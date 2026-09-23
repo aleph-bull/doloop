@@ -153,7 +153,8 @@ export function StartSessionDialog({
           // The question keeps this page mounted; the dashboard comes after the answer.
           setAskFocus(true);
         } else {
-          if (mode === 'always') void openAndReport();
+          // Still within the Start click's activation, which is what lets a tab open.
+          if (mode === 'always') openAndReport();
           navigate('/');
         }
       }
@@ -162,23 +163,25 @@ export function StartSessionDialog({
         toast('A session is already running');
         // Starting again while one runs brings the focus screen forward instead.
         onClose();
-        if (!onStarted) void openFocusTab();
+        if (!onStarted) openFocusTab();
       } else toast(err instanceof Error ? err.message : 'Could not start');
     }
   };
 
-  /** Open the focus tab on the tail of a click, which is what lets a tab open at all. */
-  const openAndReport = () =>
-    openFocusTab().then((r) => {
-      if (r === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
-    });
+  /** Open the focus tab on the click itself, which is what lets a tab open at all. */
+  const openAndReport = () => {
+    const r = openFocusTab();
+    if (r === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
+    if (r === 'focused') toast('The focus screen is open in another tab.');
+  };
 
-  const answerFocus = (open: boolean, never = false) => {
+  /** The prompt's answer: open this time or not, and optionally make that the rule. */
+  const answerFocus = (open: boolean, remember?: 'always' | 'never') => {
     setAskFocus(false);
-    if (open) void openAndReport();
-    if (never)
+    if (open) openAndReport();
+    if (remember)
       void update
-        .mutateAsync({ focusScreen: { openOnStart: 'never' } })
+        .mutateAsync({ focusScreen: { openOnStart: remember } })
         .catch(() => toast('Could not save that. Change it in Settings.'));
     navigate('/');
   };
@@ -209,8 +212,11 @@ export function StartSessionDialog({
         title="Open the focus screen?"
         actions={
           <>
-            <Button variant="ghost" onClick={() => answerFocus(false, true)}>
-              Never ask again
+            <Button variant="ghost" onClick={() => answerFocus(false, 'never')}>
+              Never open it
+            </Button>
+            <Button variant="ghost" onClick={() => answerFocus(true, 'always')}>
+              Always open it
             </Button>
             <Button onClick={() => answerFocus(false)}>No</Button>
             <Button variant="primary" onClick={() => answerFocus(true)}>
@@ -220,8 +226,8 @@ export function StartSessionDialog({
         }
       >
         <p className="muted">
-          A tab of its own with just the clock and your task. You can change this any time in
-          Settings under Focus screen.
+          A tab of its own with just the clock and your task. Always and Never remember the answer;
+          change it any time in Settings under Focus screen.
         </p>
       </Modal>
       <Modal

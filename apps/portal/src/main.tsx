@@ -6,6 +6,7 @@ import { ToastProvider, applyTheme } from '@doloop/ui';
 import { DEFAULT_SETTINGS } from '@doloop/core';
 import './index.css';
 import { App } from './App';
+import { AchievementToasts } from './components/AchievementUnlocked';
 import { AuthProvider } from './lib/auth';
 import { unlockAudio } from './lib/sounds';
 import { restoreQueryCache } from './lib/persist';
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
         <ToastProvider>
           <BrowserRouter>
             <App />
+            <AchievementToasts />
           </BrowserRouter>
         </ToastProvider>
       </AuthProvider>

@@ -108,12 +108,6 @@ export function Today() {
         <div className="min-w-0">
           <h1 className="text-3xl">{greeting.salutation}</h1>
           <p className="greeting-line">{greeting.line}</p>
-          {totalToday > 0 && (
-            <p className="muted text-sm mt-1">
-              About {fmtMinutes(totalToday)} across {pace.data.plan.length} item
-              {pace.data.plan.length === 1 ? '' : 's'} today.
-            </p>
-          )}
         </div>
         {!active.data?.active && (
           <Button variant="primary" onClick={() => setStartFor({ node: null, minutes: null })}>
@@ -136,12 +130,19 @@ export function Today() {
           settings={settings}
           nodes={list}
           onEnded={setSummary}
+          footer={<QuoteCard inline />}
         />
       ) : (
         <PlanCard
           plan={pace.data.plan}
           nodesById={nodesById}
           onStart={(node, minutes) => setStartFor({ node, minutes })}
+          todayLine={
+            totalToday > 0
+              ? `About ${fmtMinutes(totalToday)} across ${pace.data.plan.length} item${pace.data.plan.length === 1 ? '' : 's'} today`
+              : null
+          }
+          footer={<QuoteCard inline />}
         />
       )}
 
@@ -154,7 +155,6 @@ export function Today() {
         }
       />
       <FollowUpPrompt />
-      <QuoteCard />
 
       <Hint
         id="rest-days"

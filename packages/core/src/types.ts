@@ -123,6 +123,10 @@ export interface UserSettings {
     colorMode: VisualizerColorMode;
     /** Hex colour for 'custom'. */
     color: string;
+    /** The layers: waves across the top and bottom, circles around the clock, the glowing edge. */
+    ribbons: boolean;
+    rings: boolean;
+    border: boolean;
   };
   /**
    * Keys of one-off prompts and hints the user has closed. Server-side so a dismissal

@@ -16,7 +16,7 @@ import {
   AudioVisualizer,
   Backdrop,
   Button,
-  Chip,
+  fireConfetti,
   Glass,
   Spinner,
   useToast,
@@ -30,6 +30,7 @@ import {
   useActiveSession,
   useMe,
   useNodes,
+  usePace,
   useRoutines,
   useUpdateSettings,
 } from '../lib/queries';
@@ -42,6 +43,8 @@ import { TaskContext } from '../components/focus/TaskContext';
 import { TimerDisplay } from '../components/focus/TimerDisplay';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { StartSessionDialog } from '../components/StartSessionDialog';
+import { SessionSummary } from '../components/SessionSummary';
+import { announceAchievements } from '../lib/achievements';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
@@ -136,10 +139,8 @@ export function Focus() {
     void patch({ visualizer: { promptDismissed: true } });
   };
 
-  // Turning the visualizer off releases the share as well.
-  useEffect(() => {
-    if (vis && !vis.enabled) audio.stop();
-  }, [vis, audio]);
+  // Turning the visualizer off keeps the audio share: it lives for the whole visit, until
+  // "Stop listening", the browser's own banner, or the tab closing.
 
   // From the setting, not the DOM: <html> is themed in an effect, after this has rendered.
   const accent = accentHexFor(settings?.theme.accent ?? 'indigo');
@@ -208,6 +209,7 @@ export function Focus() {
           getCapture={audio.getCapture}
           intensity={vis.intensity}
           opacity={vis.opacity}
+          layers={{ ribbons: vis.ribbons, rings: vis.rings, border: vis.border }}
           palette={palette}
         />
       )}
@@ -240,31 +242,23 @@ export function Focus() {
           onEnded={(s) => {
             setSummary(s);
             void qc.invalidateQueries({ queryKey: keys.active });
+            if (s.confetti && settings.effects.confetti) fireConfetti();
+            window.setTimeout(() => announceAchievements(s.badges), 600);
           }}
         />
       ) : summary ? (
         <main className="focus-centre">
-          <div className="focus-phase">Session saved</div>
-          <div className="focus-time tabular">{Math.round(summary.session.workSeconds / 60)}</div>
-          <div className="focus-context">
-            <div className="focus-subject">minutes focused</div>
-            {settings.effects.phrases && summary.phrase && (
-              <div className="focus-child">{summary.phrase.text}</div>
-            )}
-            {summary.leveledUp && (
-              <div className="mt-2">
-                <Chip>Level {summary.levelAfter}</Chip>
-              </div>
-            )}
-          </div>
-          <div className="focus-actions">
-            <Button variant="primary" onClick={() => setStartOpen(true)}>
-              Start another
-            </Button>
-            <Button variant="ghost" onClick={leave}>
-              Close
-            </Button>
-          </div>
+          <Glass className="focus-summary" strong>
+            <SessionSummary summary={summary} phrasesEnabled={settings.effects.phrases} />
+            <div className="focus-actions" style={{ marginTop: 20 }}>
+              <Button variant="primary" onClick={() => setStartOpen(true)}>
+                Start another
+              </Button>
+              <Button variant="ghost" onClick={leave}>
+                Close
+              </Button>
+            </div>
+          </Glass>
         </main>
       ) : (
         <main className="focus-centre">
@@ -348,6 +342,7 @@ interface FocusSessionProps {
 function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: FocusSessionProps) {
   const ctl = useSessionController({ active, settings, nodes, onEnded });
   const routines = useRoutines();
+  const pace = usePace();
   const { timer, view } = ctl;
 
   const index = useMemo(() => buildIndex(nodes), [nodes]);
@@ -361,7 +356,12 @@ function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: Focus
     startedAt: active.session.startedAt,
     plannedEndAt: active.session.plannedEndAt,
   });
-  const progress = focusProgress(view.workSeconds, expected);
+  // Work already logged on the task (pace counts finished sessions only), so the elapsed
+  // figure starts where the task stands rather than at zero.
+  const prior = active.session.nodeId
+    ? (pace.data?.pace[active.session.nodeId]?.loggedWorkMinutes ?? 0) * 60
+    : 0;
+  const progress = focusProgress(view.workSeconds, expected, prior);
   // An unlimited session's clock already is the elapsed time; repeating it says nothing.
   const showProgress = !(timer.mode === 'unlimited' && progress.fraction === null);
 

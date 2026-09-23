@@ -1,5 +1,6 @@
 import {
   advance,
+  badgeByKey,
   DEFAULT_BACKGROUND_ID,
   DEFAULT_SETTINGS,
   describeCut,
@@ -33,6 +34,7 @@ import {
   Backdrop,
   Button,
   Chip,
+  fireConfetti,
   fireRewardBurst,
   Glass,
   resolveExtensionBackdrop,
@@ -183,6 +185,13 @@ export function Popup() {
       })
       .catch(() => {});
   }, [store?.connection, store?.snapshot, store?.quoteShownOn]);
+
+  // A session's end throws confetti in the popup too, more when it unlocked something.
+  useEffect(() => {
+    if (!summary) return;
+    if (settings?.effects.confetti === false) return;
+    fireConfetti({ count: summary.badges.length > 0 ? 90 : 50, durationMs: 1500 });
+  }, [summary, settings?.effects.confetti]);
 
   const nodesById = useMemo(
     () => new Map((snapshot?.nodes ?? []).map((n) => [n.id, n] as const)),
@@ -337,7 +346,11 @@ export function Popup() {
           <div className="xp">{fmtLength(summary.workMinutes)} focused</div>
           {summary.endedEarly && <p>Ended early. The minutes still count.</p>}
           {summary.routineTicked && <p>Ticked off.</p>}
-          {summary.badges.length > 0 && <p>Badge unlocked: {summary.badges.join(', ')}</p>}
+          {summary.badges.length > 0 && (
+            <p className="good">
+              Achievement unlocked: {summary.badges.map((k) => badgeByKey(k)?.name ?? k).join(', ')}
+            </p>
+          )}
           <p>Session saved. Details are in the portal.</p>
           <Button variant="primary" onClick={() => setSummary(null)}>
             Done

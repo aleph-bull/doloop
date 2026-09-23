@@ -41,14 +41,17 @@ export interface FocusProgress {
 }
 
 /**
- * Progress against an expected length. Nothing is invented: with no expectation the
+ * Progress against an expected length. `elapsedSeconds` is this session's focused time;
+ * `priorSeconds` is work already logged on the task before it, so the bar starts where
+ * the task stands rather than at zero. Nothing is invented: with no expectation the
  * fraction is null, and running over is reported rather than clamped away.
  */
 export function focusProgress(
   elapsedSeconds: number,
   expectedMinutes: number | null | undefined,
+  priorSeconds = 0,
 ): FocusProgress {
-  const elapsed = Math.max(0, elapsedSeconds);
+  const elapsed = Math.max(0, elapsedSeconds) + Math.max(0, priorSeconds);
   if (expectedMinutes === null || expectedMinutes === undefined || expectedMinutes <= 0) {
     return { elapsedSeconds: elapsed, expectedSeconds: null, fraction: null, exceeded: false };
   }

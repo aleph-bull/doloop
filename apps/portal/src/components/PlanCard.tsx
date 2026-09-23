@@ -1,5 +1,6 @@
 import { pathLabel, type PlanItem, type StudyNode } from '@doloop/core';
 import { Play } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button, Glass } from '@doloop/ui';
 import { fmtDue, fmtMinutes } from '../lib/format';
 import { StatusChip } from './StatusChip';
@@ -8,10 +9,14 @@ export interface PlanCardProps {
   plan: PlanItem[];
   nodesById: Map<string, StudyNode>;
   onStart: (node: StudyNode, suggestedMinutes: number) => void;
+  /** "About 33 m across 1 item today", as a line above the suggestion. */
+  todayLine?: string | null;
+  /** Rendered at the bottom of the panel, under a rule. */
+  footer?: ReactNode;
 }
 
 /** "Suggested next session" driven by getDailyPlan (spec §3). */
-export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
+export function PlanCard({ plan, nodesById, onStart, todayLine, footer }: PlanCardProps) {
   const top = plan[0];
   if (!top) {
     return (
@@ -20,6 +25,7 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
         <p className="muted text-sm mt-1">
           Add an estimate and a due date to a task and Doloop will tell you what to do today.
         </p>
+        {footer}
       </Glass>
     );
   }
@@ -29,6 +35,7 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
   return (
     <Glass className="p-5 flex flex-col gap-4" as="section" aria-label="Suggested next session">
       <div>
+        {todayLine && <div className="subtle text-sm">{todayLine}</div>}
         {topPath && (
           <div className="muted text-sm mt-1 truncate" aria-label="In">
             {topPath}
@@ -68,6 +75,7 @@ export function PlanCard({ plan, nodesById, onStart }: PlanCardProps) {
           })}
         </ul>
       )}
+      {footer}
     </Glass>
   );
 }

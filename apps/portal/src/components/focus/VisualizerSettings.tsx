@@ -98,6 +98,22 @@ export function VisualizerSettings({
             </div>
           </div>
           <div className="field">
+            <span className="field-label">Layers</span>
+            <div className="flex flex-col gap-2">
+              <Toggle
+                checked={value.ribbons}
+                onChange={(ribbons) => set({ ribbons })}
+                label="Waves"
+              />
+              <Toggle checked={value.rings} onChange={(rings) => set({ rings })} label="Circles" />
+              <Toggle
+                checked={value.border}
+                onChange={(border) => set({ border })}
+                label="Glowing border"
+              />
+            </div>
+          </div>
+          <div className="field">
             <span className="field-label">Colour</span>
             <div className="flex items-center gap-3 flex-wrap">
               <Segmented

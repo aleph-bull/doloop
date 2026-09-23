@@ -340,6 +340,9 @@ describe('settings: visualizer', () => {
       opacity: 0.85,
       colorMode: 'gradient',
       color: '#6366f1',
+      ribbons: true,
+      rings: true,
+      border: true,
     });
     const bad = await api({
       method: 'PATCH',

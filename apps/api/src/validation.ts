@@ -189,6 +189,9 @@ export const settingsSchema = z
         opacity: z.number().min(0).max(1),
         colorMode: z.enum(['accent', 'custom', 'gradient']),
         color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+        ribbons: z.boolean(),
+        rings: z.boolean(),
+        border: z.boolean(),
       })
       .partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),

@@ -23,6 +23,8 @@ export interface AudioVisualizerProps {
   intensity: number;
   /** How strongly the light shows over the background, 0..1. */
   opacity?: number;
+  /** Which parts to draw. All on when omitted. */
+  layers?: { ribbons: boolean; rings: boolean; border: boolean };
   palette: VisualizerPalette;
   /** When false nothing is drawn and the loop stops. */
   enabled: boolean;
@@ -48,15 +50,16 @@ export function AudioVisualizer({
   getCapture,
   intensity,
   opacity = 1,
+  layers,
   palette,
   enabled,
   analysis = DEFAULT_ANALYSIS,
   className,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const propsRef = useRef({ getCapture, intensity, opacity, palette, analysis });
+  const propsRef = useRef({ getCapture, intensity, opacity, layers, palette, analysis });
   useEffect(() => {
-    propsRef.current = { getCapture, intensity, opacity, palette, analysis };
+    propsRef.current = { getCapture, intensity, opacity, layers, palette, analysis };
   });
 
   useEffect(() => {
@@ -137,6 +140,7 @@ export function AudioVisualizer({
         state,
         intensity: p.intensity,
         opacity: p.opacity,
+        layers: p.layers,
         colors,
       });
 

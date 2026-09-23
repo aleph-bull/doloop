@@ -63,6 +63,15 @@ describe('focusProgress', () => {
   it('never goes negative', () => {
     expect(focusProgress(-10, 25).elapsedSeconds).toBe(0);
   });
+
+  it('starts from the work already logged on the task', () => {
+    // 35 minutes logged earlier, 1:16 into this session, against an hour.
+    const p = focusProgress(76, 60, 35 * 60);
+    expect(p.elapsedSeconds).toBe(35 * 60 + 76);
+    expect(p.fraction).toBeCloseTo((35 * 60 + 76) / 3600, 5);
+    expect(focusProgress(0, null, 600).elapsedSeconds).toBe(600);
+    expect(focusProgress(10, 25, -5).elapsedSeconds).toBe(10);
+  });
 });
 
 describe('expectedMinutes', () => {

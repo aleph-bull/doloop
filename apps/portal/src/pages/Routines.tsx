@@ -1,4 +1,5 @@
 import type { Routine, RoutineOccurrence } from '@doloop/core';
+import { announceAchievements } from '../lib/achievements';
 import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@doloop/core';
 import { Check, Pencil, Play, Plus, Repeat, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
@@ -139,6 +140,7 @@ export function Routines() {
       } else {
         const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
         if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
+        announceAchievements(res.badges);
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not update that.');
@@ -213,7 +215,7 @@ export function Routines() {
             {adherence.rate !== null && (
               <div>
                 <ProgressBar value={adherence.rate} label="Last four weeks" />
-                <p className="subtle text-xs mt-1 tabular">
+                <p className="subtle text-xs mt-3 tabular">
                   {adherence.done} of {adherence.due} ticked off over the last four weeks
                 </p>
               </div>

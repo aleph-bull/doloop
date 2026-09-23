@@ -43,6 +43,8 @@ export interface VisualizerFrame {
   /** 0..1: how strongly the whole layer shows over the background. */
   opacity: number;
   colors: VisualizerColors;
+  /** Which parts to draw. All on when omitted. */
+  layers?: { ribbons: boolean; rings: boolean; border: boolean };
 }
 
 const LOWER_RIBBONS = 4;
@@ -195,9 +197,12 @@ export function renderFrame(
 
   const glow = (14 + 40 * amp) * (0.5 + k * 0.6);
   const opacity = Math.min(1, Math.max(0, frame.opacity));
+  const layers = frame.layers ?? { ribbons: true, rings: true, border: true };
 
-  // Ribbons: the lower group carries the motion, the upper group echoes it faintly.
-  for (let i = 0; i < LOWER_RIBBONS; i++) {
+  // Ribbons: the lower group carries the motion, the upper group echoes it faintly. They
+  // are drawn first and masked on their own, so their ends fade out while the border
+  // and rings, drawn afterwards, keep their edges.
+  for (let i = 0; layers.ribbons && i < LOWER_RIBBONS; i++) {
     ribbon(
       ctx,
       scene,
@@ -211,7 +216,7 @@ export function renderFrame(
       colors.ribbons[i]!,
     );
   }
-  for (let i = 0; i < UPPER_RIBBONS; i++) {
+  for (let i = 0; layers.ribbons && i < UPPER_RIBBONS; i++) {
     ribbon(
       ctx,
       scene,
@@ -226,12 +231,27 @@ export function renderFrame(
     );
   }
 
+  if (layers.ribbons) {
+    // Fade both ends to nothing so no ribbon ends on a hard line.
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'destination-in';
+    const mask = ctx.createLinearGradient(0, 0, width, 0);
+    mask.addColorStop(0, 'rgb(0 0 0 / 0)');
+    mask.addColorStop(0.1, 'rgb(0 0 0 / 1)');
+    mask.addColorStop(0.9, 'rgb(0 0 0 / 1)');
+    mask.addColorStop(1, 'rgb(0 0 0 / 0)');
+    ctx.fillStyle = mask;
+    ctx.fillRect(0, 0, width, height);
+    ctx.globalCompositeOperation = 'lighter';
+  }
+
   // Rings around the clock. On a drop they split slightly into the two palette colours.
   const cx = width / 2;
   const cy = height / 2;
   const base = Math.min(width, height) * RING_RADIUS;
   const split = shock * 5;
-  for (let i = 0; i < RINGS; i++) {
+  for (let i = 0; layers.rings && i < RINGS; i++) {
     const radius = base + i * Math.min(width, height) * RING_STEP;
     const alpha = (0.1 + 0.32 * amp + 0.15 * pulse) * opacity;
     if (split > 0.4) {
@@ -252,6 +272,41 @@ export function renderFrame(
   ctx.fillRect(-1, -1, 2, 2);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
+  // The edge: a soft glowing frame around the whole screen that breathes with the level
+  // and brightens on a hit, in the palette's two colours from left to right.
+  if (layers.border) {
+    const inset = 3;
+    const r = 18;
+    const w = width - inset * 2;
+    const h = height - inset * 2;
+    ctx.beginPath();
+    ctx.moveTo(inset + r, inset);
+    ctx.lineTo(inset + w - r, inset);
+    ctx.quadraticCurveTo(inset + w, inset, inset + w, inset + r);
+    ctx.lineTo(inset + w, inset + h - r);
+    ctx.quadraticCurveTo(inset + w, inset + h, inset + w - r, inset + h);
+    ctx.lineTo(inset + r, inset + h);
+    ctx.quadraticCurveTo(inset, inset + h, inset, inset + h - r);
+    ctx.lineTo(inset, inset + r);
+    ctx.quadraticCurveTo(inset, inset, inset + r, inset);
+    ctx.closePath();
+    const edge = ctx.createLinearGradient(0, 0, width, 0);
+    edge.addColorStop(0, colors.fromCss);
+    edge.addColorStop(1, colors.toCss);
+    ctx.strokeStyle = edge;
+    ctx.shadowColor = colors.fromCss;
+    const edgeAlpha = (0.14 + 0.5 * amp + 0.35 * pulse + 0.3 * shock) * opacity;
+    // Wide halo, then the line.
+    ctx.lineWidth = 14 + 22 * amp;
+    ctx.shadowBlur = 50 + 60 * amp;
+    ctx.globalAlpha = edgeAlpha * 0.5;
+    ctx.stroke();
+    ctx.lineWidth = 2 + 3 * amp;
+    ctx.shadowBlur = 24 + 30 * amp;
+    ctx.globalAlpha = edgeAlpha;
+    ctx.stroke();
+  }
+
   // Shockwave: one ring rolling outward from a drop, gone within a second and a half.
   if (state.shockAge < SHOCK_SECONDS) {
     const life = 1 - state.shockAge / SHOCK_SECONDS;
@@ -265,17 +320,8 @@ export function renderFrame(
     ctx.stroke();
   }
 
-  // Fade both edges to nothing so no ribbon ends on a hard line.
   ctx.shadowBlur = 0;
   ctx.globalAlpha = 1;
-  ctx.globalCompositeOperation = 'destination-in';
-  const mask = ctx.createLinearGradient(0, 0, width, 0);
-  mask.addColorStop(0, 'rgb(0 0 0 / 0)');
-  mask.addColorStop(0.1, 'rgb(0 0 0 / 1)');
-  mask.addColorStop(0.9, 'rgb(0 0 0 / 1)');
-  mask.addColorStop(1, 'rgb(0 0 0 / 0)');
-  ctx.fillStyle = mask;
-  ctx.fillRect(0, 0, width, height);
   ctx.globalCompositeOperation = 'source-over';
   ctx.setTransform(1, 0, 0, 1, 0, 0);
 }

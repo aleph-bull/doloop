@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from 'react';
  * The focus screen is its own browser tab. Starting a session anywhere opens it; starting
  * another while it is open brings it forward instead of opening a second one.
  *
- * Two mechanisms, because neither alone covers every case:
- *  - A named window (`window.open(url, name)`) reuses a tab this page opened, and lets
- *    it be focused, but cannot see a tab opened by the extension or typed in by hand.
- *  - A BroadcastChannel reaches every same-origin tab, so the focus tab can always be
- *    found, but a tab cannot pull focus to itself without a handle from a user gesture.
+ * Two mechanisms:
+ *  - A named window (`window.open(name)`) reuses the tab this page opened and can bring
+ *    it forward. It cannot see a tab opened by the extension or typed in by hand.
+ *  - A BroadcastChannel reaches every same-origin tab: the focus tab announces itself so
+ *    the dashboard can hand it the alert sounds, and hears when a session starts.
  */
 
 export const FOCUS_PATH = '/focus';
@@ -17,15 +17,8 @@ const CHANNEL = 'doloop-focus';
 /** A tab that has not been heard from in this long is treated as closed. */
 const PRESENCE_TIMEOUT_MS = 6_000;
 const HEARTBEAT_MS = 2_000;
-/** How long the opener waits for an existing tab to answer before opening a new one. */
-const PING_WAIT_MS = 180;
 
-type Message =
-  | { type: 'ping' }
-  | { type: 'here' }
-  | { type: 'heartbeat' }
-  | { type: 'closing' }
-  | { type: 'focus' };
+type Message = { type: 'ping' } | { type: 'here' } | { type: 'heartbeat' } | { type: 'closing' };
 
 function channel(): BroadcastChannel | null {
   try {
@@ -35,66 +28,48 @@ function channel(): BroadcastChannel | null {
   }
 }
 
-/** Ask the other tabs whether a focus screen is open. Resolves quickly either way. */
-function findFocusTab(): Promise<boolean> {
-  const ch = channel();
-  if (!ch) return Promise.resolve(false);
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (found: boolean) => {
-      if (done) return;
-      done = true;
-      ch.close();
-      resolve(found);
-    };
-    ch.onmessage = (e: MessageEvent<Message>) => {
-      if (e.data?.type === 'here') finish(true);
-    };
-    ch.postMessage({ type: 'ping' } satisfies Message);
-    window.setTimeout(() => finish(false), PING_WAIT_MS);
-  });
-}
-
 export type OpenFocusResult =
-  /** A new tab was opened, or this page's own focus tab was navigated and focused. */
+  /** A new tab was opened. */
   | 'opened'
-  /** An existing focus tab was brought forward. */
+  /** A focus tab this page had opened was brought forward. */
   | 'focused'
-  /** A focus tab exists but was opened elsewhere (the extension, by hand); it was asked to come forward. */
-  | 'elsewhere'
   /** The browser blocked the popup. */
   | 'blocked';
 
 /**
- * Open the focus screen, or bring the one already open forward. Call it on the tail of a
- * user gesture: the browser's transient activation is what lets a tab open at all.
+ * Open the focus screen, or bring forward the one this page opened earlier. Synchronous on
+ * purpose: it has to run on the click itself, since browsers only let a click open a tab.
+ *
+ * `window.open('', name)` returns the existing window of that name without navigating it,
+ * or a fresh blank one; the blank one is then sent to the focus screen.
  */
-export async function openFocusTab(): Promise<OpenFocusResult> {
-  const exists = await findFocusTab();
-  if (exists) {
-    // A blank URL returns a handle to a familiar named window without navigating it.
-    const handle = window.open('', WINDOW_NAME);
-    let familiar: boolean;
-    try {
-      familiar = !!handle && handle.location.href !== 'about:blank';
-    } catch {
-      familiar = false;
-    }
-    if (handle && familiar) {
-      handle.focus();
-      return 'focused';
-    }
-    // Not ours: close the blank window that was just created and ask the real one to come forward.
-    handle?.close();
-    const ch = channel();
-    ch?.postMessage({ type: 'focus' } satisfies Message);
-    ch?.close();
-    return 'elsewhere';
+export function openFocusTab(): OpenFocusResult {
+  let handle: Window | null;
+  try {
+    handle = window.open('', WINDOW_NAME);
+  } catch {
+    handle = null;
   }
-  const opened = window.open(FOCUS_PATH, WINDOW_NAME);
-  if (!opened) return 'blocked';
-  opened.focus();
-  return 'opened';
+  if (!handle) {
+    // Some embedded browsers refuse a blank window but allow one with a URL.
+    try {
+      handle = window.open(FOCUS_PATH, WINDOW_NAME);
+    } catch {
+      handle = null;
+    }
+    if (!handle) return 'blocked';
+    handle.focus();
+    return 'opened';
+  }
+  let existing: boolean;
+  try {
+    existing = handle.location.href !== 'about:blank';
+  } catch {
+    existing = false;
+  }
+  if (!existing) handle.location.href = FOCUS_PATH;
+  handle.focus();
+  return existing ? 'focused' : 'opened';
 }
 
 /**
@@ -119,10 +94,10 @@ export function useFocusTabBeacon(onWake?: () => void): void {
       }
     };
     ch.onmessage = (e: MessageEvent<Message>) => {
-      if (e.data?.type === 'ping') say({ type: 'here' });
-      if (e.data?.type === 'ping' || e.data?.type === 'focus') wakeRef.current?.();
-      // Best effort: most browsers only honour this when the tab already has focus.
-      if (e.data?.type === 'focus') window.focus();
+      if (e.data?.type === 'ping') {
+        say({ type: 'here' });
+        wakeRef.current?.();
+      }
     };
     say({ type: 'here' });
     const beat = window.setInterval(() => say({ type: 'heartbeat' }), HEARTBEAT_MS);

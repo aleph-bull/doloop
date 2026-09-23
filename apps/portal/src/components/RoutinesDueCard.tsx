@@ -1,4 +1,5 @@
 import type { RoutineOccurrence } from '@doloop/core';
+import { announceAchievements } from '../lib/achievements';
 import { Check, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
@@ -29,6 +30,7 @@ export function RoutinesDueCard({
     try {
       const res = await tick.mutateAsync({ id: routineId, date });
       if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
+      announceAchievements(res.badges);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not tick that off.');
     } finally {

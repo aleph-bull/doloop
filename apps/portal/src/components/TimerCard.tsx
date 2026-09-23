@@ -1,5 +1,6 @@
 import { formatClock, type StudyNode, type UserSettings } from '@doloop/core';
 import { Eye, EyeOff, Maximize2, Pause, Play, SkipForward, Square } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Button, Chip, Glass, useToast } from '@doloop/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { openFocusTab, useFocusTabPresent } from '../lib/focus-tab';
@@ -12,24 +13,26 @@ export interface TimerCardProps {
   nodes: StudyNode[];
   /** Called with the summary once the session has been finalized. */
   onEnded: (summary: EndSummary) => void;
+  /** Rendered at the bottom of the card, under a rule. */
+  footer?: ReactNode;
 }
 
 /**
  * The active session card (spec §4): all three modes, idle detection, end flow. The logic
  * is `useSessionController`, shared with the focus screen; this is the dashboard's view.
  */
-export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) {
+export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCardProps) {
   const { toast } = useToast();
   // While the focus tab is open it plays the alerts, so the dashboard stays quiet.
   const focusOpen = useFocusTabPresent();
   const ctl = useSessionController({ active, settings, nodes, onEnded, muteAlerts: focusOpen });
   const { timer, view } = ctl;
 
-  const focus = async () => {
-    const result = await openFocusTab();
+  const focus = () => {
+    const result = openFocusTab();
     if (result === 'blocked')
       toast('The browser blocked the focus tab. Allow pop-ups and try again.');
-    if (result === 'elsewhere') toast('The focus screen is open in another tab.');
+    if (result === 'focused') toast('The focus screen is open in another tab.');
   };
 
   return (
@@ -120,6 +123,7 @@ export function TimerCard({ active, settings, nodes, onEnded }: TimerCardProps) 
             <Square size={14} aria-hidden /> Stop
           </Button>
         </div>
+        {footer}
       </Glass>
       {ctl.dialogs}
     </>

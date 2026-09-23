@@ -621,3 +621,43 @@ extension inside Chrome (it builds).
 - **New accounts start with `theme.panel: 'glass'`** instead of opaque, so dense panels
   (tasks, tables, settings) are frosted over the background like everything else. Opaque
   and custom remain a choice in Appearance; existing users keep what they have.
+
+## Focus screen round three: progress from prior work, the prompt, the edge, achievements (user request, 2026-09-23)
+
+- **Elapsed starts where the task stands.** The focus screen's elapsed figure and bar
+  include the work already logged on the task (`loggedWorkMinutes` from pace, which counts
+  finished sessions only, so it is stable during a session) plus this session's focused
+  time. Thirty-five minutes logged earlier means the bar opens at 35:00 against the estimate.
+- **The audio share lives for the whole visit.** Turning the visualizer off no longer stops
+  the capture; only "Stop listening", the browser's own sharing bar, or closing the tab
+  do. Toggling the visualizer off and on therefore keeps reacting to the music. This is
+  what read as "broken": the picture came back idle because the share had been dropped.
+- **Opening the tab is synchronous now.** The first version pinged other tabs and waited
+  180 ms before `window.open`, and when a focus tab already existed it only tried to focus
+  it, which browsers often ignore, so "Yes" appeared to do nothing. `openFocusTab` now
+  runs `window.open('', 'doloop-focus')` on the click itself: an existing tab this page
+  opened comes back and is brought forward, otherwise the fresh window is sent to `/focus`.
+  A tab opened by the extension or by hand cannot be found this way, so a start from the
+  portal in that case opens a second one; the extension still reuses through `chrome.tabs`.
+- **The prompt has four answers**: Yes, No, Always open it, Never open it. Always and Never
+  write `focusScreen.openOnStart`; Settings > Focus screen shows the same three-way choice.
+- **A glowing edge** is the fourth layer: a rounded frame just inside the viewport, in the
+  palette's two colours, breathing with the level and brightening on a hit, drawn as a
+  wide faint halo under a thin line. The ribbon mask now applies to the ribbons alone, so
+  the edge and the rings keep their sides. **Waves, circles and the border can each be
+  turned off** (`visualizer.ribbons` / `rings` / `border`).
+- **Achievements arrive like a console's**: a banner slides in at the top ("Achievement
+  unlocked", the badge, its description) with confetti, one at a time, from wherever a
+  badge is earned: a session ending on the dashboard or the focus screen, a routine ticked.
+  It is driven by a window event (`announceAchievements`), so callers need no provider and
+  the focus tab works the same. The Badge toasts setting turns the banner off, Confetti
+  the confetti. The extension popup throws confetti and names the badge in its summary.
+- **The end of a session is a score sheet**, shared by the dashboard overlay and the focus
+  screen: the XP earned as the score with its bonus lines, focused / break / idle time,
+  streak with the best, the level with the XP to the next and its bar, the achievements
+  unlocked, revealed in turn. This deliberately shows XP at the end of a session, which the
+  earlier "XP lives on Achievements" decision had removed: the user asked for a score.
+- **Dashboard tidy-up:** the daily quote sits inside the timer or plan panel under a rule
+  instead of as its own card at the bottom; "About 33 m across 1 item today" moved from
+  under the greeting into the plan card. The routines adherence caption has more room
+  above it.
