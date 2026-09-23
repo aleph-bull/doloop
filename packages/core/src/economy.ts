@@ -203,7 +203,7 @@ export const BACKGROUND_CATEGORY_LABELS: Array<{ id: BackgroundCategory; label: 
   { id: 'cities', label: 'Cities' },
 ];
 
-/** The quiet default, and what an unrecognised id falls back to. */
+/** What an unrecognised id falls back to. New accounts start on Velvet (`DEFAULT_SETTINGS`). */
 export const DEFAULT_BACKGROUND_ID = 'graphite';
 
 /**

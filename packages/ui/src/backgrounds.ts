@@ -188,7 +188,7 @@ function photoDef(p: (typeof PHOTO_BACKGROUNDS)[number]): BackgroundDef {
 
 export const BACKGROUND_DEFS: BackgroundDef[] = [...GRADIENTS, ...PHOTO_BACKGROUNDS.map(photoDef)];
 
-/** The background a user falls back to: the quiet one, and the default for new accounts. */
+/** The background an unknown id falls back to: the quiet one. New accounts start on Velvet. */
 export const DEFAULT_BACKGROUND_ID = 'graphite';
 
 export function backgroundById(id: string): BackgroundDef {

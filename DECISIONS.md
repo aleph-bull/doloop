@@ -575,3 +575,11 @@ directly: idle, a scripted drop (shock ring, bloom) and a loud gradient passage 
 false hits. Not checkable here: a real screen share (the pane blocks capture), a real
 Spotify account, a new tab actually opening (the pane navigates in place), and the
 extension inside Chrome (it builds).
+
+## Velvet is the default background (user request, 2026-09-22)
+
+- **New accounts start on Velvet** (`DEFAULT_SETTINGS.theme.backgroundId`). It is free at
+  level 0, so nothing about unlocking changes. Existing users keep whatever they chose.
+- **Graphite stays the fallback** for an id that no longer exists (`DEFAULT_BACKGROUND_ID`
+  in core and ui): that path is about reading old settings safely, not about taste, and the
+  earlier decision to make it the quiet neutral still holds.
