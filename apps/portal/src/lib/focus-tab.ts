@@ -12,8 +12,8 @@ import { useEffect, useRef, useState } from 'react';
  */
 
 export const FOCUS_PATH = '/focus';
-const WINDOW_NAME = 'doloop-focus';
-const CHANNEL = 'doloop-focus';
+const WINDOW_NAME = 'komodoit-focus';
+const CHANNEL = 'komodoit-focus';
 /** A tab that has not been heard from in this long is treated as closed. */
 const PRESENCE_TIMEOUT_MS = 6_000;
 const HEARTBEAT_MS = 2_000;

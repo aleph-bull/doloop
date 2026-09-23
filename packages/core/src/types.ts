@@ -10,7 +10,7 @@ export type NodeKind = 'course' | 'assessment' | 'task' | 'other';
 export type SessionMode = 'pomodoro' | 'unlimited' | 'scheduled';
 /**
  * Where a calendar block came from.
- * - 'app': study time the user scheduled in Doloop. The only kind pushed to Google.
+ * - 'app': study time the user scheduled in Komodoit. The only kind pushed to Google.
  * - 'google': an imported commitment - a lecture, a shift, a dentist. Shown so the user
  *   can plan around it; never treated as study time and never used to tell them to study.
  * - 'session': study that actually happened, logged after the timer ended.

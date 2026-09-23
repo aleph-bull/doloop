@@ -1,5 +1,5 @@
-@import '@doloop/ui/tokens.css';
-@import '@doloop/ui/styles.css';
+@import '@komodoit/ui/tokens.css';
+@import '@komodoit/ui/styles.css';
 
 /* Fixed popup canvas (§8): 360x480. */
 html,

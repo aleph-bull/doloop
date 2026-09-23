@@ -1,5 +1,5 @@
-import type { Highlight } from '@doloop/core';
-import { splitHighlights } from '@doloop/core';
+import type { Highlight } from '@komodoit/core';
+import { splitHighlights } from '@komodoit/core';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
@@ -12,7 +12,7 @@ import {
   Segmented,
   Spinner,
   StackedBars,
-} from '@doloop/ui';
+} from '@komodoit/ui';
 import { AnalyticsOverview } from '../components/AnalyticsOverview';
 import { ErrorPanel } from '../components/ErrorState';
 import { StatusChip } from '../components/StatusChip';

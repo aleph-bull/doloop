@@ -9,7 +9,7 @@
  * Thumbnails are derived from the shipped 2560px WebPs, so this runs without the source
  * photos. `prepare-backgrounds.ts` calls it after writing those.
  *
- * Run: pnpm --filter @doloop/ui prepare:thumbs
+ * Run: pnpm --filter @komodoit/ui prepare:thumbs
  */
 import sharp from 'sharp';
 import { mkdirSync } from 'node:fs';

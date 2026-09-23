@@ -1,5 +1,5 @@
 {
-  "name": "doloop",
+  "name": "komodoit",
   "private": true,
   "version": "0.0.0",
   "packageManager": "pnpm@12.5.1",
@@ -10,13 +10,13 @@
     "dev": "pnpm -r --parallel --stream dev",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
-    "test:coverage": "pnpm --filter @doloop/core test:coverage",
+    "test:coverage": "pnpm --filter @komodoit/core test:coverage",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm audit:contrast && pnpm build",
-    "audit:contrast": "pnpm --filter @doloop/ui audit:contrast"
+    "audit:contrast": "pnpm --filter @komodoit/ui audit:contrast"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

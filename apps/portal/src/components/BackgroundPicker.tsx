@@ -3,8 +3,8 @@ import {
   BACKGROUNDS,
   isBackgroundAvailable,
   type BackgroundMeta,
-} from '@doloop/core';
-import { BackgroundThumb, type ResolvedTheme } from '@doloop/ui';
+} from '@komodoit/core';
+import { BackgroundThumb, type ResolvedTheme } from '@komodoit/ui';
 
 export interface BackgroundPickerProps {
   /** Currently selected id. */

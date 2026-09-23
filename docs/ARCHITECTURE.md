@@ -1,6 +1,6 @@
 # Architecture
 
-Doloop is a pnpm monorepo with three deployables and two shared packages.
+Komodoit is a pnpm monorepo with three deployables and two shared packages.
 
 ```
 apps/portal      React + Vite + React Router. The full product UI.

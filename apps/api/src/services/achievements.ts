@@ -1,4 +1,4 @@
-import { evaluateBadges, toLocalDate } from '@doloop/core';
+import { evaluateBadges, toLocalDate } from '@komodoit/core';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { achievements, sessions, streakEvents, weeklyReviews, type UserRow } from '../db/schema';

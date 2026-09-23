@@ -35,7 +35,7 @@ export interface SpotifyPlayback {
 
 export type PlayerAction = 'play' | 'pause' | 'next' | 'previous';
 
-/** The user pulled Doloop's access, or the refresh token stopped working. */
+/** The user pulled Komodoit's access, or the refresh token stopped working. */
 export class SpotifyRevokedError extends Error {
   constructor() {
     super('Spotify access was revoked. Reconnect in settings.');

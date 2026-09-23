@@ -1,6 +1,6 @@
-import type { Insight, RhythmProfile } from '@doloop/core';
+import type { Insight, RhythmProfile } from '@komodoit/core';
 import { useState } from 'react';
-import { Bars, DataTable, Glass, Heatmap, Panel, Segmented, Spinner } from '@doloop/ui';
+import { Bars, DataTable, Glass, Heatmap, Panel, Segmented, Spinner } from '@komodoit/ui';
 import { ErrorPanel } from './ErrorState';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useOverviewAnalytics } from '../lib/queries';
@@ -123,7 +123,7 @@ export function AnalyticsOverview() {
           </div>
         </dl>
         <p className="subtle text-sm">
-          Counting from {fmtDate(`${lifetime.since}T12:00:00`)}, when you started using Doloop.
+          Counting from {fmtDate(`${lifetime.since}T12:00:00`)}, when you started using Komodoit.
           &ldquo;Typical study day&rdquo; averages the days you actually studied, not every day on
           the calendar.
         </p>

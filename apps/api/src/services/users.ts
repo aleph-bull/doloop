@@ -13,7 +13,7 @@ import {
   type StreakState,
   type User,
   type UserSettings,
-} from '@doloop/core';
+} from '@komodoit/core';
 import { randomBytes } from 'node:crypto';
 import { and, eq, gte, isNotNull } from 'drizzle-orm';
 import type { AuthUser } from '../auth/verify';

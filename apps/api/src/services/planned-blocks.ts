@@ -1,4 +1,4 @@
-import type { PlannedBlock } from '@doloop/core';
+import type { PlannedBlock } from '@komodoit/core';
 import { and, eq, gte, lt, lte } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { plannedBlocks, type PlannedBlockRow } from '../db/schema';

@@ -8,5 +8,5 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   // Bundle workspace packages (they ship TS source), leave real deps external.
-  noExternal: ['@doloop/core'],
+  noExternal: ['@komodoit/core'],
 });

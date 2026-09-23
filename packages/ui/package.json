@@ -1,9 +1,9 @@
 {
-  "name": "@doloop/ui",
+  "name": "@komodoit/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Shared design tokens and React components for the Doloop portal and extension.",
+  "description": "Shared design tokens and React components for the Komodoit portal and extension.",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -31,7 +31,7 @@
     "react-dom": "*"
   },
   "dependencies": {
-    "@doloop/core": "workspace:*",
+    "@komodoit/core": "workspace:*",
     "lucide-react": "^1.47.0"
   }
 }

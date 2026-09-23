@@ -11,7 +11,7 @@ describe('auth', () => {
   it('health is public', async () => {
     const res = await t.app.inject({ method: 'GET', url: '/api/health' });
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ ok: true, service: 'doloop-api' });
+    expect(res.json()).toEqual({ ok: true, service: 'komodoit-api' });
   });
 
   it('rejects missing and invalid tokens', async () => {

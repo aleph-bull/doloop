@@ -208,7 +208,7 @@ importers:
 
   apps/api:
     dependencies:
-      '@doloop/core':
+      '@komodoit/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@fastify/cors':
@@ -251,10 +251,10 @@ importers:
 
   apps/extension:
     dependencies:
-      '@doloop/core':
+      '@komodoit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@doloop/ui':
+      '@komodoit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       lucide-react:
@@ -288,10 +288,10 @@ importers:
 
   apps/portal:
     dependencies:
-      '@doloop/core':
+      '@komodoit/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@doloop/ui':
+      '@komodoit/ui':
         specifier: workspace:*
         version: link:../../packages/ui
       '@supabase/supabase-js':
@@ -346,7 +346,7 @@ importers:
 
   packages/ui:
     dependencies:
-      '@doloop/core':
+      '@komodoit/core':
         specifier: workspace:*
         version: link:../core
       lucide-react:

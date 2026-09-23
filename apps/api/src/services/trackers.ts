@@ -1,4 +1,4 @@
-import { toLocalDate, trackerWidgets, type Tracker, type TrackerEntry } from '@doloop/core';
+import { toLocalDate, trackerWidgets, type Tracker, type TrackerEntry } from '@komodoit/core';
 import { and, desc, eq, gte } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {

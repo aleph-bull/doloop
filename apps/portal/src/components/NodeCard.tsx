@@ -1,6 +1,6 @@
-import type { NodePace, StudyNode } from '@doloop/core';
+import type { NodePace, StudyNode } from '@komodoit/core';
 import { Play } from 'lucide-react';
-import { Button, Chip, Glass, ProgressBar } from '@doloop/ui';
+import { Button, Chip, Glass, ProgressBar } from '@komodoit/ui';
 import { fmtDue, fmtMinutes, pct } from '../lib/format';
 import { StatusChip } from './StatusChip';
 

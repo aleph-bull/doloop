@@ -1,4 +1,4 @@
-import { soundPresetById } from '@doloop/core';
+import { soundPresetById } from '@komodoit/core';
 
 /**
  * Plays the alert sounds.

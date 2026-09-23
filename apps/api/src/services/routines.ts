@@ -16,7 +16,7 @@ import {
   startOfWeekMonday,
   toLocalDate,
   validateRoutineDraft,
-} from '@doloop/core';
+} from '@komodoit/core';
 import { and, eq, gte, inArray, lte } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {

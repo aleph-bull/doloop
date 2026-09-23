@@ -4,7 +4,7 @@ import type {
   TimerState,
   UserSettings,
   Session,
-} from '@doloop/core';
+} from '@komodoit/core';
 
 /** Everything the extension persists, all in chrome.storage.local. */
 export interface Connection {

@@ -1,6 +1,6 @@
-import type { Tracker } from '@doloop/core';
+import type { Tracker } from '@komodoit/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, useToast } from '@doloop/ui';
+import { Button, Input, Modal, useToast } from '@komodoit/ui';
 import { useCreateTracker, useDeleteTracker, useUpdateTracker } from '../lib/queries';
 
 export interface TrackerDialogProps {

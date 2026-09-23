@@ -8,7 +8,7 @@ import {
   Settings as SettingsIcon,
   WifiOff,
 } from 'lucide-react';
-import { Backdrop, Button, Glass, LogoMark } from '@doloop/ui';
+import { Backdrop, Button, Glass, LogoMark } from '@komodoit/ui';
 import { useAppearance } from '../lib/appearance';
 import { useAuth } from '../lib/auth';
 import { useOnlineStatus } from '../lib/local-state';
@@ -127,11 +127,11 @@ export function AppShell() {
       </a>
       <Glass as="header" className="nav" strong>
         <div className="nav-inner">
-          <NavLink to="/" className="brand" aria-label="Doloop home">
+          <NavLink to="/" className="brand" aria-label="Komodoit home">
             <span className="brand-mark" aria-hidden>
               <LogoMark size={14} />
             </span>
-            <span>Doloop</span>
+            <span>Komodoit</span>
           </NavLink>
           <div
             className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${

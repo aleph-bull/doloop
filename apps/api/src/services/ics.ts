@@ -1,4 +1,4 @@
-import type { PlannedBlock, Session, StudyNode } from '@doloop/core';
+import type { PlannedBlock, Session, StudyNode } from '@komodoit/core';
 
 function icsDate(iso: string): string {
   return new Date(iso)
@@ -61,10 +61,10 @@ export function buildIcs(input: IcsInput): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Doloop//Study planner//EN',
+    'PRODID:-//Komodoit//Study planner//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${esc(input.calendarName ?? 'Doloop study plan')}`,
+    `X-WR-CALNAME:${esc(input.calendarName ?? 'Komodoit study plan')}`,
   ];
   const stamp = icsDate(input.now);
   for (const b of input.blocks) {
@@ -75,12 +75,12 @@ export function buildIcs(input: IcsInput): string {
     if (b.source !== 'app') continue;
     lines.push(
       'BEGIN:VEVENT',
-      `UID:block-${b.id}@doloop`,
+      `UID:block-${b.id}@komodoit`,
       `DTSTAMP:${stamp}`,
       `DTSTART:${icsDate(b.startAt)}`,
       `DTEND:${icsDate(b.endAt)}`,
       `SUMMARY:${esc(`Study: ${titleOf(b.nodeId)}`)}`,
-      'DESCRIPTION:Planned in Doloop',
+      'DESCRIPTION:Planned in Komodoit',
       'END:VEVENT',
     );
   }
@@ -90,11 +90,11 @@ export function buildIcs(input: IcsInput): string {
     const day = icsDay(n.dueAt, input.timezone ?? 'UTC');
     lines.push(
       'BEGIN:VEVENT',
-      `UID:due-${n.id}@doloop`,
+      `UID:due-${n.id}@komodoit`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${day}`,
       `SUMMARY:${esc(`${n.kind === 'assessment' ? '' : 'Due: '}${n.title}`)}`,
-      `DESCRIPTION:${esc(n.completedAt ? 'Done (Doloop)' : 'Due date set in Doloop')}`,
+      `DESCRIPTION:${esc(n.completedAt ? 'Done (Komodoit)' : 'Due date set in Komodoit')}`,
       'END:VEVENT',
     );
   }
@@ -102,7 +102,7 @@ export function buildIcs(input: IcsInput): string {
     if (!s.endedAt) continue;
     lines.push(
       'BEGIN:VEVENT',
-      `UID:session-${s.id}@doloop`,
+      `UID:session-${s.id}@komodoit`,
       `DTSTAMP:${stamp}`,
       `DTSTART:${icsDate(s.startedAt)}`,
       `DTEND:${icsDate(s.endedAt)}`,

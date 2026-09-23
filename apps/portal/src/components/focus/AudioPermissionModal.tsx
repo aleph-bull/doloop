@@ -1,4 +1,4 @@
-import { Button, Modal } from '@doloop/ui';
+import { Button, Modal } from '@komodoit/ui';
 
 export interface AudioPermissionModalProps {
   open: boolean;

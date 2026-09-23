@@ -1,6 +1,6 @@
-import type { RewardView } from '@doloop/core';
+import type { RewardView } from '@komodoit/core';
 import { useState } from 'react';
-import { Button, Input, Modal, Textarea } from '@doloop/ui';
+import { Button, Input, Modal, Textarea } from '@komodoit/ui';
 import type { RewardInput } from '../lib/api';
 
 export interface RewardDialogProps {

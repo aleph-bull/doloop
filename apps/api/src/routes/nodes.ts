@@ -4,7 +4,7 @@ import type { Db } from '../db/client';
 import { archiveNode, createNode, deleteNode, listNodes, updateNode } from '../services/nodes';
 import { dailyPlan, paceSnapshot, paceToJson } from '../services/pace';
 import { listBlocks } from '../services/planned-blocks';
-import { buildIndex, descendantIds } from '@doloop/core';
+import { buildIndex, descendantIds } from '@komodoit/core';
 import { createNodeSchema, updateNodeSchema, uuid } from '../validation';
 
 const idParams = z.object({ id: uuid });

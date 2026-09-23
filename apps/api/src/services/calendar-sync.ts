@@ -122,14 +122,14 @@ async function eventFor(db: Db, block: PlannedBlockRow): Promise<EventInput> {
   const done = block.source === 'session';
   return {
     summary: node ? `Study: ${node.title}` : (block.title ?? 'Study'),
-    description: done ? 'Studied in Doloop' : 'Planned in Doloop',
+    description: done ? 'Studied in Komodoit' : 'Planned in Komodoit',
     start: block.startAt.toISOString(),
     end: block.endAt.toISOString(),
-    doloopBlockId: block.id,
+    komodoitBlockId: block.id,
   };
 }
 
-/** Blocks Doloop owns and therefore writes out to the Study calendar. */
+/** Blocks Komodoit owns and therefore writes out to the Study calendar. */
 function isOurs(block: Pick<PlannedBlockRow, 'source'>): boolean {
   return block.source === 'app' || block.source === 'session';
 }
@@ -234,7 +234,7 @@ export async function syncGoogle(
     where: eq(plannedBlocks.userId, user.id),
   });
   for (const b of blocks) {
-    // Imported commitments are the user's other calendar showing through; Doloop never
+    // Imported commitments are the user's other calendar showing through; Komodoit never
     // writes them back out.
     if (!isOurs(b)) continue;
     if (!b.googleEventId && !b.cancelled) {
@@ -328,7 +328,7 @@ async function applyEvent(
   }
 
   if (cancelled || !start || !end) return 'none';
-  // An event that appeared in the calendar from outside Doloop. It is imported as a
+  // An event that appeared in the calendar from outside Komodoit. It is imported as a
   // commitment - something the user has to work around - not as study time. Nothing here
   // schedules work or nags the user to study: only routines do that.
   await db

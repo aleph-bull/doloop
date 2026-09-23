@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { Button, Glass } from '@doloop/ui';
+import { Button, Glass } from '@komodoit/ui';
 
 export function ErrorPanel({
   message = 'Something went wrong.',

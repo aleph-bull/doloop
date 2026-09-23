@@ -1,5 +1,5 @@
 /*
-  Doloop design tokens. Single source of truth for color, glass, type, radius, motion.
+  Komodoit design tokens. Single source of truth for color, glass, type, radius, motion.
   Documented in packages/ui/README.md. Do not hard-code colors anywhere else.
 
   Theme switching: `data-theme="light" | "dark"` on <html>. When absent, follows

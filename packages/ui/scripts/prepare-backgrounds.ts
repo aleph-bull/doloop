@@ -11,7 +11,7 @@
  * Both land in `src/photos.generated.ts`, which is committed. That keeps `pnpm check`,
  * the contrast audit and the extension working without the source photos present.
  *
- * Run: pnpm --filter @doloop/ui prepare:backgrounds -- --src "C:/path/to/photos"
+ * Run: pnpm --filter @komodoit/ui prepare:backgrounds -- --src "C:/path/to/photos"
  */
 import sharp from 'sharp';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -444,7 +444,7 @@ function argValue(flag: string): string | undefined {
 }
 
 async function main() {
-  const src = argValue('--src') ?? process.env.DOLOOP_BACKGROUND_SRC;
+  const src = argValue('--src') ?? process.env.KOMODOIT_BACKGROUND_SRC;
   if (!src) {
     console.error('Pass --src <folder containing the source photos>.');
     process.exit(1);

@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { isValidTimezone } from '@doloop/core';
+import { isValidTimezone } from '@komodoit/core';
 import type { Db } from '../db/client';
 import type { UserRow } from '../db/schema';
 import { ensureUser } from '../services/users';

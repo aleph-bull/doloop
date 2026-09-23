@@ -1,4 +1,4 @@
-# @doloop/ui
+# @komodoit/ui
 
 Shared design tokens and React components for the portal and the extension popup.
 

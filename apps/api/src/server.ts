@@ -63,7 +63,7 @@ export async function buildServer(opts: BuildOptions) {
 
   app.get('/api/health', { config: { public: true } }, async () => ({
     ok: true,
-    service: 'doloop-api',
+    service: 'komodoit-api',
   }));
 
   await app.register(authPlugin, { db: opts.db, verifier: opts.verifier });

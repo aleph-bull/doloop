@@ -1,7 +1,7 @@
-import type { Routine, StudyNode } from '@doloop/core';
-import { describeRecurrence, ROUTINES } from '@doloop/core';
+import type { Routine, StudyNode } from '@komodoit/core';
+import { describeRecurrence, ROUTINES } from '@komodoit/core';
 import { useState } from 'react';
-import { Button, Input, Modal, Segmented, Select, Textarea } from '@doloop/ui';
+import { Button, Input, Modal, Segmented, Select, Textarea } from '@komodoit/ui';
 import type { RoutineInput } from '../lib/api';
 
 export interface RoutineDialogProps {

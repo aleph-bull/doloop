@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { isAccentUnlocked, isBackgroundAvailable, isValidTimezone } from '@doloop/core';
+import { isAccentUnlocked, isBackgroundAvailable, isValidTimezone } from '@komodoit/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { viewPolicy } from '../services/rest-days';
@@ -71,7 +71,7 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
 
   app.get('/api/me/export', async (req, reply) => {
     const data = await exportUserData(db, req.user);
-    reply.header('content-disposition', 'attachment; filename="doloop-export.json"');
+    reply.header('content-disposition', 'attachment; filename="komodoit-export.json"');
     return data;
   });
 

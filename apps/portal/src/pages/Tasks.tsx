@@ -1,7 +1,7 @@
-import type { NodePace, StudyNode } from '@doloop/core';
+import type { NodePace, StudyNode } from '@komodoit/core';
 import { Check, ChevronDown, ChevronRight, Pencil, Play, Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Button, Chip, EmptyState, Panel, ProgressBar, Spinner, useToast } from '@doloop/ui';
+import { Button, Chip, EmptyState, Panel, ProgressBar, Spinner, useToast } from '@komodoit/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';

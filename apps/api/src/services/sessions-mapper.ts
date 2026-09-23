@@ -1,4 +1,4 @@
-import type { PlannedBlock, Session, StudyNode } from '@doloop/core';
+import type { PlannedBlock, Session, StudyNode } from '@komodoit/core';
 import type { NodeRow, PlannedBlockRow, SessionRow } from '../db/schema';
 
 /** ISO string of a Date column, or null. */

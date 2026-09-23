@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Button, fireConfetti, Modal } from '@doloop/ui';
+import { Button, fireConfetti, Modal } from '@komodoit/ui';
 import { announceAchievements } from '../lib/achievements';
 import type { EndSummary } from '../lib/api';
 import { SessionSummary } from './SessionSummary';

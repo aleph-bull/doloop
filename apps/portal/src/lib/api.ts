@@ -35,7 +35,7 @@ import type {
   GradeComponent,
   Gpa,
   Insight,
-} from '@doloop/core';
+} from '@komodoit/core';
 
 export class ApiError extends Error {
   constructor(

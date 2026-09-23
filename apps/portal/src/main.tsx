@@ -2,14 +2,18 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ToastProvider, applyTheme } from '@doloop/ui';
-import { DEFAULT_SETTINGS } from '@doloop/core';
+import { ToastProvider, applyTheme } from '@komodoit/ui';
+import { DEFAULT_SETTINGS } from '@komodoit/core';
 import './index.css';
 import { App } from './App';
 import { AchievementToasts } from './components/AchievementUnlocked';
 import { AuthProvider } from './lib/auth';
 import { unlockAudio } from './lib/sounds';
 import { restoreQueryCache } from './lib/persist';
+import { migrateDoloopStorage } from './lib/rename-migration';
+
+// Before anything reads a storage key: move the Doloop-era keys to their Komodoit names.
+migrateDoloopStorage();
 
 // Apply the default theme before first paint; the shell re-applies from user settings.
 applyTheme({

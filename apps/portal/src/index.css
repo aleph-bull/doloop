@@ -1,6 +1,6 @@
 @import 'tailwindcss';
-@import '@doloop/ui/tokens.css';
-@import '@doloop/ui/styles.css';
+@import '@komodoit/ui/tokens.css';
+@import '@komodoit/ui/styles.css';
 
 @theme {
   --font-sans: var(--font-sans);
@@ -360,7 +360,7 @@
 /*
  * A commitment is somebody else's claim on the time: drawn as a hatched, muted band that
  * reads as "taken" rather than as a study block, and not clickable, because there is
- * nothing in Doloop to edit about it.
+ * nothing in Komodoit to edit about it.
  */
 .cal-block-commitment {
   background: repeating-linear-gradient(135deg, var(--border-strong) 0 5px, transparent 5px 11px);

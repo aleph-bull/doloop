@@ -1,8 +1,8 @@
-import { addDays, startOfWeekMonday, toLocalDate, type PlannedBlock } from '@doloop/core';
+import { addDays, startOfWeekMonday, toLocalDate, type PlannedBlock } from '@komodoit/core';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, Panel, Spinner, useToast } from '@doloop/ui';
+import { Button, Chip, Panel, Spinner, useToast } from '@komodoit/ui';
 import { BlockDialog } from '../components/BlockDialog';
 import { ErrorPanel } from '../components/ErrorState';
 import { api } from '../lib/api';

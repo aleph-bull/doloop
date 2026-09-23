@@ -1,5 +1,5 @@
 {
-  "name": "@doloop/portal",
+  "name": "@komodoit/portal",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@doloop/core": "workspace:*",
-    "@doloop/ui": "workspace:*",
+    "@komodoit/core": "workspace:*",
+    "@komodoit/ui": "workspace:*",
     "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.103.1",
     "jose": "^6.2.12",

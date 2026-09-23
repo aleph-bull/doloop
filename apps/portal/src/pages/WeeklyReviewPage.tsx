@@ -1,7 +1,7 @@
-import { addDays } from '@doloop/core';
+import { addDays } from '@komodoit/core';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@doloop/ui';
+import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@komodoit/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useLocalDraft } from '../lib/local-state';

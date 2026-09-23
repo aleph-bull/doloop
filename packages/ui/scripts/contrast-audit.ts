@@ -5,7 +5,7 @@
  * background, then composites the glass and panel fills over it and checks WCAG contrast
  * for primary and muted text. Fails (exit 1) if any combination is below 4.5:1.
  *
- * Run: pnpm --filter @doloop/ui audit:contrast
+ * Run: pnpm --filter @komodoit/ui audit:contrast
  */
 import { BACKGROUND_DEFS } from '../src/backgrounds';
 import {

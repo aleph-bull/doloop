@@ -12,7 +12,7 @@ import { useMe, useUpdateSettings } from './queries';
 export type HintKey =
   'rest-days' | 'calendar' | 'xp' | 'freezes' | 'blocking' | 'name' | 'dashboard' | 'grades';
 
-const KEY = 'doloop.hints.dismissed';
+const KEY = 'komodoit.hints.dismissed';
 
 function readLocal(): string[] {
   try {

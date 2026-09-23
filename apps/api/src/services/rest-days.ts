@@ -5,7 +5,7 @@ import {
   setWeeklyRestDays,
   type RestDayPolicy,
   type Vacation,
-} from '@doloop/core';
+} from '@komodoit/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { getPolicy, savePolicy } from './users';

@@ -1,4 +1,4 @@
-import { levelProgress } from '@doloop/core';
+import { levelProgress } from '@komodoit/core';
 import { Award, Lock } from 'lucide-react';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ import {
   resolveTheme,
   Spinner,
   useToast,
-} from '@doloop/ui';
+} from '@komodoit/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RewardShelf } from '../components/RewardShelf';
 import { api } from '../lib/api';

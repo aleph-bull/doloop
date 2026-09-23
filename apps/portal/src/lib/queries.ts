@@ -1,4 +1,4 @@
-import type { UserSettings } from '@doloop/core';
+import type { UserSettings } from '@komodoit/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type NodeInput } from './api';
 

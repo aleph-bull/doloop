@@ -1,9 +1,9 @@
-import type { Routine, RoutineOccurrence } from '@doloop/core';
+import type { Routine, RoutineOccurrence } from '@komodoit/core';
 import { announceAchievements } from '../lib/achievements';
-import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@doloop/core';
+import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@komodoit/core';
 import { Check, Pencil, Play, Plus, Repeat, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@doloop/ui';
+import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@komodoit/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { IcsImportDialog } from '../components/IcsImportDialog';
 import { RoutineDialog } from '../components/RoutineDialog';

@@ -5,12 +5,12 @@ export interface LogoMarkProps {
   /** Rendered width and height in px. */
   size?: number;
   className?: string;
-  /** Announce as "Doloop"; leave off when a visible wordmark sits next to it. */
+  /** Announce as "Komodoit"; leave off when a visible wordmark sits next to it. */
   title?: string;
 }
 
 /**
- * The bare Doloop mark, inline, in `currentColor`. The portal sets it white on its accent
+ * The bare Komodoit mark, inline, in `currentColor`. The portal sets it white on its accent
  * tile (`.brand-mark`); the files that need the tile baked in come from `logoSvg`.
  */
 export function LogoMark({ size = 24, className, title }: LogoMarkProps) {

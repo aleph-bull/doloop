@@ -1,12 +1,12 @@
 /**
- * Writes every file-based copy of the Doloop mark from `src/logo.ts`, each one the white
+ * Writes every file-based copy of the Komodoit mark from `src/logo.ts`, each one the white
  * mark on the rounded indigo-to-violet tile:
  *
  *  - the portal favicon, as SVG;
  *  - the apple-touch icon, square-cornered because iOS rounds and shadows it itself;
  *  - the extension's 16/48/128 icons.
  *
- * Run: pnpm --filter @doloop/ui prepare:icons
+ * Run: pnpm --filter @komodoit/ui prepare:icons
  */
 import sharp from 'sharp';
 import { writeFileSync } from 'node:fs';
@@ -28,15 +28,15 @@ async function png(svg: string, size: number, out: string) {
 }
 
 async function main() {
-  writeFileSync(resolve(PORTAL_PUBLIC, 'favicon.svg'), logoSvg({ inset: 11 }) + '\n');
+  writeFileSync(resolve(PORTAL_PUBLIC, 'favicon.svg'), logoSvg({ inset: 9 }) + '\n');
   console.log('portal/public/favicon.svg');
 
-  await png(logoSvg({ inset: 12, radius: 0 }), 180, resolve(PORTAL_PUBLIC, 'apple-touch-icon.png'));
+  await png(logoSvg({ inset: 10, radius: 0 }), 180, resolve(PORTAL_PUBLIC, 'apple-touch-icon.png'));
 
-  // Small sizes get a tighter inset so the ribbon is not lost at 16px.
-  await png(logoSvg({ inset: 7 }), 16, resolve(EXTENSION_ICONS, 'icon16.png'));
-  await png(logoSvg({ inset: 10 }), 48, resolve(EXTENSION_ICONS, 'icon48.png'));
-  await png(logoSvg({ inset: 11 }), 128, resolve(EXTENSION_ICONS, 'icon128.png'));
+  // Small sizes get a tighter inset so the dragon is not lost at 16px.
+  await png(logoSvg({ inset: 5 }), 16, resolve(EXTENSION_ICONS, 'icon16.png'));
+  await png(logoSvg({ inset: 8 }), 48, resolve(EXTENSION_ICONS, 'icon48.png'));
+  await png(logoSvg({ inset: 9 }), 128, resolve(EXTENSION_ICONS, 'icon128.png'));
 }
 
 await main();

@@ -1,6 +1,6 @@
-import type { CustomReward } from '@doloop/core';
+import type { CustomReward } from '@komodoit/core';
 import { useEffect } from 'react';
-import { Button, fireConfetti, fireRewardBurst, Modal } from '@doloop/ui';
+import { Button, fireConfetti, fireRewardBurst, Modal } from '@komodoit/ui';
 
 export interface RewardRedeemedProps {
   reward: CustomReward | null;

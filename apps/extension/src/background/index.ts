@@ -6,7 +6,7 @@ import {
   type AdvanceOptions,
   type TimerEvent,
   type UserSettings,
-} from '@doloop/core';
+} from '@komodoit/core';
 import { api, ApiError, type ActiveSession } from '../lib/api';
 import { get, getAll, remove, set, type Connection, type Snapshot } from '../lib/storage';
 
@@ -21,7 +21,7 @@ import { get, getAll, remove, set, type Connection, type Snapshot } from '../lib
 const ALARM_POLL = 'poll';
 const ALARM_TICK = 'tick';
 const POLL_MINUTES = 1;
-const NOTIF_IDLE = 'doloop-idle';
+const NOTIF_IDLE = 'komodoit-idle';
 const BLOCK_RULE_BASE = 1000;
 
 /* ---------- Lifecycle ---------- */

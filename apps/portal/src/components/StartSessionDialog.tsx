@@ -1,8 +1,8 @@
-import type { RoutineOccurrence, SessionDurationKind, SessionStyle, StudyNode } from '@doloop/core';
-import { describeCut, modeForPlan, pomodoroCut } from '@doloop/core';
+import type { RoutineOccurrence, SessionDurationKind, SessionStyle, StudyNode } from '@komodoit/core';
+import { describeCut, modeForPlan, pomodoroCut } from '@komodoit/core';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@doloop/ui';
+import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@komodoit/ui';
 import { ApiError } from '../lib/api';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtDate } from '../lib/format';

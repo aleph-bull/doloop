@@ -4,7 +4,7 @@ import type { ISODate, ISODateTime } from './types';
 
 /**
  * Custom rewards: things the user defines and buys with XP — "an hour of doomscrolling",
- * "the hoodie". Doloop never judges what the reward is; it only enforces that it costs
+ * "the hoodie". Komodoit never judges what the reward is; it only enforces that it costs
  * something real, so the XP still has to be earned by studying.
  */
 export const REWARDS = {

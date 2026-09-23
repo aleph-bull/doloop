@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { ROUTINES } from '@doloop/core';
+import { ROUTINES } from '@komodoit/core';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {

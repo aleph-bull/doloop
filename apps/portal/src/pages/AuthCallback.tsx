@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
-import { Spinner } from '@doloop/ui';
+import { Spinner } from '@komodoit/ui';
 import { supabase } from '../lib/auth';
 
 /** Landing page for magic links and OAuth redirects. Supabase parses the URL itself. */

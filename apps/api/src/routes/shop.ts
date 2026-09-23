@@ -11,7 +11,7 @@ import {
   SHOP,
   toLocalDate,
   unlockedAccents,
-} from '@doloop/core';
+} from '@komodoit/core';
 import { and, eq, gte } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';

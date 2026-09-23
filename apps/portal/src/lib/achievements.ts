@@ -5,7 +5,7 @@
  * than a context, so callers need no provider and the focus tab works the same way.
  */
 
-export const ACHIEVEMENT_EVENT = 'doloop:achievements';
+export const ACHIEVEMENT_EVENT = 'komodoit:achievements';
 
 export function announceAchievements(keys: string[]): void {
   if (keys.length === 0 || typeof window === 'undefined') return;

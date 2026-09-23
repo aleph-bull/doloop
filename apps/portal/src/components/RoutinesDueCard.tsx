@@ -1,9 +1,9 @@
-import type { RoutineOccurrence } from '@doloop/core';
+import type { RoutineOccurrence } from '@komodoit/core';
 import { announceAchievements } from '../lib/achievements';
 import { Check, Play } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, Glass, useToast } from '@doloop/ui';
+import { Button, Chip, Glass, useToast } from '@komodoit/ui';
 import { useRoutines, useTickRoutine } from '../lib/queries';
 
 /**

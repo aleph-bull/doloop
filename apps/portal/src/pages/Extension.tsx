@@ -1,4 +1,4 @@
-import { Chip, Glass, Panel } from '@doloop/ui';
+import { Chip, Glass, Panel } from '@komodoit/ui';
 import { useExtensionStatus } from '../lib/extension-bridge';
 
 export function Extension() {
@@ -34,7 +34,7 @@ export function Extension() {
         <h2 className="text-lg mt-2">Install (developer build)</h2>
         <ol className="list-decimal pl-5 muted flex flex-col gap-1">
           <li>
-            Build it: <code>pnpm --filter @doloop/extension build</code>
+            Build it: <code>pnpm --filter @komodoit/extension build</code>
           </li>
           <li>
             Open <code>chrome://extensions</code>, turn on Developer mode, click Load unpacked,

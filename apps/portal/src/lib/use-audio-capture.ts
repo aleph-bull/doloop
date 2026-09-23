@@ -3,7 +3,7 @@ import {
   captureDisplayAudio,
   type AudioCapture,
   type AudioCaptureFailure,
-} from '@doloop/ui';
+} from '@komodoit/ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type AudioCaptureState = 'idle' | 'requesting' | 'listening' | AudioCaptureFailure;

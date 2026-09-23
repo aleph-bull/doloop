@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useQueryClient } from '@tanstack/react-query';
-import { Backdrop, Button, Glass, Input, useToast } from '@doloop/ui';
+import { Backdrop, Button, Glass, Input, useToast } from '@komodoit/ui';
 import { api } from '../lib/api';
 import { localToIso } from '../lib/format';
 import { keys, useMe } from '../lib/queries';

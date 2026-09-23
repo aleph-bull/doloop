@@ -24,8 +24,8 @@ export interface EventInput {
   description?: string;
   start: string; // ISO
   end: string; // ISO
-  /** Marks events created by Doloop. */
-  doloopBlockId?: string;
+  /** Marks events created by Komodoit. */
+  komodoitBlockId?: string;
 }
 
 export interface ListEventsResult {
@@ -89,8 +89,8 @@ function toEventBody(e: EventInput) {
     description: e.description,
     start: { dateTime: e.start },
     end: { dateTime: e.end },
-    extendedProperties: e.doloopBlockId
-      ? { private: { doloopBlockId: e.doloopBlockId } }
+    extendedProperties: e.komodoitBlockId
+      ? { private: { komodoitBlockId: e.komodoitBlockId } }
       : undefined,
   };
 }

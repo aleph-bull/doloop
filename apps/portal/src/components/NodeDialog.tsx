@@ -1,6 +1,6 @@
-import type { StudyNode } from '@doloop/core';
+import type { StudyNode } from '@komodoit/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Select, useToast } from '@doloop/ui';
+import { Button, Input, Modal, Select, useToast } from '@komodoit/ui';
 import { isoToLocalDate, isoToLocalTime, localToIso } from '../lib/format';
 import { useArchiveNode, useCreateNode, useUpdateNode } from '../lib/queries';
 

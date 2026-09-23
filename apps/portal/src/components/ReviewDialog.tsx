@@ -1,6 +1,6 @@
-import type { Distracted, ReviewMode, StudyNode } from '@doloop/core';
+import type { Distracted, ReviewMode, StudyNode } from '@komodoit/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@doloop/ui';
+import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@komodoit/ui';
 import type { ReviewInput } from '../lib/api';
 
 /**

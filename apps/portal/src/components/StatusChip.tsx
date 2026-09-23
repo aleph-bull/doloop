@@ -1,5 +1,5 @@
-import type { PaceStatus } from '@doloop/core';
-import { Chip, type ChipTone } from '@doloop/ui';
+import type { PaceStatus } from '@komodoit/core';
+import { Chip, type ChipTone } from '@komodoit/ui';
 
 const MAP: Record<PaceStatus, { label: string; tone: ChipTone }> = {
   done: { label: 'Done', tone: 'ok' },

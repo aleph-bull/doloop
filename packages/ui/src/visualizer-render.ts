@@ -1,4 +1,4 @@
-import { motionLevel, ribbonNoise, ringNoise, type AnalysisState } from '@doloop/core';
+import { motionLevel, ribbonNoise, ringNoise, type AnalysisState } from '@komodoit/core';
 import { hexToRgb, type RGB } from './contrast';
 
 /**

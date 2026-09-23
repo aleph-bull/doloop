@@ -1,7 +1,7 @@
-import type { CustomReward, RewardView } from '@doloop/core';
+import type { CustomReward, RewardView } from '@komodoit/core';
 import { Gift, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Chip, Panel, Spinner, useToast } from '@doloop/ui';
+import { Button, Chip, Panel, Spinner, useToast } from '@komodoit/ui';
 import { ErrorPanel } from './ErrorState';
 import { RewardDialog } from './RewardDialog';
 import { RewardRedeemed } from './RewardRedeemed';
@@ -97,7 +97,7 @@ function RewardCard({
 }
 
 /**
- * The user's own shop. Doloop supplies the currency and the price floor; everything on the
+ * The user's own shop. Komodoit supplies the currency and the price floor; everything on the
  * shelf is something the user decided was worth working for.
  */
 export function RewardShelf() {

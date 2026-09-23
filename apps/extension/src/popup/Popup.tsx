@@ -15,7 +15,7 @@ import {
   type SessionStyle,
   type TimerEvent,
   type TimerState,
-} from '@doloop/core';
+} from '@komodoit/core';
 import {
   Check,
   ExternalLink,
@@ -40,8 +40,8 @@ import {
   resolveExtensionBackdrop,
   Segmented,
   Toggle,
-} from '@doloop/ui';
-import { resolveTheme as resolveThemeSafe } from '@doloop/ui';
+} from '@komodoit/ui';
+import { resolveTheme as resolveThemeSafe } from '@komodoit/ui';
 import { getAll, onChange, set, type Stored } from '../lib/storage';
 
 type Reply<T> = { ok: true; result: T } | { ok: false; error: string };
@@ -325,10 +325,10 @@ export function Popup() {
     return (
       <div className="popup">
         <Glass className="card stack">
-          <h1>Doloop</h1>
+          <h1>Komodoit</h1>
           <p>Sign in to the portal once and this remote connects automatically.</p>
           <Button variant="primary" onClick={() => open('/extension')}>
-            Open Doloop <ExternalLink size={14} aria-hidden />
+            Open Komodoit <ExternalLink size={14} aria-hidden />
           </Button>
         </Glass>
       </div>

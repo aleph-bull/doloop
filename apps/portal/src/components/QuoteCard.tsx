@@ -1,4 +1,4 @@
-import { Glass } from '@doloop/ui';
+import { Glass } from '@komodoit/ui';
 import { useQuote } from '../lib/queries';
 
 /**

@@ -1,6 +1,6 @@
 import { lazy, Suspense, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
-import { Spinner } from '@doloop/ui';
+import { Spinner } from '@komodoit/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
 import { useAuth } from './lib/auth';
@@ -67,7 +67,7 @@ function Gate({ children }: { children: ReactNode }) {
     return (
       <Centered>
         <ErrorPanel
-          message="Could not reach the Doloop API. Check that it is running, then try again."
+          message="Could not reach the Komodoit API. Check that it is running, then try again."
           onRetry={() => me.refetch()}
         />
       </Centered>

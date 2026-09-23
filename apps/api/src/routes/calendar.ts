@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { findFreeSlots } from '@doloop/core';
+import { findFreeSlots } from '@komodoit/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -136,7 +136,7 @@ export function calendarRoutes(
       listRoutines(db, req.user.id, true),
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
-    reply.header('content-disposition', 'attachment; filename="doloop.ics"');
+    reply.header('content-disposition', 'attachment; filename="komodoit.ics"');
     return buildIcs({
       blocks,
       nodes,

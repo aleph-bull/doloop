@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router';
-import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@doloop/ui';
+import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komodoit/ui';
 import { useAuth } from '../lib/auth';
 
 export function SignIn() {
@@ -38,7 +38,7 @@ export function SignIn() {
             <div className="brand-mark mb-3" aria-hidden>
               <LogoMark size={14} />
             </div>
-            <h1 className="text-2xl">Doloop</h1>
+            <h1 className="text-2xl">Komodoit</h1>
             <p className="muted text-sm mt-1">Plan the work. Keep the pace.</p>
           </div>
 

@@ -12,10 +12,10 @@ import {
   type TimerState,
   type TimerView,
   type UserSettings,
-} from '@doloop/core';
+} from '@komodoit/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Button, Modal, useToast } from '@doloop/ui';
+import { Button, Modal, useToast } from '@komodoit/ui';
 import { ReviewDialog, type ReviewSubject } from '../components/ReviewDialog';
 import { api, type ActiveSession, type EndSummary, type ReviewInput } from './api';
 import { useIdleDetection } from './idle';

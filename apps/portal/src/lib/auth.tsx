@@ -38,8 +38,8 @@ interface AuthApi extends AuthState {
 
 const AuthContext = createContext<AuthApi | null>(null);
 
-const DEV_KEY = 'doloop.dev.token';
-const DEV_EMAIL_KEY = 'doloop.dev.email';
+const DEV_KEY = 'komodoit.dev.token';
+const DEV_EMAIL_KEY = 'komodoit.dev.email';
 
 async function mintDevToken(email: string): Promise<string> {
   const { SignJWT } = await import('jose');

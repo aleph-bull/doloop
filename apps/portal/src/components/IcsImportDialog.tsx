@@ -1,7 +1,7 @@
-import { ROUTINES } from '@doloop/core';
+import { ROUTINES } from '@komodoit/core';
 import { Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Button, Input, Modal } from '@doloop/ui';
+import { Button, Input, Modal } from '@komodoit/ui';
 import type { ImportIcsResponse } from '../lib/api';
 
 export interface IcsImportDialogProps {
