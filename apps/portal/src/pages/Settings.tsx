@@ -43,7 +43,6 @@ import {
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
-import { SpotifySettings } from '../components/focus/SpotifyNowPlaying';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
@@ -492,8 +491,6 @@ export function Settings() {
               </div>
               <div className="divider" />
               <VisualizerSettings value={s.visualizer} onChange={patch} showPromptPreference />
-              <div className="divider" />
-              <SpotifySettings />
             </Section>
 
             <Section id="sounds" title="Sounds">

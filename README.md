@@ -6,8 +6,8 @@ A study-planning product: a web portal, a Chrome extension remote, and an API. F
 
 - **Plan**: courses, tasks, assessments, and subtasks with estimates and due dates. Rest days and vacations that never break a streak.
 - **Pace**: a calculator tells you what to work on today, how many minutes per day you need, and whether each task is on track, behind, critical, or overdue.
-- **Study**: pomodoro, unlimited, or until-a-time sessions with idle detection, optional site blocking (extension), and a skippable end-of-session review. Starting one opens a focus screen in its own tab: a large clock, the task under it, an optional audio-reactive visualizer, and what Spotify is playing.
-- **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a daily quote or research tip, and a positive-only "This week" page.
+- **Study**: pomodoro, unlimited, or until-a-time sessions with idle detection, optional site blocking (extension), and a skippable end-of-session review. Starting one opens a focus screen in its own tab: a large clock, the task under it, and an optional audio-reactive visualizer.
+- **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a quote or research tip every six hours, and a positive-only "This week" page.
 - **Analyse**: an Advanced page with everything (per task, per course, estimate accuracy), a weekly review, and post-assessment follow-ups.
 - **Schedule**: a week view with drag-to-create blocks, free-slot suggestions, two-way Google Calendar sync into a dedicated "Study" calendar, and an .ics feed.
 

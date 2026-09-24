@@ -123,10 +123,35 @@ export interface UserSettings {
     colorMode: VisualizerColorMode;
     /** Hex colour for 'custom'. */
     color: string;
-    /** The layers: waves across the top and bottom, circles around the clock, the glowing edge. */
+    /**
+     * The layers: a cloud of mist along the bottom, waves across the top and bottom, the
+     * ring that rolls out from the clock on a drop, circles around the clock, neon bars
+     * along the bottom, and a mirrored line across the screen.
+     */
+    mist: boolean;
     ribbons: boolean;
+    shockwave: boolean;
     rings: boolean;
-    border: boolean;
+    bars: boolean;
+    waveform: boolean;
+    /** How far up the screen the mist reaches, 0..1, and how fast it drifts, 0..1. */
+    mistHeight: number;
+    mistDrift: number;
+    /** How strongly the mist shows, 0..1, on top of the visualizer's own opacity. */
+    mistOpacity: number;
+    /** How many waves cross the lower band; the upper band carries about half as many. */
+    waveCount: number;
+    /** Where the line's axis sits, as a fraction of the height from the top, 0..1. */
+    waveformPosition: number;
+    /** How many bars, and the tallest one as a fraction of the screen height. */
+    barCount: number;
+    barHeight: number;
+    /** The share of each bar's slot left empty, 0..1, and how much bloom, 0..1. */
+    barGap: number;
+    barGlow: number;
+    /** A faint reflection under the bars, and bass in the middle mirrored outward. */
+    barReflection: boolean;
+    barSymmetric: boolean;
   };
   /**
    * Keys of one-off prompts and hints the user has closed. Server-side so a dismissal

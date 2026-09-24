@@ -1,5 +1,6 @@
 import type { UserSettings, VisualizerColorMode } from '@komogon/core';
-import { Button, Segmented, Slider, Toggle } from '@komogon/ui';
+import { Button, Reveal, Segmented, Slider, Toggle } from '@komogon/ui';
+import type { ReactNode } from 'react';
 import type { AudioCaptureHandle } from '../../lib/use-audio-capture';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -14,6 +15,55 @@ export interface VisualizerSettingsProps {
   audio?: AudioCaptureHandle;
   /** Settings shows the prompt preference; the focus screen keeps it to the modal. */
   showPromptPreference?: boolean;
+}
+
+interface RangeProps {
+  label: string;
+  /** The value as words, shown after the label. */
+  readout: string;
+  min: number;
+  max: number;
+  step: number;
+  value: number;
+  onChange: (v: number) => void;
+}
+
+/** One labelled slider inside a group: the label and its reading on one line, the slider under. */
+function Range({ label, readout, min, max, step, value, onChange }: RangeProps) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="flex justify-between field-hint">
+        <span>{label}</span>
+        <span className="tabular">{readout}</span>
+      </span>
+      <Slider min={min} max={max} step={step} value={value} onChange={onChange} />
+    </label>
+  );
+}
+
+const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+interface LayerProps {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  label: string;
+  description: string;
+  /** The layer's own settings; they drop down while it is on and fold away when it is off. */
+  children?: ReactNode;
+}
+
+/** One visualizer: its switch, and under it, only while on, whatever else it can be told. */
+function Layer({ checked, onChange, label, description, children }: LayerProps) {
+  return (
+    <div className="vis-layer">
+      <Toggle checked={checked} onChange={onChange} label={label} description={description} />
+      {children && (
+        <Reveal open={checked}>
+          <div className="vis-layer-settings">{children}</div>
+        </Reveal>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -98,22 +148,6 @@ export function VisualizerSettings({
             </div>
           </div>
           <div className="field">
-            <span className="field-label">Layers</span>
-            <div className="flex flex-col gap-2">
-              <Toggle
-                checked={value.ribbons}
-                onChange={(ribbons) => set({ ribbons })}
-                label="Waves"
-              />
-              <Toggle checked={value.rings} onChange={(rings) => set({ rings })} label="Circles" />
-              <Toggle
-                checked={value.border}
-                onChange={(border) => set({ border })}
-                label="Glowing border"
-              />
-            </div>
-          </div>
-          <div className="field">
             <span className="field-label">Colour</span>
             <div className="flex items-center gap-3 flex-wrap">
               <Segmented
@@ -143,6 +177,146 @@ export function VisualizerSettings({
                   ? 'One colour of your choosing.'
                   : 'Sweeps from your accent into a neighbouring hue.'}
             </span>
+          </div>
+          <div className="field">
+            <span className="field-label">Visualizers</span>
+            <div className="vis-layers">
+              <Layer
+                checked={value.mist}
+                onChange={(mist) => set({ mist })}
+                label="Cloud mist"
+                description="A glowing cloud that drifts along the bottom and breathes with the music."
+              >
+                <Range
+                  label="Height"
+                  readout={`${pct(value.mistHeight)} of the screen`}
+                  min={0.1}
+                  max={0.6}
+                  step={0.02}
+                  value={value.mistHeight}
+                  onChange={(mistHeight) => set({ mistHeight })}
+                />
+                <Range
+                  label="Drift"
+                  readout={pct(value.mistDrift)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.mistDrift}
+                  onChange={(mistDrift) => set({ mistDrift })}
+                />
+                <Range
+                  label="Opacity"
+                  readout={pct(value.mistOpacity)}
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={value.mistOpacity}
+                  onChange={(mistOpacity) => set({ mistOpacity })}
+                />
+              </Layer>
+              <Layer
+                checked={value.ribbons}
+                onChange={(ribbons) => set({ ribbons })}
+                label="Waves"
+                description="Soft ribbons drifting across the top and bottom."
+              >
+                <Range
+                  label="Waves"
+                  readout={`${value.waveCount} below, ${Math.max(1, Math.round(value.waveCount / 2))} above`}
+                  min={1}
+                  max={12}
+                  step={1}
+                  value={value.waveCount}
+                  onChange={(waveCount) => set({ waveCount })}
+                />
+              </Layer>
+              <Layer
+                checked={value.shockwave}
+                onChange={(shockwave) => set({ shockwave })}
+                label="Beat drop circle"
+                description="A ring rolls out from the clock when the music drops."
+              />
+              <Layer
+                checked={value.rings}
+                onChange={(rings) => set({ rings })}
+                label="Circles"
+                description="Fluid rings around the clock that move with the low end."
+              />
+              <Layer
+                checked={value.bars}
+                onChange={(bars) => set({ bars })}
+                label="Sound bars"
+                description="A glowing spectrum along the bottom of the screen."
+              >
+                <Range
+                  label="Bars"
+                  readout={String(value.barCount)}
+                  min={8}
+                  max={96}
+                  step={4}
+                  value={value.barCount}
+                  onChange={(barCount) => set({ barCount })}
+                />
+                <Range
+                  label="Tallest bar"
+                  readout={`${pct(value.barHeight)} of the screen`}
+                  min={0.1}
+                  max={0.7}
+                  step={0.02}
+                  value={value.barHeight}
+                  onChange={(barHeight) => set({ barHeight })}
+                />
+                <Range
+                  label="Spacing"
+                  readout={pct(value.barGap)}
+                  min={0}
+                  max={0.8}
+                  step={0.05}
+                  value={value.barGap}
+                  onChange={(barGap) => set({ barGap })}
+                />
+                <Range
+                  label="Glow"
+                  readout={pct(value.barGlow)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.barGlow}
+                  onChange={(barGlow) => set({ barGlow })}
+                />
+                <Toggle
+                  checked={value.barReflection}
+                  onChange={(barReflection) => set({ barReflection })}
+                  label="Reflection"
+                />
+                <Toggle
+                  checked={value.barSymmetric}
+                  onChange={(barSymmetric) => set({ barSymmetric })}
+                  label="Bass in the middle"
+                  description="Low notes in the centre, high notes out toward the edges."
+                />
+              </Layer>
+              <Layer
+                checked={value.waveform}
+                onChange={(waveform) => set({ waveform })}
+                label="Mirrored line"
+                description="The waveform drawn across the screen with its reflection under it."
+              >
+                <Range
+                  label="Height on screen"
+                  readout={`${pct(value.waveformPosition)} from the top`}
+                  min={0.05}
+                  max={0.95}
+                  step={0.01}
+                  value={value.waveformPosition}
+                  onChange={(waveformPosition) => set({ waveformPosition })}
+                />
+                <span className="field-hint">
+                  The middle is where the clock is; above or below it keeps the two apart.
+                </span>
+              </Layer>
+            </div>
           </div>
         </>
       )}

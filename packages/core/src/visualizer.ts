@@ -12,6 +12,10 @@
  *     -> relative change / transient detection  analyseFrame()
  *     -> fast attack, exponential release       smooth()
  *     -> AnalysisState, read by the renderer
+ *
+ * The bars and the mirrored line have their own small pieces here too: `updateBars` turns
+ * the spectrum into log-spaced bands, and `waveformShape` resamples the time-domain
+ * waveform into the points the line is drawn through.
  */
 
 export interface VisualizerAnalysisConfig {
@@ -25,6 +29,13 @@ export interface VisualizerAnalysisConfig {
   strongRatio: number;
   /** Absolute bass energy (0..1) below which nothing counts as a hit, so hiss stays still. */
   floor: number;
+  /**
+   * Absolute bass energy a drop needs on top of its ratio. Quiet singing sits on a near-empty
+   * low end, where a soft note or a breath is many times the average without being loud.
+   */
+  dropFloor: number;
+  /** The rolling average is never taken as lower than this when judging the ratio. */
+  averageFloor: number;
   /** Seconds a hit must wait after the previous one, so one kick is not counted twice. */
   refractorySeconds: number;
   /** Per-second rates for the smoothing: how fast a level rises toward, and falls from, its target. */
@@ -43,6 +54,8 @@ export const DEFAULT_ANALYSIS: VisualizerAnalysisConfig = {
   transientRatio: 1.4,
   strongRatio: 2.1,
   floor: 0.06,
+  dropFloor: 0.24,
+  averageFloor: 0.04,
   refractorySeconds: 0.1,
   attackPerSecond: 40,
   releasePerSecond: 4.5,
@@ -189,7 +202,9 @@ export interface FrameInput {
  * Advance the analysis by one frame, in place, and return the same state.
  *
  * Loudness alone never drives the visuals: a brickwalled track sits at a high, flat level,
- * and the response comes from how the low end moves against its own recent average.
+ * and the response comes from how the low end moves against its own recent average. The
+ * one exception is the drop, which also has to be loud outright, so a voice alone over a
+ * near-empty low end can earn a hit but never the shockwave.
  */
 export function analyseFrame(
   state: AnalysisState,
@@ -221,7 +236,8 @@ export function analyseFrame(
   const average = rollingAverage(state, input.time, cfg.windowSeconds);
   pushHistory(state, bassRaw, input.time);
   state.average = average;
-  state.ratio = average > 0 ? bassRaw / average : 1;
+  // Against a floored average: over near-silence the raw ratio says nothing.
+  state.ratio = average > 0 ? bassRaw / Math.max(average, cfg.averageFloor) : 1;
 
   // Transients: the low end jumping well above where it has been sitting. It also has to
   // be *rising* this frame, so a kick that sustains is one hit, not one per refractory
@@ -244,7 +260,7 @@ export function analyseFrame(
       (state.ratio - cfg.transientRatio) / (cfg.strongRatio - cfg.transientRatio),
     );
     state.pulse = Math.max(state.pulse, 0.35 + 0.65 * strength);
-    if (state.ratio >= cfg.strongRatio) {
+    if (state.ratio >= cfg.strongRatio && bassRaw >= cfg.dropFloor) {
       state.drops++;
       state.lastDropAt = input.time;
       state.shock = 1;
@@ -286,6 +302,56 @@ export function ribbonNoise(x: number, seconds: number): number {
   );
 }
 
+/** A deterministic 0..1 for a lattice point, so the same seed always gives the same cloud. */
+function lattice(ix: number, iy: number, seed: number): number {
+  let h = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 2246822519)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+function fade(t: number): number {
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+/**
+ * Value noise on a lattice `period` cells wide that wraps in x, so a texture built from it
+ * tiles without a seam. `x` in 0..1 covers one period; `y` is in the same units. 0..1.
+ */
+export function valueNoise(x: number, y: number, period: number, seed: number): number {
+  const xf = x * period;
+  const yf = y * period;
+  const x0 = Math.floor(xf);
+  const y0 = Math.floor(yf);
+  const tx = fade(xf - x0);
+  const ty = fade(yf - y0);
+  const px = ((x0 % period) + period) % period;
+  const px1 = (px + 1) % period;
+  const a = lattice(px, y0, seed);
+  const b = lattice(px1, y0, seed);
+  const c = lattice(px, y0 + 1, seed);
+  const d = lattice(px1, y0 + 1, seed);
+  return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+}
+
+/**
+ * Fractal cloud noise: octaves of value noise, each twice as fine and half as strong, so
+ * there is shape at every scale from a bank down to a wisp. Periodic in x over 0..1. 0..1.
+ */
+export function cloudNoise(x: number, y: number, seed: number, octaves = 5, period = 6): number {
+  let sum = 0;
+  let strength = 0.5;
+  let total = 0;
+  let p = period;
+  for (let o = 0; o < octaves; o++) {
+    sum += strength * valueNoise(x, y, p, seed + o * 101);
+    total += strength;
+    strength *= 0.5;
+    p *= 2;
+  }
+  return sum / total;
+}
+
 /**
  * Noise around a circle: the same idea with whole-number harmonics of the angle, so the
  * value at 2π is the value at 0 and a ring closes without a seam. -1..1.
@@ -308,6 +374,160 @@ export function motionLevel(state: AnalysisState, seconds: number): number {
   if (state.silent) return idle;
   // Under audio the floor is still the breath, so a quiet passage never freezes.
   return Math.max(idle * 0.6, state.bass);
+}
+
+/* ---------- bars ---------- */
+
+export interface BarsConfig {
+  /**
+   * The frequencies the bars span, in Hz, divided logarithmically so an octave is the
+   * same number of bars wherever it sits and the low end is not squeezed into one bar.
+   */
+  range: readonly [number, number];
+  /** Per-second rates, as for `smooth()`: how fast a bar rises and how fast it falls. */
+  attackPerSecond: number;
+  releasePerSecond: number;
+  /** Lift for the top bars, since byte spectra roll off toward the treble. 0 leaves them be. */
+  tilt: number;
+}
+
+export const DEFAULT_BARS: BarsConfig = {
+  range: [35, 14_000],
+  attackPerSecond: 30,
+  releasePerSecond: 6,
+  tilt: 0.8,
+};
+
+/** The most bars a renderer can ask for; the state is sized once, for this. */
+export const MAX_BARS = 128;
+
+export interface BarState {
+  /** Smoothed level per bar, 0..1. Only the first `count` entries mean anything. */
+  levels: Float32Array;
+  count: number;
+  lastTime: number;
+}
+
+export function createBarState(): BarState {
+  return { levels: new Float32Array(MAX_BARS), count: 0, lastTime: NaN };
+}
+
+/**
+ * The analyser bins for bar `index` of `count`, over the log-spaced range. Bands only ever
+ * move up the spectrum with the index; a bar too narrow for a whole bin (the lowest few, at
+ * ~23 Hz per bin) shares its neighbour's, so the row is never empty there.
+ */
+export function barBins(
+  sampleRate: number,
+  fftSize: number,
+  count: number,
+  index: number,
+  range: readonly [number, number] = DEFAULT_BARS.range,
+): [number, number] {
+  const hzPerBin = sampleRate / fftSize;
+  const top = Math.min(range[1], sampleRate / 2);
+  const ratio = top / range[0];
+  const lo = range[0] * Math.pow(ratio, index / count);
+  const hi = range[0] * Math.pow(ratio, (index + 1) / count);
+  const from = Math.max(0, Math.floor(lo / hzPerBin));
+  const to = Math.max(from + 1, Math.floor(hi / hzPerBin));
+  return [from, to];
+}
+
+/**
+ * Advance the bars by one frame, in place. Each bar is the loudest bin in its band (a peak,
+ * so a single tone lights a single bar rather than smearing), tilted up toward the treble,
+ * then smoothed with a fast attack and a slower release. In silence, or with nothing
+ * captured, the bars breathe with the idle motion instead of dropping to nothing.
+ */
+export function updateBars(
+  state: BarState,
+  input: FrameInput,
+  silent: boolean,
+  count: number,
+  cfg: BarsConfig = DEFAULT_BARS,
+): BarState {
+  const n = Math.max(1, Math.min(MAX_BARS, Math.round(count)));
+  const dt = Number.isNaN(state.lastTime) ? 1 / 60 : Math.min(0.1, input.time - state.lastTime);
+  state.lastTime = input.time;
+  // A change of count restarts those bars from the floor rather than from stale levels.
+  if (state.count !== n) {
+    state.levels.fill(0);
+    state.count = n;
+  }
+  const spectrum = silent ? null : input.spectrum;
+  for (let i = 0; i < n; i++) {
+    let target: number;
+    if (spectrum) {
+      const [from, to] = barBins(input.sampleRate, input.fftSize, n, i, cfg.range);
+      const end = Math.min(to, spectrum.length);
+      let peak = 0;
+      for (let b = from; b < end; b++) if (spectrum[b]! > peak) peak = spectrum[b]!;
+      const lift = 1 + cfg.tilt * (i / Math.max(1, n - 1));
+      target = Math.min(1, (peak / 255) * lift);
+    } else {
+      target = idleBars(i, n, input.time);
+    }
+    state.levels[i] = smooth(
+      state.levels[i]!,
+      target,
+      dt,
+      cfg.attackPerSecond,
+      cfg.releasePerSecond,
+    );
+  }
+  return state;
+}
+
+/**
+ * The resting height of bar `index` of `count` at `seconds`: a low skyline that wanders
+ * along the row and swells with the breath, never quite flat. 0..1.
+ */
+export function idleBars(index: number, count: number, seconds: number): number {
+  const u = count > 1 ? index / (count - 1) : 0.5;
+  const wander = 0.5 + 0.5 * ribbonNoise(u * 4 + 1, seconds * 0.6);
+  return 0.05 + 0.08 * wander + idleBreath(seconds) * (0.04 + 0.16 * wander);
+}
+
+/* ---------- waveform ---------- */
+
+/**
+ * The mirrored line's shape: `out.length` values in -1..1 across the width, resampled from
+ * the analyser's byte waveform (128 is silence). Each point is the mean of its window and
+ * is then softened with its neighbours, so the line flows rather than jags. With no samples,
+ * or in silence, the line drifts on the idle noise instead of lying flat.
+ */
+export function waveformShape(
+  samples: Uint8Array | null,
+  silent: boolean,
+  seconds: number,
+  out: Float32Array,
+): Float32Array {
+  const n = out.length;
+  if (n === 0) return out;
+  if (!samples || silent || samples.length === 0) {
+    for (let i = 0; i < n; i++) {
+      const u = n > 1 ? i / (n - 1) : 0.5;
+      out[i] = 0.3 * ribbonNoise(u * 4.5, seconds * 0.9) * (0.6 + 0.4 * idleBreath(seconds));
+    }
+    return out;
+  }
+  const window = samples.length / n;
+  let prev = 0;
+  let before = 0;
+  for (let i = 0; i < n; i++) {
+    const from = Math.floor(i * window);
+    const to = Math.max(from + 1, Math.floor((i + 1) * window));
+    let sum = 0;
+    for (let s = from; s < to && s < samples.length; s++) sum += samples[s]! - 128;
+    const v = sum / (Math.min(to, samples.length) - from) / 128;
+    // A three-tap blur, written back one point behind so it reads only unblurred values.
+    if (i >= 1) out[i - 1] = i >= 2 ? 0.25 * before + 0.5 * prev + 0.25 * v : 0.5 * prev + 0.5 * v;
+    before = prev;
+    prev = v;
+  }
+  out[n - 1] = n >= 2 ? 0.5 * before + 0.5 * prev : prev;
+  return out;
 }
 
 /* ---------- colour ---------- */

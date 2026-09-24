@@ -763,3 +763,142 @@ extension inside Chrome (it builds).
 - **A sandbox for testing**: `sandbox-api` (8797) and `sandbox` (5183) in launch.json run
   the API from source on throwaway data (`apps/api/.pglite-sandbox`) and the portal against
   it, clear of the always-on copy's ports and the real data.
+
+## Neon bars replace the glowing border, and a mirrored line (user request, 2026-09-24)
+
+The "no bars" line of 2026-09-22 is superseded: the user found the glowing frame blocky and
+asked for a bar visualizer in its place, with plenty of bloom, and separately for a mirrored
+line like the oscilloscope traces in music-video visualizers.
+
+- **The border is gone**, not hidden: the `border` setting, its layer and its drawing were
+  removed. A stored `border` key is ignored (the API strips unknown visualizer keys).
+- **Neon bars** stand along the bottom of the screen: the loudest bin of each band,
+  log-spaced from 35 Hz to 14 kHz so an octave is the same number of bars wherever it
+  sits (`barBins`, `updateBars` in core, 5 tests), tilted up toward the treble because byte
+  spectra roll off there, with a 30/s attack and 6/s release per bar. One path holds the
+  row and is filled three times with a narrowing `shadowBlur`, then a thinner whiter core,
+  so each bar reads as a tube of light rather than a rectangle. The colour climbs from the
+  palette's first colour at the base to its second at the top of the tallest bar.
+- **Their own settings**, all flat under `settings.visualizer` so the one-level merge in
+  `withDefaults` keeps whichever the user has not touched: `barCount` (8-96, default 48),
+  `barHeight` (the tallest bar as a fraction of the screen, default 0.22, so a full-scale
+  row stays under the progress line), `barGap`,
+  `barGlow`, `barReflection` (the row hung upside down under a hairline shelf, fading over
+  half its height; without it the base glows instead) and `barSymmetric` (bass in the
+  middle, mirrored outward; only half the bands are analysed and the renderer mirrors them).
+- **The mirrored line** is the time-domain waveform (`AnalyserNode.getByteTimeDomainData`,
+  read through a new `readWaveform` on the capture), resampled to 160 points by averaging
+  windows and softened with a three-tap blur so it flows (`waveformShape` in core, 3 tests).
+  A wide soft pass and a near-white core, with the same shape hung under the axis in the
+  palette's second colour, or a hue 45 degrees on when the palette is a single colour, so
+  the mirror is always a different colour from the line. Both fade over the outer 14% of
+  the width through a gradient stroke, so no mask pass is needed.
+- **"Where on the x axis it is"** was read as where the line's axis sits vertically:
+  `waveformPosition` (0..1 from the top, default 0.18, between the upper waves and the
+  clock). Off by
+  default, since it is an addition; the bars are on by default, as the border was.
+- **In silence** the bars breathe on a swell that wanders along the row (`idleBars`) and the
+  line drifts on the ribbon noise, so neither ever lies flat.
+
+## The last routine ticked off fades in place (user request, 2026-09-24)
+
+Ticking the last due routine folded its row away, shrinking the card, then the "nothing
+outstanding" line appeared and grew it back: a bounce. Now the tick that empties a due list
+(`last` in `useTickedRoutines`) fades and slides without folding, and the empty line fades
+in at that row's measured height (`emptyHeight`), so the card never moves. Every other tick
+folds away as before. A ticked row on the Routines page keeps its Start button, disabled,
+while it leaves, as the dashboard card already did: dropping it shrank the row 44 to 36 px.
+
+## Fun, never pushy, and a new quote every six hours (user request, 2026-09-24)
+
+The user found lines like "Late, but done. Close the laptop now." annoying: nobody wants a
+script telling them to sleep, stop, or that they are having a hard day.
+
+- **Greetings and session phrases rewritten** in a playful voice ("Time to shake the
+  jello.", "Early grind?", "Start the day off doing what you hate?", "Goblin hours, well
+  spent."). Gone: bedtime and rest advice, "do another tomorrow", "try a shorter block next
+  time", guilt about gaps ("Don't let today be the gap"), comparisons ("Most people never
+  get past three"), and the pep-talk tone of the distracted-session set. Buckets, their
+  priority and the placeholders are unchanged. A test in each file fails on the nagging
+  words, so they cannot creep back. The research tips (cited, opt-in) were left alone,
+  including the four about sleep.
+- **Quotes change every six hours**, on local 0/6/12/18 (`QUOTE_PERIOD_HOURS`,
+  `quoteSlot`). The slot key, "2026-09-24T12", goes in `quotes_seen.date`, a text column,
+  so there is no migration, and it sorts after the bare dates of the one-a-day rows. The
+  30-day no-repeat window stays. Four a day takes 33 days to use the 133 quotes, so nothing
+  repeats in quotes mode; the 35 tips run out in nine days, after which the half seen
+  longest ago comes back into play, never the one just up. `/api/quote` returns `nextAt`,
+  and the portal holds the quote fresh until then and refetches on the dot. The extension
+  popup shows each slot's quote once, where it used to show one a day.
+
+## Cloud mist, a beat-drop switch, folding visualizer settings (user request, 2026-09-24)
+
+- **Cloud mist** is a new layer along the bottom edge, on by default: a bank of light that
+  brightens toward the edge in the palette's second colour, with seven wide soft discs
+  drifting through it, each on its own noise so they never move as one. It breathes with
+  the same smoothed low end as everything else (`motionLevel`), swells on a hit, and
+  settles to a faint slow breath in silence. It is gradients only, no strokes and no
+  `shadowBlur`, so it is the cheapest layer on the screen. Settings: `mistHeight` (how far
+  up it reaches, default 0.3) and `mistDrift` (speed, default 0.5). It is drawn after the
+  ribbon mask and before the rings, so it fades at nothing and everything else stays crisp
+  over it.
+- **Beat drop circle is its own switch** (`shockwave`, on by default). It only gates the
+  ring that rolls out on a drop; detection runs regardless, and the circles' colour split on
+  a drop is part of the circles layer, not this one.
+- **Defaults**: mist, waves and the beat-drop ring on; circles, sound bars and the mirrored
+  line off. Anyone who has saved visualizer settings keeps what they had, since the merge
+  only fills keys that are missing.
+- **Each visualizer folds its own settings away while off.** The list is one switch per
+  layer; a layer with more to say (mist, bars, the line) drops those controls down under its
+  switch when turned on and folds them up when turned off. `Reveal` in the UI package does
+  this with a grid row going 0fr to 1fr, so nothing is measured and nothing jumps; the
+  folded content is `inert` and hidden from readers. Reduced motion turns the fold off.
+  Intensity, opacity and colour stay above the list: they are the visualizer's, not any
+  one layer's.
+- **No small all-caps labels outside the focus screen.** "Session complete" over the score
+  sheet is gone (the title and the score already say it); "Achievement unlocked" on the
+  toast stays, in sentence case. The focus screen's phase label keeps its tracking: it is a
+  clock face, not a heading.
+
+## The beat-drop ring needs a loud low end, not just a jump (user report, 2026-09-24)
+
+Singing without instruments set the ring off constantly: the low end there is nearly empty,
+so its rolling average is tiny and a soft note or a breath is many times that average while
+being nowhere near loud. Two changes in `analyseFrame`: the ratio is now taken against an
+average floored at 0.04, and a drop also has to clear an absolute `dropFloor` of 0.24 in the
+low band (a hit still only needs 0.06). A real kick over a real bed is unchanged, and the
+new test pins the quiet case.
+
+## Wave count, and clouds that look like clouds (user request, 2026-09-24)
+
+- **`waveCount`** (1-12, default 4) sets the lower band's waves; the upper band carries
+  half as many, at least one. The palette's colour steps are built once (18 shades) and
+  picked by position along the row, so a row of any length still sweeps from one colour to
+  the other. A fuller band dims each wave by the square root of the crowding so twelve
+  waves read as light rather than a wall.
+- **The mist is a texture now, not shapes.** The user wanted a realistic cloud, not a
+  cartoon one, and drawn discs or puffs can only ever be the latter. `makeMistTexture`
+  (ui) renders fractal value noise (`cloudNoise` in core, five octaves, periodic in x so it
+  tiles) into a 768x192 picture shaped to be dense at the screen edge, thin upward and end
+  in a wandering top with holes and wisps at every scale, tinted from the palette's second
+  colour at the base to the first at the top and lightened where dense. Two such banks,
+  different seeds, are scrolled along the bottom at different widths and speeds in
+  opposite directions, so they slide past each other as cloud layers do; the low end lifts
+  and brightens both, a hit swells them. Built lazily on the first mist frame (a few tens
+  of milliseconds) and kept per palette.
+
+## The mist has its own opacity (user request, 2026-09-24)
+
+`mistOpacity` (0.1-1, default 1) scales the cloud layer on top of the visualizer's opacity,
+so the clouds can be faded on their own without dimming the waves or the ring. It is the
+third slider under the Cloud mist switch.
+
+## Spotify is gone (user request, 2026-09-24)
+
+The user did not want the now-playing card or the connect flow, so the whole feature was
+removed rather than hidden: the routes, the two services, the portal card and settings, the
+API client and query keys, the volatile-cache rule, the CSS, the env variables and the
+setup notes. Migration `0008_drop_spotify` drops the `spotify_connections` table; the 0007
+migration stays so existing databases replay cleanly. `oauth-state` stays, since Google
+Calendar's consent flow uses it. The visualizer settings test that lived in the Spotify test
+file moved to `visualizer-settings.test.ts`.

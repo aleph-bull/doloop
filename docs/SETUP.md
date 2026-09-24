@@ -37,18 +37,6 @@ Everything the build needs from you, grouped by the phase that first needs it. N
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-## Focus screen: Spotify (optional)
-
-The focus screen can show what you are listening to, with play, pause and skip on Premium.
-
-1. Create an app at https://developer.spotify.com/dashboard (any name; Web API).
-2. Add `http://localhost:8787/api/spotify/callback` as a redirect URI.
-3. Put the client ID and secret into `SPOTIFY_CLIENT_ID` / `SPOTIFY_CLIENT_SECRET` in
-   `apps/api/.env`. `TOKEN_ENCRYPTION_KEY` (above) is needed too; the tokens are stored
-   encrypted with it.
-4. Restart the API. "Connect Spotify" then appears on the focus screen and in
-   Settings > Focus screen. Without the credentials the option is simply absent.
-
 ## Phase 4: Chrome extension
 
 - Chrome (or any Chromium browser). Load `apps/extension/dist` via `chrome://extensions` > Developer mode > Load unpacked. Nothing else to provide.

@@ -1,17 +1,32 @@
 import {
   analyseFrame,
   createAnalysisState,
+  createBarState,
   DEFAULT_ANALYSIS,
+  updateBars,
+  waveformShape,
+  type FrameInput,
   type VisualizerAnalysisConfig,
 } from '@komogon/core';
 import { useEffect, useRef } from 'react';
 import type { AudioCapture } from '../audio-capture';
 import {
+  ALL_LAYERS,
   buildColors,
+  DEFAULT_BARS_LOOK,
+  DEFAULT_MIST_LOOK,
+  DEFAULT_WAVEFORM_LOOK,
+  DEFAULT_WAVES_LOOK,
   paletteKey,
   renderFrame,
+  WAVEFORM_POINTS,
+  type BarsLook,
+  type MistLook,
+  type WavesLook,
   type VisualizerColors,
+  type VisualizerLayers,
   type VisualizerPalette,
+  type WaveformLook,
 } from '../visualizer-render';
 
 export type { VisualizerPalette } from '../visualizer-render';
@@ -24,7 +39,15 @@ export interface AudioVisualizerProps {
   /** How strongly the light shows over the background, 0..1. */
   opacity?: number;
   /** Which parts to draw. All on when omitted. */
-  layers?: { ribbons: boolean; rings: boolean; border: boolean };
+  layers?: VisualizerLayers;
+  /** How the neon bars are laid out and lit. */
+  bars?: BarsLook;
+  /** Where the mirrored line hangs. */
+  waveform?: WaveformLook;
+  /** How high the mist reaches and how fast it drifts. */
+  mist?: MistLook;
+  /** How many waves. */
+  waves?: WavesLook;
   palette: VisualizerPalette;
   /** When false nothing is drawn and the loop stops. */
   enabled: boolean;
@@ -51,15 +74,41 @@ export function AudioVisualizer({
   intensity,
   opacity = 1,
   layers,
+  bars,
+  waveform,
+  mist,
+  waves,
   palette,
   enabled,
   analysis = DEFAULT_ANALYSIS,
   className,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const propsRef = useRef({ getCapture, intensity, opacity, layers, palette, analysis });
+  const propsRef = useRef({
+    getCapture,
+    intensity,
+    opacity,
+    layers,
+    bars,
+    waveform,
+    mist,
+    waves,
+    palette,
+    analysis,
+  });
   useEffect(() => {
-    propsRef.current = { getCapture, intensity, opacity, layers, palette, analysis };
+    propsRef.current = {
+      getCapture,
+      intensity,
+      opacity,
+      layers,
+      bars,
+      waveform,
+      mist,
+      waves,
+      palette,
+      analysis,
+    };
   });
 
   useEffect(() => {
@@ -75,7 +124,10 @@ export function AudioVisualizer({
         window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
     const state = createAnalysisState();
+    const barState = createBarState();
+    const waveShape = new Float32Array(WAVEFORM_POINTS);
     let spectrum = new Uint8Array(new ArrayBuffer(1024));
+    let samples = new Uint8Array(new ArrayBuffer(2048));
     let colors: VisualizerColors | null = null;
     let raf = 0;
     const scene = { width: 0, height: 0, dpr: 1 };
@@ -117,21 +169,37 @@ export function AudioVisualizer({
       lastFrame = now;
 
       const capture = p.getCapture();
+      let input: FrameInput;
       if (capture) {
         if (spectrum.length < capture.frequencyBinCount)
           spectrum = new Uint8Array(new ArrayBuffer(capture.frequencyBinCount));
         capture.read(spectrum);
-        analyseFrame(
-          state,
-          { spectrum, sampleRate: capture.sampleRate, fftSize: capture.fftSize, time: seconds },
-          p.analysis,
-        );
+        input = {
+          spectrum,
+          sampleRate: capture.sampleRate,
+          fftSize: capture.fftSize,
+          time: seconds,
+        };
       } else {
-        analyseFrame(
-          state,
-          { spectrum: null, sampleRate: 48_000, fftSize: 2048, time: seconds },
-          p.analysis,
-        );
+        input = { spectrum: null, sampleRate: 48_000, fftSize: 2048, time: seconds };
+      }
+      analyseFrame(state, input, p.analysis);
+
+      const layers = p.layers ?? ALL_LAYERS;
+      const barsLook = p.bars ?? DEFAULT_BARS_LOOK;
+      if (layers.bars) {
+        // A symmetric row only needs half the bands; the renderer mirrors them outward.
+        const bands = barsLook.symmetric ? Math.ceil(barsLook.count / 2) : barsLook.count;
+        updateBars(barState, input, state.silent, bands);
+      }
+      if (layers.waveform) {
+        if (capture) {
+          // The shape is resampled over the whole buffer, so it has to be exactly one FFT long.
+          if (samples.length !== capture.fftSize)
+            samples = new Uint8Array(new ArrayBuffer(capture.fftSize));
+          capture.readWaveform(samples);
+        }
+        waveformShape(capture ? samples : null, state.silent, seconds, waveShape);
       }
 
       if (!colors || colors.key !== paletteKey(p.palette)) colors = buildColors(ctx, p.palette);
@@ -140,8 +208,16 @@ export function AudioVisualizer({
         state,
         intensity: p.intensity,
         opacity: p.opacity,
-        layers: p.layers,
+        layers,
         colors,
+        bars: layers.bars
+          ? { levels: barState.levels, count: barsLook.count, look: barsLook }
+          : undefined,
+        waveform: layers.waveform
+          ? { shape: waveShape, look: p.waveform ?? DEFAULT_WAVEFORM_LOOK }
+          : undefined,
+        mist: layers.mist ? { look: p.mist ?? DEFAULT_MIST_LOOK } : undefined,
+        waves: { look: p.waves ?? DEFAULT_WAVES_LOOK },
       });
 
       // Under reduced motion one frame at rest is the whole animation.

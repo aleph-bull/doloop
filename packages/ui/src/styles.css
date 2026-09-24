@@ -299,6 +299,32 @@ a:hover {
   cursor: not-allowed;
 }
 
+/* ---------- Reveal: content that drops down and folds away ---------- */
+.reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--dur-base) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+.reveal.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.reveal-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+:root[data-motion='off'] .reveal {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .reveal {
+    transition: none;
+  }
+}
+
 /* ---------- Segmented control ---------- */
 .segmented {
   display: inline-flex;

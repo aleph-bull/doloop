@@ -27,8 +27,6 @@ export const keys = {
   routineList: ['routines', 'list'] as const,
   trackers: (weeks?: number) => ['trackers', weeks ?? 'default'] as const,
   grades: ['grades'] as const,
-  spotify: ['spotify', 'status'] as const,
-  nowPlaying: ['spotify', 'now-playing'] as const,
 };
 
 export function useMe() {
@@ -50,6 +48,8 @@ export function useActiveSession() {
     refetchInterval: 20_000,
     staleTime: 5_000,
   });
+}
+
 /**
  * A quote is up for six hours: fresh until the server's `nextAt`, then fetched again on the
  * dot. `staleTime` counts from the fetch and the interval from now. A floor of a minute
@@ -57,8 +57,6 @@ export function useActiveSession() {
  */
 const quoteMsFrom = (from: number, data?: { nextAt?: string }) =>
   data?.nextAt ? Math.max(60_000, Date.parse(data.nextAt) - from + 1_000) : 60 * 60_000;
-
-}
 
 export function useQuote() {
   return useQuery({
@@ -144,26 +142,6 @@ export function useCommitments() {
 
 export function useGoogleStatus() {
   return useQuery({ queryKey: keys.google, queryFn: api.googleStatus, staleTime: 30_000 });
-}
-
-export function useSpotifyStatus() {
-  return useQuery({ queryKey: keys.spotify, queryFn: api.spotifyStatus, staleTime: 30_000 });
-}
-
-/**
- * What is playing, polled while the focus screen is showing. A failed poll keeps the last
- * answer on screen rather than blanking the card: the timer never depends on this.
- */
-export function useNowPlaying(enabled: boolean) {
-  return useQuery({
-    queryKey: keys.nowPlaying,
-    queryFn: api.spotifyNowPlaying,
-    enabled,
-    refetchInterval: 5_000,
-    refetchIntervalInBackground: false,
-    staleTime: 2_000,
-    retry: 1,
-  });
 }
 
 export function useCreateBlock() {

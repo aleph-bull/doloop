@@ -3,6 +3,7 @@ export { Panel } from './components/Panel';
 export { Button, type ButtonProps, type ButtonVariant } from './components/Button';
 export { Field, Input, Select, Textarea } from './components/Field';
 export { Toggle } from './components/Toggle';
+export { Reveal, type RevealProps } from './components/Reveal';
 export { Modal, type ModalProps } from './components/Modal';
 export {
   Chip,
@@ -26,11 +27,23 @@ export {
   type VisualizerPalette,
 } from './components/AudioVisualizer';
 export {
+  ALL_LAYERS,
   buildColors,
+  DEFAULT_BARS_LOOK,
+  DEFAULT_MIST_LOOK,
+  DEFAULT_WAVEFORM_LOOK,
+  DEFAULT_WAVES_LOOK,
+  MAX_WAVES,
   renderFrame,
+  WAVEFORM_POINTS,
+  type BarsLook,
+  type MistLook,
+  type WavesLook,
   type VisualizerColors,
   type VisualizerFrame,
+  type VisualizerLayers,
   type VisualizerScene,
+  type WaveformLook,
 } from './visualizer-render';
 export {
   canCaptureAudio,

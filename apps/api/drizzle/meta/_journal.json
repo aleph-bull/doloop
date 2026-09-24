@@ -57,6 +57,13 @@
       "when": 1790121141415,
       "tag": "0007_spotify",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790121741415,
+      "tag": "0008_drop_spotify",
+      "breakpoints": true
     }
   ]
 }

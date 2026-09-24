@@ -74,8 +74,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'visualiser',
       'audio',
       'music',
-      'spotify',
-      'now playing',
       'never ask again',
       'share audio',
       'open on start',

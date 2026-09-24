@@ -358,26 +358,6 @@ export const googleCalendar = pgTable('google_calendar', {
   lastSyncAt: ts('last_sync_at'),
 });
 
-/**
- * Spotify, connected from the focus screen so it can show what is playing. Both tokens are
- * encrypted at rest; the access token is cached so a poll every few seconds does not
- * refresh every time.
- */
-export const spotifyConnections = pgTable('spotify_connections', {
-  userId: uuid('user_id')
-    .primaryKey()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  refreshTokenEnc: text('refresh_token_enc').notNull(),
-  accessTokenEnc: text('access_token_enc'),
-  accessExpiresAt: ts('access_expires_at').notNull(),
-  displayName: text('display_name'),
-  /** Spotify's account tier; playback control needs 'premium'. */
-  product: text('product'),
-  /** Null until the token stops working; the UI then offers "Reconnect". */
-  revokedAt: ts('revoked_at'),
-  connectedAt: ts('connected_at').notNull().defaultNow(),
-});
-
 /** A user-defined thing to count daily, rendered as its own contribution grid. */
 export const trackers = pgTable(
   'trackers',
@@ -457,7 +437,6 @@ export const schema = {
   estimateChanges,
   weeklyReviews,
   googleCalendar,
-  spotifyConnections,
   streakEvents,
   userAssets,
   customRewards,

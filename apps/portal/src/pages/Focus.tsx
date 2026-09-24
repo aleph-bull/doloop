@@ -38,7 +38,6 @@ import { PHASE_LABEL, useSessionController } from '../lib/session-controller';
 import { useAudioCapture } from '../lib/use-audio-capture';
 import { AudioPermissionModal } from '../components/focus/AudioPermissionModal';
 import { ProgressDisplay } from '../components/focus/ProgressDisplay';
-import { SpotifyNowPlaying, SpotifySettings } from '../components/focus/SpotifyNowPlaying';
 import { TaskContext } from '../components/focus/TaskContext';
 import { TimerDisplay } from '../components/focus/TimerDisplay';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
@@ -209,7 +208,25 @@ export function Focus() {
           getCapture={audio.getCapture}
           intensity={vis.intensity}
           opacity={vis.opacity}
-          layers={{ ribbons: vis.ribbons, rings: vis.rings, border: vis.border }}
+          layers={{
+            mist: vis.mist,
+            ribbons: vis.ribbons,
+            shockwave: vis.shockwave,
+            rings: vis.rings,
+            bars: vis.bars,
+            waveform: vis.waveform,
+          }}
+          mist={{ height: vis.mistHeight, drift: vis.mistDrift, opacity: vis.mistOpacity }}
+          waves={{ count: vis.waveCount }}
+          bars={{
+            count: vis.barCount,
+            height: vis.barHeight,
+            gap: vis.barGap,
+            glow: vis.barGlow,
+            reflection: vis.barReflection,
+            symmetric: vis.barSymmetric,
+          }}
+          waveform={{ position: vis.waveformPosition }}
           palette={palette}
         />
       )}
@@ -278,10 +295,6 @@ export function Focus() {
         </main>
       )}
 
-      <div className="focus-bottom">
-        <SpotifyNowPlaying />
-      </div>
-
       {sheetOpen && (
         <Glass className="focus-sheet" strong role="dialog" aria-label="Focus screen controls">
           <div className="focus-sheet-head">
@@ -299,9 +312,6 @@ export function Focus() {
           <section className="focus-sheet-section" aria-label="Visualizer">
             <h3 className="focus-sheet-title">Visualizer</h3>
             {vis && <VisualizerSettings value={vis} onChange={patch} audio={audio} />}
-          </section>
-          <section className="focus-sheet-section" aria-label="Spotify">
-            <SpotifySettings />
           </section>
           <section className="focus-sheet-section">
             <Button variant="secondary" onClick={leave}>

@@ -14,6 +14,8 @@ export interface AudioCapture {
   frequencyBinCount: number;
   /** Copy the current byte spectrum into `out` (length >= frequencyBinCount). */
   read(out: Uint8Array<ArrayBuffer>): void;
+  /** Copy the current byte waveform into `out` (length >= fftSize); 128 is silence. */
+  readWaveform(out: Uint8Array<ArrayBuffer>): void;
   /** Release the stream and the audio context. Idempotent. */
   stop(): void;
 }
@@ -90,6 +92,9 @@ export async function captureDisplayAudio(onEnded: () => void): Promise<AudioCap
     frequencyBinCount: analyser.frequencyBinCount,
     read(out) {
       if (!stopped) analyser.getByteFrequencyData(out);
+    },
+    readWaveform(out) {
+      if (!stopped) analyser.getByteTimeDomainData(out);
     },
     stop() {
       if (stopped) return;

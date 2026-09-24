@@ -2,18 +2,28 @@ import { describe, expect, it } from 'vitest';
 import {
   analyseFrame,
   bandEnergy,
+  barBins,
   binRange,
+  cloudNoise,
   createAnalysisState,
+  createBarState,
   DEFAULT_ANALYSIS,
+  DEFAULT_BARS,
+  idleBars,
   idleBreath,
+  MAX_BARS,
   motionLevel,
   ribbonNoise,
   ringNoise,
   shiftHue,
   smooth,
   smoothingFactor,
+  updateBars,
+  valueNoise,
   visualizerPalette,
+  waveformShape,
   type AnalysisState,
+  type BarState,
 } from './visualizer';
 
 const SAMPLE_RATE = 48_000;
@@ -146,6 +156,20 @@ describe('analyseFrame', () => {
     expect(t.shockAge).toBeCloseTo(2 / 60, 5);
   });
 
+  it('quiet singing: a soft swell over a near-empty low end is a hit at most, never a drop', () => {
+    const s = createAnalysisState();
+    run(s, spectrum(4, 30), 90); // a voice alone: almost nothing under 140 Hz
+    run(s, spectrum(30, 60), 1); // a low note lands: many times the average, but not loud
+    expect(s.hits).toBe(1);
+    expect(s.drops).toBe(0);
+    expect(s.shock).toBe(0);
+    // The same jump, loud enough outright, is still a drop.
+    const t = createAnalysisState();
+    run(t, spectrum(4, 30), 90);
+    run(t, spectrum(80, 60), 1);
+    expect(t.drops).toBe(1);
+  });
+
   it('ignores hiss: a jump below the floor is not a hit', () => {
     const s = createAnalysisState();
     run(s, spectrum(2, 6), 90);
@@ -210,6 +234,26 @@ describe('idle motion', () => {
     }
   });
 
+  it('cloud noise is bounded, seamless across its period, and different per seed', () => {
+    let min = 1;
+    let max = 0;
+    for (let y = 0; y < 0.25; y += 0.013) {
+      for (let x = 0; x < 1; x += 0.017) {
+        const v = cloudNoise(x, y, 3);
+        min = Math.min(min, v);
+        max = Math.max(max, v);
+      }
+      expect(cloudNoise(0, y, 3)).toBeCloseTo(cloudNoise(1, y, 3), 9);
+      expect(valueNoise(0, y, 6, 1)).toBeCloseTo(valueNoise(1, y, 6, 1), 9);
+    }
+    expect(min).toBeGreaterThanOrEqual(0);
+    expect(max).toBeLessThanOrEqual(1);
+    expect(max - min).toBeGreaterThan(0.3);
+    expect(cloudNoise(0.3, 0.1, 3)).not.toBeCloseTo(cloudNoise(0.3, 0.1, 4), 3);
+    // Smooth: a tiny step is a tiny change.
+    expect(Math.abs(cloudNoise(0.3, 0.1, 3) - cloudNoise(0.3005, 0.1, 3))).toBeLessThan(0.02);
+  });
+
   it('ring noise closes: the value at a full turn is the value at zero', () => {
     for (let t = 0; t < 20; t += 1.7) {
       expect(ringNoise(0, t)).toBeCloseTo(ringNoise(Math.PI * 2, t), 6);
@@ -223,6 +267,147 @@ describe('idle motion', () => {
     run(s, spectrum(240, 200), 60);
     expect(motionLevel(s, 1)).toBeCloseTo(s.bass, 5);
     expect(motionLevel(s, 1)).toBeGreaterThan(0.5);
+  });
+});
+
+describe('bars', () => {
+  it('bands are log-spaced, climb with the index, never empty and never past the spectrum', () => {
+    const count = 32;
+    let lastFrom = -1;
+    let lastTo = 0;
+    let firstWidth = 0;
+    for (let i = 0; i < count; i++) {
+      const [from, to] = barBins(SAMPLE_RATE, FFT, count, i);
+      expect(to).toBeGreaterThan(from);
+      expect(from).toBeGreaterThanOrEqual(lastFrom);
+      expect(to).toBeGreaterThanOrEqual(lastTo);
+      expect(to).toBeLessThanOrEqual(BINS);
+      if (i === 0) firstWidth = to - from;
+      lastFrom = from;
+      lastTo = to;
+    }
+    // Above the first octave or so the bands stop sharing bins.
+    for (let i = 8; i < count; i++) {
+      expect(barBins(SAMPLE_RATE, FFT, count, i)[0]).toBeGreaterThanOrEqual(
+        barBins(SAMPLE_RATE, FFT, count, i - 1)[1],
+      );
+    }
+    // Octaves take the same number of bars, so the top band spans far more bins than the first.
+    const [topFrom, topTo] = barBins(SAMPLE_RATE, FFT, count, count - 1);
+    expect(topTo - topFrom).toBeGreaterThan(firstWidth * 20);
+    // A range above Nyquist is clipped rather than pointing past the last bin.
+    const [, clipped] = barBins(SAMPLE_RATE, FFT, 8, 7, [35, 100_000]);
+    expect(clipped).toBeLessThanOrEqual(BINS);
+  });
+
+  function feed(state: BarState, spec: Uint8Array | null, frames: number, count = 24): void {
+    const start = Number.isNaN(state.lastTime) ? 0 : state.lastTime;
+    for (let f = 1; f <= frames; f++) {
+      updateBars(
+        state,
+        { spectrum: spec, sampleRate: SAMPLE_RATE, fftSize: FFT, time: start + f / 60 },
+        spec === null,
+        count,
+      );
+    }
+  }
+
+  it('a single tone lights the one bar whose band holds it', () => {
+    const spec = new Uint8Array(BINS);
+    // 1 kHz sits in bin 42-43 at 23.4 Hz per bin.
+    spec[43] = 255;
+    const state = createBarState();
+    feed(state, spec, 30);
+    const lit = [...state.levels.subarray(0, 24)]
+      .map((v, i) => [v, i] as const)
+      .filter(([v]) => v > 0.05);
+    expect(lit.length).toBe(1);
+    const [from, to] = barBins(SAMPLE_RATE, FFT, 24, lit[0]![1]);
+    expect(43).toBeGreaterThanOrEqual(from);
+    expect(43).toBeLessThan(to);
+  });
+
+  it('rises fast, falls slowly, and the tilt lifts the treble', () => {
+    const flat = new Uint8Array(BINS).fill(128);
+    const state = createBarState();
+    feed(state, flat, 3);
+    // After three frames at 30/s attack the bars are well on their way up.
+    expect(state.levels[0]).toBeGreaterThan(0.3);
+    feed(state, flat, 60);
+    const low = state.levels[0]!;
+    const high = state.levels[23]!;
+    expect(low).toBeCloseTo(128 / 255, 1);
+    expect(high).toBeCloseTo(Math.min(1, (128 / 255) * (1 + DEFAULT_BARS.tilt)), 1);
+    // Silence: the bars release toward the breath rather than snapping.
+    feed(state, null, 1);
+    expect(state.levels[0]).toBeGreaterThan(low * 0.8);
+    feed(state, null, 120);
+    expect(state.levels[0]).toBeLessThan(0.3);
+  });
+
+  it('a change of count restarts the row, and the count is clamped', () => {
+    const state = createBarState();
+    feed(state, new Uint8Array(BINS).fill(200), 30, 16);
+    expect(state.count).toBe(16);
+    feed(state, new Uint8Array(BINS).fill(200), 1, 8);
+    expect(state.count).toBe(8);
+    expect(state.levels[0]).toBeLessThan(0.5);
+    feed(state, null, 1, 10_000);
+    expect(state.count).toBe(MAX_BARS);
+  });
+
+  it('idle bars stay low, bounded and different along the row', () => {
+    for (let t = 0; t < 30; t += 0.7) {
+      for (let i = 0; i < 24; i++) {
+        const v = idleBars(i, 24, t);
+        expect(v).toBeGreaterThanOrEqual(0);
+        expect(v).toBeLessThanOrEqual(0.3);
+      }
+    }
+    expect(idleBars(0, 24, 5)).not.toBe(idleBars(23, 24, 5));
+  });
+});
+
+describe('waveform', () => {
+  it('resamples a byte waveform into -1..1 around silence at 128', () => {
+    const samples = new Uint8Array(FFT);
+    for (let i = 0; i < FFT; i++)
+      samples[i] = Math.round(128 + 100 * Math.sin((i / FFT) * Math.PI * 4));
+    const out = waveformShape(samples, false, 0, new Float32Array(64));
+    let max = -Infinity;
+    let min = Infinity;
+    for (const v of out) {
+      max = Math.max(max, v);
+      min = Math.min(min, v);
+      expect(Math.abs(v)).toBeLessThanOrEqual(1);
+    }
+    expect(max).toBeGreaterThan(0.6);
+    expect(min).toBeLessThan(-0.6);
+    // Two full cycles across the width: the line returns to zero in the middle.
+    expect(Math.abs(out[32]!)).toBeLessThan(0.15);
+    // A flat waveform is a flat line.
+    const flat = waveformShape(new Uint8Array(FFT).fill(128), false, 0, new Float32Array(64));
+    for (const v of flat) expect(v).toBe(0);
+  });
+
+  it('softens a spike across its neighbours', () => {
+    const samples = new Uint8Array(64).fill(128);
+    samples[32] = 255;
+    const out = waveformShape(samples, false, 0, new Float32Array(64));
+    expect(out[32]).toBeGreaterThan(0.4);
+    expect(out[31]).toBeGreaterThan(0.1);
+    expect(out[33]).toBeGreaterThan(0.1);
+    expect(out[30]).toBe(0);
+  });
+
+  it('drifts on the idle noise in silence or with nothing captured', () => {
+    const a = waveformShape(null, false, 1, new Float32Array(32));
+    const b = waveformShape(new Uint8Array(FFT).fill(200), true, 1, new Float32Array(32));
+    expect([...a]).toEqual([...b]);
+    expect(a.some((v) => v !== 0)).toBe(true);
+    for (const v of a) expect(Math.abs(v)).toBeLessThanOrEqual(0.3);
+    const later = waveformShape(null, false, 2, new Float32Array(32));
+    expect([...later]).not.toEqual([...a]);
   });
 });
 

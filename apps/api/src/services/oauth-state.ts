@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 /**
  * The OAuth `state` parameter, signed so the callback can trust who started the flow.
- * Shared by every consent flow (Google Calendar, Spotify): the payload is whatever the
+ * Shared by every consent flow (Google Calendar today): the payload is whatever the
  * caller needs back, the timestamp bounds how long the link stays valid.
  */
 

@@ -43,9 +43,6 @@ export function SessionSummary({ summary, phrasesEnabled }: SessionSummaryProps)
   return (
     <div className="summary">
       <div className="summary-reveal" style={stagger()}>
-        <div className="summary-kicker">
-          {summary.endedEarly ? 'Session ended early' : 'Session complete'}
-        </div>
         <h2 className="summary-title">
           {phrasesEnabled && summary.phrase ? summary.phrase.text : 'Nice work.'}
         </h2>
