@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Glass, useToast } from '@komodoit/ui';
+import { Button, Glass, useToast } from '@komogon/ui';
 import { api } from '../lib/api';
 import { keys, useFollowUps } from '../lib/queries';
 

@@ -13,7 +13,7 @@ import {
   toLocalDate,
   weekdayProfile,
   weeklyReview,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';

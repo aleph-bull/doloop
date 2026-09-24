@@ -6,7 +6,7 @@ import {
   toRewardView,
   validateRewardDraft,
   REWARDS,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { and, desc, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { customRewards, users, xpTransactions, type CustomRewardRow } from '../db/schema';

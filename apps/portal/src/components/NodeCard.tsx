@@ -1,6 +1,6 @@
-import type { NodePace, StudyNode } from '@komodoit/core';
+import type { NodePace, StudyNode } from '@komogon/core';
 import { Play } from 'lucide-react';
-import { Button, Chip, Glass, ProgressBar } from '@komodoit/ui';
+import { Button, Chip, Glass, ProgressBar } from '@komogon/ui';
 import { fmtDue, fmtMinutes, pct } from '../lib/format';
 import { StatusChip } from './StatusChip';
 

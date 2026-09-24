@@ -1,4 +1,4 @@
-import { toLocalDate } from '@komodoit/core';
+import { toLocalDate } from '@komogon/core';
 
 /** "2 h 15 m", "45 m", "0 m" */
 export function fmtMinutes(min: number | null | undefined): string {

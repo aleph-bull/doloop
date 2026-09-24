@@ -1,6 +1,6 @@
-import type { Tracker } from '@komodoit/core';
+import type { Tracker } from '@komogon/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, useToast } from '@komodoit/ui';
+import { Button, Input, Modal, useToast } from '@komogon/ui';
 import { useCreateTracker, useDeleteTracker, useUpdateTracker } from '../lib/queries';
 
 export interface TrackerDialogProps {

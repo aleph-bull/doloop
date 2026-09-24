@@ -6,7 +6,7 @@ import {
   visualizerPalette,
   type StudyNode,
   type UserSettings,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { Eye, EyeOff, Pause, Play, Settings2, SkipForward, Square, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,7 +20,7 @@ import {
   Glass,
   Spinner,
   useToast,
-} from '@komodoit/ui';
+} from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
 import { useFocusTabBeacon } from '../lib/focus-tab';
@@ -177,9 +177,9 @@ export function Focus() {
   }, [session]);
 
   useEffect(() => {
-    document.title = session ? `${session.nodeTitle} · Komodoit` : 'Focus · Komodoit';
+    document.title = session ? `${session.nodeTitle} · Komogon` : 'Focus · Komogon';
     return () => {
-      document.title = 'Komodoit';
+      document.title = 'Komogon';
     };
   }, [session]);
 
@@ -215,7 +215,7 @@ export function Focus() {
       )}
 
       <div className={`focus-top focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
-        <span className="focus-brand">Komodoit</span>
+        <span className="focus-brand">Komogon</span>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}
         <Button

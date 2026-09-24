@@ -4,11 +4,11 @@ import {
   type CourseGrade,
   type GradeComponent,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, EmptyState, Input, Panel, Segmented, Spinner, useToast } from '@komodoit/ui';
+import { Button, Chip, EmptyState, Input, Panel, Segmented, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import {
   useCreateComponent,

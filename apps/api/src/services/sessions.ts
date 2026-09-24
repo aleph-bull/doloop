@@ -21,7 +21,7 @@ import {
   type TimerEvent,
   type TimerState,
   type TimerView,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { and, desc, eq, isNull } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';

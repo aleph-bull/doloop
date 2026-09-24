@@ -1,4 +1,4 @@
-import { motionLevel, ribbonNoise, ringNoise, type AnalysisState } from '@komodoit/core';
+import { motionLevel, ribbonNoise, ringNoise, type AnalysisState } from '@komogon/core';
 import { hexToRgb, type RGB } from './contrast';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { StudyNode } from '@komodoit/core';
+import type { StudyNode } from '@komogon/core';
 import { buildIcs } from '../services/ics';
 
 const node = (over: Partial<StudyNode>): StudyNode => ({
@@ -32,7 +32,7 @@ describe('buildIcs due dates', () => {
       now: '2026-09-22T12:00:00.000Z',
       timezone: 'America/Toronto',
     });
-    expect(ics).toContain('UID:due-n1@komodoit');
+    expect(ics).toContain('UID:due-n1@komogon');
     expect(ics).toContain('DTSTART;VALUE=DATE:20260922');
     expect(ics).toContain('SUMMARY:Midterm');
     expect(ics).not.toContain('DTEND');
@@ -62,8 +62,8 @@ describe('buildIcs due dates', () => {
       now: '2026-09-22T12:00:00.000Z',
     });
     expect(ics).toContain('SUMMARY:Due: Problem set');
-    expect(ics).toContain('UID:due-b@komodoit');
-    expect(ics).toContain('DESCRIPTION:Done (Komodoit)');
+    expect(ics).toContain('UID:due-b@komogon');
+    expect(ics).toContain('DESCRIPTION:Done (Komogon)');
     expect(ics).not.toContain('due-c@');
     expect(ics).not.toContain('due-d@');
   });

@@ -1,5 +1,5 @@
-import { CUSTOM_BACKGROUND_UPLOAD, type UserSettings } from '@komodoit/core';
-import { applyTheme, applyUserTheme, resolveTheme, type ResolvedTheme } from '@komodoit/ui';
+import { CUSTOM_BACKGROUND_UPLOAD, type UserSettings } from '@komogon/core';
+import { applyTheme, applyUserTheme, resolveTheme, type ResolvedTheme } from '@komogon/ui';
 import { useEffect } from 'react';
 import { useCustomBackground } from './queries';
 

@@ -1,7 +1,7 @@
-import { formatClock, type StudyNode, type UserSettings } from '@komodoit/core';
+import { formatClock, type StudyNode, type UserSettings } from '@komogon/core';
 import { Eye, EyeOff, Maximize2, Pause, Play, SkipForward, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button, Chip, Glass, useToast } from '@komodoit/ui';
+import { Button, Chip, Glass, useToast } from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { openFocusTab, useFocusTabPresent } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';

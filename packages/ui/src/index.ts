@@ -62,4 +62,5 @@ export {
 } from './backgrounds';
 export { fireConfetti } from './confetti';
 export { fireRewardBurst, type BurstOptions } from './burst';
+export { fireSparks, type SparksOptions } from './sparks';
 export * from './contrast';

@@ -3,8 +3,8 @@ import {
   BACKGROUNDS,
   isBackgroundAvailable,
   type BackgroundMeta,
-} from '@komodoit/core';
-import { BackgroundThumb, type ResolvedTheme } from '@komodoit/ui';
+} from '@komogon/core';
+import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
 
 export interface BackgroundPickerProps {
   /** Currently selected id. */

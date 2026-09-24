@@ -1,7 +1,7 @@
-import type { Routine, StudyNode } from '@komodoit/core';
-import { describeRecurrence, ROUTINES } from '@komodoit/core';
+import type { Routine, StudyNode } from '@komogon/core';
+import { describeRecurrence, ROUTINES } from '@komogon/core';
 import { useState } from 'react';
-import { Button, Input, Modal, Segmented, Select, Textarea } from '@komodoit/ui';
+import { Button, Input, Modal, Segmented, Select, Textarea } from '@komogon/ui';
 import type { RoutineInput } from '../lib/api';
 
 export interface RoutineDialogProps {

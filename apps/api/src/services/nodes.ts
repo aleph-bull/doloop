@@ -1,4 +1,4 @@
-import type { StudyNode } from '@komodoit/core';
+import type { StudyNode } from '@komogon/core';
 import { and, eq } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';

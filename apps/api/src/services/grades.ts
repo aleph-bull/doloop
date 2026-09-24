@@ -6,7 +6,7 @@ import {
   type GradeComponent,
   type Gpa,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { and, eq } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { gradeComponents, type GradeComponentRow, type UserRow } from '../db/schema';

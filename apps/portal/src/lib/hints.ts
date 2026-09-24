@@ -12,7 +12,7 @@ import { useMe, useUpdateSettings } from './queries';
 export type HintKey =
   'rest-days' | 'calendar' | 'xp' | 'freezes' | 'blocking' | 'name' | 'dashboard' | 'grades';
 
-const KEY = 'komodoit.hints.dismissed';
+const KEY = 'komogon.hints.dismissed';
 
 function readLocal(): string[] {
   try {

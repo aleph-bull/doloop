@@ -1,5 +1,5 @@
-import { DEFAULT_BACKGROUND_ID } from '@komodoit/core';
-import { BackgroundThumb, Segmented, type ResolvedTheme } from '@komodoit/ui';
+import { DEFAULT_BACKGROUND_ID } from '@komogon/core';
+import { BackgroundThumb, Segmented, type ResolvedTheme } from '@komogon/ui';
 import { BackgroundPicker } from './BackgroundPicker';
 
 export interface ExtensionBackgroundPickerProps {

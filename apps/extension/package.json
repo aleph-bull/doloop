@@ -1,5 +1,5 @@
 {
-  "name": "@komodoit/extension",
+  "name": "@komogon/extension",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@komodoit/core": "workspace:*",
-    "@komodoit/ui": "workspace:*",
+    "@komogon/core": "workspace:*",
+    "@komogon/ui": "workspace:*",
     "lucide-react": "^1.47.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

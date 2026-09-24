@@ -4,10 +4,10 @@ import {
   type RoutineOccurrence,
   type Session,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Glass, Spinner } from '@komodoit/ui';
+import { Button, Glass, Spinner } from '@komogon/ui';
 import { CardRail } from '../components/CardRail';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';

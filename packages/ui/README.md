@@ -1,4 +1,4 @@
-# @komodoit/ui
+# @komogon/ui
 
 Shared design tokens and React components for the portal and the extension popup.
 

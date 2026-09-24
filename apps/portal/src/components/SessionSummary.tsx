@@ -1,6 +1,6 @@
-import { badgeByKey, levelProgress, type SessionXpBreakdown } from '@komodoit/core';
+import { badgeByKey, levelProgress, type SessionXpBreakdown } from '@komogon/core';
 import { Award, Flame, Star, TrendingUp } from 'lucide-react';
-import { ProgressBar } from '@komodoit/ui';
+import { ProgressBar } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
 import { fmtMinutes } from '../lib/format';
 

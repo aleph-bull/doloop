@@ -1,6 +1,6 @@
-import type { RewardView } from '@komodoit/core';
+import type { RewardView } from '@komogon/core';
 import { useState } from 'react';
-import { Button, Input, Modal, Textarea } from '@komodoit/ui';
+import { Button, Input, Modal, Textarea } from '@komogon/ui';
 import type { RewardInput } from '../lib/api';
 
 export interface RewardDialogProps {

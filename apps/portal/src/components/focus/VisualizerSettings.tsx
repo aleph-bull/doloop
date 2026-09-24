@@ -1,5 +1,5 @@
-import type { UserSettings, VisualizerColorMode } from '@komodoit/core';
-import { Button, Segmented, Slider, Toggle } from '@komodoit/ui';
+import type { UserSettings, VisualizerColorMode } from '@komogon/core';
+import { Button, Segmented, Slider, Toggle } from '@komogon/ui';
 import type { AudioCaptureHandle } from '../../lib/use-audio-capture';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };

@@ -4,9 +4,9 @@ import {
   toLocalDate,
   type NodePace,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { Link } from 'react-router';
-import { Panel } from '@komodoit/ui';
+import { Panel } from '@komogon/ui';
 import { StatusChip } from './StatusChip';
 import { fmtDue, fmtMinutes } from '../lib/format';
 

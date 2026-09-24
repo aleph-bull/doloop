@@ -1,5 +1,5 @@
-import '@komodoit/ui/tokens.css';
-import '@komodoit/ui/styles.css';
+import '@komogon/ui/tokens.css';
+import '@komogon/ui/styles.css';
 import './blocked.css';
 
 const params = new URLSearchParams(window.location.search);

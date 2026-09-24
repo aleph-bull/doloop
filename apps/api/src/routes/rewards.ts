@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { REWARDS } from '@komodoit/core';
+import { REWARDS } from '@komogon/core';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {

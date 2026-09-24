@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { CUSTOM_BACKGROUND_UPLOAD } from '@komodoit/core';
+import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';

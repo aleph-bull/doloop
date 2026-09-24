@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { pickQuote, toLocalDate } from '@komodoit/core';
+import { pickQuote, toLocalDate } from '@komogon/core';
 import { and, eq, gte } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { quotesSeen } from '../db/schema';

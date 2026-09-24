@@ -1,7 +1,7 @@
-import { addDays } from '@komodoit/core';
+import { addDays } from '@komogon/core';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@komodoit/ui';
+import { Bars, Button, Glass, Panel, Spinner, Textarea, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useLocalDraft } from '../lib/local-state';

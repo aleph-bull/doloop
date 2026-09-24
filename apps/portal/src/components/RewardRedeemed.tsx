@@ -1,6 +1,6 @@
-import type { CustomReward } from '@komodoit/core';
+import type { CustomReward } from '@komogon/core';
 import { useEffect } from 'react';
-import { Button, fireConfetti, fireRewardBurst, Modal } from '@komodoit/ui';
+import { Button, fireConfetti, fireRewardBurst, Modal } from '@komogon/ui';
 
 export interface RewardRedeemedProps {
   reward: CustomReward | null;

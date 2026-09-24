@@ -1,6 +1,6 @@
-import type { PlannedBlock, StudyNode } from '@komodoit/core';
+import type { PlannedBlock, StudyNode } from '@komogon/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Select, useToast } from '@komodoit/ui';
+import { Button, Input, Modal, Select, useToast } from '@komogon/ui';
 import { isoToLocalDate, isoToLocalTime, localToIso } from '../lib/format';
 import { useCreateBlock, useDeleteBlock, useUpdateBlock } from '../lib/queries';
 

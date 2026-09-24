@@ -4,13 +4,13 @@
     {
       "name": "api",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@komodoit/api", "dev"],
+      "runtimeArgs": ["--filter", "@komogon/api", "dev"],
       "port": 8787
     },
     {
       "name": "portal",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@komodoit/portal", "dev"],
+      "runtimeArgs": ["--filter", "@komogon/portal", "dev"],
       "port": 5173
     }
   ]

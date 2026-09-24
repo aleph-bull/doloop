@@ -11,7 +11,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 ## Phase 0
 
-- **Workspace packages export TypeScript source** (`exports` point at `src/index.ts`). Vite and `tsx` consume TS directly, so no build step is needed to develop. The API bundles `@komodoit/core` with tsup for production.
+- **Workspace packages export TypeScript source** (`exports` point at `src/index.ts`). Vite and `tsx` consume TS directly, so no build step is needed to develop. The API bundles `@komogon/core` with tsup for production.
 - **Tailwind v4** via `@tailwindcss/vite` for layout only. All visual values come from `packages/ui/tokens.css` custom properties.
 - **Inter** loaded from rsms.me in the portal. The extension popup uses the system font stack to avoid a network fetch in a popup.
 - **API port 8787**, portal 5173, extension dev 5174. Portal proxies `/api` to the API in dev.
@@ -34,7 +34,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 ## Phase 2
 
-- **The API owns the timer.** A session row stores a `TimerState` (from `@komodoit/core/timer`) and the server materializes pomodoro/scheduled transitions lazily on every read (`advance(state, now)`). Clients only send events (pause, resume, skip-break, idle-start, idle-answer, extend, end) and render `viewTimer()` against their own clock. This keeps the portal and extension in agreement without a cron or websockets.
+- **The API owns the timer.** A session row stores a `TimerState` (from `@komogon/core/timer`) and the server materializes pomodoro/scheduled transitions lazily on every read (`advance(state, now)`). Clients only send events (pause, resume, skip-break, idle-start, idle-answer, extend, end) and render `viewTimer()` against their own clock. This keeps the portal and extension in agreement without a cron or websockets.
 - **Idle detection is client-reported.** The client sends `idle-start` with `idleSince` (when idleness actually began); the server credits work up to that instant and books the gap to `idleSeconds` when the user answers "Still studying?". Answering "no" ends the session.
 - **Scheduled sessions auto-end** at `plannedEndAt` (work is credited only to the planned end, not the 60 s grace). Whoever reads the session next finalizes it (XP, streak) so nothing is lost if the tab was closed.
 - **Node completion is explicit.** Reaching 100% of the estimate sets status `done` but does not set `completedAt`; the user marks it complete (from the end-of-session screen via `markComplete`, or by editing the node).
@@ -109,7 +109,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 - **Panel surface is a theme setting** (`theme.panel`: opaque, glass, custom). Glass reuses the strong-glass recipe. Custom takes any hex colour plus opacity (min 20%); the panel text colour is chosen from the composited luminance so a light panel gets dark text and vice versa, and the muted/subtle/border tokens are re-scoped inside `.panel` only.
 - **Uploaded backgrounds live in the API** (`user_assets`, base64 in Postgres, 5 MB cap, JPEG/PNG/WebP). The portal downsizes to 2048 px on the long edge before uploading and reads the image back as a data URL, which also keeps the luminance sampler CORS-free. `theme.customBackgroundUrl` becomes the sentinel `upload`; removing the upload clears it. The URL option remains for hosted images.
-- **The extension follows the portal's appearance.** `applyUserTheme()` in `@komodoit/ui` is the single place that applies theme mode, accent (preset or custom), motion, and panel surface; the portal shell and the extension popup/options both call it. The popup renders the same `Backdrop`. The background worker caches an uploaded background in `chrome.storage` and re-downloads it only when `/api/me` reports a new `backgroundUpdatedAt`.
+- **The extension follows the portal's appearance.** `applyUserTheme()` in `@komogon/ui` is the single place that applies theme mode, accent (preset or custom), motion, and panel surface; the portal shell and the extension popup/options both call it. The popup renders the same `Backdrop`. The background worker caches an uploaded background in `chrome.storage` and re-downloads it only when `/api/me` reports a new `backgroundUpdatedAt`.
 
 ## XP rework and early cancellation (user request, 2026-09-20)
 
@@ -118,7 +118,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 - **Ending early earns no XP.** A pomodoro cancelled before its first work interval completes, or a scheduled session stopped before its planned end, logs the minutes (they still count toward progress and streaks) but awards zero XP and no confetti. The portal asks "End early?" first. Unlimited sessions are never early.
 - **Pomodoro durations are locked** to 25/5/15 with a long break every 4, shown read-only in Settings, so short intervals cannot be used to collect the interval-completion threshold quickly. Auto-start and timer-visibility toggles remain editable. The API still accepts the fields; the constant lives in `DEFAULT_SETTINGS`.
 - **Level divisor raised to 100** so levelling pace stays close to before despite higher per-session XP. Shop prices are unchanged.
-- **Extension background** is a theme setting: same as the portal (default), the uploaded image, or its own preset. Resolved by `resolveExtensionBackdrop()` in `@komodoit/ui`; the background worker caches the upload whenever either surface needs it.
+- **Extension background** is a theme setting: same as the portal (default), the uploaded image, or its own preset. Resolved by `resolveExtensionBackdrop()` in `@komogon/ui`; the background worker caches the upload whenever either surface needs it.
 
 ## Parent path on task surfaces (user request, 2026-09-21)
 
@@ -140,10 +140,10 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 ### Custom rewards
 
-- **The user defines the reward; Komodoit only enforces the price.** Minimum 150 XP, roughly an hour of focused work, so XP always has to be earned before it buys anything. No content judgement — "doomscroll for an hour" is a legitimate reward.
+- **The user defines the reward; Komogon only enforces the price.** Minimum 150 XP, roughly an hour of focused work, so XP always has to be earned before it buys anything. No content judgement — "doomscroll for an hour" is a legitimate reward.
 - **Optional cooldown** (0–90 days) so a reward can be once-a-week rather than whenever affordable. Counted in whole local calendar days from the last redemption.
 - **Redemptions are written to `xp_transactions`** (`kind: 'reward'`, `ref` = reward id), so history survives deleting the reward and the badge counts come from the ledger rather than a denormalised field.
-- **The redeem animation is deliberately different from the session overlay**: an emoji burst keyed to the reward's own icon (`fireRewardBurst` in `@komodoit/ui`) over confetti a beat later. Both respect `data-motion` and the OS reduced-motion preference.
+- **The redeem animation is deliberately different from the session overlay**: an emoji burst keyed to the reward's own icon (`fireRewardBurst` in `@komogon/ui`) over confetti a beat later. Both respect `data-motion` and the OS reduced-motion preference.
 
 ### Recurring tasks (routines)
 
@@ -164,7 +164,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 
 - **The query cache is mirrored to IndexedDB and restored before first paint**, so the app opens on last-known data and keeps working read-only when the API is unreachable. Verified by stopping the API and reloading.
 - **Cache, not outbox.** Mutations are never dehydrated or replayed; an offline banner says edits will not be saved rather than letting them fail silently. Cloud sync was explicitly deferred by the user.
-- **Scoped to one account.** The record stores whose data it holds and is discarded unread if a different account signs in, wiped on sign-out, and expired after seven days or a `CACHE_VERSION` bump. `komodoit.user` in localStorage is what makes that check possible synchronously at boot.
+- **Scoped to one account.** The record stores whose data it holds and is discarded unread if a different account signs in, wiped on sign-out, and expired after seven days or a `CACHE_VERSION` bump. `komogon.user` in localStorage is what makes that check possible synchronously at boot.
 - **Never persisted**: `['sessions','active']`, because only the server can be right about a running timer, and `['me','background']`, a multi-megabyte data URL that would be rewritten on every cache change.
 - **No new dependencies** — `dehydrate`/`hydrate` ship with TanStack Query, and the IndexedDB wrapper is about eighty lines. Everything degrades to the previous behaviour when IndexedDB is missing, blocked or slow.
 
@@ -328,10 +328,10 @@ An imported calendar says where the user has to _be_. It says nothing about when
 intend to study, and treating it as though it does is how a study app ends up scheduling
 revision during someone's shift. So:
 
-- **Komodoit -> external is the only direction that carries study time.** Blocks the user
+- **Komogon -> external is the only direction that carries study time.** Blocks the user
   plans here (`source: 'app'`) and sessions they finish (`source: 'session'`) are pushed to
   the Study calendar. Nothing else is.
-- **External -> Komodoit imports commitments** (`source: 'google'`), which are drawn on the
+- **External -> Komogon imports commitments** (`source: 'google'`), which are drawn on the
   grid as hatched, muted, unclickable bands. They are never linked to a task - `updateBlock`
   rejects it outright - never counted in `plannedMinutes`, never counted as "kept to the
   plan" for XP, and never re-exported to the .ics feed (which would be an echo, and with a
@@ -396,8 +396,9 @@ revision during someone's shift. So:
 
 ### Logo
 
-- *Superseded 2026-09-23 by the Komodoit dragon (see "Doloop becomes Komodoit" below); the tile
-  treatment still holds.*
+- _Superseded 2026-09-23 by the KomodoIt dragon (see "Doloop becomes KomodoIt" below), and
+  later that day by the Komogon face (see "KomodoIt becomes Komogon"); the tile treatment
+  still holds._
 - The mark is the user's looped ribbon, from their `doloop.svg`: one path, used verbatim in
   its own coordinates, with a gap where the stem crosses the bar. It replaced a first
   version traced from a PNG with a painted shadow at the crossing. The source of truth is
@@ -405,7 +406,7 @@ revision during someone's shift. So:
 - **It keeps the rounded indigo-to-violet tile** the app always had, at the user's request.
   The favicon, apple-touch icon and extension icons are the white mark on that tile
   (`#5b55eb` to `#8a5cf6`, corners 14.5 of 64), all written by
-  `pnpm --filter @komodoit/ui prepare:icons`. The apple-touch icon has square corners because
+  `pnpm --filter @komogon/ui prepare:icons`. The apple-touch icon has square corners because
   iOS rounds it itself.
 - In the app, `.brand-mark` is the same 22px tile as before, in the user's accent gradient,
   with `LogoMark` (white, `currentColor`) inside instead of the old CSS-drawn ring.
@@ -459,7 +460,7 @@ analysis and the drawing were all rebuilt to the new brief.
   button, and the extension popup (`chrome.tabs`). Closing the tab changes nothing: the
   server owns the session, so the dashboard card carries on and the tab can be reopened.
 - **One tab, reused.** Before opening, the caller pings a `BroadcastChannel` and waits
-  180 ms. A tab this page opened is a named window (`komodoit-focus`) and can be focused
+  180 ms. A tab this page opened is a named window (`komogon-focus`) and can be focused
   through `window.open('', name)`; one opened by the extension or typed in by hand
   answers the ping but cannot be pulled forward (browsers do not let a background tab take
   focus), so the caller says "open in another tab" rather than opening a second. The
@@ -592,7 +593,7 @@ extension inside Chrome (it builds).
   small chip ("Due · Unit 1"; an assessment shows its title alone), struck through once
   the task is done. It is drawn from the task itself, not from a block, so no sync or
   import can touch it. The `.ics` feed and download publish the same dates as all-day
-  events on the user's local day (`due-<id>@komodoit`), so a subscribed calendar shows them
+  events on the user's local day (`due-<id>@komogon`), so a subscribed calendar shows them
   too. They are not pushed to Google as events: the Google sync moves study blocks, and a
   deadline is not a block of time.
 - **Nothing on the calendar is deleted by an import or a sync.** Checked rather than
@@ -637,7 +638,7 @@ extension inside Chrome (it builds).
 - **Opening the tab is synchronous now.** The first version pinged other tabs and waited
   180 ms before `window.open`, and when a focus tab already existed it only tried to focus
   it, which browsers often ignore, so "Yes" appeared to do nothing. `openFocusTab` now
-  runs `window.open('', 'komodoit-focus')` on the click itself: an existing tab this page
+  runs `window.open('', 'komogon-focus')` on the click itself: an existing tab this page
   opened comes back and is brought forward, otherwise the fresh window is sent to `/focus`.
   A tab opened by the extension or by hand cannot be found this way, so a start from the
   portal in that case opens a second one; the extension still reuses through `chrome.tabs`.
@@ -664,9 +665,9 @@ extension inside Chrome (it builds).
   under the greeting into the plan card. The routines adherence caption has more room
   above it.
 
-## Doloop becomes Komodoit, with a dragon mark (user request, 2026-09-23)
+## Doloop becomes KomodoIt, with a dragon mark (user request, 2026-09-23)
 
-- **The app is Komodoit** everywhere: display text, the extension name, workspace packages
+- **The app is KomodoIt** everywhere: display text, the extension name, workspace packages
   (`@komodoit/*`), storage keys (`komodoit.*`), window messages (`komodoit:*`), the ICS
   `PRODID` and UIDs, the Google event marker (`komodoitBlockId`, write-only, so no
   matching breaks) and `KOMODOIT_BACKGROUND_SRC`. "Pomodoro" is a different word and was
@@ -679,3 +680,51 @@ extension inside Chrome (it builds).
   keeps the white-on-indigo-to-violet tile. Icon insets were tightened by about 2 units
   of 64 because the wide shape otherwise sat small in the tile.
 - Folder names on disk (`Documents\Doloop\Doloop`) were not renamed.
+
+## KomodoIt spelling, and ninety-odd more quotes (user request, 2026-09-23)
+
+- **The brand is written KomodoIt**, capital I, everywhere it is shown: nav, titles, the
+  extension manifest, calendar descriptions, the mark's alt text. Package scopes
+  (`@komodoit/*`), storage keys and event names stay lowercase; they are identifiers.
+- **The quote pool grew from 40 to about 130** with the list from Kevin Kruse's Forbes
+  "Top 100 Inspirational Quotes" (2013), each carrying that page as its source. Left out:
+  seven that run past the card's 30-word limit, two attributed to "Unknown" (the card never
+  shows a quote without an attribution), and the one attributed to Bill Cosby. "Jesus" on
+  the page is cited as Matthew 7:7. Attributions are as the page gives them; several are
+  popularly attributed rather than verified, which was already the case for the list.
+
+## Ticking off a routine plays a small celebration (user request, 2026-09-23)
+
+- **The tick itself**: the box squashes on press and springs back past full size, a ring
+  pulses out of it, the check draws itself in, and a strike draws across the title. A
+  handful of sparks (`fireSparks` in `@komogon/ui`) fly from the box: accent with a little
+  gold and green, under 0.7 s, on a canvas only as big as the burst. Deliberately smaller
+  than confetti or the reward burst; a tick is a small win and can come several times a
+  minute.
+- **In a due list the row then slides off and the list closes up** (Today's routines card,
+  "Due now" on Routines). The refetch after a tick would unmount the row within
+  milliseconds, so `useTickedRoutines` holds the list still until the last tick has played
+  (about 0.95 s). The row is drawn done straight away, before the server answers; a failed
+  tick puts it back with the error toast. The week grid ticks in place without folding.
+- **The "+N XP" toast is unchanged** and still arrives when the server answers.
+- **Motion rules as before**: every duration and delay is a multiple of `--dur-slow`, so the
+  motion setting and the OS reduced-motion preference jump straight to the end state, and
+  the sparks check both before drawing.
+- **Not added**: a tick sound. The alert sounds belong to sessions; ask before adding one.
+
+## KomodoIt becomes Komogon, with a new mark (user request, 2026-09-23)
+
+- **The app is Komogon** everywhere KomodoIt was: display text, the extension name,
+  workspace packages (`@komogon/*`), storage keys (`komogon.*`), window messages
+  (`komogon:*`), the IndexedDB cache, the ICS `PRODID` and UIDs, the Google event marker
+  (`komogonBlockId`, write-only, so nothing that matches on it breaks) and
+  `KOMOGON_BACKGROUND_SRC`. The two sections above are left as written, as history.
+- **Old browser storage still carries over once**: `lib/rename-migration.ts` now moves both
+  `komodoit.*` and `doloop.*` localStorage keys to `komogon.*`, newest name first so a key
+  saved under both keeps its later value, and drops both old IndexedDB caches.
+- **The mark is the user's `komo21.svg`**, verbatim, in `packages/ui/src/logo.ts`: Komogon's
+  face, front-on, with the eyes and nostrils cut out and the jaw as a band beneath. It is
+  nearly square (857 x 827 of its 1095 units), so the box holds its width and centres it
+  vertically. It keeps the white-on-indigo-to-violet tile. The icon insets went back to
+  their pre-dragon values (favicon 11, apple-touch 12, extension 6 / 10 / 11 of 64): at the
+  dragon's tighter insets the square face crowded the tile.

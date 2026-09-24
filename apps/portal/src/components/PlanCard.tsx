@@ -1,7 +1,7 @@
-import { pathLabel, type PlanItem, type StudyNode } from '@komodoit/core';
+import { pathLabel, type PlanItem, type StudyNode } from '@komogon/core';
 import { Play } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button, Glass } from '@komodoit/ui';
+import { Button, Glass } from '@komogon/ui';
 import { fmtDue, fmtMinutes } from '../lib/format';
 import { StatusChip } from './StatusChip';
 
@@ -23,7 +23,7 @@ export function PlanCard({ plan, nodesById, onStart, todayLine, footer }: PlanCa
       <Glass className="p-5" as="section" aria-label="Suggested next session">
         <h2 className="text-lg">Nothing urgent</h2>
         <p className="muted text-sm mt-1">
-          Add an estimate and a due date to a task and Komodoit will tell you what to do today.
+          Add an estimate and a due date to a task and Komogon will tell you what to do today.
         </p>
         {footer}
       </Glass>

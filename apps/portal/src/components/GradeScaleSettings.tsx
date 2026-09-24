@@ -1,7 +1,7 @@
-import { sortScale, UOFT_GRADE_SCALE, type GradeBand, type UserSettings } from '@komodoit/core';
+import { sortScale, UOFT_GRADE_SCALE, type GradeBand, type UserSettings } from '@komogon/core';
 import { Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Input, useToast } from '@komodoit/ui';
+import { Button, Input, useToast } from '@komogon/ui';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 

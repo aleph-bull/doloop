@@ -6,7 +6,7 @@ import {
   type PlanItem,
   type Session,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { sessions, type UserRow } from '../db/schema';

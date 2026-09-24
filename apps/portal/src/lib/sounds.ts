@@ -1,4 +1,4 @@
-import { soundPresetById } from '@komodoit/core';
+import { soundPresetById } from '@komogon/core';
 
 /**
  * Plays the alert sounds.

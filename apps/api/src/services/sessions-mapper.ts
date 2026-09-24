@@ -1,4 +1,4 @@
-import type { PlannedBlock, Session, StudyNode } from '@komodoit/core';
+import type { PlannedBlock, Session, StudyNode } from '@komogon/core';
 import type { NodeRow, PlannedBlockRow, SessionRow } from '../db/schema';
 
 /** ISO string of a Date column, or null. */

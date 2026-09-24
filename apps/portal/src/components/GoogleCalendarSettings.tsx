@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
-import { Button, Chip, Toggle, useToast } from '@komodoit/ui';
+import { Button, Chip, Toggle, useToast } from '@komogon/ui';
 import { api } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { keys, useGoogleStatus, useMe, useUpdateSettings } from '../lib/queries';

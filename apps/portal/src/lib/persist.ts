@@ -13,7 +13,7 @@ import { dehydrate, hydrate } from '@tanstack/react-query';
  * dropped when you sign out or when a different account signs in.
  */
 
-const DB_NAME = 'komodoit';
+const DB_NAME = 'komogon';
 const STORE = 'query-cache';
 const RECORD_KEY = 'state';
 
@@ -29,7 +29,7 @@ const OPEN_TIMEOUT_MS = 1500;
 /** Debounce on writes: the cache changes constantly while queries settle. */
 const WRITE_DEBOUNCE_MS = 1000;
 
-const USER_KEY_STORAGE = 'komodoit.user';
+const USER_KEY_STORAGE = 'komogon.user';
 
 /**
  * Queries that must never come back from disk:

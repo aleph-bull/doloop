@@ -3,7 +3,7 @@ import { supabase, authMode } from './auth';
 
 /**
  * Hands the signed-in session to the Chrome extension's content script (same window,
- * same origin). The extension answers with `komodoit:connected` when it stored it.
+ * same origin). The extension answers with `komogon:connected` when it stored it.
  */
 
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) || window.location.origin;
@@ -14,7 +14,7 @@ async function buildPayload(): Promise<Record<string, unknown> | null> {
     const s = data.session;
     if (!s) return null;
     return {
-      type: 'komodoit:session',
+      type: 'komogon:session',
       token: s.access_token,
       refreshToken: s.refresh_token,
       expiresAt: s.expires_at ?? null,
@@ -29,14 +29,14 @@ async function buildPayload(): Promise<Record<string, unknown> | null> {
     let token: string | null = null;
     let email: string | null = null;
     try {
-      token = localStorage.getItem('komodoit.dev.token');
-      email = localStorage.getItem('komodoit.dev.email');
+      token = localStorage.getItem('komogon.dev.token');
+      email = localStorage.getItem('komogon.dev.email');
     } catch {
       /* ignore */
     }
     if (!token) return null;
     return {
-      type: 'komodoit:session',
+      type: 'komogon:session',
       token,
       apiUrl: API_URL,
       portalUrl: window.location.origin,
@@ -66,11 +66,11 @@ export function useExtensionStatus(): {
     const onMsg = (e: MessageEvent) => {
       if (e.source !== window || e.origin !== window.location.origin) return;
       const t = (e.data as { type?: string; version?: string })?.type;
-      if (t === 'komodoit:extension-ready') {
+      if (t === 'komogon:extension-ready') {
         setState((s) => ({ ...s, installed: true }));
         void pushSessionToExtension();
       }
-      if (t === 'komodoit:connected')
+      if (t === 'komogon:connected')
         setState({
           installed: true,
           connected: true,
@@ -78,7 +78,7 @@ export function useExtensionStatus(): {
         });
     };
     window.addEventListener('message', onMsg);
-    window.postMessage({ type: 'komodoit:ping' }, window.location.origin);
+    window.postMessage({ type: 'komogon:ping' }, window.location.origin);
     void pushSessionToExtension();
     return () => window.removeEventListener('message', onMsg);
   }, []);

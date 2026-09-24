@@ -6,12 +6,12 @@ const origin = (u: string) => `${new URL(u).origin}/*`;
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'Komodoit',
+  name: 'Komogon',
   description: 'Start and stop study sessions, see your timer, and block distractions.',
   version: '0.1.0',
   action: {
     default_popup: 'src/popup/index.html',
-    default_title: 'Komodoit',
+    default_title: 'Komogon',
   },
   options_page: 'src/options/index.html',
   background: {

@@ -3,7 +3,7 @@ import {
   createAnalysisState,
   DEFAULT_ANALYSIS,
   type VisualizerAnalysisConfig,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { useEffect, useRef } from 'react';
 import type { AudioCapture } from '../audio-capture';
 import {

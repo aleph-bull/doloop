@@ -1,8 +1,13 @@
-import type { RoutineOccurrence, SessionDurationKind, SessionStyle, StudyNode } from '@komodoit/core';
-import { describeCut, modeForPlan, pomodoroCut } from '@komodoit/core';
+import type {
+  RoutineOccurrence,
+  SessionDurationKind,
+  SessionStyle,
+  StudyNode,
+} from '@komogon/core';
+import { describeCut, modeForPlan, pomodoroCut } from '@komogon/core';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@komodoit/ui';
+import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@komogon/ui';
 import { ApiError } from '../lib/api';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtDate } from '../lib/format';

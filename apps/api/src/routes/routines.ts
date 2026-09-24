@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { ROUTINES } from '@komodoit/core';
+import { ROUTINES } from '@komogon/core';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {

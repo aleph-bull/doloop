@@ -1,4 +1,4 @@
-# Komodoit
+# Komogon
 
 A study-planning product: a web portal, a Chrome extension remote, and an API. Frosted-glass UI, light and dark.
 
@@ -20,7 +20,7 @@ pnpm dev
 
 - Portal: http://localhost:5173
 - API: http://localhost:8787/api/health
-- Extension: `pnpm --filter @komodoit/extension build`, then load `apps/extension/dist` unpacked in Chrome.
+- Extension: `pnpm --filter @komogon/extension build`, then load `apps/extension/dist` unpacked in Chrome.
 
 With no credentials configured the API runs on an in-process Postgres (PGlite, persisted to `apps/api/.pglite`) and the portal signs in with a locally minted dev token. Set `DEV_AUTH_SECRET` in `apps/api/.env` and the same value as `VITE_DEV_AUTH_SECRET` in `apps/portal/.env`.
 

@@ -1,7 +1,7 @@
-import { ROUTINES } from '@komodoit/core';
+import { ROUTINES } from '@komogon/core';
 import { Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { Button, Input, Modal } from '@komodoit/ui';
+import { Button, Input, Modal } from '@komogon/ui';
 import type { ImportIcsResponse } from '../lib/api';
 
 export interface IcsImportDialogProps {

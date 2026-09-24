@@ -1,4 +1,4 @@
-import { formatClock, type FocusProgress } from '@komodoit/core';
+import { formatClock, type FocusProgress } from '@komogon/core';
 
 /**
  * Time elapsed this session and, when something says how long the work should take, a

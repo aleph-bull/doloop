@@ -1,4 +1,4 @@
-import type { PlannedBlock, Session, StudyNode } from '@komodoit/core';
+import type { PlannedBlock, Session, StudyNode } from '@komogon/core';
 
 function icsDate(iso: string): string {
   return new Date(iso)
@@ -61,10 +61,10 @@ export function buildIcs(input: IcsInput): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Komodoit//Study planner//EN',
+    'PRODID:-//Komogon//Study planner//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${esc(input.calendarName ?? 'Komodoit study plan')}`,
+    `X-WR-CALNAME:${esc(input.calendarName ?? 'Komogon study plan')}`,
   ];
   const stamp = icsDate(input.now);
   for (const b of input.blocks) {
@@ -75,12 +75,12 @@ export function buildIcs(input: IcsInput): string {
     if (b.source !== 'app') continue;
     lines.push(
       'BEGIN:VEVENT',
-      `UID:block-${b.id}@komodoit`,
+      `UID:block-${b.id}@komogon`,
       `DTSTAMP:${stamp}`,
       `DTSTART:${icsDate(b.startAt)}`,
       `DTEND:${icsDate(b.endAt)}`,
       `SUMMARY:${esc(`Study: ${titleOf(b.nodeId)}`)}`,
-      'DESCRIPTION:Planned in Komodoit',
+      'DESCRIPTION:Planned in Komogon',
       'END:VEVENT',
     );
   }
@@ -90,11 +90,11 @@ export function buildIcs(input: IcsInput): string {
     const day = icsDay(n.dueAt, input.timezone ?? 'UTC');
     lines.push(
       'BEGIN:VEVENT',
-      `UID:due-${n.id}@komodoit`,
+      `UID:due-${n.id}@komogon`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${day}`,
       `SUMMARY:${esc(`${n.kind === 'assessment' ? '' : 'Due: '}${n.title}`)}`,
-      `DESCRIPTION:${esc(n.completedAt ? 'Done (Komodoit)' : 'Due date set in Komodoit')}`,
+      `DESCRIPTION:${esc(n.completedAt ? 'Done (Komogon)' : 'Due date set in Komogon')}`,
       'END:VEVENT',
     );
   }
@@ -102,7 +102,7 @@ export function buildIcs(input: IcsInput): string {
     if (!s.endedAt) continue;
     lines.push(
       'BEGIN:VEVENT',
-      `UID:session-${s.id}@komodoit`,
+      `UID:session-${s.id}@komogon`,
       `DTSTAMP:${stamp}`,
       `DTSTART:${icsDate(s.startedAt)}`,
       `DTEND:${icsDate(s.endedAt)}`,

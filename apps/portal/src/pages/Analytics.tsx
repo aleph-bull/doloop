@@ -1,5 +1,5 @@
-import type { Highlight } from '@komodoit/core';
-import { splitHighlights } from '@komodoit/core';
+import type { Highlight } from '@komogon/core';
+import { splitHighlights } from '@komogon/core';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import {
@@ -12,7 +12,7 @@ import {
   Segmented,
   Spinner,
   StackedBars,
-} from '@komodoit/ui';
+} from '@komogon/ui';
 import { AnalyticsOverview } from '../components/AnalyticsOverview';
 import { ErrorPanel } from '../components/ErrorState';
 import { StatusChip } from '../components/StatusChip';

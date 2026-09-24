@@ -7,7 +7,7 @@ import {
   Glass,
   resolveExtensionBackdrop,
   resolveTheme,
-} from '@komodoit/ui';
+} from '@komogon/ui';
 import { getAll, type Stored } from '../lib/storage';
 
 const FALLBACK_PORTAL = import.meta.env.VITE_PORTAL_URL ?? 'http://localhost:5173';
@@ -37,7 +37,7 @@ export function Options() {
         className="card"
         style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}
       >
-        <h1 style={{ fontSize: 'var(--text-xl)' }}>Komodoit</h1>
+        <h1 style={{ fontSize: 'var(--text-xl)' }}>Komogon</h1>
         <p style={{ color: 'var(--fg-muted)' }}>
           {store?.connection
             ? `Connected as ${store.connection.email ?? 'your account'}. All settings live in the portal.`

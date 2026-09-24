@@ -10,7 +10,7 @@ import type {
   TimerState,
   TimerView,
   User,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { get, set, type Connection } from './storage';
 
 export class ApiError extends Error {
@@ -38,7 +38,7 @@ async function refreshIfNeeded(conn: Connection): Promise<Connection> {
     headers: { 'content-type': 'application/json', apikey: conn.anonKey },
     body: JSON.stringify({ refresh_token: conn.refreshToken }),
   });
-  if (!res.ok) throw new ApiError(401, 'Session expired. Open Komodoit to reconnect.');
+  if (!res.ok) throw new ApiError(401, 'Session expired. Open Komogon to reconnect.');
   const data = (await res.json()) as {
     access_token: string;
     refresh_token: string;
@@ -56,7 +56,7 @@ async function refreshIfNeeded(conn: Connection): Promise<Connection> {
 
 export async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   let conn = await get('connection');
-  if (!conn) throw new ApiError(401, 'Not connected. Open Komodoit and sign in.');
+  if (!conn) throw new ApiError(401, 'Not connected. Open Komogon and sign in.');
   conn = await refreshIfNeeded(conn);
   const headers: Record<string, string> = {
     authorization: `Bearer ${conn.token}`,

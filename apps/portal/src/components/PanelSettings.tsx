@@ -1,6 +1,6 @@
-import type { PanelStyle } from '@komodoit/core';
+import type { PanelStyle } from '@komogon/core';
 import { useRef, useState } from 'react';
-import { Button, Panel, Segmented, Slider, useToast } from '@komodoit/ui';
+import { Button, Panel, Segmented, Slider, useToast } from '@komogon/ui';
 import { api } from '../lib/api';
 
 type DeepPatch = { theme: { panel?: PanelStyle; panelColor?: string; panelAlpha?: number } };

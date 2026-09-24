@@ -9,7 +9,7 @@ import {
   SOUND_EVENT_LABELS,
   SOUND_PRESETS,
   type UserSettings,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { useEffect, useState } from 'react';
 import { Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router';
@@ -28,7 +28,7 @@ import {
   Toggle,
   useToast,
   hexToRgb,
-} from '@komodoit/ui';
+} from '@komogon/ui';
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
@@ -45,7 +45,7 @@ import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { SpotifySettings } from '../components/focus/SpotifyNowPlaying';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
-import { CUSTOM_BACKGROUND_UPLOAD } from '@komodoit/core';
+import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearQueryCache } from '../lib/persist';
 import { playSound } from '../lib/sounds';
@@ -216,7 +216,7 @@ export function Settings() {
     const blob = await res.blob();
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'komodoit.ics';
+    a.download = 'komogon.ics';
     a.click();
     URL.revokeObjectURL(a.href);
   };
@@ -816,7 +816,7 @@ export function Settings() {
                     });
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(blob);
-                    a.download = 'komodoit-export.json';
+                    a.download = 'komogon-export.json';
                     a.click();
                     URL.revokeObjectURL(a.href);
                   }}
@@ -848,7 +848,7 @@ export function Settings() {
               </div>
               <p className="field-hint">
                 Signed in as {me.data!.user.email || auth.email}. No analytics or tracking SDKs are
-                used. Komodoit keeps a copy of your data in this browser so it opens instantly and
+                used. Komogon keeps a copy of your data in this browser so it opens instantly and
                 still works offline; that copy never leaves the device and is cleared when you sign
                 out.
               </p>

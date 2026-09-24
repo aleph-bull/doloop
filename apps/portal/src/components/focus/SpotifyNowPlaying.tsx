@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Music, Pause, Play, SkipBack, SkipForward } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router';
-import { Button, Glass, useToast } from '@komodoit/ui';
+import { Button, Glass, useToast } from '@komogon/ui';
 import { api, ApiError } from '../../lib/api';
 import { keys, useNowPlaying, useSpotifyStatus } from '../../lib/queries';
 

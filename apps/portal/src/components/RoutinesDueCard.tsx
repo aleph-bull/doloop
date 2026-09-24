@@ -1,10 +1,10 @@
-import type { RoutineOccurrence } from '@komodoit/core';
+import type { RoutineOccurrence } from '@komogon/core';
 import { announceAchievements } from '../lib/achievements';
 import { Check, Play } from 'lucide-react';
-import { useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, Glass, useToast } from '@komodoit/ui';
+import { Button, Chip, Glass, useToast } from '@komogon/ui';
 import { useRoutines, useTickRoutine } from '../lib/queries';
+import { occurrenceKey, useTickedRoutines } from '../lib/routine-ticks';
 
 /**
  * Today's outstanding recurring tasks: tick one off in place, or start it as a timed
@@ -20,21 +20,20 @@ export function RoutinesDueCard({
   const q = useRoutines();
   const tick = useTickRoutine();
   const { toast } = useToast();
-  const [busy, setBusy] = useState<string | null>(null);
+  const due = useTickedRoutines(q.data?.due ?? []);
 
   if (!q.data || q.data.routines.length === 0) return null;
-  const { due } = q.data;
 
-  const off = async (routineId: string, date: string) => {
-    setBusy(`${routineId}:${date}`);
+  const off = async (o: RoutineOccurrence, from: HTMLElement) => {
+    if (due.ticked.has(occurrenceKey(o))) return;
+    due.tick(o, from);
     try {
-      const res = await tick.mutateAsync({ id: routineId, date });
+      const res = await tick.mutateAsync({ id: o.routineId, date: o.date });
       if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
       announceAchievements(res.badges);
     } catch (err) {
+      due.release(o);
       toast(err instanceof Error ? err.message : 'Could not tick that off.');
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -46,40 +45,48 @@ export function RoutinesDueCard({
           All routines
         </Link>
       </div>
-      {due.length === 0 ? (
+      {due.rows.length === 0 ? (
         <p className="muted text-sm">Everything due is ticked off.</p>
       ) : (
         <ul className="routine-list">
-          {due.map((o) => (
-            <li key={`${o.routineId}:${o.date}`} className="routine-row">
-              <button
-                type="button"
-                className="routine-tick"
-                role="checkbox"
-                aria-checked={false}
-                aria-label={`Tick off ${o.title}`}
-                disabled={busy === `${o.routineId}:${o.date}`}
-                onClick={() => void off(o.routineId, o.date)}
+          {due.rows.map((o) => {
+            const ticked = due.ticked.has(occurrenceKey(o));
+            return (
+              <li
+                key={occurrenceKey(o)}
+                className={`routine-row${ticked ? ' is-done is-ticked is-leaving' : ''}`}
               >
-                <Check size={14} aria-hidden style={{ opacity: 0 }} />
-              </button>
-              <span className="flex-1 min-w-0 truncate">{o.title}</span>
-              {o.overdue && <Chip tone="warn">missed</Chip>}
-              <span className="muted text-sm tabular">{o.estimatedMinutes}m</span>
-              {onStart && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon
-                  aria-label={`Start a session for ${o.title}`}
-                  title="Start a session"
-                  onClick={() => onStart(o)}
+                <button
+                  type="button"
+                  className="routine-tick"
+                  role="checkbox"
+                  aria-checked={ticked}
+                  aria-label={`Tick off ${o.title}`}
+                  onClick={(e) => void off(o, e.currentTarget)}
                 >
-                  <Play size={14} aria-hidden />
-                </Button>
-              )}
-            </li>
-          ))}
+                  <Check size={14} aria-hidden />
+                </button>
+                <span className="flex-1 min-w-0 truncate">
+                  <span className="routine-title">{o.title}</span>
+                </span>
+                {o.overdue && <Chip tone="warn">missed</Chip>}
+                <span className="muted text-sm tabular">{o.estimatedMinutes}m</span>
+                {onStart && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon
+                    aria-label={`Start a session for ${o.title}`}
+                    title="Start a session"
+                    disabled={ticked}
+                    onClick={() => onStart(o)}
+                  >
+                    <Play size={14} aria-hidden />
+                  </Button>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </Glass>

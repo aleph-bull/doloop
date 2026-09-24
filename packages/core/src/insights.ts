@@ -78,7 +78,7 @@ export function lifetimeStats(input: LifetimeInput): LifetimeStats {
 
   const headline =
     totalMinutes > 0
-      ? `You have put in ${fmtDurationWord(totalMinutes)} of focused work since you started using Komodoit.`
+      ? `You have put in ${fmtDurationWord(totalMinutes)} of focused work since you started using Komogon.`
       : 'No focused work logged yet. Your first session starts the record.';
 
   return {

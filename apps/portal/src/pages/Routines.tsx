@@ -1,14 +1,15 @@
-import type { Routine, RoutineOccurrence } from '@komodoit/core';
+import type { Routine, RoutineOccurrence } from '@komogon/core';
 import { announceAchievements } from '../lib/achievements';
-import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@komodoit/core';
+import { addDays, describeRecurrence, pathLabel, startOfWeekMonday } from '@komogon/core';
 import { Check, Pencil, Play, Plus, Repeat, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@komodoit/ui';
+import { Button, Chip, Glass, Panel, ProgressBar, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { IcsImportDialog } from '../components/IcsImportDialog';
 import { RoutineDialog } from '../components/RoutineDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { fmtDate } from '../lib/format';
+import { occurrenceKey, useTickedRoutines } from '../lib/routine-ticks';
 import {
   useActiveSession,
   useCreateRoutine,
@@ -33,35 +34,43 @@ function OccurrenceRow({
   occ,
   today,
   busy,
+  ticked,
+  leaves,
   onToggle,
   onStart,
 }: {
   occ: RoutineOccurrence;
   today: string;
   busy: boolean;
-  onToggle: () => void;
+  /** Just ticked here: play the tick, and draw it done before the server answers. */
+  ticked: boolean;
+  /** In a due list, where a ticked row folds away rather than staying. */
+  leaves?: boolean;
+  onToggle: (from: HTMLElement) => void;
   onStart?: () => void;
 }) {
   const future = occ.date > today;
+  const done = occ.done || ticked;
+  const state = `${done ? ' is-done' : ''}${ticked ? ' is-ticked' : ''}${ticked && leaves ? ' is-leaving' : ''}`;
   return (
-    <li className="routine-row">
+    <li className={`routine-row${state}`}>
       <button
         type="button"
         className="routine-tick"
         role="checkbox"
-        aria-checked={occ.done}
-        aria-label={`${occ.done ? 'Untick' : 'Tick off'} ${occ.title} for ${occ.date}`}
+        aria-checked={done}
+        aria-label={`${done ? 'Untick' : 'Tick off'} ${occ.title} for ${occ.date}`}
         disabled={future || busy}
-        onClick={onToggle}
+        onClick={(e) => onToggle(e.currentTarget)}
       >
-        {occ.done && <Check size={14} aria-hidden />}
+        <Check size={14} aria-hidden />
       </button>
-      <span className={`flex-1 min-w-0 truncate${occ.done ? ' routine-done' : ''}`}>
-        {occ.title}
+      <span className="flex-1 min-w-0 truncate">
+        <span className="routine-title">{occ.title}</span>
       </span>
       {occ.overdue && <Chip tone="warn">missed</Chip>}
       <span className="muted text-sm tabular">{occ.estimatedMinutes}m</span>
-      {onStart && !occ.done && !future && (
+      {onStart && !done && !future && (
         <Button
           variant="ghost"
           size="sm"
@@ -97,6 +106,7 @@ export function Routines() {
   const [importing, setImporting] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [startFor, setStartFor] = useState<RoutineOccurrence | null>(null);
+  const dueNow = useTickedRoutines(q.data?.due ?? []);
 
   if (q.isError)
     return (
@@ -112,7 +122,7 @@ export function Routines() {
       </div>
     );
 
-  const { today, routines, occurrences, due, adherence } = q.data;
+  const { today, routines, occurrences, adherence } = q.data;
   // One session at a time: while one runs, the rows only tick.
   const canStart = !active.data?.active;
   const nodeIndex = new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n]));
@@ -131,21 +141,32 @@ export function Routines() {
     byDay.get(o.date)!.push(o);
   }
 
-  const toggle = async (occ: RoutineOccurrence) => {
-    const key = `${occ.routineId}:${occ.date}`;
-    setBusyKey(key);
-    try {
-      if (occ.done) {
+  const toggle = async (occ: RoutineOccurrence, from: HTMLElement) => {
+    const key = occurrenceKey(occ);
+    if (occ.done) {
+      dueNow.release(occ);
+      setBusyKey(key);
+      try {
         await untick.mutateAsync({ id: occ.routineId, date: occ.date });
-      } else {
-        const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
-        if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
-        announceAchievements(res.badges);
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Could not update that.');
+      } finally {
+        setBusyKey(null);
       }
+      return;
+    }
+    // Ticked already and waiting on the refetch: the row shows done, so a second click is
+    // not an untick yet.
+    if (dueNow.ticked.has(key)) return;
+    // No busy state: the tick plays straight away, and a dimmed box would spoil it.
+    dueNow.tick(occ, from);
+    try {
+      const res = await tick.mutateAsync({ id: occ.routineId, date: occ.date });
+      if (res.xpAwarded > 0) toast(`+${res.xpAwarded} XP`, { tone: 'ok' });
+      announceAchievements(res.badges);
     } catch (err) {
+      dueNow.release(occ);
       toast(err instanceof Error ? err.message : 'Could not update that.');
-    } finally {
-      setBusyKey(null);
     }
   };
 
@@ -196,17 +217,19 @@ export function Routines() {
         <>
           <Glass className="p-5 flex flex-col gap-3">
             <h2 className="text-lg">Due now</h2>
-            {due.length === 0 ? (
+            {dueNow.rows.length === 0 ? (
               <p className="muted">Nothing outstanding. Everything due is ticked off.</p>
             ) : (
               <ul className="routine-list">
-                {due.map((o) => (
+                {dueNow.rows.map((o) => (
                   <OccurrenceRow
-                    key={`${o.routineId}:${o.date}`}
+                    key={occurrenceKey(o)}
                     occ={o}
                     today={today}
-                    busy={busyKey === `${o.routineId}:${o.date}`}
-                    onToggle={() => void toggle(o)}
+                    busy={busyKey === occurrenceKey(o)}
+                    ticked={dueNow.ticked.has(occurrenceKey(o))}
+                    leaves
+                    onToggle={(from) => void toggle(o, from)}
                     onStart={canStart ? () => setStartFor(o) : undefined}
                   />
                 ))}
@@ -215,7 +238,8 @@ export function Routines() {
             {adherence.rate !== null && (
               <div>
                 <ProgressBar value={adherence.rate} label="Last four weeks" />
-                <p className="subtle text-xs mt-3 tabular">
+                {/* Inline: the shared `p { margin: 0 }` outranks Tailwind's layered utilities. */}
+                <p className="subtle text-xs tabular" style={{ marginTop: 12 }}>
                   {adherence.done} of {adherence.due} ticked off over the last four weeks
                 </p>
               </div>
@@ -259,11 +283,12 @@ export function Routines() {
                       <ul className="routine-list">
                         {items.map((o) => (
                           <OccurrenceRow
-                            key={`${o.routineId}:${o.date}`}
+                            key={occurrenceKey(o)}
                             occ={o}
                             today={today}
-                            busy={busyKey === `${o.routineId}:${o.date}`}
-                            onToggle={() => void toggle(o)}
+                            busy={busyKey === occurrenceKey(o)}
+                            ticked={dueNow.ticked.has(occurrenceKey(o))}
+                            onToggle={(from) => void toggle(o, from)}
                           />
                         ))}
                       </ul>

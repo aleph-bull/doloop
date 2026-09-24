@@ -1,7 +1,7 @@
-import { weeksForHistory, type Tracker } from '@komodoit/core';
+import { weeksForHistory, type Tracker } from '@komogon/core';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
-import { Button, Heatmap, Panel, Segmented, Spinner } from '@komodoit/ui';
+import { Button, Heatmap, Panel, Segmented, Spinner } from '@komogon/ui';
 import { TrackerDialog } from './TrackerDialog';
 import { TrackerWidget } from './TrackerWidget';
 import { fmtHours } from '../lib/format';

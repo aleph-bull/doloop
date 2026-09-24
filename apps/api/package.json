@@ -1,5 +1,5 @@
 {
-  "name": "@komodoit/api",
+  "name": "@komogon/api",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@komodoit/core": "workspace:*",
+    "@komogon/core": "workspace:*",
     "@fastify/cors": "^11.3.0",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.5",

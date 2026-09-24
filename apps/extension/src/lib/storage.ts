@@ -4,7 +4,7 @@ import type {
   TimerState,
   UserSettings,
   Session,
-} from '@komodoit/core';
+} from '@komogon/core';
 
 /** Everything the extension persists, all in chrome.storage.local. */
 export interface Connection {

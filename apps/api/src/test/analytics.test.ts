@@ -130,7 +130,7 @@ describe('overview analytics', () => {
     expect(lifetime.totalSessions).toBe(2);
     expect(lifetime.activeDays).toBe(1);
     expect(lifetime.bestDay).toMatchObject({ date: '2026-09-15', minutes: 70 });
-    expect(lifetime.headline).toContain('since you started using Komodoit');
+    expect(lifetime.headline).toContain('since you started using Komogon');
   });
 
   it('returns a Monday-first grid ending on the current week', () => {

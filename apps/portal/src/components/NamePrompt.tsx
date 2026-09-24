@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Glass, Input, useToast } from '@komodoit/ui';
+import { Button, Glass, Input, useToast } from '@komogon/ui';
 import { useHints } from '../lib/hints';
 import { useMe, useUpdateSettings } from '../lib/queries';
 

@@ -1,5 +1,5 @@
 import { X } from 'lucide-react';
-import { Button, Glass } from '@komodoit/ui';
+import { Button, Glass } from '@komogon/ui';
 import { useHints, type HintKey } from '../lib/hints';
 
 export interface HintProps {

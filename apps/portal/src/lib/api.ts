@@ -35,7 +35,7 @@ import type {
   GradeComponent,
   Gpa,
   Insight,
-} from '@komodoit/core';
+} from '@komogon/core';
 
 export class ApiError extends Error {
   constructor(

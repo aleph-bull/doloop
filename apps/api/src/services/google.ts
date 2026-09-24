@@ -24,8 +24,8 @@ export interface EventInput {
   description?: string;
   start: string; // ISO
   end: string; // ISO
-  /** Marks events created by Komodoit. */
-  komodoitBlockId?: string;
+  /** Marks events created by Komogon. */
+  komogonBlockId?: string;
 }
 
 export interface ListEventsResult {
@@ -89,8 +89,8 @@ function toEventBody(e: EventInput) {
     description: e.description,
     start: { dateTime: e.start },
     end: { dateTime: e.end },
-    extendedProperties: e.komodoitBlockId
-      ? { private: { komodoitBlockId: e.komodoitBlockId } }
+    extendedProperties: e.komogonBlockId
+      ? { private: { komogonBlockId: e.komogonBlockId } }
       : undefined,
   };
 }

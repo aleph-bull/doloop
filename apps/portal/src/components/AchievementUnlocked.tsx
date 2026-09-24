@@ -1,7 +1,7 @@
-import { badgeByKey } from '@komodoit/core';
+import { badgeByKey } from '@komogon/core';
 import { Award } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { fireConfetti } from '@komodoit/ui';
+import { fireConfetti } from '@komogon/ui';
 import { ACHIEVEMENT_EVENT } from '../lib/achievements';
 import { useMe } from '../lib/queries';
 

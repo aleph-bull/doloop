@@ -1,4 +1,4 @@
-import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS, SOUND_PRESETS } from '@komodoit/core';
+import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS, SOUND_PRESETS } from '@komogon/core';
 import { z } from 'zod';
 
 export const isoDateTime = z.iso.datetime({ offset: true });

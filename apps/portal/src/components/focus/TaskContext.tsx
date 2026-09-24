@@ -1,4 +1,4 @@
-import type { FocusContext } from '@komodoit/core';
+import type { FocusContext } from '@komogon/core';
 
 /** "Financial Accounting / for Adjusting Entries", from the real task tree. */
 export function TaskContext({ subject, child }: FocusContext) {

@@ -1,6 +1,6 @@
-import type { Distracted, ReviewMode, StudyNode } from '@komodoit/core';
+import type { Distracted, ReviewMode, StudyNode } from '@komogon/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@komodoit/ui';
+import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@komogon/ui';
 import type { ReviewInput } from '../lib/api';
 
 /**

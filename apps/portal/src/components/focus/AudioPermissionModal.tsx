@@ -1,4 +1,4 @@
-import { Button, Modal } from '@komodoit/ui';
+import { Button, Modal } from '@komogon/ui';
 
 export interface AudioPermissionModalProps {
   open: boolean;

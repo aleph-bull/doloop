@@ -1,7 +1,7 @@
-import type { TrackerWidget as TrackerWidgetData } from '@komodoit/core';
+import type { TrackerWidget as TrackerWidgetData } from '@komogon/core';
 import { Check, Minus, Pencil, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button, Heatmap, Input, Panel, useToast } from '@komodoit/ui';
+import { Button, Heatmap, Input, Panel, useToast } from '@komogon/ui';
 import { useLogTracker } from '../lib/queries';
 
 export interface TrackerWidgetProps {

@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Search } from 'lucide-react';
-import { Glass, Panel } from '@komodoit/ui';
+import { Glass, Panel } from '@komogon/ui';
 
 /**
  * The settings page is long enough that scrolling it is not navigation. A sidebar shows

@@ -3,7 +3,7 @@
  * background worker, which stores it. We answer so the portal can show "Extension connected".
  */
 interface BridgeMessage {
-  type: 'komodoit:session';
+  type: 'komogon:session';
   token: string;
   apiUrl: string;
   portalUrl: string;
@@ -16,7 +16,7 @@ interface BridgeMessage {
 
 function isBridgeMessage(data: unknown): data is BridgeMessage {
   return (
-    !!data && typeof data === 'object' && (data as { type?: string }).type === 'komodoit:session'
+    !!data && typeof data === 'object' && (data as { type?: string }).type === 'komogon:session'
   );
 }
 
@@ -26,7 +26,7 @@ window.addEventListener('message', (event) => {
   const { type: _type, ...connection } = event.data;
   void chrome.runtime.sendMessage({ type: 'connect', connection }).then(() => {
     window.postMessage(
-      { type: 'komodoit:connected', version: chrome.runtime.getManifest().version },
+      { type: 'komogon:connected', version: chrome.runtime.getManifest().version },
       window.location.origin,
     );
   });
@@ -34,12 +34,12 @@ window.addEventListener('message', (event) => {
 
 window.addEventListener('message', (event) => {
   if (event.source !== window || event.origin !== window.location.origin) return;
-  if ((event.data as { type?: string })?.type !== 'komodoit:ping') return;
+  if ((event.data as { type?: string })?.type !== 'komogon:ping') return;
   window.postMessage(
-    { type: 'komodoit:connected', version: chrome.runtime.getManifest().version },
+    { type: 'komogon:connected', version: chrome.runtime.getManifest().version },
     window.location.origin,
   );
 });
 
 // Let the portal know we are here as soon as we load.
-window.postMessage({ type: 'komodoit:extension-ready' }, window.location.origin);
+window.postMessage({ type: 'komogon:extension-ready' }, window.location.origin);

@@ -1,4 +1,4 @@
-import { Glass } from '@komodoit/ui';
+import { Glass } from '@komogon/ui';
 import { useQuote } from '../lib/queries';
 
 /**
@@ -13,12 +13,12 @@ export function QuoteCard({ inline = false }: { inline?: boolean }) {
   const body = (
     <>
       <p
-        className={inline ? 'text-base leading-snug' : 'text-lg leading-snug'}
+        className={inline ? 'text-base leading-snug italic' : 'text-lg leading-snug italic'}
         style={{ letterSpacing: 'var(--tracking-tight)' }}
       >
         {pick.kind === 'quote' ? `“${pick.item.text}”` : pick.item.text}
       </p>
-      <p className="muted text-sm mt-1">
+      <p className="muted text-sm" style={{ marginTop: 6 }}>
         {pick.kind === 'quote' ? pick.item.author : pick.item.citation}
       </p>
     </>

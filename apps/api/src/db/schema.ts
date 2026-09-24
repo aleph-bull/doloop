@@ -6,7 +6,7 @@ import type {
   TimerState,
   UserSettings,
   Vacation,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -252,7 +252,7 @@ export const userAssets = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.kind] })],
 );
 
-/** User-defined rewards bought with XP. Komodoit only enforces the price floor. */
+/** User-defined rewards bought with XP. Komogon only enforces the price floor. */
 export const customRewards = pgTable(
   'custom_rewards',
   {

@@ -68,11 +68,11 @@ describe('pickQuote', () => {
 });
 
 describe('sourced data (spec §12)', () => {
-  it('has 40-60 quotes, all from the two source pages, none about illness or trauma', () => {
+  it('has 40+ quotes, all from the three source pages, none about illness or trauma', () => {
     expect(QUOTES.length).toBeGreaterThanOrEqual(40);
-    expect(QUOTES.length).toBeLessThanOrEqual(60);
+    expect(QUOTES.length).toBeLessThanOrEqual(200);
     const sources = new Set(QUOTES.map((q) => q.sourceUrl));
-    expect(sources.size).toBe(2);
+    expect(sources.size).toBe(3);
     for (const q of QUOTES) {
       expect(q.text).not.toMatch(/\b(depression|illness|trauma|disorder|suicide)/i);
       expect(q.text.split(/\s+/).length).toBeLessThanOrEqual(30);

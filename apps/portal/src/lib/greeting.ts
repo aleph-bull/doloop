@@ -8,7 +8,7 @@ import {
   type PickedGreeting,
   type Session,
   type StudyNode,
-} from '@komodoit/core';
+} from '@komogon/core';
 import { useMemo } from 'react';
 
 /** Items due within this many days are worth greeting someone about. */

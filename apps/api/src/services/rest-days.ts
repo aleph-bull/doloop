@@ -5,7 +5,7 @@ import {
   setWeeklyRestDays,
   type RestDayPolicy,
   type Vacation,
-} from '@komodoit/core';
+} from '@komogon/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { getPolicy, savePolicy } from './users';

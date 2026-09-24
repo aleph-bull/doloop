@@ -44,7 +44,7 @@ export function useLocalDraft(
   key: string,
   serverValue: string,
 ): [string, (v: string) => void, () => void] {
-  const storageKey = `komodoit.draft.${key}`;
+  const storageKey = `komogon.draft.${key}`;
   const read = (): string | null => {
     try {
       return localStorage.getItem(storageKey);
