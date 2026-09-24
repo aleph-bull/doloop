@@ -8,6 +8,7 @@ import {
   modeForPlan,
   pathLabel,
   pomodoroCut,
+  quoteSlot,
   viewTimer,
   type AdvanceOptions,
   type RoutineOccurrence,
@@ -67,15 +68,6 @@ const PHASE: Record<TimerState['phase'], string> = {
 };
 
 type Tab = NonNullable<Stored['tab']>;
-
-function todayLocal(tz: string | null): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: tz ?? undefined,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-}
 
 function fmtLength(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -165,13 +157,14 @@ export function Popup() {
   const active = snapshot?.active ?? null;
   const settings = snapshot?.settings ?? null;
 
-  // Daily quote, once per day (spec §12).
+  // The quote of the moment, shown once per six-hour slot (spec §12).
   useEffect(() => {
     if (!store?.connection || !store.snapshot) return;
     const mode = store.snapshot.settings?.quote.mode ?? 'quotes';
     if (mode === 'off') return;
-    const today = todayLocal(store.snapshot.timezone);
-    if (store.quoteShownOn === today) return;
+    const tz = store.snapshot.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const slot = quoteSlot(new Date(), tz).key;
+    if (store.quoteShownOn === slot) return;
     void send<{
       pick: { kind: string; item: { text: string; author?: string; citation?: string } } | null;
     }>({ type: 'quote' })
@@ -181,7 +174,7 @@ export function Popup() {
             text: r.pick.item.text,
             by: r.pick.item.author ?? r.pick.item.citation ?? '',
           });
-        void set({ quoteShownOn: today });
+        void set({ quoteShownOn: slot });
       })
       .catch(() => {});
   }, [store?.connection, store?.snapshot, store?.quoteShownOn]);

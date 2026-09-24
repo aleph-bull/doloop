@@ -36,6 +36,7 @@ function OccurrenceRow({
   busy,
   ticked,
   leaves,
+  last,
   onToggle,
   onStart,
 }: {
@@ -46,12 +47,15 @@ function OccurrenceRow({
   ticked: boolean;
   /** In a due list, where a ticked row folds away rather than staying. */
   leaves?: boolean;
+  /** The tick that emptied the due list: the row fades in place, with no fold. */
+  last?: boolean;
   onToggle: (from: HTMLElement) => void;
   onStart?: () => void;
 }) {
   const future = occ.date > today;
   const done = occ.done || ticked;
-  const state = `${done ? ' is-done' : ''}${ticked ? ' is-ticked' : ''}${ticked && leaves ? ' is-leaving' : ''}`;
+  const leaving = ticked && leaves;
+  const state = `${done ? ' is-done' : ''}${ticked ? ' is-ticked' : ''}${leaving ? ' is-leaving' : ''}${leaving && last ? ' is-last' : ''}`;
   return (
     <li className={`routine-row${state}`}>
       <button
@@ -70,13 +74,15 @@ function OccurrenceRow({
       </span>
       {occ.overdue && <Chip tone="warn">missed</Chip>}
       <span className="muted text-sm tabular">{occ.estimatedMinutes}m</span>
-      {onStart && !done && !future && (
+      {/* Kept, disabled, while a ticked row leaves: dropping it would shrink the row first. */}
+      {onStart && (!done || leaving) && !future && (
         <Button
           variant="ghost"
           size="sm"
           icon
           aria-label={`Start a session for ${occ.title}`}
           title="Start a session"
+          disabled={done}
           onClick={onStart}
         >
           <Play size={14} aria-hidden />
@@ -218,7 +224,9 @@ export function Routines() {
           <Glass className="p-5 flex flex-col gap-3">
             <h2 className="text-lg">Due now</h2>
             {dueNow.rows.length === 0 ? (
-              <p className="muted">Nothing outstanding. Everything due is ticked off.</p>
+              <p className="routine-empty muted fade-in" style={{ minHeight: dueNow.emptyHeight }}>
+                Nothing outstanding. Everything due is ticked off.
+              </p>
             ) : (
               <ul className="routine-list">
                 {dueNow.rows.map((o) => (
@@ -229,6 +237,7 @@ export function Routines() {
                     busy={busyKey === occurrenceKey(o)}
                     ticked={dueNow.ticked.has(occurrenceKey(o))}
                     leaves
+                    last={dueNow.last === occurrenceKey(o)}
                     onToggle={(from) => void toggle(o, from)}
                     onStart={canStart ? () => setStartFor(o) : undefined}
                   />

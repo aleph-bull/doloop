@@ -46,15 +46,18 @@ export function RoutinesDueCard({
         </Link>
       </div>
       {due.rows.length === 0 ? (
-        <p className="muted text-sm">Everything due is ticked off.</p>
+        <p className="routine-empty muted text-sm fade-in" style={{ minHeight: due.emptyHeight }}>
+          Everything due is ticked off.
+        </p>
       ) : (
         <ul className="routine-list">
           {due.rows.map((o) => {
-            const ticked = due.ticked.has(occurrenceKey(o));
+            const key = occurrenceKey(o);
+            const ticked = due.ticked.has(key);
             return (
               <li
-                key={occurrenceKey(o)}
-                className={`routine-row${ticked ? ' is-done is-ticked is-leaving' : ''}`}
+                key={key}
+                className={`routine-row${ticked ? ' is-done is-ticked is-leaving' : ''}${ticked && due.last === key ? ' is-last' : ''}`}
               >
                 <button
                   type="button"

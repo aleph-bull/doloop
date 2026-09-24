@@ -2,7 +2,8 @@ import { Glass } from '@komogon/ui';
 import { useQuote } from '../lib/queries';
 
 /**
- * Daily quote or research tip (spec §12). Never shows a quote without attribution.
+ * The quote or research tip of the moment, a new one every six hours (spec §12, made
+ * more frequent on request). Never shows a quote without attribution.
  * `inline` renders it as a footer inside another panel, under a rule, rather than as a
  * card of its own.
  */
@@ -25,13 +26,13 @@ export function QuoteCard({ inline = false }: { inline?: boolean }) {
   );
   if (inline)
     return (
-      <div className="fade-in" role="note" aria-label="Daily quote">
+      <div className="fade-in" role="note" aria-label="Quote">
         <div className="divider" style={{ marginTop: 4 }} />
         {body}
       </div>
     );
   return (
-    <Glass className="p-5 fade-in" as="section" aria-label="Daily quote">
+    <Glass className="p-5 fade-in" as="section" aria-label="Quote">
       {body}
     </Glass>
   );

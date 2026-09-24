@@ -58,7 +58,7 @@ export interface Stored {
   snapshot?: Snapshot;
   /** Pending "Still studying?" question after chrome.idle fired. */
   idlePrompt?: { sessionId: string; since: string } | null;
-  /** Date (user tz) the daily quote was last shown in the popup. */
+  /** The six-hour quote slot (`quoteSlot().key`) last shown in the popup; a bare date before. */
   quoteShownOn?: string;
   lastError?: string | null;
   /** Cached uploaded background, keyed by the API's updatedAt. */

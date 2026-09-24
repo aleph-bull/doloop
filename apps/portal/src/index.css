@@ -822,6 +822,28 @@
     margin-bottom: -2px;
   }
 }
+/*
+ * The last row out does not fold: it fades where it stands and the empty line fades in at
+ * its height (useTickedRoutines), so the card does not shrink and then grow back.
+ */
+.routine-row.is-leaving.is-last {
+  animation-name: routine-leave-last;
+}
+@keyframes routine-leave-last {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+/* Centered in the height the last row left behind. */
+.routine-empty {
+  display: flex;
+  align-items: center;
+}
 
 .routine-week {
   display: grid;

@@ -137,4 +137,10 @@ describe('pickGreeting', () => {
   it('gives every bucket something to say', () => {
     for (const g of GREETINGS) expect(greetingsFor(g.bucket).length).toBeGreaterThan(0);
   });
+
+  it('never nags: no bedtime, no guilt, no comparing', () => {
+    const nag =
+      /\b(sleep|bed|laptop|rest|wind down|keep going|most people|you should|need to|don't let|take a break|call it)\b/i;
+    for (const g of GREETINGS) expect(g.text, g.id).not.toMatch(nag);
+  });
 });

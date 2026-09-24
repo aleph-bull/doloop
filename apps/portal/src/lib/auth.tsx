@@ -41,6 +41,23 @@ const AuthContext = createContext<AuthApi | null>(null);
 const DEV_KEY = 'komogon.dev.token';
 const DEV_EMAIL_KEY = 'komogon.dev.email';
 
+// Installed at import, before the first render: queries mounted outside the auth gate
+// (the achievement toasts) fetch from child effects, which run before AuthProvider's own
+// effect, so a getter set there would let the first /api/me go out without a token, and a
+// hidden tab holds the retry until it is shown. Neither getter depends on React state,
+// and each returns null while nobody is signed in.
+if (supabase) {
+  setTokenGetter(async () => (await supabase.auth.getSession()).data.session?.access_token ?? null);
+} else if (authMode === 'dev') {
+  setTokenGetter(async () => {
+    try {
+      return localStorage.getItem(DEV_KEY);
+    } catch {
+      return null;
+    }
+  });
+}
+
 async function mintDevToken(email: string): Promise<string> {
   const { SignJWT } = await import('jose');
   // Stable per-email id so data persists across reloads while the API is up.
@@ -73,9 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       supabase.auth.getSession().then(({ data }) => apply(data.session));
       const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => apply(session));
-      setTokenGetter(
-        async () => (await supabase.auth.getSession()).data.session?.access_token ?? null,
-      );
       return () => sub.subscription.unsubscribe();
     }
     if (authMode === 'dev') {
@@ -85,13 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         /* ignore */
       }
-      setTokenGetter(async () => {
-        try {
-          return localStorage.getItem(DEV_KEY);
-        } catch {
-          return null;
-        }
-      });
       let email: string | null = null;
       try {
         email = localStorage.getItem(DEV_EMAIL_KEY);

@@ -199,12 +199,21 @@ describe('rest days', () => {
 });
 
 describe('quote', () => {
-  it('returns a stable daily pick and honours the off mode', async () => {
+  it('holds a pick for six hours, then moves on, and honours the off mode', async () => {
     const a = await t.api({ method: 'GET', url: '/api/quote' });
     expect(a.statusCode).toBe(200);
     expect(a.json().pick.kind).toBe('quote');
+    const nextAt = Date.parse(a.json().nextAt);
+    expect(nextAt).toBeGreaterThan(Date.parse(t.clock.now));
+    expect(nextAt - Date.parse(t.clock.now)).toBeLessThanOrEqual(6 * 3_600_000);
     const b = await t.api({ method: 'GET', url: '/api/quote' });
     expect(b.json().pick.item.id).toBe(a.json().pick.item.id);
+
+    t.clock.now = new Date(nextAt).toISOString();
+    const next = await t.api({ method: 'GET', url: '/api/quote' });
+    expect(next.json().pick.item.id).not.toBe(a.json().pick.item.id);
+    expect(Date.parse(next.json().nextAt) - nextAt).toBe(6 * 3_600_000);
+
     await t.api({ method: 'PATCH', url: '/api/me/settings', payload: { quote: { mode: 'off' } } });
     const c = await t.api({ method: 'GET', url: '/api/quote' });
     expect(c.json().pick).toBeNull();

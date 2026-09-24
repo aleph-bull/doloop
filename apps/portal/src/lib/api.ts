@@ -239,7 +239,8 @@ export const api = {
       `/api/rest-days/vacations/${from}`,
     ),
 
-  quote: () => request<{ date: string; pick: DailyPick | null }>('GET', '/api/quote'),
+  quote: () =>
+    request<{ date: string; nextAt?: string; pick: DailyPick | null }>('GET', '/api/quote'),
 
   weekHighlights: (weekStart?: string) =>
     request<HighlightsResult>(

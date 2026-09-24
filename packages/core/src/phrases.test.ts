@@ -33,6 +33,12 @@ describe('phrase data', () => {
     const ids = new Set(PHRASES.map((p) => p.id));
     expect(ids.size).toBe(PHRASES.length);
   });
+
+  it('never nags: no bedtime, no homework for tomorrow, no pep talks', () => {
+    const nag =
+      /\b(sleep|bed|laptop|rest|wind down|keep going|do another|next time|most people|you should|need to|hard day)\b/i;
+    for (const p of PHRASES) expect(p.text, p.id).not.toMatch(nag);
+  });
 });
 
 describe('pickPhrase', () => {

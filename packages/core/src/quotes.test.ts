@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pickQuote, QUOTES, RESEARCH_TIPS } from './quotes';
+import { addDays } from './dates';
+import { pickQuote, QUOTES, quoteSlot, RESEARCH_TIPS } from './quotes';
 import type { QuoteSeen } from './types';
 
 describe('quote data', () => {
@@ -33,7 +34,7 @@ describe('pickQuote', () => {
     expect(pickQuote('u', '2026-09-20', 'research-tips')!.kind).toBe('tip');
   });
 
-  it('avoids anything seen in the last 30 days, then falls back to the full pool', () => {
+  it('avoids anything seen in the last 30 days, then still finds something', () => {
     // Several sightings can share a recent date; only the ids matter for the no-repeat window.
     const seen: QuoteSeen[] = QUOTES.slice(0, -1).map((q) => ({
       userId: 'u',
@@ -64,6 +65,58 @@ describe('pickQuote', () => {
     // unknown id recorded -> normal pick
     const bad: QuoteSeen[] = [{ userId: 'u', date: '2026-09-20', quoteId: 'gone' }];
     expect(pickQuote('u', '2026-09-20', 'quotes', bad)).not.toBeNull();
+  });
+});
+
+describe('six-hour quotes', () => {
+  it('slots each local day into four, keyed by date and start hour', () => {
+    const tz = 'America/Toronto'; // UTC-4 in September
+    expect(quoteSlot('2026-09-24T04:30:00.000Z', tz).key).toBe('2026-09-24T00');
+    expect(quoteSlot('2026-09-24T09:59:00.000Z', tz).key).toBe('2026-09-24T00');
+    expect(quoteSlot('2026-09-24T10:00:00.000Z', tz).key).toBe('2026-09-24T06');
+    expect(quoteSlot('2026-09-24T21:00:00.000Z', tz).key).toBe('2026-09-24T12');
+    expect(quoteSlot('2026-09-25T03:00:00.000Z', tz).key).toBe('2026-09-24T18');
+  });
+
+  it('ends each slot where the next begins, midnight included', () => {
+    const tz = 'America/Toronto';
+    expect(quoteSlot('2026-09-24T12:00:00.000Z', tz).endsAt.toISOString()).toBe(
+      '2026-09-24T16:00:00.000Z',
+    );
+    expect(quoteSlot('2026-09-25T01:00:00.000Z', tz).endsAt.toISOString()).toBe(
+      '2026-09-25T04:00:00.000Z',
+    );
+  });
+
+  it('sorts a slot key after the bare date of the one-a-day picks', () => {
+    expect('2026-09-24T00' > '2026-09-24').toBe(true);
+  });
+
+  it('brings a different quote with each slot', () => {
+    const seen: QuoteSeen[] = [];
+    let prev: string | null = null;
+    for (const hour of ['00', '06', '12', '18']) {
+      const slot = `2026-09-24T${hour}`;
+      const pick = pickQuote('u', slot, 'quotes', seen)!;
+      expect(pick.item.id).not.toBe(prev);
+      seen.push({ userId: 'u', date: slot, quoteId: pick.item.id });
+      prev = pick.item.id;
+    }
+  });
+
+  it('once the pool is used up, brings back the longest unseen, never the last one up', () => {
+    // Four a day gets through the 35 tips in nine days: each shown once, the last most recently.
+    const seen: QuoteSeen[] = RESEARCH_TIPS.map((t, i) => ({
+      userId: 'u',
+      date: `${addDays('2026-09-20', Math.floor(i / 4))}T${String((i % 4) * 6).padStart(2, '0')}`,
+      quoteId: t.id,
+    }));
+    const half = Math.ceil(RESEARCH_TIPS.length / 2);
+    const recentHalf = new Set(RESEARCH_TIPS.slice(half).map((t) => t.id));
+    for (let u = 0; u < 20; u++) {
+      const pick = pickQuote(`u${u}`, '2026-09-30T06', 'research-tips', seen)!;
+      expect(recentHalf.has(pick.item.id)).toBe(false);
+    }
   });
 });
 

@@ -50,10 +50,23 @@ export function useActiveSession() {
     refetchInterval: 20_000,
     staleTime: 5_000,
   });
+/**
+ * A quote is up for six hours: fresh until the server's `nextAt`, then fetched again on the
+ * dot. `staleTime` counts from the fetch and the interval from now. A floor of a minute
+ * keeps a clock that disagrees with the server's from looping.
+ */
+const quoteMsFrom = (from: number, data?: { nextAt?: string }) =>
+  data?.nextAt ? Math.max(60_000, Date.parse(data.nextAt) - from + 1_000) : 60 * 60_000;
+
 }
 
 export function useQuote() {
-  return useQuery({ queryKey: keys.quote, queryFn: api.quote, staleTime: 60 * 60_000 });
+  return useQuery({
+    queryKey: keys.quote,
+    queryFn: api.quote,
+    staleTime: (q) => quoteMsFrom(q.state.dataUpdatedAt, q.state.data),
+    refetchInterval: (q) => quoteMsFrom(Date.now(), q.state.data),
+  });
 }
 
 export function useSessions(nodeId?: string, limit = 200) {
