@@ -12,6 +12,25 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@komogon/portal", "dev"],
       "port": 5173
+    },
+    {
+      "name": "sandbox-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/local/sandbox-api.mjs"],
+      "port": 8797
+    },
+    {
+      "name": "sandbox",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/portal",
+        "exec",
+        "vite",
+        "--config",
+        "vite.sandbox.config.ts"
+      ],
+      "port": 5183
     }
   ]
 }

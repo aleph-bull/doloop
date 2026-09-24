@@ -1,12 +1,19 @@
 import type { PgDatabase, PgQueryResultHKT } from 'drizzle-orm/pg-core';
 import { drizzle as drizzlePg } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { schema } from './schema';
 
 export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
-export const MIGRATIONS_FOLDER = fileURLToPath(new URL('../../drizzle', import.meta.url));
+/**
+ * The migrations folder beside the code: one level up from the tsup bundle (`dist`, which
+ * inlines this module), two levels up from this file under tsx (`src/db`).
+ */
+export const MIGRATIONS_FOLDER = ['../drizzle', '../../drizzle']
+  .map((rel) => fileURLToPath(new URL(rel, import.meta.url)))
+  .find((dir) => existsSync(`${dir}/meta/_journal.json`))!;
 
 /** Production/dev database over a Postgres connection string (Supabase pooler URI). */
 export function createDb(connectionString: string): { db: Db; close: () => Promise<void> } {

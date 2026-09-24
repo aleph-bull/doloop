@@ -12,3 +12,5 @@ coverage/
 *.tsbuildinfo
 .eslintcache
 .pglite/
+.local-build/
+.pglite-sandbox/

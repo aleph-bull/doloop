@@ -26,6 +26,17 @@ With no credentials configured the API runs on an in-process Postgres (PGlite, p
 
 `pnpm check` runs lint, typecheck, tests, the background contrast audit, and builds.
 
+## Always on, on this PC
+
+`pnpm local:update` builds, freezes a copy of the build, and starts it hidden: the portal on http://localhost:5173 and the API on 127.0.0.1:8787, reachable from this PC only. A `Komogon` shortcut in the Windows Startup folder runs `pnpm local:start` at sign-in.
+
+- It runs the frozen copy, so rebuilding while you develop does not change it. Run `pnpm local:update` again when you want the latest.
+- Its data lives in `%LOCALAPPDATA%\Komogon\pglite`, copied once from `apps/api/.pglite` on first start. Dev servers keep `apps/api/.pglite` for testing. Logs are in `%LOCALAPPDATA%\Komogon\logs`.
+- It uses the dev ports, so `pnpm local:stop` before `pnpm dev`, and `pnpm local:start` after.
+- To stop it starting at sign-in, delete `Komogon.lnk` from `shell:startup`.
+
+To try things without touching real data or those ports, run the sandbox: `node scripts/local/sandbox-api.mjs` (API on 8797, throwaway data in `apps/api/.pglite-sandbox`) and `pnpm --filter @komogon/portal exec vite --config vite.sandbox.config.ts` (portal on http://localhost:5183).
+
 ## Layout
 
 ```

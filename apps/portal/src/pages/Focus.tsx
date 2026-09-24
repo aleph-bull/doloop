@@ -356,14 +356,19 @@ function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: Focus
     startedAt: active.session.startedAt,
     plannedEndAt: active.session.plannedEndAt,
   });
-  // Work already logged on the task (pace counts finished sessions only), so the elapsed
-  // figure starts where the task stands rather than at zero.
+  // Work already logged on the task (pace counts finished sessions only), so the total
+  // starts where the task stands rather than at zero.
   const prior = active.session.nodeId
     ? (pace.data?.pace[active.session.nodeId]?.loggedWorkMinutes ?? 0) * 60
     : 0;
   const progress = focusProgress(view.workSeconds, expected, prior);
-  // An unlimited session's clock already is the elapsed time; repeating it says nothing.
-  const showProgress = !(timer.mode === 'unlimited' && progress.fraction === null);
+  // An unlimited session's clock already is this session's time; with no expectation and
+  // nothing logged before, both figures would only repeat it.
+  const showProgress = !(
+    timer.mode === 'unlimited' &&
+    progress.fraction === null &&
+    progress.priorSeconds === 0
+  );
 
   const phase =
     view.graceRemainingSeconds !== null

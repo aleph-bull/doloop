@@ -1,6 +1,7 @@
 node_modules
 dist
 coverage
+.local-build
 pnpm-lock.yaml
 packages/core/data/*.json
 

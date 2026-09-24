@@ -728,3 +728,38 @@ extension inside Chrome (it builds).
   vertically. It keeps the white-on-indigo-to-violet tile. The icon insets went back to
   their pre-dragon values (favicon 11, apple-touch 12, extension 6 / 10 / 11 of 64): at the
   dragon's tighter insets the square face crowded the tile.
+
+## Komogon runs on this PC whenever it is on (user request, 2026-09-23)
+
+- **Just for the user, not hosted**: a `Komogon` shortcut in the Windows Startup folder runs
+  `scripts/local/start.mjs` at sign-in. It starts the API and `vite preview` hidden and
+  detached, bound to this PC only, on the dev ports 5173 and 8787, because the extension
+  only talks to the portal on 5173.
+- **It runs a frozen copy of the last build** (`apps/*/.local-build`), not `dist`, so the
+  builds `pnpm check` makes during development never change the app in use.
+  `pnpm local:update` builds, then swaps the copy only if the build passed.
+- **Its data is separate from dev data**: `%LOCALAPPDATA%\Komogon\pglite`, copied once from
+  `apps/api/.pglite` on first start. Dev servers and tests keep `apps/api/.pglite`, so
+  testing cannot touch what the user relies on.
+- **The dev portal now fails on a taken port** (`strictPort`) instead of moving to 5174,
+  where it would still proxy to the always-on API and its real data.
+- **Two fixes the built API needed**, since only `tsx` had ever run it: the migrations folder
+  is found from `dist` as well as `src/db`, and PGlite is left external in tsup because
+  bundled it cannot find its `.wasm` and `.data` files.
+
+## Focus bar in two parts, and Tasks above Routines (user request, 2026-09-23)
+
+- **The focus bar keeps earlier work and this session apart**: white (the screen's text
+  colour, so near-white on the dark default) for work logged on the task before this
+  session, accent for this session. The fill as a whole is the total.
+- **Two figures, shorter words**: "27:36 of 1:00:00" (the total studied for the task
+  against its expectation; "past" once over, "total" with no expectation) and
+  "● 3:00 this session", the accent dot keying it to the accent part. The words are
+  smaller and quieter than the figures. Over the expectation, the words, dot and accent
+  part turn the warning colour; the white part stays white.
+- An unlimited session with no expectation now shows the figures when the task has earlier
+  work, since the total then says something the clock does not.
+- **Today puts the Tasks row directly above Routines** (after "Upcoming due").
+- **A sandbox for testing**: `sandbox-api` (8797) and `sandbox` (5183) in launch.json run
+  the API from source on throwaway data (`apps/api/.pglite-sandbox`) and the portal against
+  it, clear of the always-on copy's ports and the real data.

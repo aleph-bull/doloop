@@ -31,36 +31,54 @@ export function focusContext(
 }
 
 export interface FocusProgress {
-  elapsedSeconds: number;
+  /** Work logged on the task before this session: the white part of the bar. */
+  priorSeconds: number;
+  /** This session's focused time: the accent part of the bar. */
+  sessionSeconds: number;
+  /** Both together, the time studied for this goal: the whole filled bar. */
+  totalSeconds: number;
   /** Null when nothing says how long the work should take: then there is no bar. */
   expectedSeconds: number | null;
-  /** elapsed / expected, capped at 1 for the bar. Null without an expectation. */
+  /** Where the white part ends, prior / expected, capped at 1. Null without an expectation. */
+  priorFraction: number | null;
+  /** Where the fill ends, total / expected, capped at 1. Null without an expectation. */
   fraction: number | null;
-  /** True once elapsed has passed the expectation. */
+  /** True once the total has passed the expectation. */
   exceeded: boolean;
 }
 
 /**
- * Progress against an expected length. `elapsedSeconds` is this session's focused time;
- * `priorSeconds` is work already logged on the task before it, so the bar starts where
- * the task stands rather than at zero. Nothing is invented: with no expectation the
- * fraction is null, and running over is reported rather than clamped away.
+ * Progress against an expected length, kept in two parts: `sessionSeconds` is this
+ * session's focused time and `priorSeconds` is work already logged on the task before it,
+ * so the bar starts where the task stands rather than at zero and still shows which part
+ * is this sitting. Nothing is invented: with no expectation the fractions are null, and
+ * running over is reported rather than clamped away.
  */
 export function focusProgress(
-  elapsedSeconds: number,
+  sessionSeconds: number,
   expectedMinutes: number | null | undefined,
   priorSeconds = 0,
 ): FocusProgress {
-  const elapsed = Math.max(0, elapsedSeconds) + Math.max(0, priorSeconds);
+  const session = Math.max(0, sessionSeconds);
+  const prior = Math.max(0, priorSeconds);
+  const total = session + prior;
+  const parts = { priorSeconds: prior, sessionSeconds: session, totalSeconds: total };
   if (expectedMinutes === null || expectedMinutes === undefined || expectedMinutes <= 0) {
-    return { elapsedSeconds: elapsed, expectedSeconds: null, fraction: null, exceeded: false };
+    return {
+      ...parts,
+      expectedSeconds: null,
+      priorFraction: null,
+      fraction: null,
+      exceeded: false,
+    };
   }
   const expectedSeconds = Math.round(expectedMinutes * 60);
   return {
-    elapsedSeconds: elapsed,
+    ...parts,
     expectedSeconds,
-    fraction: Math.min(1, elapsed / expectedSeconds),
-    exceeded: elapsed > expectedSeconds,
+    priorFraction: Math.min(1, prior / expectedSeconds),
+    fraction: Math.min(1, total / expectedSeconds),
+    exceeded: total > expectedSeconds,
   };
 }
 

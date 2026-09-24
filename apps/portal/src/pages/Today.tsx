@@ -147,6 +147,28 @@ export function Today() {
       )}
 
       <UpcomingDue nodes={list} pace={pace.data.pace} />
+      {leaves.length > 0 && (
+        <CardRail
+          label="Your tasks"
+          heading={<h2 className="text-lg">Tasks</h2>}
+          actions={
+            <Link to="/tasks" className="text-sm">
+              Manage
+            </Link>
+          }
+        >
+          {leaves.map((n) => (
+            <NodeCard
+              key={n.id}
+              node={n}
+              pace={pace.data.pace[n.id]}
+              plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
+              courseTitle={courseOf(n)}
+              onStart={(node) => setStartFor({ node, minutes: null })}
+            />
+          ))}
+        </CardRail>
+      )}
       <RoutinesDueCard
         onStart={
           active.data?.active
@@ -187,29 +209,6 @@ export function Today() {
         Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
         versus needed hours.
       </Hint>
-
-      {leaves.length > 0 && (
-        <CardRail
-          label="Your tasks"
-          heading={<h2 className="text-lg">Tasks</h2>}
-          actions={
-            <Link to="/tasks" className="text-sm">
-              Manage
-            </Link>
-          }
-        >
-          {leaves.map((n) => (
-            <NodeCard
-              key={n.id}
-              node={n}
-              pace={pace.data.pace[n.id]}
-              plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
-              courseTitle={courseOf(n)}
-              onStart={(node) => setStartFor({ node, minutes: null })}
-            />
-          ))}
-        </CardRail>
-      )}
 
       <TrackerBoard />
 
