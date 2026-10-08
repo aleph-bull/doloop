@@ -15,7 +15,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import { randomBytes } from 'node:crypto';
-import { and, eq, gte, isNotNull } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { AuthUser } from '../auth/verify';
 import type { Db } from '../db/client';
 import {
@@ -230,6 +230,29 @@ export async function updateProfile(
   if (Object.keys(set).length === 0) return row;
   const [updated] = await db.update(users).set(set).where(eq(users.id, row.id)).returning();
   return updated!;
+}
+
+/**
+ * Add `delta` XP (negative to take some away, never below zero) in one statement, so two
+ * requests landing together both count. `withLevel` also moves the stored level to match.
+ * Returns the totals as saved.
+ */
+export async function addXp(
+  db: Db,
+  userId: string,
+  delta: number,
+  opts: { withLevel?: boolean } = {},
+): Promise<{ xp: number; level: number }> {
+  const [row] = await db
+    .update(users)
+    .set({ xp: sql`greatest(0, ${users.xp} + ${Math.round(delta)})` })
+    .where(eq(users.id, userId))
+    .returning({ xp: users.xp, level: users.level });
+  if (!row) return { xp: 0, level: 0 };
+  if (!opts.withLevel) return row;
+  const level = levelForXp(row.xp);
+  if (level !== row.level) await db.update(users).set({ level }).where(eq(users.id, userId));
+  return { xp: row.xp, level };
 }
 
 export async function setXp(

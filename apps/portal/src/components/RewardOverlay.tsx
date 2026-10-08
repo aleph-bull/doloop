@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, fireConfetti, Modal } from '@komogon/ui';
 import { announceAchievements } from '../lib/achievements';
 import type { EndSummary } from '../lib/api';
@@ -14,9 +14,15 @@ export interface RewardOverlayProps {
 
 /**
  * The end-of-session screen on the dashboard (spec §6, §7): confetti, the achievement
- * banner for any new badge, and the score sheet.
+ * banner for any new badge, and the score sheet. The sheet stays mounted after Done so the
+ * modal can fade out rather than vanish.
  */
 export function RewardOverlay({ summary, onClose, phrasesEnabled }: RewardOverlayProps) {
+  const [shown, setShown] = useState(summary);
+  useEffect(() => {
+    if (summary) setShown(summary);
+  }, [summary]);
+
   useEffect(() => {
     if (!summary) return;
     if (summary.confetti) fireConfetti();
@@ -25,10 +31,10 @@ export function RewardOverlay({ summary, onClose, phrasesEnabled }: RewardOverla
     return () => window.clearTimeout(id);
   }, [summary]);
 
-  if (!summary) return null;
+  if (!shown) return null;
   return (
     <Modal
-      open
+      open={summary !== null}
       onClose={onClose}
       actions={
         <Button variant="primary" onClick={onClose}>
@@ -36,7 +42,7 @@ export function RewardOverlay({ summary, onClose, phrasesEnabled }: RewardOverla
         </Button>
       }
     >
-      <SessionSummary summary={summary} phrasesEnabled={phrasesEnabled} />
+      <SessionSummary summary={shown} phrasesEnabled={phrasesEnabled} onTrimmed={onClose} />
     </Modal>
   );
 }

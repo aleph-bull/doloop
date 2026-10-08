@@ -19,6 +19,8 @@ import { rewardRoutes } from './routes/rewards';
 import { routineRoutes } from './routes/routines';
 import { trackerRoutes } from './routes/trackers';
 import { gradeRoutes } from './routes/grades';
+import { recapRoutes } from './routes/recap';
+import type { FetchLike, TmdbCredentials } from './services/tmdb';
 
 export interface BuildOptions {
   db: Db;
@@ -29,6 +31,10 @@ export interface BuildOptions {
   clock?: () => string;
   /** Google Calendar integration; null disables the connect flow. */
   calendar?: Partial<CalendarRouteOptions>;
+  /** TMDB for the equivalents strip's posters; null uses the listed runtimes. */
+  tmdb?: TmdbCredentials | null;
+  /** Injectable fetch for the TMDB lookups, for tests. */
+  tmdbFetch?: FetchLike;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -85,6 +91,7 @@ export async function buildServer(opts: BuildOptions) {
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);
   analyticsRoutes(app, opts.db, clock);
+  recapRoutes(app, opts.db, clock, opts.tmdb ?? null, opts.tmdbFetch);
 
   return app;
 }

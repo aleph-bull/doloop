@@ -17,7 +17,7 @@ export const CHART_SERIES = [
 function fmt(n: number, unit: string): string {
   if (unit === 'h') {
     // Under an hour, show minutes: "0.0 h" tells the reader nothing about a 20-minute day.
-    if (n > 0 && n < 60) return `${Math.max(1, Math.round(n))} m`;
+    if (n > 0 && n < 60) return `${Math.max(1, Math.round(n))} min`;
     return `${(n / 60) % 1 === 0 ? n / 60 : (n / 60).toFixed(1)} h`;
   }
   if (unit === '%') return `${Math.round(n)}%`;

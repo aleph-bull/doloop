@@ -3,8 +3,8 @@
  *
  * It runs a frozen copy of the last build, not the working tree, so a rebuild during
  * development (`pnpm check` builds too) never changes the app you are using. Its data lives
- * in %LOCALAPPDATA%\Komogon, apart from `apps/api/.pglite`, which dev servers keep for
- * testing. Both servers listen on this PC only.
+ * in ~/.komogon, apart from `apps/api/.pglite`, which dev servers keep for testing. Both
+ * servers listen on this PC only.
  */
 import { spawn, execFileSync } from 'node:child_process';
 import {
@@ -30,11 +30,16 @@ export const PORTAL_DIR = join(ROOT, 'apps/portal');
 export const API_BUILD = join(API_DIR, '.local-build');
 export const PORTAL_BUILD = join(PORTAL_DIR, '.local-build');
 
-export const HOME = join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData/Local'), 'Komogon');
+/**
+ * Not under AppData: Claude's desktop app is a packaged Windows app, and Windows quietly
+ * redirects a packaged app's AppData writes (and those of every process it starts) into its
+ * own private copy, so a copy started from a Claude session used different files from the
+ * one started at sign-in. The profile folder is the same for both.
+ */
+export const HOME = join(homedir(), '.komogon');
 export const DATA_DIR = join(HOME, 'pglite');
 export const LOG_DIR = join(HOME, 'logs');
 const PID_FILE = join(HOME, 'pids.json');
-const DEV_DATA_DIR = join(API_DIR, '.pglite');
 
 /** The extension only talks to the portal on 5173, so these are fixed. */
 export const API_PORT = 8787;
@@ -73,13 +78,27 @@ export function snapshot() {
   log('Froze the current build.');
 }
 
-/** First run only: start from the data the dev servers have been using. */
-export function seedData() {
-  if (existsSync(DATA_DIR)) return;
-  if (existsSync(DEV_DATA_DIR)) {
-    cpSync(DEV_DATA_DIR, DATA_DIR, { recursive: true });
-    log(`Copied ${DEV_DATA_DIR} to ${DATA_DIR}.`);
-  }
+/** Whether the real data is where the API will look. It is never made up from dev data. */
+export function hasData() {
+  return existsSync(join(DATA_DIR, 'PG_VERSION'));
+}
+
+/**
+ * Start `start.mjs` through WMI rather than as a child of this process, so the servers
+ * belong to Windows and not to whatever ran this: a terminal, or a Claude session, whose
+ * processes Windows closes when the session ends.
+ */
+export function startOutside() {
+  const quote = (s) => s.replace(/'/g, "''");
+  const commandLine = `"${process.execPath}" "${join(ROOT, 'scripts/local/start.mjs')}"`;
+  const command =
+    `$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ ` +
+    `CommandLine = '${quote(commandLine)}'; CurrentDirectory = '${quote(ROOT)}' }; ` +
+    `exit $r.ReturnValue`;
+  execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], {
+    stdio: 'ignore',
+    windowsHide: true,
+  });
 }
 
 function connects(host, port) {

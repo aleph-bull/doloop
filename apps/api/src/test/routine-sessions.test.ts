@@ -124,7 +124,11 @@ describe('routine sessions', () => {
     expect(
       (await start({ nodeId: node.id, routineId: reading, mode: 'unlimited' })).statusCode,
     ).toBe(400);
-    expect((await start({ mode: 'unlimited' })).statusCode).toBe(400);
+    // Naming nothing is allowed: that is a free session.
+    const free = await start({ mode: 'unlimited' });
+    expect(free.statusCode).toBe(201);
+    expect(free.json().active.nodeTitle).toBe('Free session');
+    await end(free.json().active.session.id, {});
   });
 
   it('logs the session on the calendar under the routine name', async () => {

@@ -65,7 +65,6 @@ export function PanelSettings({ panel, panelColor, panelAlpha, onChange }: Panel
       )}
       <Panel className="p-4 text-sm">
         <div className="font-medium">Preview</div>
-        <div className="muted">This is how panel text looks on the surface you picked.</div>
       </Panel>
     </div>
   );

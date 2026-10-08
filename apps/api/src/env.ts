@@ -34,6 +34,11 @@ export interface Env {
   };
   tokenEncryptionKey: string | undefined;
   portalUrl: string;
+  /**
+   * TMDB credentials for film and TV posters on the Analytics page: a v4 read access token
+   * or a v3 API key. Without either, the equivalents fall back to listed runtimes and icons.
+   */
+  tmdb: { readToken: string | undefined; apiKey: string | undefined };
 }
 
 export function loadEnv(): Env {
@@ -59,5 +64,6 @@ export function loadEnv(): Env {
     },
     tokenEncryptionKey: str('TOKEN_ENCRYPTION_KEY'),
     portalUrl: str('PORTAL_URL', 'http://localhost:5173')!,
+    tmdb: { readToken: str('TMDB_READ_TOKEN'), apiKey: str('TMDB_API_KEY') },
   };
 }

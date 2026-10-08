@@ -28,3 +28,7 @@ export * from './routines';
 export * from './ics-parse';
 export * from './visualizer';
 export * from './focus';
+export * from './recap';
+export * from './equivalents';
+export * from './session-edit';
+export * from './timelapse';

@@ -1,4 +1,11 @@
-import type { UserSettings, VisualizerColorMode } from '@komogon/core';
+import {
+  BASS_HZ_LIMITS,
+  DEFAULT_SETTINGS,
+  VISUALIZER_PRESETS,
+  type UserSettings,
+  type VisualizerColorMode,
+  type VisualizerPreset,
+} from '@komogon/core';
 import { Button, Reveal, Segmented, Slider, Toggle } from '@komogon/ui';
 import type { ReactNode } from 'react';
 import type { AudioCaptureHandle } from '../../lib/use-audio-capture';
@@ -42,6 +49,16 @@ function Range({ label, readout, min, max, step, value, onChange }: RangeProps) 
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+
+const PRESET_OPTIONS: Array<{ value: VisualizerPreset; label: string }> = [
+  { value: 'bass', label: VISUALIZER_PRESETS.bass.label },
+  { value: 'balanced', label: VISUALIZER_PRESETS.balanced.label },
+  { value: 'mellow', label: VISUALIZER_PRESETS.mellow.label },
+  { value: 'custom', label: 'Custom' },
+];
+
+/** The custom preset's memory slider, in the seconds it stands for. */
+const memorySeconds = (v: number) => `${(0.5 + 3.5 * v).toFixed(1)} s`;
 
 interface LayerProps {
   checked: boolean;
@@ -111,7 +128,7 @@ export function VisualizerSettings({
           <span className="field-hint">
             {audio.state === 'listening'
               ? 'Listening. Stop from here or from the browser’s sharing bar.'
-              : (audio.hint ?? 'Nothing shared yet; the visualizer is idling.')}
+              : (audio.hint ?? 'Nothing shared yet.')}
           </span>
         </div>
       )}
@@ -148,6 +165,26 @@ export function VisualizerSettings({
             </div>
           </div>
           <div className="field">
+            <span className="field-label">Motion</span>
+            <div className="vis-layer-settings" style={{ paddingTop: 0 }}>
+              <Range
+                label="Speed"
+                readout={`${value.speed.toFixed(2)}×`}
+                min={0.25}
+                max={2}
+                step={0.05}
+                value={value.speed}
+                onChange={(speed) => set({ speed })}
+              />
+              <Toggle
+                checked={value.fadeWhenSilent}
+                onChange={(fadeWhenSilent) => set({ fadeWhenSilent })}
+                label="Calm when silent"
+                description="Fade the light to a glimmer while nothing is playing."
+              />
+            </div>
+          </div>
+          <div className="field">
             <span className="field-label">Colour</span>
             <div className="flex items-center gap-3 flex-wrap">
               <Segmented
@@ -177,6 +214,97 @@ export function VisualizerSettings({
                   ? 'One colour of your choosing.'
                   : 'Sweeps from your accent into a neighbouring hue.'}
             </span>
+          </div>
+          <div className="field">
+            <span className="field-label">Listening</span>
+            <Segmented
+              ariaLabel="How the visualizer listens"
+              value={value.preset}
+              onChange={(preset: VisualizerPreset) => set({ preset })}
+              options={PRESET_OPTIONS}
+            />
+            {value.preset !== 'custom' && (
+              <span className="field-hint">{VISUALIZER_PRESETS[value.preset].description}</span>
+            )}
+            <Reveal open={value.preset === 'custom'}>
+              <div className="vis-layer-settings">
+                <Range
+                  label="Sensitivity"
+                  readout={pct(value.customSensitivity)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.customSensitivity}
+                  onChange={(customSensitivity) => set({ customSensitivity })}
+                />
+                <span className="field-hint">How easily a beat is picked up.</span>
+                <Range
+                  label="Drop threshold"
+                  readout={pct(value.customDrop)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.customDrop}
+                  onChange={(customDrop) => set({ customDrop })}
+                />
+                <span className="field-hint">
+                  Higher means smaller drops still set off the beat drop circle.
+                </span>
+                <Range
+                  label="Smoothness"
+                  readout={pct(value.customSmoothing)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.customSmoothing}
+                  onChange={(customSmoothing) => set({ customSmoothing })}
+                />
+                <span className="field-hint">How slowly the light settles after a beat.</span>
+                <Range
+                  label="Memory"
+                  readout={memorySeconds(value.customMemory)}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={value.customMemory}
+                  onChange={(customMemory) => set({ customMemory })}
+                />
+                <span className="field-hint">
+                  How much of the recent music a beat is compared with.
+                </span>
+                <Range
+                  label="Low end from"
+                  readout={`${Math.round(value.customBassLow)} Hz`}
+                  min={BASS_HZ_LIMITS.min}
+                  max={BASS_HZ_LIMITS.max - 10}
+                  step={5}
+                  value={value.customBassLow}
+                  onChange={(customBassLow) =>
+                    set({
+                      customBassLow,
+                      customBassHigh: Math.max(value.customBassHigh, customBassLow + 10),
+                    })
+                  }
+                />
+                <Range
+                  label="Low end to"
+                  readout={`${Math.round(value.customBassHigh)} Hz`}
+                  min={BASS_HZ_LIMITS.min + 10}
+                  max={BASS_HZ_LIMITS.max}
+                  step={5}
+                  value={value.customBassHigh}
+                  onChange={(customBassHigh) =>
+                    set({
+                      customBassHigh,
+                      customBassLow: Math.min(value.customBassLow, customBassHigh - 10),
+                    })
+                  }
+                />
+                <span className="field-hint">
+                  Where the beat is listened for. Most drums sit between 40 and 120 Hz.
+                </span>
+              </div>
+            </Reveal>
           </div>
           <div className="field">
             <span className="field-label">Visualizers</span>
@@ -230,6 +358,16 @@ export function VisualizerSettings({
                   value={value.waveCount}
                   onChange={(waveCount) => set({ waveCount })}
                 />
+                <Toggle
+                  checked={value.waveTop}
+                  onChange={(waveTop) => set({ waveTop })}
+                  label="Across the top"
+                />
+                <Toggle
+                  checked={value.waveBottom}
+                  onChange={(waveBottom) => set({ waveBottom })}
+                  label="Across the bottom"
+                />
               </Layer>
               <Layer
                 checked={value.shockwave}
@@ -242,13 +380,105 @@ export function VisualizerSettings({
                 onChange={(rings) => set({ rings })}
                 label="Circles"
                 description="Fluid rings around the clock that move with the low end."
-              />
+              >
+                <Range
+                  label="Circles"
+                  readout={String(value.ringCount)}
+                  min={1}
+                  max={6}
+                  step={1}
+                  value={value.ringCount}
+                  onChange={(ringCount) => set({ ringCount })}
+                />
+              </Layer>
+              <Layer
+                checked={value.burst}
+                onChange={(burst) => set({ burst })}
+                label="Burst"
+                description="A ring of spectrum spikes around the clock, with glowing shapes behind it."
+              >
+                <Range
+                  label="Ring size"
+                  readout={`${pct(value.burstRadius)} of the screen`}
+                  min={0.1}
+                  max={0.5}
+                  step={0.01}
+                  value={value.burstRadius}
+                  onChange={(burstRadius) => set({ burstRadius })}
+                />
+                <Range
+                  label="Spike length"
+                  readout={`${pct(value.burstReach)} of the screen`}
+                  min={0.02}
+                  max={0.6}
+                  step={0.01}
+                  value={value.burstReach}
+                  onChange={(burstReach) => set({ burstReach })}
+                />
+                <Range
+                  label="Spikes"
+                  readout={String(value.burstSpikes)}
+                  min={16}
+                  max={192}
+                  step={8}
+                  value={value.burstSpikes}
+                  onChange={(burstSpikes) => set({ burstSpikes })}
+                />
+                <Toggle
+                  checked={value.burstShowSpikes}
+                  onChange={(burstShowSpikes) => set({ burstShowSpikes })}
+                  label="Spikes"
+                  description="Off leaves just the glowing shapes."
+                />
+                <Reveal open={value.burstShowSpikes}>
+                  <div className="vis-layer-settings" style={{ paddingTop: 0 }}>
+                    <Range
+                      label="Spike opacity"
+                      readout={pct(value.burstSpikeOpacity)}
+                      min={0.1}
+                      max={1}
+                      step={0.05}
+                      value={value.burstSpikeOpacity}
+                      onChange={(burstSpikeOpacity) => set({ burstSpikeOpacity })}
+                    />
+                  </div>
+                </Reveal>
+                <Toggle
+                  checked={value.burstBlob}
+                  onChange={(burstBlob) => set({ burstBlob })}
+                  label="Glowing shapes"
+                  description="Soft colour behind the ring that swells with the music."
+                />
+                <Toggle
+                  checked={value.burstRays}
+                  onChange={(burstRays) => set({ burstRays })}
+                  label="Fine rays"
+                />
+              </Layer>
               <Layer
                 checked={value.bars}
                 onChange={(bars) => set({ bars })}
                 label="Sound bars"
                 description="A glowing spectrum along the bottom of the screen."
               >
+                <Range
+                  label="Position"
+                  readout={`${pct(value.barPosition)} from the top`}
+                  min={0.1}
+                  max={1}
+                  step={0.01}
+                  value={value.barPosition}
+                  onChange={(barPosition) => set({ barPosition })}
+                />
+                <Range
+                  label="Width"
+                  readout={`${pct(value.barWidth)} of the screen`}
+                  min={0.2}
+                  max={1}
+                  step={0.05}
+                  value={value.barWidth}
+                  onChange={(barWidth) => set({ barWidth })}
+                />
                 <Range
                   label="Bars"
                   readout={String(value.barCount)}
@@ -285,6 +515,15 @@ export function VisualizerSettings({
                   value={value.barGlow}
                   onChange={(barGlow) => set({ barGlow })}
                 />
+                <Range
+                  label="Opacity"
+                  readout={pct(value.barOpacity)}
+                  min={0.1}
+                  max={1}
+                  step={0.05}
+                  value={value.barOpacity}
+                  onChange={(barOpacity) => set({ barOpacity })}
+                />
                 <Toggle
                   checked={value.barReflection}
                   onChange={(barReflection) => set({ barReflection })}
@@ -312,11 +551,30 @@ export function VisualizerSettings({
                   value={value.waveformPosition}
                   onChange={(waveformPosition) => set({ waveformPosition })}
                 />
-                <span className="field-hint">
-                  The middle is where the clock is; above or below it keeps the two apart.
-                </span>
+                <Toggle
+                  checked={value.waveformMirror}
+                  onChange={(waveformMirror) => set({ waveformMirror })}
+                  label="Reflection"
+                />
               </Layer>
             </div>
+          </div>
+          <div className="field">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                onChange({
+                  visualizer: {
+                    ...DEFAULT_SETTINGS.visualizer,
+                    enabled: value.enabled,
+                    promptDismissed: value.promptDismissed,
+                  },
+                })
+              }
+            >
+              Reset the visualizer to its defaults
+            </Button>
           </div>
         </>
       )}

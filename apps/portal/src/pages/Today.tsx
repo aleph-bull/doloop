@@ -6,9 +6,10 @@ import {
   type StudyNode,
 } from '@komogon/core';
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router';
-import { Button, Glass, Spinner } from '@komogon/ui';
+import { Link, useNavigate } from 'react-router';
+import { Glass, Spinner, useToast } from '@komogon/ui';
 import { CardRail } from '../components/CardRail';
+import { DashboardStats } from '../components/DashboardStats';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { Hint } from '../components/Hint';
@@ -23,6 +24,7 @@ import { RewardOverlay } from '../components/RewardOverlay';
 import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TimerCard } from '../components/TimerCard';
+import { openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
 import { useActiveSession, useMe, useNodes, usePace, useSessions } from '../lib/queries';
@@ -45,6 +47,33 @@ export function Today() {
     minutes: number | null;
   } | null>(null);
   const [summary, setSummary] = useState<EndSummary | null>(null);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const openFocus = () => {
+    if (openFocusTab() === 'blocked')
+      toast('Allow pop-ups to open the focus screen in its own tab.');
+  };
+
+  /**
+   * A pressing task named on the start panel takes you down to its card, lit for a
+   * moment so the eye finds it. A task with no card here (nothing to show yet) goes to
+   * the task tree instead.
+   */
+  const jumpTo = (nodeId: string) => {
+    const el = document.getElementById(`task-${nodeId}`);
+    if (!el) return void navigate('/tasks');
+    const still =
+      document.documentElement.dataset.motion === 'off' ||
+      (document.documentElement.dataset.motion !== 'on' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    el.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'center', inline: 'center' });
+    el.classList.remove('is-spotlit');
+    // Restart the animation even when the same card is picked twice in a row.
+    void el.offsetWidth;
+    el.classList.add('is-spotlit');
+    el.addEventListener('animationend', () => el.classList.remove('is-spotlit'), { once: true });
+  };
 
   const nodesById = useMemo(
     () => new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n])),
@@ -109,14 +138,11 @@ export function Today() {
           <h1 className="text-3xl">{greeting.salutation}</h1>
           <p className="greeting-line">{greeting.line}</p>
         </div>
-        {!active.data?.active && (
-          <Button variant="primary" onClick={() => setStartFor({ node: null, minutes: null })}>
-            Start a session
-          </Button>
-        )}
       </div>
 
       <NamePrompt />
+
+      <DashboardStats />
 
       {me.data?.streakMessage && (
         <Glass className="p-4 text-sm" role="status">
@@ -136,7 +162,9 @@ export function Today() {
         <PlanCard
           plan={pace.data.plan}
           nodesById={nodesById}
-          onStart={(node, minutes) => setStartFor({ node, minutes })}
+          onStart={() => setStartFor({ node: null, minutes: null })}
+          onOpenFocus={openFocus}
+          onPick={jumpTo}
           todayLine={
             totalToday > 0
               ? `About ${fmtMinutes(totalToday)} across ${pace.data.plan.length} item${pace.data.plan.length === 1 ? '' : 's'} today`

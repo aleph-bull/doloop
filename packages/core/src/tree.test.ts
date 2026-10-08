@@ -31,6 +31,7 @@ const n = (id: string, parentId: string | null, over: Partial<StudyNode> = {}): 
   gradeMode: null,
   gradeOverall: null,
   gradeCredits: null,
+  childDefaults: null,
   ...over,
 });
 
@@ -51,6 +52,7 @@ const s = (id: string, nodeId: string): Session => ({
   review: null,
   xpAwarded: 0,
   badgesAwarded: [],
+  sleeps: [],
 });
 
 const nodes = [

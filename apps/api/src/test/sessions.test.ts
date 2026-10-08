@@ -60,7 +60,7 @@ describe('session lifecycle', () => {
     expect(active.view.breakSeconds).toBe(120);
   });
 
-  it('applies events: skip break, idle, pause, resume', async () => {
+  it('applies events: skip break, pause, resume', async () => {
     let res = await t.api({
       method: 'POST',
       url: `/api/sessions/${sessionId}/events`,
@@ -68,21 +68,13 @@ describe('session lifecycle', () => {
     });
     expect(res.json().active.timer.phase).toBe('work');
     advanceClock(t, 10);
-    const idleSince = new Date(Date.parse(t.clock.now) - 5 * 60_000).toISOString();
-    res = await t.api({
+    // The idle events of older builds are gone from the API, not just from the app.
+    const gone = await t.api({
       method: 'POST',
       url: `/api/sessions/${sessionId}/events`,
-      payload: { type: 'idle-start', idleSince },
+      payload: { type: 'idle-start', idleSince: t.clock.now },
     });
-    expect(res.json().active.timer.phase).toBe('idle');
-    advanceClock(t, 1);
-    res = await t.api({
-      method: 'POST',
-      url: `/api/sessions/${sessionId}/events`,
-      payload: { type: 'idle-answer', stillStudying: true },
-    });
-    expect(res.json().active.timer.phase).toBe('work');
-    expect(res.json().active.view.idleSeconds).toBe(360);
+    expect(gone.statusCode).toBe(400);
     res = await t.api({
       method: 'POST',
       url: `/api/sessions/${sessionId}/events`,
@@ -116,20 +108,20 @@ describe('session lifecycle', () => {
     });
     expect(res.statusCode).toBe(200);
     const { summary } = res.json();
-    // work: 25 (first interval) + 5 (before idle) + 0 (paused right after idle) + 5 (after resume) = 35 min
-    expect(summary.session.workSeconds).toBe(2100);
+    // work: 25 (first interval) + 10 (before the pause) + 5 (after resume) = 40 min
+    expect(summary.session.workSeconds).toBe(2400);
     expect(summary.session.breakSeconds).toBe(120);
-    expect(summary.session.idleSeconds).toBe(360);
+    expect(summary.session.idleSeconds).toBe(0);
     expect(summary.session.review).toMatchObject({
       skipped: false,
       distracted: 'no',
       mood: 4,
       note: 'good',
     });
-    // 35 focused minutes -> 70 base; review 10%, focus 20%, streak day 1
-    expect(summary.xp.base).toBe(70);
-    expect(summary.xp.reviewSubmitted).toBe(7);
-    expect(summary.xp.focus).toBe(14);
+    // 40 focused minutes -> 80 base; review 10%, focus 20%, streak day 1
+    expect(summary.xp.base).toBe(80);
+    expect(summary.xp.reviewSubmitted).toBe(8);
+    expect(summary.xp.focus).toBe(16);
     expect(summary.streak.current).toBe(1);
     expect(summary.xp.streakBonus).toBe(1);
     expect(summary.endedEarly).toBe(false);
@@ -157,10 +149,10 @@ describe('session lifecycle', () => {
   it('exposes pace with logged work and the daily plan', async () => {
     const res = await t.api({ method: 'GET', url: '/api/pace' });
     const { pace, plan } = res.json();
-    expect(pace[hwId].loggedWorkMinutes).toBe(35);
-    expect(pace[hwId].remainingMinutes).toBe(145);
+    expect(pace[hwId].loggedWorkMinutes).toBe(40);
+    expect(pace[hwId].remainingMinutes).toBe(140);
     expect(pace[courseId].aggregated).toBe(true);
-    expect(pace[courseId].loggedWorkMinutes).toBe(35);
+    expect(pace[courseId].loggedWorkMinutes).toBe(40);
     expect(plan[0].nodeId).toBe(hwId);
     expect(plan[0].suggestedMinutes).toBeGreaterThan(0);
   });
@@ -187,30 +179,37 @@ describe('session lifecycle', () => {
     expect(summary.isFirstSessionOnNode).toBe(false);
   });
 
-  it('"still studying? no" ends and finalizes the session', async () => {
+  it('a free session has no task and no routine, and still counts', async () => {
     advanceClock(t, 60);
     const start = await t.api({
       method: 'POST',
       url: '/api/sessions',
-      payload: { nodeId: hwId, mode: 'unlimited' },
+      payload: { mode: 'unlimited' },
     });
-    const id = start.json().active.session.id;
+    expect(start.statusCode).toBe(201);
+    const { active } = start.json();
+    expect(active.session.nodeId).toBeNull();
+    expect(active.session.routineId).toBeNull();
+    expect(active.nodeTitle).toBe('Free session');
+    const seen = await t.api({ method: 'GET', url: '/api/sessions/active' });
+    expect(seen.json().active.nodeTitle).toBe('Free session');
     advanceClock(t, 30);
-    await t.api({
-      method: 'POST',
-      url: `/api/sessions/${id}/events`,
-      payload: { type: 'idle-start', idleSince: t.clock.now },
-    });
-    advanceClock(t, 2);
     const res = await t.api({
       method: 'POST',
-      url: `/api/sessions/${id}/events`,
-      payload: { type: 'idle-answer', stillStudying: false },
+      url: `/api/sessions/${active.session.id}/end`,
+      payload: {},
     });
-    expect(res.json().active.timer.phase).toBe('ended');
-    const active = await t.api({ method: 'GET', url: '/api/sessions/active' });
-    expect(active.json().active).toBeNull();
-    const s = await t.api({ method: 'GET', url: `/api/sessions/${id}` });
+    expect(res.statusCode).toBe(200);
+    const { summary } = res.json();
+    expect(summary.xp.base).toBe(60);
+    expect(summary.nodeCompleted).toBe(false);
+    expect(summary.routineTicked).toBe(false);
+    expect(summary.statusAfter).toBe('no-estimate');
+    // It sits on the calendar under its own name, since there is no task to name it after.
+    const blocks = (await t.api({ method: 'GET', url: '/api/planned-blocks' })).json().blocks;
+    const logged = blocks.find((b: { sessionId: string }) => b.sessionId === active.session.id);
+    expect(logged).toMatchObject({ nodeId: null, title: 'Free session', source: 'session' });
+    const s = await t.api({ method: 'GET', url: `/api/sessions/${active.session.id}` });
     expect(s.json().session.endedAt).not.toBeNull();
     expect(s.json().session.xpAwarded).toBeGreaterThan(0);
   });
@@ -287,16 +286,43 @@ describe('session lifecycle', () => {
   it('lists sessions newest first and filters by node', async () => {
     const res = await t.api({ method: 'GET', url: `/api/sessions?nodeId=${hwId}` });
     const list = res.json().sessions;
-    expect(list.length).toBe(5);
+    expect(list.length).toBe(4);
+    // The free session is listed too, just not under any task.
+    const all = (await t.api({ method: 'GET', url: '/api/sessions' })).json().sessions;
+    expect(all.length).toBeGreaterThan(list.length);
+    expect(all.filter((s: { nodeId: string | null }) => s.nodeId === null).length).toBe(1);
     for (let i = 1; i < list.length; i++)
       expect(list[i - 1].startedAt >= list[i].startedAt).toBe(true);
   });
 });
 
 describe('early cancellation', () => {
-  it('a pomodoro ended before its first work interval earns no XP', async () => {
+  it('a pomodoro ended before its first work interval earns no XP while under ten minutes', async () => {
     const node = (
       await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Early' } })
+    ).json().node;
+    const start = await t.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'pomodoro' },
+    });
+    advanceClock(t, 8);
+    const res = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${start.json().active.session.id}/end`,
+      payload: { review: { distracted: 'no' } },
+    });
+    const { summary } = res.json();
+    expect(summary.endedEarly).toBe(true);
+    expect(summary.xp.total).toBe(0);
+    expect(summary.xp.withheld).toBe(true);
+    expect(summary.confetti).toBe(false);
+    expect(summary.session.workSeconds).toBe(480);
+  });
+
+  it('a pomodoro ended early with ten focused minutes in is paid for them', async () => {
+    const node = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Ten' } })
     ).json().node;
     const start = await t.api({
       method: 'POST',
@@ -311,10 +337,37 @@ describe('early cancellation', () => {
     });
     const { summary } = res.json();
     expect(summary.endedEarly).toBe(true);
-    expect(summary.xp.total).toBe(0);
-    expect(summary.xp.withheld).toBe(true);
-    expect(summary.confetti).toBe(false);
-    expect(summary.session.workSeconds).toBe(600);
+    expect(summary.xp.withheld).toBe(false);
+    expect(summary.xp.base).toBe(20);
+    expect(summary.confetti).toBe(true);
+  });
+
+  it('finishing the task pays however short the session was', async () => {
+    const node = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: { title: 'Quick win', estimatedMinutes: 30 },
+      })
+    ).json().node;
+    const start = await t.api({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: { nodeId: node.id, mode: 'pomodoro' },
+    });
+    advanceClock(t, 4);
+    const res = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${start.json().active.session.id}/end`,
+      payload: { review: { skipped: true }, markComplete: true },
+    });
+    const { summary } = res.json();
+    expect(summary.endedEarly).toBe(true);
+    expect(summary.nodeCompleted).toBe(true);
+    expect(summary.xp.withheld).toBe(false);
+    expect(summary.xp.base).toBe(8);
+    expect(summary.xp.estimateBeat).toBe(1);
+    expect(summary.confetti).toBe(true);
   });
 
   it('a scheduled session stopped before its planned end earns no XP, but full XP when it runs to the end', async () => {
@@ -327,7 +380,7 @@ describe('early cancellation', () => {
       url: '/api/sessions',
       payload: { nodeId: node.id, mode: 'scheduled', plannedEndAt },
     });
-    advanceClock(t, 15);
+    advanceClock(t, 7);
     let res = await t.api({
       method: 'POST',
       url: `/api/sessions/${start.json().active.session.id}/end`,
@@ -389,7 +442,7 @@ describe('a pomodoro with a planned end', () => {
     await t2.close();
   });
 
-  it('withholds XP when a pomodoro with a planned end is stopped early', async () => {
+  it('pays a pomodoro with a planned end that is stopped early but held ten minutes', async () => {
     const t2 = await createTestApp('2026-09-21T14:00:00.000Z');
     const node = (
       await t2.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Bailed' } })
@@ -409,7 +462,8 @@ describe('a pomodoro with a planned end', () => {
       payload: { review: { skipped: true } },
     });
     expect(end.json().summary.endedEarly).toBe(true);
-    expect(end.json().summary.xp.total).toBe(0);
+    expect(end.json().summary.xp.withheld).toBe(false);
+    expect(end.json().summary.xp.base).toBe(50);
     await t2.close();
   });
 

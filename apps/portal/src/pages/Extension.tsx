@@ -26,9 +26,6 @@ export function Extension() {
         <h2 className="text-lg">What it does</h2>
         <ul className="list-disc pl-5 muted flex flex-col gap-1">
           <li>Start and stop sessions from the toolbar; the badge shows minutes left.</li>
-          <li>
-            Pauses the work clock when your computer goes idle and asks if you are still studying.
-          </li>
           <li>Blocks the sites you list in Settings during work intervals, if you turn that on.</li>
         </ul>
         <h2 className="text-lg mt-2">Install (developer build)</h2>

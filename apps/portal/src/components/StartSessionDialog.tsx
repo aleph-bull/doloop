@@ -4,13 +4,12 @@ import type {
   SessionStyle,
   StudyNode,
 } from '@komogon/core';
-import { describeCut, modeForPlan, pomodoroCut } from '@komogon/core';
-import { useEffect, useState } from 'react';
+import { buildIndex, describeCut, modeForPlan, pathLabel, pomodoroCut } from '@komogon/core';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, Input, Modal, Segmented, Select, Toggle, useToast } from '@komogon/ui';
+import { Button, Input, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
 import { ApiError } from '../lib/api';
 import { openFocusTab } from '../lib/focus-tab';
-import { fmtDate } from '../lib/format';
 import { useMe, useRoutines, useStartSession, useUpdateSettings } from '../lib/queries';
 
 export interface StartSessionDialogProps {
@@ -24,6 +23,11 @@ export interface StartSessionDialogProps {
   /** Suggested minutes (from the daily plan) used to prefill the length. */
   suggestedMinutes?: number | null;
   /**
+   * The session can only be on the preselected task: the picker gives way to its name.
+   * The Tasks page's play button opens the dialog this way.
+   */
+  lockSubject?: boolean;
+  /**
    * After a successful start. The default goes to the dashboard and opens the focus tab;
    * the focus screen itself passes a no-op, since it is already where the timer lives.
    */
@@ -33,6 +37,52 @@ export interface StartSessionDialogProps {
 function plusMinutesLocalTime(min: number): string {
   const d = new Date(Date.now() + min * 60_000);
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/** The style and length chosen last time, kept in this browser so the next start begins there. */
+interface LastChoice {
+  style: SessionStyle;
+  duration: SessionDurationKind;
+  minutes: string;
+}
+const LAST_KEY = 'komogon.start.last';
+
+function readLastChoice(): LastChoice | null {
+  try {
+    const raw = localStorage.getItem(LAST_KEY);
+    if (!raw) return null;
+    const v = JSON.parse(raw) as Partial<LastChoice>;
+    const style = v.style === 'pomodoro' || v.style === 'continuous' ? v.style : null;
+    const duration =
+      v.duration === 'unlimited' || v.duration === 'for' || v.duration === 'until'
+        ? v.duration
+        : null;
+    if (!style || !duration) return null;
+    const minutes = Number(v.minutes);
+    return {
+      style,
+      duration,
+      minutes: Number.isFinite(minutes) && minutes > 0 ? String(Math.round(minutes)) : '60',
+    };
+  } catch {
+    return null;
+  }
+}
+
+function saveLastChoice(choice: LastChoice): void {
+  try {
+    localStorage.setItem(LAST_KEY, JSON.stringify(choice));
+  } catch {
+    /* a convenience only */
+  }
+}
+
+/** True when a local clock time has already passed today, so it means tomorrow. */
+function isTomorrow(time: string): boolean {
+  const [h, m] = time.split(':').map(Number);
+  const d = new Date();
+  d.setHours(h ?? 0, m ?? 0, 0, 0);
+  return d.getTime() <= Date.now();
 }
 
 function todayAtLocal(time: string): string {
@@ -48,10 +98,7 @@ function minutesUntilLocal(time: string): number {
   return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
 }
 
-/** The picker's value: a task, or one occurrence of a routine. */
-const nodeKey = (id: string) => `node:${id}`;
-const routineKey = (o: Pick<RoutineOccurrence, 'routineId' | 'date'>) =>
-  `routine:${o.routineId}:${o.date}`;
+import { nodeKey, routineKey, SubjectPicker } from './SubjectPicker';
 
 function fmtLength(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -67,6 +114,7 @@ export function StartSessionDialog({
   node,
   routine,
   suggestedMinutes,
+  lockSubject = false,
   onStarted,
 }: StartSessionDialogProps) {
   const me = useMe();
@@ -88,8 +136,15 @@ export function StartSessionDialog({
   /** Set when the chosen length cuts a block short; cleared by confirming. */
   const [confirmCut, setConfirmCut] = useState<string | null>(null);
 
+  // Fill the form once each time the dialog opens. Reading the props through a ref keeps a
+  // background refetch (new task list, saved settings) from wiping what the user picked.
+  const latest = useRef({ node, routine, suggestedMinutes, settings });
+  useEffect(() => {
+    latest.current = { node, routine, suggestedMinutes, settings };
+  });
   useEffect(() => {
     if (!open) return;
+    const { node, routine, suggestedMinutes, settings } = latest.current;
     if (routine) {
       // A routine already says how long it takes, so the session defaults to that. One
       // shorter than a work block runs straight through rather than being cut short.
@@ -100,23 +155,29 @@ export function StartSessionDialog({
       setMinutes(String(est));
       setEndTime(plusMinutesLocalTime(est));
     } else {
-      const first = node ?? nodes.find((n) => !n.completedAt && n.kind !== 'course') ?? nodes[0];
-      setSubject(first ? nodeKey(first.id) : '');
-      setStyle('pomodoro');
-      setDuration('unlimited');
-      setMinutes(String(suggestedMinutes ?? 60));
-      setEndTime(plusMinutesLocalTime(suggestedMinutes ?? 60));
+      // Nothing is chosen until the user chooses it; a task handed in is the one exception.
+      // Style and length start where they were left last time.
+      const last = readLastChoice();
+      const mins = suggestedMinutes ?? (last ? Number(last.minutes) : 60);
+      setSubject(node ? nodeKey(node.id) : '');
+      setStyle(last?.style ?? 'pomodoro');
+      setDuration(suggestedMinutes ? 'for' : (last?.duration ?? 'unlimited'));
+      setMinutes(String(mins));
+      setEndTime(plusMinutesLocalTime(mins));
     }
     setShowTimer(settings?.pomodoro.showTimerByDefault ?? true);
     setConfirmCut(null);
-  }, [open, node, routine, nodes, suggestedMinutes, settings]);
+  }, [open]);
 
-  const leaves = nodes.filter((n) => !n.completedAt);
   // Outstanding occurrences; the preselected one stays listed even if the query lags.
   const due = routines.data?.due ?? [];
   const routineOptions =
     routine && !due.some((o) => routineKey(o) === routineKey(routine)) ? [routine, ...due] : due;
   const today = routines.data?.today;
+  const lockedPath = useMemo(
+    () => (lockSubject && node ? pathLabel(buildIndex(nodes).byId, node.id) : ''),
+    [lockSubject, node, nodes],
+  );
 
   /** How long the session will run, or null when it is unlimited. */
   const plannedMinutes =
@@ -145,11 +206,17 @@ export function StartSessionDialog({
     const [kind, id, date] = subject.split(':');
     try {
       await start.mutateAsync({
-        ...(kind === 'routine' ? { routineId: id, routineDate: date } : { nodeId: id }),
+        ...(kind === 'routine'
+          ? { routineId: id, routineDate: date }
+          : kind === 'node'
+            ? { nodeId: id }
+            : {}),
         mode: modeForPlan({ style, plannedEndAt: plannedEndAt() }),
         plannedEndAt: plannedEndAt(),
         showTimer,
       });
+      // A routine brings its own length, so only a task or free session sets the default.
+      if (kind !== 'routine') saveLastChoice({ style, duration, minutes });
       onClose();
       if (onStarted) onStarted();
       else {
@@ -204,10 +271,7 @@ export function StartSessionDialog({
         : ''
       : 'Straight through, no breaks. Stop whenever you like.';
 
-  const durationHelp =
-    duration === 'unlimited'
-      ? 'Runs until you stop it.'
-      : 'A chime plays at the end, then the session closes after a minute unless you extend it.';
+  const durationHelp = duration === 'unlimited' ? 'Runs until you stop it.' : '';
 
   return (
     <>
@@ -244,40 +308,30 @@ export function StartSessionDialog({
             <Button variant="ghost" onClick={onClose}>
               Cancel
             </Button>
-            <Button variant="primary" onClick={go} loading={start.isPending}>
+            <Button variant="primary" onClick={go} loading={start.isPending} disabled={!subject}>
               {confirmCut ? 'Start anyway' : 'Start'}
             </Button>
           </>
         }
       >
         <div className="flex flex-col gap-4">
-          <Select label="Studying" value={subject} onChange={(e) => setSubject(e.target.value)}>
-            {routineOptions.length > 0 ? (
-              <>
-                <optgroup label="Tasks">
-                  {leaves.map((n) => (
-                    <option key={n.id} value={nodeKey(n.id)}>
-                      {n.title}
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="Routines">
-                  {routineOptions.map((o) => (
-                    <option key={routineKey(o)} value={routineKey(o)}>
-                      {o.title}
-                      {today && o.date !== today ? ` (from ${fmtDate(`${o.date}T12:00:00`)})` : ''}
-                    </option>
-                  ))}
-                </optgroup>
-              </>
-            ) : (
-              leaves.map((n) => (
-                <option key={n.id} value={nodeKey(n.id)}>
-                  {n.title}
-                </option>
-              ))
-            )}
-          </Select>
+          {lockSubject && node ? (
+            <div className="field">
+              <span className="field-label">Studying</span>
+              <div className="start-locked-subject">
+                <strong>{node.title}</strong>
+                {lockedPath && <span className="muted">{lockedPath}</span>}
+              </div>
+            </div>
+          ) : (
+            <SubjectPicker
+              nodes={nodes}
+              routines={routineOptions}
+              today={today}
+              value={subject}
+              onChange={setSubject}
+            />
+          )}
 
           <div className="field">
             <span className="field-label">How you work</span>
@@ -341,7 +395,9 @@ export function StartSessionDialog({
               }}
               hint={
                 plannedMinutes && plannedMinutes > 0
-                  ? `${fmtLength(plannedMinutes)} from now`
+                  ? isTomorrow(endTime)
+                    ? `That time has passed today, so this runs until tomorrow, ${fmtLength(plannedMinutes)} from now.`
+                    : `${fmtLength(plannedMinutes)} from now`
                   : undefined
               }
             />

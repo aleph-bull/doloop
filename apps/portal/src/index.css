@@ -46,7 +46,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px 16px;
 }
 .nav-link {
   position: relative;
@@ -101,12 +101,18 @@
 .brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  /* The wordmark needs room from its own logo, from the pill's edge, and from the tabs. */
+  gap: 10px;
   font-weight: 600;
   letter-spacing: var(--tracking-tight);
   color: var(--fg-on-glass);
   text-decoration: none;
-  padding: 0 6px;
+  /*
+   * The pill's rounded end eats into the left edge, so the logo needs more inset than a
+   * square corner would to look like it has room.
+   */
+  padding: 0 10px 0 16px;
+  margin-right: 4px;
 }
 .brand:hover {
   text-decoration: none;
@@ -149,6 +155,7 @@
 }
 
 .tree-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -164,9 +171,444 @@
   opacity: 0;
   transition: opacity var(--dur-fast) var(--ease-out);
 }
+/*
+ * The start button is not one of the hover-revealed row actions: it is the thing the page
+ * is for. It sits just left of them, always visible, and only picks up the accent on hover
+ * so a tree full of tasks does not read as a wall of buttons.
+ */
+.tree-row .row-start,
+.tree-row .row-start-spacer {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  margin-right: 14px;
+}
+.tree-row .row-start {
+  color: var(--fg-muted);
+  transition: color var(--dur-fast) var(--ease-out);
+}
+.tree-row .row-start:hover,
+.tree-row .row-start:focus-visible {
+  color: var(--accent);
+}
 .tree-row:hover .row-actions,
 .tree-row:focus-within .row-actions {
   opacity: 1;
+}
+/* The folded group of finished items at the bottom of a course. */
+.tree-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  padding-right: 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.tree-done-toggle:hover,
+.tree-done-toggle:focus-visible {
+  color: var(--fg-on-glass);
+  background: var(--accent-soft);
+}
+/* A value like "0 min / 3 h" never breaks across lines; whole items wrap instead. */
+.tree-row .row-meta > span {
+  white-space: nowrap;
+}
+/*
+ * On a phone the editing actions take a line of their own under the row, so the title
+ * gets the width instead of being squeezed to a word per line.
+ */
+@media (max-width: 640px) {
+  .tree-row {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+  .tree-row .row-start,
+  .tree-row .row-start-spacer {
+    margin-right: 8px;
+  }
+  .tree-row .row-actions {
+    flex-basis: 100%;
+    justify-content: flex-end;
+  }
+}
+/* The grip that drags a course: in the row's left margin, shown on hover or focus. */
+.tree-grip {
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: grab;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.tree-grip:active {
+  cursor: grabbing;
+}
+.tree-row:hover .tree-grip,
+.tree-grip:focus-visible {
+  opacity: 1;
+}
+.tree-grip:hover {
+  color: var(--fg-on-glass);
+  background: var(--accent-soft);
+}
+@media (hover: none) {
+  .tree-grip {
+    opacity: 1;
+  }
+}
+.tree-root {
+  position: relative;
+}
+.tree-root.is-dragging {
+  opacity: 0.45;
+}
+/* Where a dragged course will land: an accent line above or below the course under it. */
+.tree-root.is-drop-before::before,
+.tree-root.is-drop-after::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  z-index: 1;
+  pointer-events: none;
+}
+.tree-root.is-drop-before::before {
+  top: -2px;
+}
+.tree-root.is-drop-after::after {
+  bottom: -2px;
+}
+
+/* A rule between the top-level items, so one course ends where the next begins. */
+.tree-root + .tree-root {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+
+/* The dashboard's start panel: the big Start, the focus link beside it, the pressing list. */
+.start-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.start-panel-focus {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+.start-panel-focus:hover {
+  color: var(--fg-on-glass);
+  text-decoration: underline;
+}
+.start-pressing {
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+/* The heading is the switch: the arrow turns as the list folds. */
+.start-pressing-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 6px 12px 6px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-on-glass);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.start-pressing-toggle:hover {
+  border-color: var(--accent);
+}
+.start-pressing-toggle[aria-expanded='true'] {
+  background: transparent;
+}
+.start-pressing-chevron {
+  color: var(--accent);
+}
+.start-pressing-chevron {
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.start-pressing-toggle[aria-expanded='false'] .start-pressing-chevron {
+  transform: rotate(-90deg);
+}
+.start-pressing-list {
+  padding-top: 6px;
+}
+.start-pressing-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.start-pressing-item:hover,
+.start-pressing-item:focus-visible {
+  background: var(--accent-soft);
+}
+.start-pressing-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+}
+/* The card a pressing task points at: a ring of accent that fades out. */
+.node-card.is-spotlit {
+  animation: spotlight 1.6s var(--ease-out);
+}
+@keyframes spotlight {
+  0%,
+  35% {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+:root[data-motion='off'] .node-card.is-spotlit {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .node-card.is-spotlit {
+    animation: none;
+  }
+}
+
+/* The subject picker: the task tree one page at a time, under a line saying what is chosen. */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* What is chosen right now, wherever in the tree it lives. */
+.picker-chosen {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  font-size: var(--text-sm);
+}
+/* Before anything is chosen the line is quiet: no accent, no dot. */
+.picker-chosen.is-empty {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  border-color: transparent;
+  color: var(--fg-muted);
+}
+.picker-chosen.is-empty .picker-chosen-dot {
+  background: var(--fg-subtle);
+}
+.picker-chosen-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  align-self: center;
+}
+.picker-chosen-title {
+  font-weight: 600;
+}
+.picker-chosen-where {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  min-width: 0;
+}
+/* Back, where you are, and the way back to the top, on one line above the list. */
+.picker-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 2px;
+}
+.picker-bar > :last-child {
+  justify-self: end;
+}
+.picker-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+.picker-above {
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+.picker-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.picker-nav:hover {
+  background: var(--accent-soft);
+}
+.picker-list {
+  max-height: 264px;
+  overflow: auto;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.picker-row:hover,
+.picker-row:focus-visible {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.picker-row.is-chosen,
+.picker-folder.is-chosen .picker-row {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.picker-row-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.picker-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.picker-row-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-row-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.picker-count {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.picker-chevron,
+.picker-check {
+  flex-shrink: 0;
+  color: var(--fg-muted);
+}
+.picker-check {
+  color: var(--accent);
+}
+/* A folder is its row plus, at the right, the mark that studies it as a whole. */
+.picker-folder {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.picker-folder .picker-open {
+  flex: 1;
+  min-width: 0;
+}
+.picker-whole {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.picker-whole:hover,
+.picker-whole:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.picker-whole[aria-pressed='true'] {
+  color: var(--accent);
+}
+.picker-empty {
+  padding: 12px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
 }
 
 .settings-section {
@@ -471,6 +913,19 @@
   border-radius: var(--radius-pill);
   background: rgb(0 0 0 / 0.6);
   color: #fff;
+}
+
+/* The start dialog opened from a task's play button: the task, in place of the picker. */
+.start-locked-subject {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+}
+.start-locked-subject .muted {
+  font-size: var(--text-sm);
 }
 
 /* Shown when a chosen session length would cut a pomodoro block short. */
@@ -1081,6 +1536,11 @@
   .brand span:last-child {
     display: none;
   }
+  /* Just the logo on a phone: keep the inset, drop the room that was for the wordmark. */
+  .brand {
+    padding: 0 4px 0 8px;
+    margin-right: 0;
+  }
 }
 
 /* Touch devices cannot hover: keep row actions visible. */
@@ -1106,6 +1566,17 @@
   padding: clamp(14px, 3vw, 36px);
   color: var(--fg-on-glass);
   overflow: hidden;
+}
+/*
+ * Panels over the visualizer need more body than elsewhere to stay readable. Mixing toward
+ * the panel fill raises the opacity and keeps the tint a photo backdrop gave the glass.
+ */
+.focus-screen .glass {
+  background: color-mix(in srgb, var(--glass-fill) 70%, var(--panel-fill));
+}
+.focus-screen .glass-strong,
+:root[data-panel='glass'] .focus-screen .panel {
+  background: color-mix(in srgb, var(--glass-fill-strong) 62%, var(--panel-fill));
 }
 .focus-screen.is-still {
   cursor: none;
@@ -1259,6 +1730,27 @@
   font-size: var(--text-sm);
   color: var(--fg-subtle);
 }
+/* One line under the top bar after a share fell short: the reason, try again, and an x. */
+.focus-retry {
+  position: relative;
+  z-index: 2;
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 4px 4px 4px 12px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  animation: fade-in var(--dur-slow) var(--ease-out);
+}
+/* Hidden: only the phase word, given a little more presence on an otherwise bare screen. */
+.focus-centre.is-bare .focus-phase {
+  font-size: var(--text-base);
+  letter-spacing: 0.28em;
+}
 .focus-link {
   display: inline-flex;
   align-items: center;
@@ -1278,6 +1770,61 @@
 .focus-link:hover {
   color: var(--fg-on-glass);
   background: var(--accent-soft);
+}
+
+/* The timelapse: a recording pill in the top bar, and the card that makes the video. */
+.timelapse-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 2px 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.timelapse-preview {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+.timelapse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-bad);
+  animation: timelapse-pulse 1.6s ease-in-out infinite;
+}
+.timelapse-dot.is-idle {
+  background: var(--fg-subtle);
+  animation: none;
+}
+@keyframes timelapse-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+:root[data-motion='off'] .timelapse-dot {
+  animation: none;
+}
+.timelapse-export {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  text-align: left;
+}
+.focus-sheet .timelapse-export {
+  margin-top: 4px;
+}
+.timelapse-video {
+  width: 100%;
+  border-radius: var(--radius-md);
+  background: #000;
 }
 
 /* The controls sheet, anchored under the gear. */
@@ -1568,4 +2115,978 @@
   :root:not([data-motion='on']) .achievement {
     animation: none;
   }
+}
+
+/* ---------- recap (Analytics) ---------- */
+/*
+ * Built on the same glass as the rest of the app: a strong hero, then a bento of tiles in
+ * three widths, then the shelves. Single series wear the accent, several wear --chart-*
+ * in the task tree's order. Everything rises in on load, charts draw in when scrolled to,
+ * and reduced motion shows the finished state at once.
+ */
+.rc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  transition: opacity var(--dur-slow) var(--ease-out);
+}
+.rc-page.is-stale {
+  opacity: 0.55;
+  pointer-events: none;
+}
+.rc-rise,
+.rc-bento > * {
+  animation: rc-rise 520ms var(--ease-out) both;
+}
+.rc-bento > :nth-child(2) {
+  animation-delay: 60ms;
+}
+.rc-bento > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.rc-bento > :nth-child(4) {
+  animation-delay: 180ms;
+}
+.rc-bento > :nth-child(5) {
+  animation-delay: 240ms;
+}
+.rc-bento > :nth-child(n + 6) {
+  animation-delay: 300ms;
+}
+@keyframes rc-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The hero: one number, as big as anything on the page. */
+.rc-hero {
+  display: flex;
+  align-items: center;
+  /* The headline card is the one place on the page that gets to breathe. */
+  gap: 40px;
+  padding: 40px 48px;
+  flex-wrap: wrap;
+  background-image: radial-gradient(
+    120% 140% at 100% 0%,
+    color-mix(in srgb, var(--accent) 30%, transparent),
+    transparent 60%
+  );
+}
+.rc-hero-main {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.rc-hero-range {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.rc-hero-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 4px;
+}
+.rc-hero-number {
+  font-size: clamp(3.4rem, 9vw, 5.6rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.rc-hero-unit {
+  font-size: clamp(var(--text-lg), 2.4vw, var(--text-2xl));
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+.rc-hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+.rc-hero-summary {
+  margin-top: 16px;
+  font-size: var(--text-lg);
+  max-width: 52ch;
+}
+.rc-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  min-width: 200px;
+}
+.rc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--fg-on-glass) 9%, transparent);
+}
+.rc-chip.is-up {
+  background: color-mix(in srgb, var(--status-ok) 18%, transparent);
+}
+.rc-chip.is-up svg {
+  color: var(--status-ok);
+}
+.rc-chip.is-new,
+.rc-chip.is-persona {
+  background: var(--accent-soft);
+}
+.rc-chip.is-quiet {
+  color: var(--fg-muted);
+}
+.rc-level {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+.rc-level-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* Rings, the gauge and anything with a figure in its middle. */
+.rc-ring {
+  position: relative;
+  flex-shrink: 0;
+}
+.rc-ring-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.rc-ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.1s var(--ease-out);
+}
+.rc-ring-centre,
+.rc-clock-centre,
+.rc-donut-centre,
+.rc-gauge-caption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.15;
+}
+.rc-ring-centre,
+.rc-donut-centre {
+  position: absolute;
+  inset: 0;
+}
+.rc-ring-big {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+.rc-ring-small {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.rc-gauge {
+  max-width: 240px;
+  margin: 0 auto;
+}
+.rc-gauge-caption {
+  margin-top: -38px;
+}
+.rc-centre {
+  display: flex;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+/* The bento: three columns on a wide screen, the tiles in varied sizes. */
+/* Rows are packed in code (packTiles), so plain row flow never leaves a hole. */
+.rc-bento {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.rc-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  min-width: 0;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.rc-tile:hover {
+  transform: translateY(-3px);
+}
+.rc-tile.is-wide {
+  grid-column: span 2;
+}
+.rc-tile.is-full {
+  grid-column: 1 / -1;
+}
+.rc-tile-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.rc-tile-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.rc-tile-note {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.rc-empty {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 16px;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+/* Narrower than three tiles fit: one column, which cannot have a hole. */
+@media (max-width: 900px) {
+  .rc-bento {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rc-tile.is-wide,
+  .rc-tile.is-full {
+    grid-column: auto;
+  }
+}
+@media (max-width: 640px) {
+  .rc-hero {
+    gap: 28px;
+    padding: 28px 24px;
+  }
+  .rc-hero-side {
+    width: 100%;
+  }
+}
+
+/* Chart parts, shared by every figure. */
+.rc-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rc-plot {
+  position: relative;
+}
+.rc-plot svg {
+  display: block;
+  overflow: visible;
+}
+.rc-grid,
+.rc-axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.rc-axis {
+  stroke: var(--border-strong);
+}
+.rc-grid-circle {
+  fill: none;
+  stroke: var(--border);
+}
+.rc-tick {
+  font-size: 11px;
+  fill: var(--fg-muted);
+}
+.rc-tick.is-today {
+  fill: var(--fg-on-glass);
+  font-weight: 700;
+}
+.rc-tick.is-future {
+  opacity: 0.5;
+}
+.rc-value {
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--fg-on-glass);
+}
+.rc-bar,
+.rc-wedge {
+  fill: color-mix(in srgb, var(--accent) 72%, transparent);
+}
+.rc-bar.is-best {
+  fill: var(--accent);
+}
+.rc-ghost {
+  fill: color-mix(in srgb, var(--fg-on-glass) 10%, transparent);
+}
+.rc-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rc-dot {
+  fill: var(--accent);
+  stroke: var(--panel-fill);
+  stroke-width: 2;
+}
+.rc-arc {
+  fill: none;
+  cursor: pointer;
+  outline: none;
+}
+.rc-hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+}
+.rc-col :focus-visible,
+.rc-spoke :focus-visible,
+.rc-arc:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.rc-tip {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, calc(-100% - 6px));
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--panel-fill);
+  border: 1px solid var(--border-strong);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.3);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.rc-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.rc-legend.is-column {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--fg-on-glass);
+}
+.rc-legend.is-column li {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.rc-legend-value {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+.rc-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+.rc-swatch.is-ghost {
+  background: color-mix(in srgb, var(--fg-on-glass) 16%, transparent);
+}
+.rc-table summary {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  cursor: pointer;
+  width: max-content;
+}
+.rc-table[open] summary {
+  margin-bottom: 6px;
+}
+
+/* Draw-in: bars grow from the baseline, wedges and arcs fade in, the climb draws itself. */
+.rc-figure .rc-col {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transition: transform 700ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 45ms);
+}
+.rc-figure:not(.is-in) .rc-col {
+  transform: scaleY(0);
+}
+.rc-figure .rc-spoke {
+  transition: opacity 500ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 25ms);
+}
+.rc-figure:not(.is-in) .rc-spoke {
+  opacity: 0;
+}
+.rc-donut .rc-arc {
+  transition: opacity 700ms var(--ease-out);
+}
+.rc-donut:not(.is-in) .rc-arc {
+  opacity: 0;
+}
+.rc-climb .rc-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.rc-climb.is-in .rc-draw {
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 1.4s var(--ease-out);
+}
+.rc-climb .rc-area {
+  transition: opacity 1s var(--ease-out) 0.4s;
+}
+.rc-climb:not(.is-in) .rc-area {
+  opacity: 0;
+}
+.rc-clock .rc-plot {
+  max-width: 300px;
+  margin: 0 auto;
+  width: 100%;
+}
+.rc-clock-centre {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.rc-donut-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.rc-donut-chart {
+  position: relative;
+  width: min(180px, 100%);
+}
+.rc-donut-body .rc-legend.is-column {
+  width: 100%;
+}
+
+/* The equivalents: posters and icons in a row that scrolls sideways on a narrow screen. */
+.eq {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+/* A section heading above its panels: set here, since utility margins lose to heading resets. */
+.rc-section-title {
+  margin-bottom: 16px;
+}
+.eq-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.eq-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(200px, 1fr);
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+}
+.eq-card {
+  scroll-snap-align: start;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  animation: rc-rise 460ms var(--ease-out) both;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.eq-card:hover {
+  transform: translateY(-3px);
+}
+.eq-poster {
+  width: 58px;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  flex-shrink: 0;
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.35);
+}
+.eq-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  border-radius: 16px;
+  background: var(--accent-soft);
+  font-size: 30px;
+}
+.eq-text {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  line-height: 1.35;
+}
+.eq-text::first-letter {
+  text-transform: uppercase;
+}
+
+/* Streaks: the flame, the week in dots, and thirty days as a ring. */
+.rc-streaks {
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.rc-streaks-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+}
+@media (max-width: 720px) {
+  .rc-streaks-body {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+  }
+}
+.rc-streak-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rc-streak-number {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.1;
+}
+.rc-week-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rc-week-dots ol {
+  display: flex;
+  gap: 8px;
+}
+.rc-dot-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.rc-dot-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-fg);
+}
+.rc-dot-day.is-on .rc-dot-mark {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.rc-dot-day.is-today .rc-dot-mark {
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: var(--accent);
+}
+.rc-dot-day.is-future .rc-dot-mark {
+  opacity: 0.45;
+}
+.rc-dot-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.rc-dot-day.is-today .rc-dot-label {
+  color: var(--fg-on-glass);
+  font-weight: 700;
+}
+
+/* The streak flame animates itself (StreakFlame.tsx); unlit, it is a grey ghost of itself. */
+.rc-flame {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.rc-flame.is-level-0 svg {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+/* The trophy shelf: medals in a row, the new ones shimmering. */
+.trophies {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.trophy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 20px 12px 16px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--panel-fill) 72%, transparent);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.trophy:hover {
+  transform: translateY(-3px);
+}
+.trophy.is-new {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.trophy.is-new::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    color-mix(in srgb, var(--accent) 22%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: rc-shimmer 2.8s ease-in-out 0.6s 2;
+  pointer-events: none;
+}
+@keyframes rc-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+/* The record's emoji, on its own: no coin or disc behind it. */
+.trophy-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.trophy-new {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 10px;
+  font-weight: 700;
+}
+.trophy-value {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.trophy-label {
+  font-size: var(--text-sm);
+}
+.trophy-when {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* Insights, grades, the review card. */
+.rc-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.rc-insight {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.rc-insight-head {
+  font-weight: 600;
+  line-height: 1.35;
+}
+.rc-grades {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--text-sm);
+}
+.rc-grades li {
+  display: grid;
+  grid-template-columns: minmax(80px, 160px) minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 10px;
+}
+.rc-grades-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  overflow: hidden;
+}
+.rc-grades-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent);
+}
+.rc-review {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px 22px;
+}
+
+/* Loading. */
+.rc-skeleton {
+  border-radius: var(--radius-lg);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--fg-on-glass) 6%, transparent) 30%,
+    color-mix(in srgb, var(--fg-on-glass) 12%, transparent) 50%,
+    color-mix(in srgb, var(--fg-on-glass) 6%, transparent) 70%
+  );
+  background-size: 300% 100%;
+  animation: rc-skeleton 1.6s linear infinite;
+}
+@keyframes rc-skeleton {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* ---------- dashboard stat strip ---------- */
+.dash-stats {
+  display: grid;
+  grid-template-columns: 1.1fr 1.3fr 1.1fr 1fr;
+  align-items: center;
+  gap: 18px 24px;
+  padding: 20px 24px;
+}
+/* Before the first session: the flame and one line, in place of a row of zeros. */
+.dash-stats.dash-stats-empty {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.dash-stats-empty > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.dash-stat > div,
+.dash-stat.is-total,
+.dash-stat.is-spark {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-stat.is-total,
+.dash-stat.is-spark {
+  align-items: flex-start;
+}
+.dash-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.dash-figure {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.dash-figure small {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+.dash-value {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.dash-value small {
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+.dash-ring-text {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.dash-link {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.dash-fun {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--fg-on-glass);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.dash-fun span:nth-child(2) {
+  flex: 1;
+}
+.dash-fun:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+@media (max-width: 900px) {
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .dash-stats {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
+  }
+}
+
+/* Reduced motion: the finished picture, nothing moving. */
+:root[data-motion='off'] .rc-rise,
+:root[data-motion='off'] .rc-bento > *,
+:root[data-motion='off'] .eq-card,
+:root[data-motion='off'] .rc-skeleton,
+:root[data-motion='off'] .trophy.is-new::after {
+  animation: none;
+}
+:root[data-motion='off'] .rc-tile:hover,
+:root[data-motion='off'] .eq-card:hover,
+:root[data-motion='off'] .trophy:hover {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .rc-rise,
+  :root:not([data-motion='on']) .rc-bento > *,
+  :root:not([data-motion='on']) .eq-card,
+  :root:not([data-motion='on']) .rc-skeleton,
+  :root:not([data-motion='on']) .trophy.is-new::after {
+    animation: none;
+  }
+  :root:not([data-motion='on']) .rc-tile:hover,
+  :root:not([data-motion='on']) .eq-card:hover,
+  :root:not([data-motion='on']) .trophy:hover {
+    transform: none;
+  }
+}
+
+/* ---------- session history (Settings) and deleting time ---------- */
+.history-day {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history-day-title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.history-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 12px;
+}
+.history-row + .history-row {
+  border-top: 1px solid var(--border);
+}
+.history-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.history-title {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-when {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.history-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--text-sm);
+}
+.history-badges {
+  font-size: var(--text-xs);
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 560px) {
+  .history-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .history-figures {
+    grid-column: 1;
+  }
+  .history-row > .btn {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+.trim-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+}
+.trim-preview-end {
+  font-size: var(--text-lg);
+  font-weight: 600;
 }

@@ -902,3 +902,353 @@ setup notes. Migration `0008_drop_spotify` drops the `spotify_connections` table
 migration stays so existing databases replay cleanly. `oauth-state` stays, since Google
 Calendar's consent flow uses it. The visualizer settings test that lived in the Spotify test
 file moved to `visualizer-settings.test.ts`.
+
+## Templates, free sessions, undo, and a quieter focus screen (user request, 2026-09-24)
+
+- **A template for the items under a node** (`childDefaults`, a JSON column on `nodes`,
+  migration 0009): type, estimated hours, due time, count unit and colour. Set from the
+  template button on any row of the task tree, at any level; a new item's dialog fills in
+  from the nearest ancestor that has one, walking up from the chosen parent, and refills
+  when the parent is changed while creating. Every field is optional and only what is set
+  is a default; the node's own fields and anything already saved are untouched. A row with
+  a template shows a "Template" chip. Saving a template with nothing set clears it.
+- **A rule between top-level items** in the task tree (`.tree-root + .tree-root`), so one
+  course ends where the next begins.
+- **Free sessions**: the start dialog's "Start without a task" line runs the timer for
+  nothing in particular. The session has neither a task nor a routine (the check
+  constraint is now "at most one", not "exactly one"); its title is "Free session", the
+  minutes count toward streak and level as always, and the calendar block carries the
+  title. There is no review, since there is nothing to review. The dialog also opens as a
+  free session when there is nothing to pick, rather than refusing to start.
+- **"Open the focus screen"** sits in small text under the dashboard's Start button.
+- **Ctrl+Z and Ctrl+Y** (or Ctrl+Shift+Z) undo and redo the small reversible things:
+  editing, adding (taken back by archiving, never deleting), ticking and archiving a task,
+  ticking a routine, logging a tracker for today, and planning, editing or removing a
+  block. Each entry carries its own inverse call (`lib/undo.ts`, recorded from the
+  mutation hooks in `lib/queries.ts`). Deliberately not undoable: settings, rewards and
+  purchases, routine and tracker edits, ICS imports, grade components, account actions,
+  anything touching many rows at once. The shortcut yields to a text field or an open
+  dialog, where the browser's own undo is the right one. The stack lives for the tab.
+- **The clock waits for the audio question**: while the share prompt or the browser's
+  picker is up, the focus screen pauses a running clock and resumes it once the question
+  is answered or the picker closes, however that went. A pause the user chose before the
+  question is left to them to end.
+- **Try again after a share fell short**: a dismissable line under the top bar says why
+  (no audio ticked, or nothing shared) with a "Try again" that reopens the picker. It never
+  shows once "Never ask again" has been chosen, and each new attempt earns it back if it
+  fails again.
+- **Hide now hides everything that stays on screen when the hands are still**: the clock,
+  the task and the progress go; the phase word ("Paused", "Focus · cycle 2") stays, a
+  touch larger, and the visualizer and background are untouched. The controls still come
+  back on movement, so the eye button is always reachable. It is the same per-session
+  `showTimer` flag, so the dashboard card still just hides its digits.
+- **Idle detection is gone**: the portal hook, the setting, the "Still studying?" dialogs,
+  the extension's chrome.idle listener and its permission, and the two timer events. The
+  timer has no idle phase any more; a session saved mid-idle by an older build reads as
+  paused, about to resume into work (`normalizeTimer`). `idleSeconds` stays on sessions
+  as a record of old rows and is 0 on every session since.
+- **Early ends still pay**: ending before the first work interval or the planned end is
+  still "early", but the XP is only withheld while the session is under ten focused
+  minutes (`XP.MIN_REWARDED_MINUTES`) and nothing was finished. Ten solid minutes pay for
+  ten minutes; marking the task done or ticking the routine pays however short it was.
+  The "End early?" warning only appears when stopping would actually earn nothing, and the
+  score sheet's note says why. Confetti follows the XP, not the early flag.
+- **Visualizer presets** (`visualizer.preset`): how it listens. "Bass heavy" is the
+  original analysis. "Balanced" listens to a wider low end (20 to 200 Hz), counts a
+  smaller jump as a beat and settles a little slower. "Calm and mellow" reaches to
+  260 Hz, hears a gentle swell as a beat, needs far less for a drop, and lets the light
+  linger. "Custom" builds a tuning from six sliders: sensitivity, drop threshold,
+  smoothness, memory (the window a beat is judged against, 0.5 to 4 s) and the band's two
+  edges in Hz (20 to 500, at least 10 Hz apart). The bars' attack and release follow the
+  same preset. It all lives in core (`visualizerTuning`, `customTuning`, tested), the
+  sliders flat under `settings.visualizer` like the rest.
+
+## The dashboard panel is the start button, and things fade out (user request, 2026-09-27)
+
+- **The plan panel no longer picks a task for you.** Where it showed the top of the day's
+  plan with "Start 2 h 59 m", it now says "Ready when you are", the day's total, one big
+  "Start a session" (the general dialog, nothing chosen in advance) with "Open the focus
+  screen" beside it, and under a rule the four most pressing tasks in small text with
+  their status, suggested minutes and due date. The header's own Start button and focus
+  link moved into the panel. Clicking a pressing task scrolls its card in the Tasks rail
+  into the middle of the screen (sideways within the rail too) and rings it with the
+  accent for a moment (`.node-card.is-spotlit`); a task with no card there goes to the
+  task tree. Smooth scrolling and the ring both respect reduced motion.
+- **Toasts fade before they go**: the last 260 ms of a toast's time plays `toast-out`
+  (`is-leaving`), so "+12 XP" sinks away instead of blinking out.
+- **Modals fade before they close**: `Modal` adds `is-closing`, plays `modal-out` with the
+  scrim lifting, and only then calls `close()`; reduced motion closes at once. The score
+  sheet keeps its last summary mounted through the fade so the Done button is not a
+  vanish. Every other dialog gets the same exit for free.
+- **"Most pressing" folds** (user request, same day): the heading is a button with a
+  chevron that turns as the list drops down or folds away through `Reveal`. Folded by
+  default (the user found it open too busy) and drawn as an accent pill so it reads as a
+  control; once toggled, the choice is kept in this browser (`komogon.pressing-open`), a per-device
+  convenience rather than a setting.
+- **The start dialog's "Studying" is a tree, one page at a time** (user request, same
+  day): `SubjectPicker` replaces the flat select. It opens on the courses (or on the page
+  of whatever is already chosen), a course's arrow turns the page to its children with the
+  count beside it, clicking a name chooses it at any level (a course can be studied as
+  itself), and Back and Reset sit above the list with the path between them. Routines are
+  a folder at the top level. The chosen item is named under the list, since it may be on
+  another page. "Start without a task" stays where it was.
+- **The picker, second pass** (user request, same day): it always opens on "All courses"
+  rather than on the chosen item's page; the "Studying" label is gone; "See all courses"
+  replaces Reset, and Back and it only show once inside a course. A line above the list
+  names what is chosen and where it lives, since that may be on another page. Rows with
+  things inside open on click (with "n items" and a chevron); a small mark at their right
+  studies the course or unit as a whole. "Just the timer" is the first row at the top,
+  replacing the separate free-session box and its link, and Routines the last.
+- **Nothing is chosen until the user chooses** (user request, same day): the dialog no
+  longer preselects the first task. The chosen line reads "Nothing chosen yet" in a quiet
+  grey until a row is picked, and Start stays disabled until then. A task handed in from
+  a card's own Start button is still preselected.
+
+## Analytics becomes a recap, and the dashboard gets its numbers (user request, 2026-09-28)
+
+The Analytics tab was a grid of same-weight text cards that often said the same thing, with
+a stray "Fewer" toggle and a hole in the grid. The user asked for something closer to a
+Wrapped-style recap: visual, celebratory, encouraging.
+
+- **Tabs**: This week, This month, All time, By task. "By task" is the old advanced view,
+  unchanged. `?tab=overview` still lands on All time. The old highlight grid and the
+  `AnalyticsOverview` component are gone; the week highlights endpoint stays for the API
+  tests and the extension, and its cards now only feed "Worth knowing".
+- **One call per range**: `GET /api/analytics/recap?range=week|month|all` returns
+  everything the page draws, computed in core (`recap.ts`, 24 tests) from completed
+  sessions, nodes, planned blocks, the streak, grades and XP. A range switch keeps the last
+  render up, dimmed (`keepPreviousData`), rather than flashing a skeleton.
+- **Hierarchy**: a hero (one count-up number, a change chip, one sentence, the weekly goal
+  ring, level progress, "Share my week"), then the equivalents strip, then a bento of
+  charts, then streaks, the trophy shelf, "Worth knowing" (at most four), and a proper
+  weekly review button.
+- **Encouraging by construction**: `recapSummary` never words a drop as a drop. A lower
+  week gets a neutral grey chip naming last week's total and "Every session counts. You
+  showed up N times." A range whose previous one had under 30 minutes (`MIN_BASELINE_MINUTES`)
+  is a first: "Your first week is on the board. Here's where you started." and a "First
+  week" chip, never "2.8 hours vs 1 minute". A month in progress is compared with the same
+  stretch of last month, not all of it.
+- **No redundant cards**: the highlight keys the charts already make (hours total and up,
+  best week and day, streak, planned kept, sessions up) are filtered out of the insights.
+- **No holes**: the bento's rows are packed in code (`packTiles`): each wide tile shares a
+  row with a normal one, alternating sides; the rest go three to a row; a leftover pair
+  becomes normal plus wide, a lone leftover takes the row. Below 900 px it is one column.
+  There is no tall tile size; it could not be packed without gaps.
+- **Charts are hand-drawn SVG** in `@komogon/ui` (`components/Recap.tsx`), not Recharts or
+  Chart.js: the existing charts were already dependency-free, and the radial clock, gauge
+  and rings are simpler drawn than configured. Week or month bars with last period as
+  ghost bars and the best day labelled; a 24-hour radial clock with a label ("You're a
+  night owl 🦉"); a course donut; stacked days by course (week); the cumulative climb with
+  milestone dots at 10/25/50/100… hours (all time, from two studied days); the six-month
+  heatmap (all time); a planned-kept gauge; a focus-quality ring from review answers;
+  session-length histogram; weekday columns (month and all time); study against grades
+  (only once three courses have both a mark and study time, worded gently).
+- **Chart rules** (from the dataviz guidance): one series in the accent; several in the
+  existing `--chart-1..5`, which passed the palette validator on the dark panel (worst
+  adjacent CVD ΔE 8.4). A course's colour follows its place in the task tree, not its rank
+  this week, so it keeps its colour across ranges; time with no course is neutral grey.
+  Tooltips on hover and keyboard focus, a "Show as a table" fold under every chart, text
+  in text tokens, 4px rounded bar ends, hairline grids.
+- **Equivalents** (`equivalents.ts`, one config file, 11 tests): songs, albums, podcasts,
+  pizzas, bread, novels, nights of sleep, marathons (4.5 h), walking at 5 km/h with a named
+  distance ("Toronto to Niagara Falls"), and the Toronto to Tokyo flight (13 h). Each has a
+  range of totals it reads well for, so small totals get small units. Films and TV seasons
+  come from a curated list of 21 titles with their TMDB ids; runtimes and posters are
+  fetched by the API (`services/tmdb.ts`) with `TMDB_READ_TOKEN` or `TMDB_API_KEY`, cached a
+  week in memory and a day plus the on-disk query cache in the portal, with TMDB's
+  attribution line under the strip. Without a key, or when TMDB fails, the listed runtimes
+  are used with "~" and an icon replaces the poster; a broken image also falls back to the
+  icon. The dice deals a new hand.
+- **Streaks**: a flame that grows and reddens with the run, this week as seven dots with
+  today ringed, the next milestone ("2 more days to a 7-day streak 🔥"), days studied out of
+  the last 30 as a ring, and a line about freezes on hand. Streak freezes already existed
+  (the shop), so no new grace-day mechanism was added; "a study day" is the existing
+  streak rule, a session of at least the streak minimum in the user's timezone.
+- **Trophy shelf**: biggest day, biggest week, longest session, longest streak, most tasks
+  in a week, earliest start and latest finish (these two only after three sessions, and
+  ignoring any session left running for 12 hours or more). A record set this week wears
+  NEW with a shimmer, and sparks fly off it the first time it is seen (remembered in this
+  browser only).
+- **Personality**: Night owl, Early bird, Weekend warrior, Deep diver, Sprinter or
+  Consistent climber, from at least five sessions and two hours, with the reason on hover.
+  **Forecast**: "At this pace you'll hit 100 hours by October 24 🎯" from the last 28 days.
+- **Share my week**: a 1080 px square drawn on a canvas in the browser and downloaded as a
+  PNG; nothing is uploaded.
+- **Dashboard strip** (`GET /api/analytics/dashboard`): all-time hours counting up, this
+  week in a ring against the new **weekly goal** (`settings.goals.weeklyMinutes`, default
+  5 hours, set in Settings under Pace and streaks), the streak beside the best, a seven-day
+  sparkline, and one comparison that changes daily and links to Analytics.
+- **Motion**: count-ups, staggered rise-in, bars grow from the baseline and rings fill when
+  scrolled into view, hover lift. The app's motion setting and the OS preference show the
+  finished state at once. Skeletons while loading; every tile has an empty state.
+- **Not done, left for later**: a TMDB logo image in the attribution (the text line is
+  there); seasonal or yearly recaps; badges tied to equivalents; progress rings per unit on
+  Analytics (the task tree already shows progress bars).
+
+## Deleting time from sessions, session history, and the computer falling asleep (user request, 2026-09-28)
+
+The user left a pomodoro running overnight: with breaks and work starting on their own it
+logged 5 h 30 m of focus and 728 XP, with three badges.
+
+- **Delete time** (`POST /api/sessions/:id/trim`, `trimFocus` in core `session-edit.ts`):
+  the user says how much focus to take off; it comes off the end with the breaks that ran
+  alongside it, at the session's own focus-to-break mix, since a session stores totals and
+  not a timeline. That mix is exact for the case this exists for, a forgotten session
+  cycling on its own, and one for one on a session without breaks. The dialog says where
+  the end lands before anything changes ("This means you ended at 3:12 AM"), what focus is
+  left, and the XP that comes off. A session always keeps its first minute.
+- **XP** scales with whole focused minutes (new over old), so every bonus that was a share
+  of the base comes off in step; the difference is taken from the user's total with a
+  negative `session` ledger row, and the level recomputed. **Badges**: of the ones that
+  session unlocked, any that no longer hold are taken back (`revokeLapsedBadges`); badges
+  earned elsewhere, or still true on other study, stay. The calendar block that records
+  the session is shortened, and pushed to Google if it was synced. The streak is left as
+  it was: a day already counted stays counted. Not undoable with Ctrl+Z; it is confirmed
+  in its own dialog instead.
+- **Session history** is a section of Settings (`#history`, searchable as history, delete
+  time, forgot to stop): finished sessions grouped by day, what each was for, when, focus,
+  XP and badges, thirty at a time with "Show older sessions" (`GET /api/sessions/history`,
+  paged by start time). A session that ran past midnight names the day it ended. The
+  score sheet at the end of a session also offers "Didn't study all of that? Delete time".
+- **The computer falling asleep**: the session keeps running (no pause). The portal's
+  one-second tick notices when the clock jumps ten minutes or more while the timer was
+  running, which only happens when the machine slept, and logs it on the session
+  (`sessions.sleeps`, migration 0010; `logSleep` merges the same sleep seen by two tabs).
+  On waking, a dialog asks "Your computer went to sleep at 3:12 AM. Did you keep studying
+  until now, or did you stop at 3:12 AM?". "I kept studying" marks it answered and changes
+  nothing. "I stopped at…" runs the normal end flow (review if on) and ends the session
+  back then (`endAt` on `/end`, `trimByWall`), so the XP is for the time before the
+  sleep. It is not the removed idle detection: stillness never triggers it, only a clock
+  that jumped. Needs a Komogon tab open during the sleep; the extension does not report
+  sleeps yet.
+- **The user's session was corrected** with the same code, from a one-off script run
+  against the always-on data after a backup (`%LOCALAPPDATA%\Komogon\pglite-backup-*`):
+  1 h 30 m focused, ending 3:12 AM, 198 XP (530 removed, level 3 to 2), Marathon and Deep
+  work taken back, Perfect week kept.
+
+## Recap spacing, and dragging courses (user request, 2026-09-29)
+
+- **Section headings on Analytics** ("Trophy shelf", "Worth knowing") now sit 16px above
+  their panels. They used Tailwind's `mb-3`, which the app's own heading reset overrides
+  (unlayered CSS beats Tailwind's layered utilities), so they had no gap at all; a plain
+  `.rc-section-title` class carries the margin. The equivalents strip's heading gap went
+  from 12 to 16px to match.
+- **Courses can be dragged into a new order** on Tasks. A grip appears in a course row's
+  left margin on hover (always shown on touch screens, where it still cannot drag: native
+  HTML drag and drop is mouse only). An accent line shows where it will land; the whole
+  course moves with its tasks. Alt with the up or down arrow on the grip moves a course
+  one place from the keyboard. Only the moved course is written: its sort order becomes
+  the midpoint of its new neighbours. The new order shows at once and is replaced by the
+  server's copy when it arrives. Ctrl+Z says "Moved Accounting" and puts it back. Tasks
+  inside a course do not drag yet.
+- **A new streak flame** (user request, with two hand-animated fire references): the flat
+  two-tone icon that wobbled is replaced by `StreakFlame.tsx`, drawn like cartoon fire. A
+  round white-hot bulb narrows into a thin tip that leans and hooks; three layers (deep
+  red, orange, yellow) each morph through five poses at their own speed with SVG path
+  animation, inside a blurred dark-red halo and a pulsing glow. Small tongues break off
+  the tip, rise and shrink to nothing (shrinking, not fading: half-transparent orange over
+  the dark reads as brown), and sparks drift up. It grows with the streak in five steps:
+  at 1-2 days it is small with one breakaway, past 30 days it is tall, fast, glowing, with
+  three breakaways and four sparks. At 0 it is a grey, still ghost. Reduced motion draws
+  it still. Used on the dashboard strip and Analytics.
+- **No gold coins on the trophy shelf**: the coin discs are gone; each record keeps its
+  emoji, plain, above its
+  figure (a size larger), then the label and date.
+
+## Burst, bar placement, wave bands, and a few conveniences (user request, 2026-09-29)
+
+- **Burst** is a new layer, off by default, after a reference the user sent: a ring around
+  the clock (`burstRadius`) with a spectrum spike on every step of it (`burstSpikes`, 16-192,
+  `burstReach` for the longest), the two halves mirrored about the vertical so the picture
+  is symmetric. The spikes share the bars' band analysis through a second `BarState`, with
+  only the bands from the top round to the bottom computed. Behind the ring, when
+  `burstBlob` is on, three organic shapes (the two palette colours turned against each
+  other and a smaller near-white one) whose edges follow a seven-spike smoothing of the
+  spectrum, so the overlaps pile into a lit core, cut away again inside the ring
+  (`destination-out`, soft-edged) so the clock sits on the background and not on a disc of
+  colour, as in the reference; `burstRays` adds fine hairlines reaching past the spikes. The spikes are stroked in six wedges so the palette sweeps around.
+  Drawn over the bloom and under the bars and the line.
+- **Bars** can be placed: `barPosition` (fraction of the height, default 0.92) and
+  `barWidth` (share of the width, centred, default 0.9). The reflection no longer moves the
+  baseline on its own; the position slider does.
+- **Waves** have `waveTop` and `waveBottom` switches for the two bands.
+- **Conveniences**: `speed` scales the clock the drifting parts run on (0.25x to 2x);
+  `fadeWhenSilent` eases the whole picture to a third while nothing is playing;
+  `ringCount` (1-6) for the circles, with the palette sweeping across however many there
+  are; `waveformMirror` for the line's reflection; and a reset button that puts every
+  visualizer setting back to its default while leaving the on switch and the audio prompt
+  preference alone.
+
+## Bar opacity, spike opacity, and a burst without spikes (user request, 2026-09-29)
+
+`barOpacity` scales the sound bars on top of the visualizer's opacity, as the mist's does.
+The burst gets `burstShowSpikes` (off leaves the glowing shapes and rays, with the ring line
+gone too, so the centre reads as a halo) and `burstSpikeOpacity` for the spikes and ring.
+The user also asked for a review of user-facing copy that sounded written for the developer;
+several hints were deleted or shortened (see the settings panel and Settings page).
+
+## Missed routines leave Today (user request, 2026-09-29)
+
+- **Today's Routines card lists only today's occurrences.** A day that went by unticked no
+  longer follows the user onto Today with a "missed" chip. The API's `due` list is
+  unchanged: "Due now" on the Routines page, the extension popup and the start dialog's
+  routine picker still offer the past week's unticked days, so one can be ticked late.
+
+## The always-on copy moves to ~/.komogon (fix, 2026-09-29)
+
+- **What went wrong**: Claude's desktop app is an MSIX-packaged app, and Windows redirects
+  a packaged app's AppData writes, and those of every process it starts, into
+  `AppData\Local\Packages\Claude_<id>\LocalCache`. Every always-on copy a Claude session
+  started (every `pnpm local:update` since 09-23) read and wrote that private copy of
+  `%LOCALAPPDATA%\Komogon`, and died whenever the Claude app restarted. Started from
+  outside Claude, the launcher saw no data folder and seeded a new one from `apps/api/.pglite`.
+- **Now**: the home is `~/.komogon` (the profile folder is not redirected), so sign-in, a
+  terminal and a Claude session all use the same files. The user's data was copied there from
+  Claude's private copy as of 14:14:45 (1,084 files, byte-identical; no writes after that).
+  Kept, untouched: Claude's private copy, the 09-28 backup (also copied to
+  `~/.komogon/backups`), and the copy seeded from test data, renamed
+  `%LOCALAPPDATA%\Komogon\pglite-made-from-test-data-20260929`.
+- **The launcher never seeds from dev data any more**: with no data folder it logs and
+  leaves the API off.
+- **`local:start` and `local:update` start the servers through WMI** (`Win32_Process.Create`),
+  so they belong to Windows rather than to the terminal or session that asked. The Startup
+  shortcut still runs `start.mjs` directly.
+
+## Design philosophy (user, 2026-10-05)
+
+- **Komogon is modelled on running apps and run trackers.** The thesis: the discipline runners build (beat last time, watch your splits, keep the streak, see your progress) carries over to studying and makes people more focused and motivated. When a design choice is open, ask how a good running app would handle the equivalent: sessions are runs, compare against your own past rather than other people, and make progress visible.
+
+## Focus screen readability, smoother visualizer (user request, 2026-10-06)
+
+- **Focus-screen panels are more opaque than elsewhere.** `.glass` and `.glass-strong` inside `.focus-screen` mix 30–38% of `--panel-fill` into their fill, which takes dark strong glass from about 0.60 to 0.73 alpha. Mixing keeps the tint a photo backdrop gives the glass, rather than overriding it with a flat colour.
+- **All three named visualizer presets are smoother.** Rise rates are cut by about 20% and fall rates (release, pulse, shock, bars) by about 25%, so the relationships between presets hold (mellow is still the calmest). The custom preset is unchanged, since its smoothing slider already covers that range.
+
+## Review fixes, Tasks play button, QoL, timelapse (user request, 2026-10-06)
+
+### Bugs from the 2026-10-05 review
+- **A session is finished once.** `persistTimer` writes the end only `WHERE ended_at IS NULL` and reports whether this request `claimed` it; only the claimant runs `finalize`. `view()` itself finalizes an auto-ended scheduled session it claims, so every path (polling, sleep, events, a new start over a stale one) shares the guard. A second End gets 409. Tests in `session-races.test.ts`.
+- **XP changes are one statement.** `addXp(db, userId, delta, { withLevel })` in `services/users.ts` does `xp = greatest(0, xp + delta)`, used by session end, trim, and routine tick/untick. Shop and reward spending still write a computed total: they check the balance first, and a double-spend race there is unlikely and bounded by the price.
+- **Two starts at once** map the one-active index's unique violation (23505, possibly wrapped by Drizzle) to the usual 409.
+- **The start dialog fills once per open,** reading its props through a ref, so a refetch no longer resets it. It remembers the last style and length in `localStorage` (`komogon.start.last`, tasks and free sessions only; a routine brings its own length). "Until a time" that has already passed says it means tomorrow.
+
+### Tasks
+- **Play sits right after the tick,** with 14 px after it (8 px on a phone). Rows without one keep a same-size spacer so titles line up. Opening the dialog from it passes `lockSubject`: the picker gives way to the task's name and path.
+- **On a phone** (≤640 px) the edit actions wrap onto their own line, and each meta item (`0 min / 3 h`) never breaks inside itself.
+
+### QoL
+- **Durations say "min"**, not "m", everywhere (`fmtMinutes`, `fmtHours`, greetings, chart axes). Per-day needs round up to 5 like the plan does (`fmtPerDay`).
+- **First run:** with nothing studied yet the stat strip is one welcoming line, and the heatmap says what its squares are for instead of "0 h across 0 days".
+- **Focus screen keys:** Space pauses or resumes, H hides or shows the clock. Ignored while typing, on a focused button, with a modifier, or with any dialog open.
+
+### Timelapse
+- **Local only.** Stills live in the focus tab's memory; nothing is uploaded. Leaving with unsaved stills asks first (`beforeunload`).
+- **Asked once per session,** after the audio question: Record / Not now / Always record / Never ask again (`settings.timelapse.record`, `ask | always | never`), also in the focus sheet and Settings > Focus screen. The clock waits while the question is up.
+- **Capture, Apple-style:** a still every 0.5 s to start; when the buffer passes its cap the stills are thinned to every other and the interval doubles. Thinning one past the cap keeps the newest still, so spacing stays even (a test caught the uneven version). Speed mode captures at `speed / fps` seconds. Stills are 960 px JPEGs, taken in focus only (not breaks or a pause), and saved unmirrored so writing reads the right way round; only the live preview is a mirror.
+- **Steady light:** exposure and white balance are locked after 2.5 s where the camera allows it, and a deflicker evens each still's brightness against its neighbours (gain clamped 0.75–1.35).
+- **Output:** auto (one still per frame, about 20–40 s for a long session), a set length (spare stills blended into each frame), or a speed. The fps slider tops out at what the stills can fill (`plan.maxFps`). Made with `MediaRecorder` from a canvas in real time, MP4 where the browser can and WebM otherwise. Optional studied-time clock in the corner; smooth motion blends stills.
+- The arithmetic is in `packages/core/src/timelapse.ts` with tests; the camera and encoding are in `apps/portal/src/lib/timelapse.ts`.
+
+## Finished items fold away (user request, 2026-10-06)
+
+- **A ticked-off item is never overdue.** Its row on Tasks, and a node card, say "Done <date>" in place of the due line.
+- **Finished items move into a folded "Done · N" group** at the bottom of their parent, closed by default, and come back up when unticked. Top-level courses are left in place, since their drag and Alt+arrow ordering counts every course.

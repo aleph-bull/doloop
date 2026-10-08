@@ -26,6 +26,7 @@ export function toSession(row: SessionRow): Session {
     review: row.review ?? null,
     xpAwarded: row.xpAwarded,
     badgesAwarded: row.badgesAwarded,
+    sleeps: row.sleeps ?? [],
   };
 }
 
@@ -48,6 +49,7 @@ export function toNode(row: NodeRow): StudyNode {
     gradeMode: row.gradeMode,
     gradeOverall: row.gradeOverall,
     gradeCredits: row.gradeCredits,
+    childDefaults: row.childDefaults ?? null,
   };
 }
 

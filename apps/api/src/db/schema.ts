@@ -1,7 +1,9 @@
 import type {
+  NodeTemplate,
   PomodoroSnapshot,
   RestDayChange,
   SessionReview,
+  SleepGap,
   StreakState,
   TimerState,
   UserSettings,
@@ -68,6 +70,8 @@ export const nodes = pgTable(
     gradeMode: text('grade_mode', { enum: ['off', 'overall', 'components'] }),
     gradeOverall: real('grade_overall'),
     gradeCredits: real('grade_credits'),
+    /** Defaults for the items added under this node; null when none are set. */
+    childDefaults: jsonb('child_defaults').$type<NodeTemplate | null>(),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
@@ -81,7 +85,10 @@ export const sessions = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    /** The task studied. Null for a routine session; exactly one of the two is set. */
+    /**
+     * The task studied. Null for a routine session, and for a free session started with
+     * nothing picked; at most one of the two is set.
+     */
     nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'cascade' }),
     routineId: uuid('routine_id').references(() => routines.id, { onDelete: 'cascade' }),
     /** A routine session's occurrence (local date): the one ticked off if it gets done. */
@@ -97,6 +104,8 @@ export const sessions = pgTable(
     review: jsonb('review').$type<SessionReview | null>(),
     xpAwarded: integer('xp_awarded').notNull().default(0),
     badgesAwarded: jsonb('badges_awarded').$type<string[]>().notNull().default([]),
+    /** When the computer slept during the session, and whether the user kept studying. */
+    sleeps: jsonb('sleeps').$type<SleepGap[]>().notNull().default([]),
     /** Full timer state machine; derived columns above are synced from it. */
     timer: jsonb('timer').$type<TimerState>().notNull(),
     phraseId: text('phrase_id'),
@@ -106,7 +115,7 @@ export const sessions = pgTable(
     index('sessions_user_started_idx').on(t.userId, t.startedAt),
     index('sessions_node_idx').on(t.nodeId),
     index('sessions_routine_idx').on(t.routineId),
-    check('sessions_one_subject', sql`(node_id IS NULL) <> (routine_id IS NULL)`),
+    check('sessions_one_subject', sql`(node_id IS NULL) OR (routine_id IS NULL)`),
     // One active (un-ended) session per user.
     uniqueIndex('sessions_one_active_idx')
       .on(t.userId)

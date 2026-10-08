@@ -1,7 +1,7 @@
 import type { NodePace, StudyNode } from '@komogon/core';
 import { Play } from 'lucide-react';
 import { Button, Chip, Glass, ProgressBar } from '@komogon/ui';
-import { fmtDue, fmtMinutes, pct } from '../lib/format';
+import { fmtDate, fmtDue, fmtMinutes, fmtPerDay, pct } from '../lib/format';
 import { StatusChip } from './StatusChip';
 
 export interface NodeCardProps {
@@ -33,13 +33,18 @@ export function NodeCard({
   const est = pace?.estimatedMinutes ?? node.estimatedMinutes;
   const needLine =
     pace?.requiredPerDay != null && pace.status !== 'done'
-      ? `Need ${fmtMinutes(pace.requiredPerDay)} per day`
+      ? `Need ${fmtPerDay(pace.requiredPerDay)} per day`
       : pace?.remainingMinutes != null && pace.status !== 'done'
         ? `${fmtMinutes(pace.remainingMinutes)} left`
         : null;
 
   return (
-    <Glass as="article" className="p-4 flex flex-col gap-3" aria-label={node.title}>
+    <Glass
+      as="article"
+      id={`task-${node.id}`}
+      className="p-4 flex flex-col gap-3 node-card"
+      aria-label={node.title}
+    >
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           {courseTitle && <div className="subtle text-xs truncate">{courseTitle}</div>}
@@ -80,7 +85,7 @@ export function NodeCard({
 
       <div className="flex items-center gap-2 flex-wrap text-xs muted">
         <Chip tone="neutral">{KIND_LABEL[node.kind]}</Chip>
-        <span>{fmtDue(node.dueAt)}</span>
+        <span>{node.completedAt ? `Done ${fmtDate(node.completedAt)}` : fmtDue(node.dueAt)}</span>
         {needLine && <span>· {needLine}</span>}
         {plannedMinutes !== undefined &&
           pace?.remainingMinutes != null &&

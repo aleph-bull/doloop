@@ -1,22 +1,22 @@
 import { toLocalDate } from '@komogon/core';
 
-/** "2 h 15 m", "45 m", "0 m" */
+/** "2 h 15 min", "45 min", "0 min" */
 export function fmtMinutes(min: number | null | undefined): string {
   if (min === null || min === undefined) return '–';
   const m = Math.round(min);
   const h = Math.floor(m / 60);
   const r = m % 60;
-  if (h === 0) return `${r} m`;
+  if (h === 0) return `${r} min`;
   if (r === 0) return `${h} h`;
-  return `${h} h ${r} m`;
+  return `${h} h ${r} min`;
 }
 
 /**
  * "9.5 h" for analytics-style copy, falling back to minutes under an hour so a short
- * history reads as "20 m" rather than the uninformative "0.3 h".
+ * history reads as "20 min" rather than the uninformative "0.3 h".
  */
 export function fmtHours(min: number): string {
-  if (min > 0 && min < 60) return `${Math.max(1, Math.round(min))} m`;
+  if (min > 0 && min < 60) return `${Math.max(1, Math.round(min))} min`;
   const h = min / 60;
   return `${h % 1 === 0 ? h : h.toFixed(1)} h`;
 }
@@ -73,4 +73,12 @@ export function isoToLocalTime(iso: string | null): string {
 export function pct(ratio: number | null | undefined): string {
   if (ratio === null || ratio === undefined) return '';
   return `${Math.round(ratio * 100)}%`;
+}
+
+/**
+ * Minutes needed per day, rounded up to five the way the daily plan rounds its suggestion,
+ * so a task never says "26 min/day" beside a plan that asks for 30.
+ */
+export function fmtPerDay(min: number): string {
+  return fmtMinutes(min > 0 ? Math.ceil(min / 5) * 5 : 0);
 }

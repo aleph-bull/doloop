@@ -15,6 +15,7 @@ import { useOnlineStatus } from '../lib/local-state';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
+import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 
 const links = [
@@ -35,6 +36,8 @@ export function AppShell() {
   const online = useOnlineStatus();
   // Hands the session to the Chrome extension whenever the shell mounts.
   useExtensionStatus();
+  // Ctrl+Z and Ctrl+Y for the small reversible things, anywhere in the app.
+  useUndoShortcuts();
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
 

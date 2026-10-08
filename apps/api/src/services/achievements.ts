@@ -1,5 +1,5 @@
-import { evaluateBadges, toLocalDate } from '@komogon/core';
-import { and, eq } from 'drizzle-orm';
+import { evaluateBadges, satisfiedBadges, toLocalDate, type BadgeInput } from '@komogon/core';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { achievements, sessions, streakEvents, weeklyReviews, type UserRow } from '../db/schema';
 import { listNodes } from './nodes';
@@ -9,13 +9,12 @@ import { rewardsRedeemedCount } from './rewards';
 import { routineBadgeStats } from './routines';
 import { dt } from './sessions-mapper';
 
-/** Unlock any newly satisfied badges. Returns the new keys, in catalogue order. */
-export async function unlockNewBadges(
+/** Everything the badge rules read, loaded once. */
+async function badgeInput(
   db: Db,
   user: UserRow,
   now: string,
-  sessionId?: string,
-): Promise<string[]> {
+): Promise<{ input: BadgeInput; have: string[] }> {
   const today = toLocalDate(now, user.timezone);
   const [nodes, completed, blocks, have, freezes, routineStats, rewardsRedeemed, notes] =
     await Promise.all([
@@ -33,7 +32,7 @@ export async function unlockNewBadges(
         columns: { note: true },
       }),
     ]);
-  const fresh = evaluateBadges({
+  const input: BadgeInput = {
     nodes,
     sessions: completed,
     plannedBlocks: blocks,
@@ -46,7 +45,19 @@ export async function unlockNewBadges(
     perfectRoutineWeeks: routineStats.perfectWeeks,
     rewardsRedeemed,
     weeklyNotes: notes.filter((n) => (n.note ?? '').trim().length > 0).length,
-  });
+  };
+  return { input, have: have.map((a) => a.key) };
+}
+
+/** Unlock any newly satisfied badges. Returns the new keys, in catalogue order. */
+export async function unlockNewBadges(
+  db: Db,
+  user: UserRow,
+  now: string,
+  sessionId?: string,
+): Promise<string[]> {
+  const { input } = await badgeInput(db, user, now);
+  const fresh = evaluateBadges(input);
   if (fresh.length === 0) return [];
   await db
     .insert(achievements)
@@ -56,6 +67,28 @@ export async function unlockNewBadges(
     await db.update(sessions).set({ badgesAwarded: fresh }).where(eq(sessions.id, sessionId));
   }
   return fresh;
+}
+
+/**
+ * Take back badges that no longer hold after time was deleted from a session. Only the
+ * keys given are considered (the ones that session earned), so a badge earned some other
+ * way, or one that still holds on other study, stays. Returns the keys taken back.
+ */
+export async function revokeLapsedBadges(
+  db: Db,
+  user: UserRow,
+  keys: string[],
+  now: string,
+): Promise<string[]> {
+  if (keys.length === 0) return [];
+  const { input } = await badgeInput(db, user, now);
+  const still = satisfiedBadges(input);
+  const lapsed = keys.filter((k) => !still.has(k));
+  if (lapsed.length === 0) return [];
+  await db
+    .delete(achievements)
+    .where(and(eq(achievements.userId, user.id), inArray(achievements.key, lapsed)));
+  return lapsed;
 }
 
 export async function listAchievements(

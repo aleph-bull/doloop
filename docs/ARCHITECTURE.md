@@ -33,7 +33,7 @@ api ─────────▶ core
 
 - Wire format is ISO-8601 UTC.
 - Calendar-day logic (streaks, rest days, "due today") is computed in the user's IANA timezone using `core`'s date helpers, never with the server's local clock.
-- Sessions record `workSeconds`, `breakSeconds`, `idleSeconds` separately. Only `workSeconds` counts toward progress.
+- Sessions record `workSeconds` and `breakSeconds` separately (`idleSeconds` survives on older rows from the removed idle detection, and is 0 since). Only `workSeconds` counts toward progress.
 
 ## Theming
 

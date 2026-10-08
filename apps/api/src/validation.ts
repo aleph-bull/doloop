@@ -1,4 +1,9 @@
-import { CUSTOM_BACKGROUND_UPLOAD, POMODORO_LIMITS, SOUND_PRESETS } from '@komogon/core';
+import {
+  BASS_HZ_LIMITS,
+  CUSTOM_BACKGROUND_UPLOAD,
+  POMODORO_LIMITS,
+  SOUND_PRESETS,
+} from '@komogon/core';
 import { z } from 'zod';
 
 export const isoDateTime = z.iso.datetime({ offset: true });
@@ -7,6 +12,22 @@ export const uuid = z.uuid();
 
 export const nodeKind = z.enum(['course', 'assessment', 'task', 'other']);
 export const countUnit = z.enum(['problems', 'pages', 'cards', 'custom']);
+
+/** Defaults for the items under a node. Every field optional: only what is set is a default. */
+export const nodeTemplateSchema = z
+  .object({
+    kind: nodeKind.nullable().default(null),
+    estimatedMinutes: z.number().int().min(0).max(100_000).nullable().default(null),
+    dueTime: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, 'HH:MM')
+      .nullable()
+      .default(null),
+    countUnit: countUnit.nullable().default(null),
+    countUnitLabel: z.string().max(40).nullable().default(null),
+    color: z.string().max(32).nullable().default(null),
+  })
+  .strict();
 
 /**
  * The editable fields of a node, with no defaults on them. `kind` picks up its default in
@@ -27,6 +48,8 @@ const nodeFields = z.object({
   gradeMode: z.enum(['off', 'overall', 'components']).nullable().optional(),
   gradeOverall: z.number().min(0).max(1000).nullable().optional(),
   gradeCredits: z.number().min(0).max(100).nullable().optional(),
+  /** The template for items added under this node; null clears it. */
+  childDefaults: nodeTemplateSchema.nullable().optional(),
 });
 
 export const createNodeSchema = nodeFields.extend({ kind: nodeKind.default('task') });
@@ -49,20 +72,19 @@ export const startSessionSchema = z
     /** ...or a routine session, for the occurrence on routineDate (default: today). */
     routineId: uuid.optional(),
     routineDate: isoDate.optional(),
+    /** ...or neither: a free session, just the timer. */
     mode: sessionMode,
     plannedEndAt: isoDateTime.nullable().optional(),
     showTimer: z.boolean().optional(),
   })
-  .refine((v) => (v.nodeId === undefined) !== (v.routineId === undefined), {
-    message: 'Start a session for either a task or a routine',
+  .refine((v) => v.nodeId === undefined || v.routineId === undefined, {
+    message: 'Start a session for a task or a routine, not both',
   });
 
 export const timerEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('pause') }),
   z.object({ type: z.literal('resume') }),
   z.object({ type: z.literal('skip-break') }),
-  z.object({ type: z.literal('idle-start'), idleSince: isoDateTime }),
-  z.object({ type: z.literal('idle-answer'), stillStudying: z.boolean() }),
   z.object({ type: z.literal('extend'), plannedEndAt: isoDateTime }),
   z.object({ type: z.literal('set-timer-visibility'), showTimer: z.boolean() }),
 ]);
@@ -81,7 +103,23 @@ export const reviewSchema = z.object({
 export const endSessionSchema = z.object({
   review: reviewSchema.nullable().optional(),
   markComplete: z.boolean().optional(),
+  /**
+   * End the session at this earlier moment instead of now: "I stopped when the computer
+   * fell asleep". The time after it comes off focus and breaks at the session's own mix.
+   */
+  endAt: isoDateTime.optional(),
 });
+
+/** Delete focused time from the end of a finished session. */
+export const trimSessionSchema = z.object({
+  removeFocusMinutes: z.number().int().min(1).max(100_000),
+});
+
+/** A sleep the portal noticed: the last tick before it and the first after. */
+export const sleepSchema = z.object({ from: isoDateTime, to: isoDateTime });
+
+/** "I kept studying" for the sleep that began at `from`. */
+export const keptStudyingSchema = z.object({ from: isoDateTime });
 
 export const plannedBlockSchema = z.object({
   nodeId: uuid.nullable().optional(),
@@ -126,10 +164,8 @@ export const settingsSchema = z
     profile: z.object({ name: z.string().trim().max(60).nullable() }).partial(),
     pomodoro: pomodoro.partial(),
     review: z.object({ mode: z.enum(['quick', 'full', 'off']) }).partial(),
-    idle: z
-      .object({ enabled: z.boolean(), thresholdMin: z.number().int().min(1).max(120) })
-      .partial(),
     streak: z.object({ minMinutes: z.number().int().min(1).max(240) }).partial(),
+    goals: z.object({ weeklyMinutes: z.number().int().min(30).max(10_080) }).partial(),
     pace: z.object({ maxComfortableMinutesPerDay: z.number().int().min(15).max(1440) }).partial(),
     sounds: z
       .object({
@@ -206,9 +242,45 @@ export const settingsSchema = z
         barGlow: z.number().min(0).max(1),
         barReflection: z.boolean(),
         barSymmetric: z.boolean(),
+        preset: z.enum(['bass', 'balanced', 'mellow', 'custom']),
+        customSensitivity: z.number().min(0).max(1),
+        customDrop: z.number().min(0).max(1),
+        customSmoothing: z.number().min(0).max(1),
+        customMemory: z.number().min(0).max(1),
+        customBassLow: z.number().min(BASS_HZ_LIMITS.min).max(BASS_HZ_LIMITS.max),
+        customBassHigh: z.number().min(BASS_HZ_LIMITS.min).max(BASS_HZ_LIMITS.max),
+        barPosition: z.number().min(0.1).max(1),
+        barWidth: z.number().min(0.2).max(1),
+        waveTop: z.boolean(),
+        waveBottom: z.boolean(),
+        waveformMirror: z.boolean(),
+        ringCount: z.number().int().min(1).max(6),
+        burst: z.boolean(),
+        burstRadius: z.number().min(0.1).max(0.5),
+        burstReach: z.number().min(0.02).max(0.6),
+        burstSpikes: z.number().int().min(16).max(192),
+        burstBlob: z.boolean(),
+        burstRays: z.boolean(),
+        speed: z.number().min(0.25).max(2),
+        fadeWhenSilent: z.boolean(),
+        barOpacity: z.number().min(0).max(1),
+        burstShowSpikes: z.boolean(),
+        burstSpikeOpacity: z.number().min(0).max(1),
       })
       .partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
+    timelapse: z
+      .object({
+        record: z.enum(['ask', 'always', 'never']),
+        lengthMode: z.enum(['auto', 'length', 'speed']),
+        lengthSeconds: z.number().int().min(5).max(600),
+        speed: z.number().int().min(10).max(10_000),
+        fps: z.number().int().min(1).max(60),
+        showTimer: z.boolean(),
+        smooth: z.boolean(),
+        deflicker: z.boolean(),
+      })
+      .partial(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),
   })
   .partial()

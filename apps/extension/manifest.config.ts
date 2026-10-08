@@ -26,7 +26,7 @@ export default defineManifest({
       run_at: 'document_idle',
     },
   ],
-  permissions: ['storage', 'alarms', 'idle', 'declarativeNetRequest', 'notifications'],
+  permissions: ['storage', 'alarms', 'declarativeNetRequest', 'notifications'],
   host_permissions: [origin(API_URL), origin(PORTAL_URL), 'https://*.supabase.co/*'],
   web_accessible_resources: [
     {

@@ -29,6 +29,7 @@ const s = (startedAt: string, workMinutes: number, over: Partial<Session> = {}):
   review: null,
   xpAwarded: 0,
   badgesAwarded: [],
+  sleeps: [],
   ...over,
 });
 const noon = (d: string) => `${d}T16:00:00.000Z`; // EDT noon

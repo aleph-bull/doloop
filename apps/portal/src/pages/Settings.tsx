@@ -44,6 +44,8 @@ import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
+import { TimelapseSettings } from '../components/focus/Timelapse';
+import { SessionHistory } from '../components/SessionHistory';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { clearQueryCache } from '../lib/persist';
@@ -51,7 +53,6 @@ import { playSound } from '../lib/sounds';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import {
-  useActiveSession,
   useAddVacation,
   useMe,
   useRemoveVacation,
@@ -152,8 +153,6 @@ export function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const restDays = useRestDays();
-  const active = useActiveSession();
-  const sessionRunning = !!active.data?.active;
   const qc = useQueryClient();
   const setWeekly = useSetWeeklyRestDays();
   const addVacation = useAddVacation();
@@ -250,7 +249,7 @@ export function Settings() {
             <Section id="profile" title="You">
               <Input
                 label="Name"
-                hint="What the greeting on Today calls you. Nothing else uses it."
+                hint="Only used to say hello."
                 placeholder="e.g. Zach"
                 maxLength={60}
                 value={name ?? s.profile.name ?? ''}
@@ -352,7 +351,7 @@ export function Settings() {
                 checked={advanced || !!s.theme.customBackgroundUrl}
                 onChange={setAdvanced}
                 label="Advanced"
-                description="Upload your own image. Text colour and glass opacity adapt to it automatically."
+                description="Upload your own image."
               />
               {(advanced || !!s.theme.customBackgroundUrl) && (
                 <BackgroundUpload
@@ -379,12 +378,8 @@ export function Settings() {
                 ))}
               </div>
               <p className="field-hint">
-                {sessionRunning
-                  ? 'Your running session keeps the lengths it started with; these apply to the next one.'
-                  : 'Applies to your next session.'}{' '}
-                A pomodoro ended before its first work interval, or a scheduled session stopped
-                before its planned end, counts as ended early: the minutes are logged, but it does
-                not count toward your level.
+                A session counts toward your level after ten focused minutes, or when you mark the
+                task done. The minutes are always saved.
               </p>
               <Toggle
                 checked={s.pomodoro.autoStartBreaks}
@@ -402,21 +397,6 @@ export function Settings() {
                 label="Show the timer by default"
                 description="You can still hide it per session."
               />
-              <Toggle
-                checked={s.idle.enabled}
-                onChange={(v) => patch({ idle: { enabled: v } })}
-                label="Idle detection"
-                description="Pause the work clock when there is no input and ask if you are still studying."
-              />
-              {s.idle.enabled && (
-                <NumberField
-                  label="Idle after (min)"
-                  value={s.idle.thresholdMin}
-                  min={1}
-                  max={120}
-                  onCommit={(v) => patch({ idle: { thresholdMin: v } })}
-                />
-              )}
             </Section>
 
             <Section id="review" title="After each session">
@@ -433,8 +413,8 @@ export function Settings() {
                   ]}
                 />
                 <span className="field-hint">
-                  Quick asks two questions. Full adds counts, mood, estimate check, and a note.
-                  Always skippable.
+                  Quick asks two questions. Full also asks how it went, how you felt, whether the
+                  estimate was right, and for a note. You can always skip it.
                 </span>
               </div>
               <Toggle
@@ -469,10 +449,6 @@ export function Settings() {
             </Section>
 
             <Section id="focus" title="Focus screen">
-              <p className="field-hint">
-                Starting a session opens the focus screen in its own tab: a large clock, the task
-                under it, and nothing else. These settings decide what else it shows.
-              </p>
               <div className="field">
                 <span className="field-label">Open it when a session starts</span>
                 <Segmented
@@ -485,12 +461,16 @@ export function Settings() {
                     { value: 'never', label: 'Never' },
                   ]}
                 />
-                <span className="field-hint">
-                  The timer card's expand button opens it whenever you like.
-                </span>
               </div>
               <div className="divider" />
               <VisualizerSettings value={s.visualizer} onChange={patch} showPromptPreference />
+              <div className="divider" />
+              <h3 className="font-medium">Timelapse</h3>
+              <p className="field-hint">
+                Records you from the camera while you focus, as a short video. The stills stay on
+                this computer.
+              </p>
+              <TimelapseSettings value={s.timelapse} onChange={patch} />
             </Section>
 
             <Section id="sounds" title="Sounds">
@@ -554,6 +534,14 @@ export function Settings() {
             </Section>
 
             <Section id="pace" title="Pace and streaks">
+              <NumberField
+                label="Weekly goal (hours)"
+                value={Math.round((s.goals.weeklyMinutes / 60) * 10) / 10}
+                min={0.5}
+                max={168}
+                step={0.5}
+                onCommit={(v) => patch({ goals: { weeklyMinutes: Math.round(v * 60) } })}
+              />
               <NumberField
                 label="Comfortable minutes per day"
                 value={s.pace.maxComfortableMinutesPerDay}
@@ -779,7 +767,8 @@ export function Settings() {
                   </Button>
                 </div>
                 <span className="field-hint">
-                  Anyone with this URL can see your planned blocks. Regenerate it if it leaks.
+                  Anyone with this link can see your planned blocks. If it gets out, regenerate it
+                  to make a new one.
                 </span>
                 <div>
                   <Button size="sm" onClick={downloadIcs}>
@@ -787,6 +776,10 @@ export function Settings() {
                   </Button>
                 </div>
               </div>
+            </Section>
+
+            <Section id="history" title="Session history">
+              <SessionHistory />
             </Section>
 
             <Section id="account" title="Account">
@@ -844,10 +837,9 @@ export function Settings() {
                 </Button>
               </div>
               <p className="field-hint">
-                Signed in as {me.data!.user.email || auth.email}. No analytics or tracking SDKs are
-                used. Komogon keeps a copy of your data in this browser so it opens instantly and
-                still works offline; that copy never leaves the device and is cleared when you sign
-                out.
+                Signed in as {me.data!.user.email || auth.email}. Komogon keeps a copy of your data
+                in this browser so it opens quickly and works offline. That copy stays on this
+                device and is cleared when you sign out. Nothing about you is tracked.
               </p>
             </Section>
           </div>

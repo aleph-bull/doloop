@@ -3,8 +3,10 @@ import {
   createAnalysisState,
   createBarState,
   DEFAULT_ANALYSIS,
+  DEFAULT_BARS,
   updateBars,
   waveformShape,
+  type BarsConfig,
   type FrameInput,
   type VisualizerAnalysisConfig,
 } from '@komogon/core';
@@ -14,14 +16,18 @@ import {
   ALL_LAYERS,
   buildColors,
   DEFAULT_BARS_LOOK,
+  DEFAULT_BURST_LOOK,
   DEFAULT_MIST_LOOK,
+  DEFAULT_RINGS_LOOK,
   DEFAULT_WAVEFORM_LOOK,
   DEFAULT_WAVES_LOOK,
   paletteKey,
   renderFrame,
   WAVEFORM_POINTS,
   type BarsLook,
+  type BurstLook,
   type MistLook,
+  type RingsLook,
   type WavesLook,
   type VisualizerColors,
   type VisualizerLayers,
@@ -48,10 +54,21 @@ export interface AudioVisualizerProps {
   mist?: MistLook;
   /** How many waves. */
   waves?: WavesLook;
+  /** How many circles. */
+  rings?: RingsLook;
+  /** The burst's ring, spikes and shapes. */
+  burst?: BurstLook;
+  /** Speed of the drifting parts, 1 being as designed. */
+  speed?: number;
+  /** Fade the whole picture to a glimmer while nothing is playing. */
+  fadeWhenSilent?: boolean;
   palette: VisualizerPalette;
   /** When false nothing is drawn and the loop stops. */
   enabled: boolean;
+  /** How the low end is listened to: the preset's analysis. */
   analysis?: VisualizerAnalysisConfig;
+  /** How the bars follow the spectrum: the preset's attack and release. */
+  barsAnalysis?: BarsConfig;
   className?: string;
 }
 
@@ -78,9 +95,14 @@ export function AudioVisualizer({
   waveform,
   mist,
   waves,
+  rings,
+  burst,
+  speed = 1,
+  fadeWhenSilent = false,
   palette,
   enabled,
   analysis = DEFAULT_ANALYSIS,
+  barsAnalysis = DEFAULT_BARS,
   className,
 }: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -93,8 +115,13 @@ export function AudioVisualizer({
     waveform,
     mist,
     waves,
+    rings,
+    burst,
+    speed,
+    fadeWhenSilent,
     palette,
     analysis,
+    barsAnalysis,
   });
   useEffect(() => {
     propsRef.current = {
@@ -106,8 +133,13 @@ export function AudioVisualizer({
       waveform,
       mist,
       waves,
+      rings,
+      burst,
+      speed,
+      fadeWhenSilent,
       palette,
       analysis,
+      barsAnalysis,
     };
   });
 
@@ -125,6 +157,9 @@ export function AudioVisualizer({
 
     const state = createAnalysisState();
     const barState = createBarState();
+    const burstState = createBarState();
+    // How much of the picture shows: eases toward a glimmer in silence when asked to.
+    let quiet = 1;
     const waveShape = new Float32Array(WAVEFORM_POINTS);
     let spectrum = new Uint8Array(new ArrayBuffer(1024));
     let samples = new Uint8Array(new ArrayBuffer(2048));
@@ -190,8 +225,15 @@ export function AudioVisualizer({
       if (layers.bars) {
         // A symmetric row only needs half the bands; the renderer mirrors them outward.
         const bands = barsLook.symmetric ? Math.ceil(barsLook.count / 2) : barsLook.count;
-        updateBars(barState, input, state.silent, bands);
+        updateBars(barState, input, state.silent, bands, p.barsAnalysis);
       }
+      const burstLook = p.burst ?? DEFAULT_BURST_LOOK;
+      if (layers.burst) {
+        // The two halves mirror, so only the bands from the top round to the bottom are needed.
+        const spikes = Math.max(16, Math.min(192, Math.round(burstLook.spikes)));
+        updateBars(burstState, input, state.silent, Math.floor(spikes / 2) + 1, p.barsAnalysis);
+      }
+      quiet += ((p.fadeWhenSilent && state.silent ? 0.3 : 1) - quiet) * 0.04;
       if (layers.waveform) {
         if (capture) {
           // The shape is resampled over the whole buffer, so it has to be exactly one FFT long.
@@ -204,10 +246,10 @@ export function AudioVisualizer({
 
       if (!colors || colors.key !== paletteKey(p.palette)) colors = buildColors(ctx, p.palette);
       renderFrame(ctx, scene, {
-        seconds,
+        seconds: seconds * p.speed,
         state,
         intensity: p.intensity,
-        opacity: p.opacity,
+        opacity: p.opacity * quiet,
         layers,
         colors,
         bars: layers.bars
@@ -218,6 +260,8 @@ export function AudioVisualizer({
           : undefined,
         mist: layers.mist ? { look: p.mist ?? DEFAULT_MIST_LOOK } : undefined,
         waves: { look: p.waves ?? DEFAULT_WAVES_LOOK },
+        rings: { look: p.rings ?? DEFAULT_RINGS_LOOK },
+        burst: layers.burst ? { levels: burstState.levels, look: burstLook } : undefined,
       });
 
       // Under reduced motion one frame at rest is the whole animation.

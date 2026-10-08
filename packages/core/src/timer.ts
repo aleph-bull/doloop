@@ -6,7 +6,7 @@ import type { ISODateTime, PomodoroSnapshot, SessionMode } from './types';
  * Pomodoro auto-transitions are materialized lazily by `advance()`, so no cron is needed.
  */
 
-export type TimerPhase = 'work' | 'short-break' | 'long-break' | 'paused' | 'idle' | 'ended';
+export type TimerPhase = 'work' | 'short-break' | 'long-break' | 'paused' | 'ended';
 export type IntervalPhase = 'work' | 'short-break' | 'long-break';
 
 export interface TimerState {
@@ -16,7 +16,7 @@ export interface TimerState {
   phaseStartedAt: ISODateTime;
   /** Planned end of the current interval (pomodoro) or of the session (scheduled). */
   phaseEndsAt: ISODateTime | null;
-  /** When paused/idle: the interval to resume into and how many ms of it were left. */
+  /** When paused: the interval to resume into and how many ms of it were left. */
   resumePhase: IntervalPhase | null;
   resumeRemainingMs: number | null;
   /** Completed work intervals (pomodoro). */
@@ -24,6 +24,11 @@ export interface TimerState {
   /** Accumulated seconds up to `phaseStartedAt`. The live phase is added on read. */
   workSeconds: number;
   breakSeconds: number;
+  /**
+   * Seconds an older session sat in the idle phase, from when the app watched for a still
+   * mouse and asked "still studying?". That feature is gone; the count is kept so old
+   * sessions still add up, and is 0 on every session since.
+   */
   idleSeconds: number;
   /** Scheduled mode: planned end. Extending moves it. */
   plannedEndAt: ISODateTime | null;
@@ -93,11 +98,25 @@ export function startTimer(input: StartTimerInput): TimerState {
   return base;
 }
 
-function counterFor(phase: TimerPhase): 'workSeconds' | 'breakSeconds' | 'idleSeconds' | null {
+function counterFor(phase: TimerPhase): 'workSeconds' | 'breakSeconds' | null {
   if (phase === 'work') return 'workSeconds';
   if (phase === 'short-break' || phase === 'long-break') return 'breakSeconds';
-  if (phase === 'idle') return 'idleSeconds';
   return null;
+}
+
+/**
+ * A timer saved by an older build may be sitting in the idle phase, which no longer
+ * exists. It reads as paused, about to resume into work, so the session can carry on or
+ * be ended like any other. Every current state comes back untouched.
+ */
+export function normalizeTimer(state: TimerState): TimerState {
+  if ((state.phase as string) !== 'idle') return state;
+  return {
+    ...state,
+    phase: 'paused',
+    phaseEndsAt: null,
+    resumePhase: state.resumePhase ?? 'work',
+  };
 }
 
 /** Close the current phase at `at`, banking its elapsed time into the right counter. */
@@ -189,8 +208,6 @@ export type TimerEvent =
   | { type: 'pause' }
   | { type: 'resume' }
   | { type: 'skip-break' }
-  | { type: 'idle-start'; idleSince: ISODateTime }
-  | { type: 'idle-answer'; stillStudying: boolean }
   | { type: 'extend'; plannedEndAt: ISODateTime }
   | { type: 'set-timer-visibility'; showTimer: boolean }
   | { type: 'end' };
@@ -210,7 +227,7 @@ export function applyEvent(
       return { ...s, showTimer: event.showTimer };
 
     case 'pause': {
-      if (s.phase === 'paused' || s.phase === 'idle') return s;
+      if (s.phase === 'paused') return s;
       const interval = s.phase as IntervalPhase;
       const remaining = s.phaseEndsAt ? Math.max(0, ms(s.phaseEndsAt) - ms(now)) : null;
       s = bank(s, now);
@@ -255,51 +272,6 @@ export function applyEvent(
         phase: 'work',
         phaseStartedAt: now,
         phaseEndsAt: iso(ms(now) + intervalMs('work', opts.pomodoro)),
-        resumePhase: null,
-        resumeRemainingMs: null,
-      };
-    }
-
-    case 'idle-start': {
-      if (s.phase !== 'work') return s; // only the work clock is protected
-      // Credit work up to when idleness began (never before the phase started, never after now).
-      const since = iso(Math.min(Math.max(ms(event.idleSince), ms(s.phaseStartedAt)), ms(now)));
-      const remaining = s.phaseEndsAt ? Math.max(0, ms(s.phaseEndsAt) - ms(since)) : null;
-      s = bank(s, since);
-      return {
-        ...s,
-        phase: 'idle',
-        phaseEndsAt: null,
-        resumePhase: 'work',
-        resumeRemainingMs: s.mode === 'pomodoro' ? remaining : null,
-      };
-    }
-
-    case 'idle-answer': {
-      if (s.phase !== 'idle') return s;
-      s = bank(s, now); // idle time is banked to idleSeconds
-      if (!event.stillStudying) {
-        return {
-          ...s,
-          phase: 'ended',
-          endedAt: now,
-          phaseEndsAt: null,
-          resumePhase: null,
-          resumeRemainingMs: null,
-        };
-      }
-      const remaining = s.resumeRemainingMs;
-      const endsAt =
-        s.mode === 'pomodoro'
-          ? iso(ms(now) + (remaining ?? intervalMs('work', opts.pomodoro)))
-          : s.mode === 'scheduled'
-            ? s.plannedEndAt
-            : null;
-      return {
-        ...s,
-        phase: 'work',
-        phaseStartedAt: now,
-        phaseEndsAt: endsAt,
         resumePhase: null,
         resumeRemainingMs: null,
       };
@@ -356,7 +328,7 @@ export function viewTimer(state: TimerState, now: ISODateTime): TimerView {
   const totals = {
     workSeconds: state.workSeconds + (key === 'workSeconds' ? live : 0),
     breakSeconds: state.breakSeconds + (key === 'breakSeconds' ? live : 0),
-    idleSeconds: state.idleSeconds + (key === 'idleSeconds' ? live : 0),
+    idleSeconds: state.idleSeconds,
   };
   let remaining: number | null = null;
   if (state.phaseEndsAt && state.phase !== 'ended')

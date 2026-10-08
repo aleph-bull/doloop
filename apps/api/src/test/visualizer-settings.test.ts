@@ -61,7 +61,54 @@ describe('settings: visualizer', () => {
       barGlow: 0.7,
       barReflection: true,
       barSymmetric: false,
+      preset: 'bass',
+      customSensitivity: 0.5,
+      customDrop: 0.5,
+      customSmoothing: 0.5,
+      customMemory: 0.4,
+      customBassLow: 20,
+      customBassHigh: 140,
+      barPosition: 0.92,
+      barWidth: 0.9,
+      waveTop: true,
+      waveBottom: true,
+      waveformMirror: true,
+      ringCount: 3,
+      burst: false,
+      burstRadius: 0.2,
+      burstReach: 0.15,
+      burstSpikes: 96,
+      burstBlob: true,
+      burstRays: true,
+      speed: 1,
+      fadeWhenSilent: false,
+      barOpacity: 1,
+      burstShowSpikes: true,
+      burstSpikeOpacity: 1,
     });
+    const preset = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { visualizer: { preset: 'custom', customBassHigh: 300, customDrop: 0.2 } },
+    });
+    expect(preset.statusCode).toBe(200);
+    expect(preset.json().settings.visualizer).toMatchObject({
+      preset: 'custom',
+      customBassHigh: 300,
+      customDrop: 0.2,
+    });
+    const badPreset = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { visualizer: { preset: 'loud' } },
+    });
+    expect(badPreset.statusCode).toBe(400);
+    const badHz = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { visualizer: { customBassHigh: 5000 } },
+    });
+    expect(badHz.statusCode).toBe(400);
     const bad = await api({
       method: 'PATCH',
       url: '/api/me/settings',
@@ -74,5 +121,31 @@ describe('settings: visualizer', () => {
       payload: { visualizer: { barCount: 500 } },
     });
     expect(tooMany.statusCode).toBe(400);
+  });
+});
+
+describe('settings: timelapse', () => {
+  it('defaults to asking, saves a choice, and rejects a frame rate past 60', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.timelapse).toMatchObject({ record: 'ask', lengthMode: 'auto' });
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { record: 'never', lengthMode: 'speed', speed: 600, fps: 24 } },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().settings.timelapse).toMatchObject({
+      record: 'never',
+      lengthMode: 'speed',
+      speed: 600,
+      fps: 24,
+      showTimer: true,
+    });
+    const bad = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { fps: 120 } },
+    });
+    expect(bad.statusCode).toBe(400);
   });
 });

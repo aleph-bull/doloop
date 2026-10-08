@@ -14,14 +14,12 @@ import { get, getAll, remove, set, type Connection, type Snapshot } from '../lib
  * Background service worker (Manifest V3).
  *  - Polls the active session, node list, and settings.
  *  - Keeps the badge showing remaining/elapsed minutes.
- *  - Reports idleness via chrome.idle and asks "Still studying?" through a notification.
  *  - Applies declarativeNetRequest rules during work intervals when blocking is enabled.
  */
 
 const ALARM_POLL = 'poll';
 const ALARM_TICK = 'tick';
 const POLL_MINUTES = 1;
-const NOTIF_IDLE = 'komogon-idle';
 const BLOCK_RULE_BASE = 1000;
 
 /* ---------- Lifecycle ---------- */
@@ -94,7 +92,7 @@ async function handle(msg: Msg): Promise<unknown> {
       await poll();
       return true;
     case 'disconnect':
-      await remove('connection', 'snapshot', 'idlePrompt');
+      await remove('connection', 'snapshot');
       await clearBlocking();
       await chrome.action.setBadgeText({ text: '' });
       return true;
@@ -114,7 +112,6 @@ async function handle(msg: Msg): Promise<unknown> {
     }
     case 'event': {
       const res = await api.event(msg.sessionId, msg.event);
-      if (msg.event.type === 'idle-answer') await set({ idlePrompt: null });
       await applyActive(res.active.timer.phase === 'ended' ? null : res.active, res.now);
       if (res.active.timer.phase === 'ended') await poll();
       return res.active;
@@ -217,8 +214,6 @@ async function poll(): Promise<Snapshot | null> {
         /* keep whatever we had */
       }
     }
-    if (!snapshot.active) await set({ idlePrompt: null });
-    await syncIdleDetection(snapshot.settings);
     await tick();
     return snapshot;
   } catch (err) {
@@ -327,7 +322,6 @@ async function tick() {
     'short-break': '#22c55e',
     'long-break': '#22c55e',
     paused: '#94a3b8',
-    idle: '#f59e0b',
   };
   await chrome.action.setBadgeBackgroundColor({ color: colors[timer.phase] ?? '#6366f1' });
   await chrome.action.setBadgeTextColor?.({ color: '#ffffff' });
@@ -378,70 +372,4 @@ async function clearBlocking() {
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map((r) => r.id),
   });
-}
-
-/* ---------- Idle detection (chrome.idle) ---------- */
-
-let idleIntervalSeconds = 0;
-
-async function syncIdleDetection(settings: UserSettings | null) {
-  const wanted = settings?.idle.enabled ? Math.max(15, settings.idle.thresholdMin * 60) : 0;
-  if (wanted === idleIntervalSeconds) return;
-  idleIntervalSeconds = wanted;
-  if (wanted > 0) chrome.idle.setDetectionInterval(wanted);
-}
-
-chrome.idle.onStateChanged.addListener((state) => {
-  void onIdleState(state);
-});
-
-async function onIdleState(state: 'active' | 'idle' | 'locked') {
-  const { snapshot, idlePrompt } = await getAll();
-  const active = snapshot?.active;
-  if (!active || !snapshot?.settings?.idle.enabled) return;
-  if (state === 'idle' || state === 'locked') {
-    if (active.timer.phase !== 'work' || idlePrompt) return;
-    // chrome.idle fires once the interval has elapsed, so idleness began that long ago.
-    const idleSince = new Date(Date.now() - idleIntervalSeconds * 1000).toISOString();
-    try {
-      const res = await api.event(active.session.id, { type: 'idle-start', idleSince });
-      await applyActive(res.active, res.now);
-      await set({ idlePrompt: { sessionId: active.session.id, since: idleSince } });
-    } catch {
-      /* next poll will reconcile */
-    }
-  } else if (state === 'active') {
-    if (!idlePrompt) return;
-    chrome.notifications.create(NOTIF_IDLE, {
-      type: 'basic',
-      iconUrl: 'icons/icon128.png',
-      title: 'Still studying?',
-      message: `The work clock paused while you were away. Time since then is idle, not work.`,
-      buttons: [{ title: 'Yes, continue' }, { title: 'No, end session' }],
-      requireInteraction: true,
-    });
-  }
-}
-
-chrome.notifications.onButtonClicked.addListener((id, buttonIndex) => {
-  if (id !== NOTIF_IDLE) return;
-  void answerIdle(buttonIndex === 0);
-});
-chrome.notifications.onClicked.addListener((id) => {
-  if (id === NOTIF_IDLE) void answerIdle(true);
-});
-
-async function answerIdle(stillStudying: boolean) {
-  const prompt = await get('idlePrompt');
-  chrome.notifications.clear(NOTIF_IDLE);
-  if (!prompt) return;
-  try {
-    const res = await api.event(prompt.sessionId, { type: 'idle-answer', stillStudying });
-    await set({ idlePrompt: null });
-    await applyActive(res.active.timer.phase === 'ended' ? null : res.active, res.now);
-    if (res.active.timer.phase === 'ended') await poll();
-  } catch {
-    await set({ idlePrompt: null });
-    await poll();
-  }
 }

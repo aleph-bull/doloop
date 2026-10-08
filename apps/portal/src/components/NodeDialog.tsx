@@ -1,5 +1,5 @@
-import type { StudyNode } from '@komogon/core';
-import { useEffect, useState } from 'react';
+import type { NodeTemplate, StudyNode } from '@komogon/core';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Input, Modal, Select, useToast } from '@komogon/ui';
 import { isoToLocalDate, isoToLocalTime, localToIso } from '../lib/format';
 import { useArchiveNode, useCreateNode, useUpdateNode } from '../lib/queries';
@@ -15,20 +15,36 @@ export interface NodeDialogProps {
   nodes: StudyNode[];
 }
 
-const KINDS: Array<{ value: StudyNode['kind']; label: string }> = [
+export const KINDS: Array<{ value: StudyNode['kind']; label: string }> = [
   { value: 'course', label: 'Course' },
   { value: 'assessment', label: 'Assessment (quiz, exam)' },
   { value: 'task', label: 'Task (homework, reading)' },
   { value: 'other', label: 'Other' },
 ];
 
-const UNITS: Array<{ value: NonNullable<StudyNode['countUnit']> | ''; label: string }> = [
+export const UNITS: Array<{ value: NonNullable<StudyNode['countUnit']> | ''; label: string }> = [
   { value: '', label: 'Not counted' },
   { value: 'problems', label: 'Problems' },
   { value: 'pages', label: 'Pages' },
   { value: 'cards', label: 'Cards' },
   { value: 'custom', label: 'Custom label' },
 ];
+
+/**
+ * The template a new item under `parentId` starts from: the nearest ancestor's, walking up
+ * from the parent itself. Null when no ancestor has one.
+ */
+export function templateFor(nodes: StudyNode[], parentId: string | null): NodeTemplate | null {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const seen = new Set<string>();
+  let cur = parentId ? byId.get(parentId) : undefined;
+  while (cur && !seen.has(cur.id)) {
+    if (cur.childDefaults) return cur.childDefaults;
+    seen.add(cur.id);
+    cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+  }
+  return null;
+}
 
 export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogProps) {
   const create = useCreateNode();
@@ -46,21 +62,53 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
   const [unitLabel, setUnitLabel] = useState('');
   const [color, setColor] = useState('');
 
+  /** Which parent the new item was last filled in for; see the effect below. */
+  const openedUnder = useRef<string | null>(parentId ?? null);
+
+  /** Fill the fields a template speaks for, for a new item under `under`. */
+  const applyTemplate = (under: string | null) => {
+    const t = templateFor(nodes, under);
+    setKind(t?.kind ?? (under ? 'task' : 'course'));
+    setHours(t?.estimatedMinutes != null ? String(t.estimatedMinutes / 60) : '');
+    setDueTime(t?.dueTime ?? '23:59');
+    setUnit(t?.countUnit ?? '');
+    setUnitLabel(t?.countUnitLabel ?? '');
+    setColor(t?.color ?? '');
+  };
+
   useEffect(() => {
     if (!open) return;
     setTitle(node?.title ?? '');
-    setKind(node?.kind ?? (parentId ? 'task' : 'course'));
     setParent(node?.parentId ?? parentId ?? '');
-    setHours(node?.estimatedMinutes != null ? String(node.estimatedMinutes / 60) : '');
     setDueDate(isoToLocalDate(node?.dueAt ?? null));
-    setDueTime(node?.dueAt ? isoToLocalTime(node.dueAt) : '23:59');
-    setUnit(node?.countUnit ?? '');
-    setUnitLabel(node?.countUnitLabel ?? '');
-    setColor(node?.color ?? '');
+    if (node) {
+      setKind(node.kind);
+      setHours(node.estimatedMinutes != null ? String(node.estimatedMinutes / 60) : '');
+      setDueTime(node.dueAt ? isoToLocalTime(node.dueAt) : '23:59');
+      setUnit(node.countUnit ?? '');
+      setUnitLabel(node.countUnitLabel ?? '');
+      setColor(node.color ?? '');
+    } else {
+      // A new item opens as the nearest template up the tree says it should.
+      openedUnder.current = parentId ?? null;
+      applyTemplate(parentId ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, node, parentId]);
+
+  // Moving a new item under a different parent takes that parent's template instead.
+  useEffect(() => {
+    if (!open || node) return;
+    const under = parent || null;
+    if (under === openedUnder.current) return;
+    openedUnder.current = under;
+    applyTemplate(under);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parent]);
 
   const candidates = nodes.filter((n) => n.id !== node?.id);
   const busy = create.isPending || update.isPending;
+  const template = !node ? templateFor(nodes, parent || null) : null;
 
   const submit = async () => {
     const est = hours.trim() === '' ? null : Math.round(Number(hours) * 60);
@@ -129,6 +177,13 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
           autoFocus
           required
         />
+        {template && (
+          <p className="field-hint">
+            Filled in from the template on{' '}
+            {nodes.find((n) => n.childDefaults === template)?.title ?? 'a parent'}. Change anything
+            you like.
+          </p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Type"

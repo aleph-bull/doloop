@@ -9,11 +9,11 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { snapshot } from './lib.mjs';
 
-const run = (file) =>
-  execFileSync(process.execPath, [fileURLToPath(new URL(file, import.meta.url))], {
+const run = (file, ...args) =>
+  execFileSync(process.execPath, [fileURLToPath(new URL(file, import.meta.url)), ...args], {
     stdio: 'inherit',
   });
 
 run('./stop.mjs');
 snapshot();
-run('./start.mjs');
+run('./start.mjs', '--outside');

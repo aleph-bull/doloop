@@ -7,6 +7,7 @@ import {
   cloudNoise,
   createAnalysisState,
   createBarState,
+  customTuning,
   DEFAULT_ANALYSIS,
   DEFAULT_BARS,
   idleBars,
@@ -20,11 +21,31 @@ import {
   smoothingFactor,
   updateBars,
   valueNoise,
+  VISUALIZER_PRESETS,
   visualizerPalette,
+  visualizerTuning,
   waveformShape,
   type AnalysisState,
   type BarState,
+  type VisualizerAnalysisConfig,
 } from './visualizer';
+
+const CUSTOM = {
+  sensitivity: 0.5,
+  drop: 0.5,
+  smoothing: 0.5,
+  memory: 0.4,
+  bassLow: 20,
+  bassHigh: 140,
+};
+const KNOBS = {
+  customSensitivity: 0.5,
+  customDrop: 0.5,
+  customSmoothing: 0.5,
+  customMemory: 0.4,
+  customBassLow: 20,
+  customBassHigh: 140,
+};
 
 const SAMPLE_RATE = 48_000;
 const FFT = 2048;
@@ -440,5 +461,96 @@ describe('colour', () => {
     expect(shiftHue('#ff0000', 360)).toBe('#ff0000');
     expect(shiftHue('#808080', 90)).toBe('#808080'); // grey has no hue to move
     expect(shiftHue('nope', 90)).toBe('nope');
+  });
+});
+
+describe('presets', () => {
+  it('bass is the original analysis, and the others listen wider and settle slower', () => {
+    expect(visualizerTuning({ ...KNOBS, preset: 'bass' }).analysis).toBe(DEFAULT_ANALYSIS);
+    expect(visualizerTuning({ ...KNOBS, preset: 'bass' }).bars).toBe(DEFAULT_BARS);
+    const balanced = VISUALIZER_PRESETS.balanced.tuning.analysis;
+    const mellow = VISUALIZER_PRESETS.mellow.tuning.analysis;
+    expect(balanced.bassRange[1]).toBeGreaterThan(DEFAULT_ANALYSIS.bassRange[1]);
+    expect(mellow.bassRange[1]).toBeGreaterThan(balanced.bassRange[1]);
+    expect(mellow.transientRatio).toBeLessThan(balanced.transientRatio);
+    expect(balanced.transientRatio).toBeLessThan(DEFAULT_ANALYSIS.transientRatio);
+    expect(mellow.releasePerSecond).toBeLessThan(DEFAULT_ANALYSIS.releasePerSecond);
+    expect(mellow.dropFloor).toBeLessThan(DEFAULT_ANALYSIS.dropFloor);
+    for (const p of Object.values(VISUALIZER_PRESETS)) {
+      expect(p.tuning.analysis.strongRatio).toBeGreaterThan(p.tuning.analysis.transientRatio);
+      expect(p.label.length).toBeGreaterThan(0);
+    }
+    // An unknown preset in a saved row falls back to bass rather than throwing.
+    expect(visualizerTuning({ ...KNOBS, preset: 'nope' as unknown as 'bass' }).analysis).toBe(
+      DEFAULT_ANALYSIS,
+    );
+  });
+
+  it('a soft song moves the mellow preset where the bass preset stays still', () => {
+    // A gentle swell: the low end lifts by a quarter, which is a beat only to a preset
+    // that listens for small moves.
+    const quiet = spectrum(30, 10);
+    const swell = spectrum(38, 12);
+    const hits = (cfg: VisualizerAnalysisConfig) => {
+      const st = createAnalysisState();
+      for (let f = 1; f <= 90; f++)
+        analyseFrame(
+          st,
+          { spectrum: quiet, sampleRate: SAMPLE_RATE, fftSize: FFT, time: f / 60 },
+          cfg,
+        );
+      for (let f = 91; f <= 100; f++)
+        analyseFrame(
+          st,
+          { spectrum: swell, sampleRate: SAMPLE_RATE, fftSize: FFT, time: f / 60 },
+          cfg,
+        );
+      return st.hits;
+    };
+    expect(hits(VISUALIZER_PRESETS.bass.tuning.analysis)).toBe(0);
+    expect(hits(VISUALIZER_PRESETS.mellow.tuning.analysis)).toBeGreaterThan(0);
+  });
+
+  it('the custom sliders move the right knobs, and the ring always needs more than a beat', () => {
+    const calm = customTuning({ ...CUSTOM, sensitivity: 0, drop: 0, smoothing: 1, memory: 1 });
+    const eager = customTuning({ ...CUSTOM, sensitivity: 1, drop: 1, smoothing: 0, memory: 0 });
+    expect(eager.analysis.transientRatio).toBeLessThan(calm.analysis.transientRatio);
+    expect(eager.analysis.floor).toBeLessThan(calm.analysis.floor);
+    expect(eager.analysis.dropFloor).toBeLessThan(calm.analysis.dropFloor);
+    expect(eager.analysis.strongRatio).toBeLessThan(calm.analysis.strongRatio);
+    expect(eager.analysis.releasePerSecond).toBeGreaterThan(calm.analysis.releasePerSecond);
+    expect(eager.bars.releasePerSecond).toBeGreaterThan(calm.bars.releasePerSecond);
+    expect(eager.analysis.windowSeconds).toBeLessThan(calm.analysis.windowSeconds);
+    for (const t of [calm, eager, customTuning({ ...CUSTOM, sensitivity: 1, drop: 0 })])
+      expect(t.analysis.strongRatio).toBeGreaterThan(t.analysis.transientRatio);
+    // The middle of every slider lands between the named presets' values.
+    const mid = customTuning(CUSTOM).analysis;
+    expect(mid.transientRatio).toBeGreaterThan(
+      VISUALIZER_PRESETS.mellow.tuning.analysis.transientRatio,
+    );
+    expect(mid.transientRatio).toBeLessThan(DEFAULT_ANALYSIS.transientRatio + 0.2);
+  });
+
+  it('keeps the custom band inside its limits and at least 10 Hz wide', () => {
+    expect(customTuning({ ...CUSTOM, bassLow: 5, bassHigh: 2000 }).analysis.bassRange).toEqual([
+      20, 500,
+    ]);
+    expect(customTuning({ ...CUSTOM, bassLow: 200, bassHigh: 100 }).analysis.bassRange).toEqual([
+      200, 210,
+    ]);
+    expect(customTuning({ ...CUSTOM, bassLow: 60, bassHigh: 180 }).analysis.bassRange).toEqual([
+      60, 180,
+    ]);
+    // Garbage in a saved row reads as the middle of each slider, not NaN.
+    const t = customTuning({
+      sensitivity: NaN,
+      drop: NaN,
+      smoothing: NaN,
+      memory: NaN,
+      bassLow: NaN,
+      bassHigh: NaN,
+    });
+    expect(Number.isFinite(t.analysis.transientRatio)).toBe(true);
+    expect(t.analysis.bassRange).toEqual([20, 140]);
   });
 });

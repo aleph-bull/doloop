@@ -374,7 +374,7 @@ export function Grades() {
         <Panel className="p-2">
           <EmptyState
             title="No courses yet"
-            body="Grades hang off your courses. Add one in Tasks and it will show up here."
+            body="Add a course in Tasks and its grades show up here."
             action={
               <Link to="/tasks" className="btn btn-primary">
                 Go to Tasks
@@ -387,7 +387,7 @@ export function Grades() {
           <Panel className="p-4 flex items-end gap-3 flex-wrap">
             <Input
               label="Target for each course (%)"
-              hint="Optional. Shows what the ungraded part of a course has to average."
+              hint="Optional. Shows the average you need on what is left to reach it."
               type="number"
               min={0}
               max={100}

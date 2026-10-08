@@ -83,9 +83,16 @@ export function TrackerBoard() {
             ariaLabel={`Study minutes per day, ${weeks} weeks to ${heatmap.to}`}
           />
           <p className="muted text-sm">
-            {fmtHours(heatmap.totalMinutes)} across {heatmap.activeDays} day
-            {heatmap.activeDays === 1 ? '' : 's'}
-            {heatmap.longestRun >= 2 && `, longest run ${heatmap.longestRun} days`}.
+            {heatmap.activeDays === 0 ? (
+              // Nothing yet in this range: say what the squares are for, not that they are empty.
+              'Each day you study lights up a square.'
+            ) : (
+              <>
+                {fmtHours(heatmap.totalMinutes)} across {heatmap.activeDays} day
+                {heatmap.activeDays === 1 ? '' : 's'}
+                {heatmap.longestRun >= 2 && `, longest run ${heatmap.longestRun} days`}.
+              </>
+            )}
           </p>
         </Panel>
       )}

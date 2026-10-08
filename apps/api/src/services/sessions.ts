@@ -7,8 +7,12 @@ import {
   isEndedEarly,
   isUnderAssessment,
   buildIndex,
-  levelForXp,
   localHour,
+  answerSleep,
+  logSleep,
+  trimByWall,
+  trimFocus,
+  normalizeTimer,
   pickPhrase,
   startTimer,
   viewTimer,
@@ -22,7 +26,7 @@ import {
   type TimerState,
   type TimerView,
 } from '@komogon/core';
-import { and, desc, eq, isNull } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';
 import {
@@ -36,23 +40,43 @@ import {
   type UserRow,
 } from '../db/schema';
 import { badRequest, conflict, notFound } from '../errors';
-import type { endSessionSchema, reviewSchema, startSessionSchema } from '../validation';
+import type {
+  endSessionSchema,
+  reviewSchema,
+  sleepSchema,
+  startSessionSchema,
+} from '../validation';
 import { getNodeRow } from './nodes';
 import { routineForSession, tickFromSession } from './routines';
 import { loadCompletedSessions, paceContext } from './pace';
 import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
-import { pushBlockCreated, type CalendarDeps } from './calendar-sync';
+import { pushBlockCreated, pushBlockUpdated, type CalendarDeps } from './calendar-sync';
 import { dt, dtn, toNode, toSession } from './sessions-mapper';
-import { settingsOf, syncStreak } from './users';
-import { unlockNewBadges } from './achievements';
+import { addXp, settingsOf, syncStreak } from './users';
+import { revokeLapsedBadges, unlockNewBadges } from './achievements';
 
 export interface SessionView {
   session: Session;
   timer: TimerState;
   view: TimerView;
-  /** What is being studied: the task's title, or the routine's for a routine session. */
+  /**
+   * What is being studied: the task's title, the routine's for a routine session, or
+   * `FREE_SESSION_TITLE` for a session started with nothing picked.
+   */
   nodeTitle: string;
 }
+
+/** Postgres's unique_violation, from the driver or wrapped by Drizzle. */
+function isUniqueViolation(err: unknown): boolean {
+  for (let e = err as { code?: unknown; cause?: unknown } | undefined, i = 0; e && i < 4; i++) {
+    if (e.code === '23505') return true;
+    e = e.cause as typeof e;
+  }
+  return false;
+}
+
+/** What a session with no task and no routine is called. */
+export const FREE_SESSION_TITLE = 'Free session';
 
 function advanceOptions(
   user: UserRow,
@@ -76,19 +100,29 @@ function derivedColumns(t: TimerState) {
   };
 }
 
+/**
+ * Save the timer. The write that ends a session only lands if no other request ended it
+ * first, and `claimed` says whether this one did: only the claimant finalizes, so a
+ * session ended from two places at once (the portal and the extension polling the same
+ * auto-end, or a double-click on End) pays its XP once.
+ */
 async function persistTimer(
   db: Db,
   row: SessionRow,
   timer: TimerState,
   now: string,
-): Promise<SessionRow> {
-  if (timer === row.timer) return row;
+): Promise<{ row: SessionRow; claimed: boolean }> {
+  if (timer === row.timer) return { row, claimed: false };
+  const ending = !row.endedAt && timer.endedAt !== null;
   const [updated] = await db
     .update(sessions)
     .set({ timer, ...derivedColumns(timer), lastSeenAt: dt(now) })
-    .where(eq(sessions.id, row.id))
+    .where(ending ? and(eq(sessions.id, row.id), isNull(sessions.endedAt)) : eq(sessions.id, row.id))
     .returning();
-  return updated!;
+  if (updated) return { row: updated, claimed: ending };
+  // Another request ended it first: carry on with what that one saved.
+  const saved = await db.query.sessions.findFirst({ where: eq(sessions.id, row.id) });
+  return { row: saved ?? row, claimed: false };
 }
 
 export async function getActiveRow(db: Db, userId: string): Promise<SessionRow | undefined> {
@@ -97,10 +131,15 @@ export async function getActiveRow(db: Db, userId: string): Promise<SessionRow |
   });
 }
 
+/**
+ * The session as it stands now. A scheduled session whose end arrived while nobody was
+ * looking is finalized here (with no review), by whichever request claims the end.
+ */
 async function view(db: Db, user: UserRow, row: SessionRow, now: string): Promise<SessionView> {
   const opts = advanceOptions(user, row.pomodoroConfigSnapshot);
-  const advanced = advance(row.timer, now, opts);
-  const persisted = await persistTimer(db, row, advanced, now);
+  const advanced = advance(normalizeTimer(row.timer), now, opts);
+  const { row: persisted, claimed } = await persistTimer(db, row, advanced, now);
+  if (claimed) await finalize(db, user, persisted, { review: null }, now);
   return {
     session: toSession(persisted),
     timer: advanced,
@@ -119,25 +158,15 @@ async function subjectTitle(db: Db, row: SessionRow): Promise<string> {
     const routine = await db.query.routines.findFirst({ where: eq(routines.id, row.routineId) });
     return routine?.title ?? '';
   }
-  return '';
+  return FREE_SESSION_TITLE;
 }
 
 export async function getActive(db: Db, user: UserRow, now: string): Promise<SessionView | null> {
   const row = await getActiveRow(db, user.id);
   if (!row) return null;
   const v = await view(db, user, row, now);
-  // A scheduled session may have auto-ended while nobody was looking: finalize it.
-  if (v.timer.phase === 'ended') {
-    await finalize(
-      db,
-      user,
-      { ...row, timer: v.timer, ...derivedColumns(v.timer) },
-      { review: null },
-      now,
-    );
-    return null;
-  }
-  return v;
+  // A scheduled session may have auto-ended while nobody was looking; view() finalized it.
+  return v.timer.phase === 'ended' ? null : v;
 }
 
 export async function startSession(
@@ -146,9 +175,14 @@ export async function startSession(
   input: z.infer<typeof startSessionSchema>,
   now: string,
 ): Promise<SessionView> {
-  // A task, or one occurrence of a routine. The schema guarantees exactly one was given.
-  let subject: { nodeId: string | null; routineId: string | null; routineDate: string | null };
-  let title: string;
+  // A task, one occurrence of a routine, or nothing at all: a free session is just the
+  // timer. The schema guarantees at most one was given.
+  let subject: { nodeId: string | null; routineId: string | null; routineDate: string | null } = {
+    nodeId: null,
+    routineId: null,
+    routineDate: null,
+  };
+  let title = FREE_SESSION_TITLE;
   if (input.routineId) {
     const { routine, date } = await routineForSession(
       db,
@@ -159,24 +193,17 @@ export async function startSession(
     );
     subject = { nodeId: null, routineId: routine.id, routineDate: date };
     title = routine.title;
-  } else {
-    const node = await getNodeRow(db, user.id, input.nodeId!);
+  } else if (input.nodeId) {
+    const node = await getNodeRow(db, user.id, input.nodeId);
     if (node.archived) throw badRequest('Cannot study an archived node');
     subject = { nodeId: node.id, routineId: null, routineDate: null };
     title = node.title;
   }
   const active = await getActiveRow(db, user.id);
   if (active) {
-    // Finalize a stale auto-ended scheduled session, otherwise refuse.
+    // A stale auto-ended scheduled session is finalized by view(); anything else refuses.
     const v = await view(db, user, active, now);
     if (v.timer.phase !== 'ended') throw conflict('A session is already running');
-    await finalize(
-      db,
-      user,
-      { ...active, timer: v.timer, ...derivedColumns(v.timer) },
-      { review: null },
-      now,
-    );
   }
   if (input.mode === 'scheduled' && !input.plannedEndAt)
     throw badRequest('Scheduled sessions need plannedEndAt');
@@ -198,19 +225,27 @@ export async function startSession(
     plannedEndAt: input.plannedEndAt ?? null,
     showTimer: input.showTimer ?? settings.pomodoro.showTimerByDefault,
   });
-  const [row] = await db
-    .insert(sessions)
-    .values({
-      userId: user.id,
-      ...subject,
-      startedAt: dt(now),
-      mode: input.mode,
-      pomodoroConfigSnapshot: input.mode === 'pomodoro' ? snapshot : null,
-      timer,
-      lastSeenAt: dt(now),
-      ...derivedColumns(timer),
-    })
-    .returning();
+  let row: SessionRow | undefined;
+  try {
+    [row] = await db
+      .insert(sessions)
+      .values({
+        userId: user.id,
+        ...subject,
+        startedAt: dt(now),
+        mode: input.mode,
+        pomodoroConfigSnapshot: input.mode === 'pomodoro' ? snapshot : null,
+        timer,
+        lastSeenAt: dt(now),
+        ...derivedColumns(timer),
+      })
+      .returning();
+  } catch (err) {
+    // Two starts at once (a double click, or the portal and the extension): the one-active
+    // index lets one through, and the other gets the same answer as starting over a session.
+    if (isUniqueViolation(err)) throw conflict('A session is already running');
+    throw err;
+  }
   return { session: toSession(row!), timer, view: viewTimer(timer, now), nodeTitle: title };
 }
 
@@ -227,12 +262,10 @@ export async function applySessionEvent(
   if (!row) throw notFound('Session not found');
   if (row.endedAt && event.type !== 'set-timer-visibility') throw conflict('Session already ended');
   const opts = advanceOptions(user, row.pomodoroConfigSnapshot);
-  const next = applyEvent(row.timer, event, now, opts);
-  const persisted = await persistTimer(db, row, next, now);
-  if (next.phase === 'ended' && !row.endedAt) {
-    // "Still studying? No" ends the session; finalize with no review.
-    await finalize(db, user, persisted, { review: null }, now);
-  }
+  const next = applyEvent(normalizeTimer(row.timer), event, now, opts);
+  const { row: persisted, claimed } = await persistTimer(db, row, next, now);
+  // A planned end arrived while the event was in flight; finalize with no review.
+  if (claimed) await finalize(db, user, persisted, { review: null }, now);
   return {
     session: toSession(persisted),
     timer: next,
@@ -257,7 +290,7 @@ export interface EndSummary {
   badges: string[];
   confetti: boolean;
   isFirstSessionOnNode: boolean;
-  /** True when the session was cancelled early and earned no XP. */
+  /** True when the session was cancelled early. It still pays unless `xp.withheld`. */
   endedEarly: boolean;
 }
 
@@ -275,9 +308,259 @@ export async function endSession(
   if (!row) throw notFound('Session not found');
   if (row.endedAt) throw conflict('Session already ended');
   const opts = advanceOptions(user, row.pomodoroConfigSnapshot);
-  const ended = applyEvent(row.timer, { type: 'end' }, now, opts);
-  const persisted = await persistTimer(db, row, ended, now);
+  let ended = applyEvent(normalizeTimer(row.timer), { type: 'end' }, now, opts);
+  let current = row;
+  if (input.endAt) {
+    // "I stopped when the computer fell asleep": end back then, taking the time since off
+    // focus and breaks at the session's own mix, and answer the sleep that began there.
+    const endAtMs = Date.parse(input.endAt);
+    if (endAtMs > Date.parse(now)) throw badRequest('A session cannot end in the future');
+    if (endAtMs < row.startedAt.getTime() + 60_000)
+      throw badRequest('That is before the session had started');
+    const t = trimByWall(
+      {
+        startedAt: row.startedAt.toISOString(),
+        endedAt: ended.endedAt!,
+        workSeconds: ended.workSeconds,
+        breakSeconds: ended.breakSeconds,
+        xpAwarded: 0,
+      },
+      (Date.parse(ended.endedAt!) - endAtMs) / 1000,
+    );
+    if (t)
+      ended = {
+        ...ended,
+        endedAt: t.endedAt,
+        workSeconds: t.workSeconds,
+        breakSeconds: t.breakSeconds,
+      };
+    const stopped = row.sleeps.find((g) => g.answer === null && Date.parse(g.from) === endAtMs);
+    if (stopped) {
+      const [updated] = await db
+        .update(sessions)
+        .set({ sleeps: answerSleep(row.sleeps, stopped.from, 'stopped') })
+        .where(eq(sessions.id, row.id))
+        .returning();
+      current = updated!;
+    }
+  }
+  const { row: persisted, claimed } = await persistTimer(db, current, ended, now);
+  // Ended from elsewhere a moment ago (another tab, the extension, a second click).
+  if (!claimed) throw conflict('Session already ended');
   return finalize(db, user, persisted, input, now, calendar);
+}
+
+/* ---------- deleting time, and the sleeps a session slept through ---------- */
+
+export interface TrimSummary {
+  session: Session & { title: string };
+  removedFocusSeconds: number;
+  removedBreakSeconds: number;
+  xpRemoved: number;
+  xpTotal: number;
+  level: number;
+  /** Badges that session earned which no longer hold, and were taken back. */
+  badgesRevoked: string[];
+}
+
+/**
+ * Delete focused time from the end of a finished session. The end moves back with it, the
+ * session's XP scales down with its minutes and comes off the user's total, and any badge
+ * the session earned that no longer holds is taken back. The calendar's record of the
+ * session is shortened to match.
+ *
+ * The streak is left as it was: a day already counted stays counted.
+ */
+export async function trimSession(
+  db: Db,
+  user: UserRow,
+  id: string,
+  removeFocusMinutes: number,
+  now: string,
+  calendar: CalendarDeps | null = null,
+): Promise<TrimSummary> {
+  const row = await db.query.sessions.findFirst({
+    where: and(eq(sessions.id, id), eq(sessions.userId, user.id)),
+  });
+  if (!row) throw notFound('Session not found');
+  if (!row.endedAt) throw conflict('Stop the session first, then delete time from it');
+  const t = trimFocus(
+    {
+      startedAt: row.startedAt.toISOString(),
+      endedAt: row.endedAt.toISOString(),
+      workSeconds: row.workSeconds,
+      breakSeconds: row.breakSeconds,
+      xpAwarded: row.xpAwarded,
+    },
+    removeFocusMinutes * 60,
+  );
+  if (!t) throw badRequest('There is no focused time left to delete from that session');
+
+  const timer = {
+    ...row.timer,
+    endedAt: t.endedAt,
+    workSeconds: t.workSeconds,
+    breakSeconds: t.breakSeconds,
+  };
+  let [saved] = await db
+    .update(sessions)
+    .set({
+      timer,
+      workSeconds: t.workSeconds,
+      breakSeconds: t.breakSeconds,
+      endedAt: dt(t.endedAt),
+      xpAwarded: t.xpAwarded,
+    })
+    .where(eq(sessions.id, row.id))
+    .returning();
+
+  if (t.xpRemoved > 0) {
+    const before = user.xp;
+    const saved = await addXp(db, user.id, -t.xpRemoved, { withLevel: true });
+    await db.insert(xpTransactions).values({
+      userId: user.id,
+      at: dt(now),
+      delta: -Math.min(t.xpRemoved, before),
+      kind: 'session',
+      ref: row.id,
+    });
+    user.xp = saved.xp;
+    user.level = saved.level;
+  }
+
+  // Shorten the calendar's record of it. Best effort, as when it was logged.
+  const settings = settingsOf(user);
+  if (settings.calendar.logSessions) {
+    try {
+      const block = await logSessionBlock(
+        db,
+        user.id,
+        {
+          id: row.id,
+          nodeId: row.nodeId,
+          title: row.nodeId ? null : await subjectTitle(db, row),
+          startedAt: row.startedAt,
+          endedAt: dt(t.endedAt),
+        },
+        now,
+      );
+      if (block?.googleEventId && settings.calendar.syncPlannedBlocks)
+        await pushBlockUpdated(db, calendar, block);
+    } catch {
+      /* the calendar is a record of the session, never a condition of it */
+    }
+  }
+
+  const badgesRevoked = await revokeLapsedBadges(db, user, row.badgesAwarded, now);
+  if (badgesRevoked.length > 0) {
+    [saved] = await db
+      .update(sessions)
+      .set({ badgesAwarded: row.badgesAwarded.filter((k) => !badgesRevoked.includes(k)) })
+      .where(eq(sessions.id, row.id))
+      .returning();
+  }
+
+  return {
+    session: { ...toSession(saved!), title: await subjectTitle(db, saved!) },
+    removedFocusSeconds: t.removedWorkSeconds,
+    removedBreakSeconds: t.removedBreakSeconds,
+    xpRemoved: t.xpRemoved,
+    xpTotal: user.xp,
+    level: user.level,
+    badgesRevoked,
+  };
+}
+
+async function activeRowById(db: Db, user: UserRow, id: string): Promise<SessionRow> {
+  const row = await db.query.sessions.findFirst({
+    where: and(eq(sessions.id, id), eq(sessions.userId, user.id)),
+  });
+  if (!row) throw notFound('Session not found');
+  if (row.endedAt) throw conflict('Session already ended');
+  return row;
+}
+
+/**
+ * Log a sleep the portal noticed while the session ran. The session keeps running: the
+ * user is asked about it when they are back, and nothing changes until they answer.
+ */
+export async function recordSleep(
+  db: Db,
+  user: UserRow,
+  id: string,
+  gap: z.infer<typeof sleepSchema>,
+  now: string,
+): Promise<SessionView> {
+  const row = await activeRowById(db, user, id);
+  const from = Math.max(Date.parse(gap.from), row.startedAt.getTime());
+  const to = Math.min(Date.parse(gap.to), Date.parse(now) + 60_000);
+  const sleeps = logSleep(row.sleeps, {
+    from: new Date(from).toISOString(),
+    to: new Date(to).toISOString(),
+  });
+  const [updated] = await db
+    .update(sessions)
+    .set({ sleeps })
+    .where(eq(sessions.id, row.id))
+    .returning();
+  return view(db, user, updated!, now);
+}
+
+/** "I kept studying": the sleep is answered and the session carries on untouched. */
+export async function keptStudying(
+  db: Db,
+  user: UserRow,
+  id: string,
+  from: string,
+  now: string,
+): Promise<SessionView> {
+  const row = await activeRowById(db, user, id);
+  const match = row.sleeps.find((g) => Date.parse(g.from) === Date.parse(from));
+  if (!match) throw notFound('No such sleep on this session');
+  const [updated] = await db
+    .update(sessions)
+    .set({ sleeps: answerSleep(row.sleeps, match.from, 'kept') })
+    .where(eq(sessions.id, row.id))
+    .returning();
+  return view(db, user, updated!, now);
+}
+
+/**
+ * Finished sessions, newest first, each with what it was for, for the history page. Pages
+ * by start time: pass the last one's `startedAt` as `before` for the next page.
+ */
+export async function sessionHistory(
+  db: Db,
+  userId: string,
+  opts: { limit?: number; before?: string } = {},
+): Promise<Array<Session & { title: string }>> {
+  const conds = [eq(sessions.userId, userId), isNotNull(sessions.endedAt)];
+  if (opts.before) conds.push(lt(sessions.startedAt, dt(opts.before)));
+  const rows = await db.query.sessions.findMany({
+    where: and(...conds),
+    orderBy: [desc(sessions.startedAt)],
+    limit: Math.min(opts.limit ?? 30, 200),
+  });
+  const nodeIds = [...new Set(rows.map((r) => r.nodeId).filter((x): x is string => !!x))];
+  const routineIds = [...new Set(rows.map((r) => r.routineId).filter((x): x is string => !!x))];
+  const [nodeRows, routineRows] = await Promise.all([
+    nodeIds.length
+      ? db.query.nodes.findMany({ where: inArray(nodes.id, nodeIds) })
+      : Promise.resolve([]),
+    routineIds.length
+      ? db.query.routines.findMany({ where: inArray(routines.id, routineIds) })
+      : Promise.resolve([]),
+  ]);
+  const nodeTitle = new Map(nodeRows.map((n) => [n.id, n.title]));
+  const routineTitle = new Map(routineRows.map((r) => [r.id, r.title]));
+  return rows.map((r) => ({
+    ...toSession(r),
+    title: r.nodeId
+      ? (nodeTitle.get(r.nodeId) ?? 'A deleted task')
+      : r.routineId
+        ? (routineTitle.get(r.routineId) ?? 'A deleted routine')
+        : FREE_SESSION_TITLE,
+  }));
 }
 
 function normaliseReview(r: z.infer<typeof reviewSchema> | null | undefined): SessionReview | null {
@@ -436,6 +719,8 @@ async function finalize(
     endedAt: row.timer.endedAt,
     plannedEndAt: row.timer.plannedEndAt,
   });
+  // A routine session ticks its occurrence off when the user says it got done.
+  const routineDone = !!(row.routineId && row.routineDate && input.markComplete);
   const xp = computeSessionXp({
     endedEarly,
     workMinutes: row.workSeconds / 60,
@@ -444,20 +729,21 @@ async function finalize(
     overlapsPlannedBlock: overlaps,
     statusAfter: task.statusAfter,
     nodeJustCompleted: task.nodeCompleted,
+    // Finished is finished, early or not: a ticked routine pays like a completed task.
+    subjectCompleted: task.nodeCompleted || routineDone,
     loggedWorkMinutesAfter: task.loggedAfter,
     estimatedMinutes: task.estimatedMinutes,
     streakCurrent: streakSync.streak.current,
   });
 
-  // A routine session ticks its occurrence off when the user says it got done.
   let routineTicked = false;
   let tickXp = 0;
-  if (row.routineId && row.routineDate && input.markComplete) {
+  if (routineDone) {
     const tick = await tickFromSession(
       db,
       user,
-      row.routineId,
-      row.routineDate,
+      row.routineId!,
+      row.routineDate!,
       { minutes: Math.round(row.workSeconds / 60), sessionXp: xp.total },
       now,
     );
@@ -466,9 +752,9 @@ async function finalize(
   }
 
   const levelBefore = user.level;
-  const xpTotal = user.xp + xp.total + tickXp;
-  const levelAfter = levelForXp(xpTotal);
-  await db.update(users).set({ xp: xpTotal, level: levelAfter }).where(eq(users.id, user.id));
+  const totals = await addXp(db, user.id, xp.total + tickXp, { withLevel: true });
+  const xpTotal = totals.xp;
+  const levelAfter = totals.level;
   await db
     .insert(xpTransactions)
     .values({ userId: user.id, at: dt(now), delta: xp.total, kind: 'session', ref: row.id });
@@ -487,8 +773,8 @@ async function finalize(
         {
           id: row.id,
           nodeId: row.nodeId,
-          // A routine has no node to name the block after, so the block carries the title.
-          title: row.routineId ? await subjectTitle(db, row) : null,
+          // Without a node to name the block after, the block carries the title itself.
+          title: row.nodeId ? null : await subjectTitle(db, row),
           startedAt: row.startedAt,
           endedAt: row.endedAt,
         },
@@ -529,7 +815,7 @@ async function finalize(
 
   const confetti =
     settings.effects.confetti &&
-    !endedEarly &&
+    !xp.withheld &&
     (review?.distracted === 'no' ||
       task.nodeCompleted ||
       routineTicked ||

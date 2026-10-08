@@ -246,7 +246,7 @@ export function ReviewDialog({
             checked={markComplete}
             onChange={setMarkComplete}
             label={`Tick off "${title}"`}
-            description="Leave it off if you did not finish; it stays on your list."
+            description="Leave this off if you are not done, and it stays on your list."
           />
         ) : (
           !subject.node.completedAt && (

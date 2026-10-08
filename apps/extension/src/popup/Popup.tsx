@@ -63,7 +63,6 @@ const PHASE: Record<TimerState['phase'], string> = {
   'short-break': 'Short break',
   'long-break': 'Long break',
   paused: 'Paused',
-  idle: 'Idle',
   ended: 'Ended',
 };
 
@@ -360,7 +359,9 @@ export function Popup() {
         {backdrop}
         <Glass className="card stack">
           <h1>Done with {active?.nodeTitle ?? 'it'}?</h1>
-          <p className="hint">The minutes count either way. Not yet leaves it on your list.</p>
+          <p className="hint">
+            The minutes are saved either way. Choose Not yet to keep it on your list.
+          </p>
           <div className="row end">
             <Button variant="ghost" onClick={() => finish(null, false)} disabled={busy}>
               Not yet
@@ -400,7 +401,7 @@ export function Popup() {
               label={`Tick off ${active?.nodeTitle ?? 'the routine'}`}
             />
           )}
-          <p className="hint">The full review is in the portal. Skipping costs nothing.</p>
+          <p className="hint">The full review is in the app. It is fine to skip.</p>
           <div className="row end">
             <Button
               variant="ghost"
@@ -415,33 +416,6 @@ export function Popup() {
               loading={busy}
             >
               Save
-            </Button>
-          </div>
-        </Glass>
-      </div>
-    );
-  }
-
-  if (store.idlePrompt && active && timer?.phase === 'idle') {
-    return (
-      <div className="popup">
-        {backdrop}
-        <Glass className="card stack">
-          <h1>Still studying?</h1>
-          <p>The work clock paused while you were away. Time since then is idle, not work.</p>
-          <div className="row end">
-            <Button
-              onClick={() => event({ type: 'idle-answer', stillStudying: false })}
-              disabled={busy}
-            >
-              No, end
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => event({ type: 'idle-answer', stillStudying: true })}
-              loading={busy}
-            >
-              Yes, continue
             </Button>
           </div>
         </Glass>

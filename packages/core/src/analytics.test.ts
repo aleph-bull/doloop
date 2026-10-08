@@ -32,6 +32,7 @@ const node = (over: Partial<StudyNode> = {}): StudyNode => ({
   gradeMode: null,
   gradeOverall: null,
   gradeCredits: null,
+  childDefaults: null,
   ...over,
 });
 const session = (
@@ -56,6 +57,7 @@ const session = (
   review: null,
   xpAwarded: 0,
   badgesAwarded: [],
+  sleeps: [],
   ...over,
 });
 const block = (

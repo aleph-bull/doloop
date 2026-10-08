@@ -57,6 +57,7 @@ const app = await buildServer({
     stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',
     portalUrl: env.portalUrl,
   },
+  tmdb: env.tmdb,
 });
 
 const shutdown = async () => {

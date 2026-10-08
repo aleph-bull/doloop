@@ -7,14 +7,21 @@ import {
   endSession,
   getActive,
   getSession,
+  keptStudying,
   listSessions,
+  recordSleep,
+  sessionHistory,
   startSession,
+  trimSession,
 } from '../services/sessions';
 import {
   endSessionSchema,
   isoDateTime,
+  keptStudyingSchema,
+  sleepSchema,
   startSessionSchema,
   timerEventSchema,
+  trimSessionSchema,
   uuid,
 } from '../validation';
 
@@ -49,6 +56,40 @@ export function sessionRoutes(
     const { id } = idParams.parse(req.params);
     const body = endSessionSchema.parse(req.body ?? {});
     return { summary: await endSession(db, req.user, id, body, clock(), calendar) };
+  });
+
+  /** Delete focused time from the end of a finished session. */
+  app.post('/api/sessions/:id/trim', async (req) => {
+    const { id } = idParams.parse(req.params);
+    const { removeFocusMinutes } = trimSessionSchema.parse(req.body);
+    return trimSession(db, req.user, id, removeFocusMinutes, clock(), calendar);
+  });
+
+  /** The portal noticed the computer slept while this session ran. */
+  app.post('/api/sessions/:id/sleep', async (req) => {
+    const { id } = idParams.parse(req.params);
+    const gap = sleepSchema.parse(req.body);
+    const now = clock();
+    return { now, active: await recordSleep(db, req.user, id, gap, now) };
+  });
+
+  /** "I kept studying" through the sleep that began at `from`. */
+  app.post('/api/sessions/:id/sleep/kept', async (req) => {
+    const { id } = idParams.parse(req.params);
+    const { from } = keptStudyingSchema.parse(req.body);
+    const now = clock();
+    return { now, active: await keptStudying(db, req.user, id, from, now) };
+  });
+
+  /** Finished sessions with what they were for, newest first, a page at a time. */
+  app.get('/api/sessions/history', async (req) => {
+    const q = z
+      .object({
+        limit: z.coerce.number().int().min(1).max(200).optional(),
+        before: isoDateTime.optional(),
+      })
+      .parse(req.query);
+    return { sessions: await sessionHistory(db, req.user.id, q) };
   });
 
   app.get('/api/sessions', async (req) => {

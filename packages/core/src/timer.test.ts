@@ -5,9 +5,11 @@ import {
   currentView,
   formatClock,
   intervalMs,
+  normalizeTimer,
   startTimer,
   viewTimer,
   type AdvanceOptions,
+  type TimerState,
 } from './timer';
 
 const T0 = '2026-09-20T12:00:00.000Z';
@@ -168,46 +170,26 @@ describe('events', () => {
     expect(applyEvent(u, { type: 'skip-break' }, at(1), opts())).toEqual(u);
   });
 
-  it('idle: credits work up to idleSince, banks the gap to idle, then resumes', () => {
-    let s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg });
-    // Detected at minute 20 that the user has been idle since minute 10.
-    s = applyEvent(s, { type: 'idle-start', idleSince: at(10) }, at(20), opts());
-    expect(s.phase).toBe('idle');
-    expect(s.workSeconds).toBe(600);
-    expect(s.phaseStartedAt).toBe(at(10));
-    expect(s.resumeRemainingMs).toBe(15 * 60_000);
-    // Answer "still studying" at minute 22.
-    s = applyEvent(s, { type: 'idle-answer', stillStudying: true }, at(22), opts());
-    expect(s.phase).toBe('work');
-    expect(s.idleSeconds).toBe(720);
-    expect(s.phaseEndsAt).toBe(at(37));
-    // Idle-start while not in work is ignored.
-    const paused = applyEvent(s, { type: 'pause' }, at(23), opts());
-    expect(applyEvent(paused, { type: 'idle-start', idleSince: at(23) }, at(30), opts())).toEqual(
-      paused,
-    );
-    // idle-answer while not idle is ignored
-    expect(applyEvent(s, { type: 'idle-answer', stillStudying: true }, at(23), opts())).toEqual(s);
-  });
-
-  it('idle: answering "no" ends the session with idle time recorded', () => {
-    let s = startTimer({ mode: 'unlimited', now: T0, pomodoro: cfg });
-    s = applyEvent(s, { type: 'idle-start', idleSince: at(30) }, at(40), opts());
-    s = applyEvent(s, { type: 'idle-answer', stillStudying: false }, at(41), opts());
-    expect(s.phase).toBe('ended');
-    expect(s.endedAt).toBe(at(41));
-    expect(s.workSeconds).toBe(1800);
-    expect(s.idleSeconds).toBe(660);
-  });
-
-  it('idle: clamps idleSince into the current phase', () => {
-    let s = startTimer({ mode: 'unlimited', now: T0, pomodoro: cfg });
-    s = applyEvent(s, { type: 'idle-start', idleSince: at(-5) }, at(3), opts());
-    expect(s.workSeconds).toBe(0);
-    expect(s.phaseStartedAt).toBe(T0);
-    let t = startTimer({ mode: 'unlimited', now: T0, pomodoro: cfg });
-    t = applyEvent(t, { type: 'idle-start', idleSince: at(50) }, at(3), opts());
-    expect(t.workSeconds).toBe(180);
+  it('reads an older idle timer as paused, about to resume into work', () => {
+    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg });
+    const legacy = {
+      ...s,
+      phase: 'idle' as TimerState['phase'],
+      phaseEndsAt: null,
+      resumePhase: null,
+      resumeRemainingMs: 15 * 60_000,
+      idleSeconds: 120,
+    };
+    const fixed = normalizeTimer(legacy);
+    expect(fixed.phase).toBe('paused');
+    expect(fixed.resumePhase).toBe('work');
+    expect(fixed.resumeRemainingMs).toBe(15 * 60_000);
+    expect(fixed.idleSeconds).toBe(120);
+    const resumed = applyEvent(fixed, { type: 'resume' }, at(5), opts());
+    expect(resumed.phase).toBe('work');
+    expect(resumed.phaseEndsAt).toBe(at(20));
+    // A current state is handed back as it is.
+    expect(normalizeTimer(s)).toBe(s);
   });
 
   it('end banks the live phase', () => {
@@ -269,10 +251,6 @@ describe('scheduled mode', () => {
     let s = startTimer({ mode: 'scheduled', now: T0, pomodoro: cfg, plannedEndAt: at(30) });
     s = applyEvent(s, { type: 'pause' }, at(10), opts());
     s = applyEvent(s, { type: 'resume' }, at(12), opts());
-    expect(s.phaseEndsAt).toBe(at(30));
-    // idle then resume also keeps the planned end
-    s = applyEvent(s, { type: 'idle-start', idleSince: at(15) }, at(20), opts());
-    s = applyEvent(s, { type: 'idle-answer', stillStudying: true }, at(21), opts());
     expect(s.phaseEndsAt).toBe(at(30));
   });
 });

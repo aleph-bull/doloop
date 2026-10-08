@@ -1,11 +1,8 @@
-import type { Highlight } from '@komogon/core';
-import { splitHighlights } from '@komogon/core';
 import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router';
+import { useSearchParams } from 'react-router';
 import {
   Bars,
   DataTable,
-  Glass,
   LineChart,
   Panel,
   ProgressBar,
@@ -13,11 +10,11 @@ import {
   Spinner,
   StackedBars,
 } from '@komogon/ui';
-import { AnalyticsOverview } from '../components/AnalyticsOverview';
 import { ErrorPanel } from '../components/ErrorState';
+import { RecapView } from '../components/recap/RecapView';
 import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtHours, fmtMinutes, pct } from '../lib/format';
-import { useAdvancedAnalytics, useWeekHighlights } from '../lib/queries';
+import { useAdvancedAnalytics } from '../lib/queries';
 
 /** Prose for a pace/planning line that would otherwise be a bare pair of numbers. */
 function plannedVsNeeded(planned: number, needed: number | null): string {
@@ -25,77 +22,6 @@ function plannedVsNeeded(planned: number, needed: number | null): string {
   if (needed <= 0) return 'Nothing left to schedule.';
   if (planned >= needed) return 'You have scheduled enough time to finish this.';
   return `You are ${fmtMinutes(needed - planned)} short of the time you would need.`;
-}
-
-function HighlightCard({ h }: { h: Highlight }) {
-  return (
-    <Glass as="article" className="p-5 flex flex-col gap-1">
-      <h3 className="text-lg leading-snug">{h.headline}</h3>
-      <p className="muted text-sm">{h.detail}</p>
-    </Glass>
-  );
-}
-
-/** "This week": positive signals only (spec §11a). */
-function ThisWeek() {
-  const q = useWeekHighlights();
-  const [more, setMore] = useState(false);
-  if (q.isError)
-    return (
-      <ErrorPanel
-        message={q.error instanceof Error ? q.error.message : 'Could not load highlights.'}
-        onRetry={() => q.refetch()}
-      />
-    );
-  if (!q.data)
-    return (
-      <div className="flex justify-center p-12">
-        <Spinner />
-      </div>
-    );
-  const { top, more: rest } = splitHighlights(q.data.highlights);
-  return (
-    <div className="flex flex-col gap-4">
-      <p className="muted text-sm">
-        Week of {fmtDate(`${q.data.weekStart}T12:00:00`)} to {fmtDate(`${q.data.weekEnd}T12:00:00`)}
-      </p>
-      {q.data.fallback ? (
-        <Glass className="p-6">
-          <p className="text-lg">{q.data.fallback}</p>
-        </Glass>
-      ) : (
-        <>
-          <div className="card-grid">
-            {top.map((h) => (
-              <HighlightCard key={h.key} h={h} />
-            ))}
-          </div>
-          {rest.length > 0 && (
-            <div>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                aria-expanded={more}
-                onClick={() => setMore(!more)}
-              >
-                {more ? 'Fewer' : `More wins (${rest.length})`}
-              </button>
-              {more && (
-                <div className="card-grid mt-3">
-                  {rest.map((h) => (
-                    <HighlightCard key={h.key} h={h} />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
-      <Link to="/analytics/review" className="text-sm">
-        Weekly review
-      </Link>
-    </div>
-  );
 }
 
 /** "Advanced": everything, neutrally (spec §11b). */
@@ -284,13 +210,15 @@ function Advanced() {
   );
 }
 
-const TABS = ['week', 'overview', 'advanced'] as const;
+const TABS = ['week', 'month', 'all', 'advanced'] as const;
 type Tab = (typeof TABS)[number];
 
 export function Analytics() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('tab');
-  const tab: Tab = (TABS as readonly string[]).includes(raw ?? '') ? (raw as Tab) : 'week';
+  // "overview" was the All time tab's old name; links to it still land there.
+  const named = raw === 'overview' ? 'all' : raw;
+  const tab: Tab = (TABS as readonly string[]).includes(named ?? '') ? (named as Tab) : 'week';
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -301,12 +229,13 @@ export function Analytics() {
           onChange={(v) => setParams(v === 'week' ? {} : { tab: v })}
           options={[
             { value: 'week', label: 'This week' },
-            { value: 'overview', label: 'All time' },
+            { value: 'month', label: 'This month' },
+            { value: 'all', label: 'All time' },
             { value: 'advanced', label: 'By task' },
           ]}
         />
       </div>
-      {tab === 'week' ? <ThisWeek /> : tab === 'overview' ? <AnalyticsOverview /> : <Advanced />}
+      {tab === 'advanced' ? <Advanced /> : <RecapView range={tab} />}
     </div>
   );
 }

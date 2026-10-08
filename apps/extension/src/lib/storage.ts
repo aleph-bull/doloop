@@ -56,8 +56,6 @@ export interface Snapshot {
 export interface Stored {
   connection?: Connection;
   snapshot?: Snapshot;
-  /** Pending "Still studying?" question after chrome.idle fired. */
-  idlePrompt?: { sessionId: string; since: string } | null;
   /** The six-hour quote slot (`quoteSlot().key`) last shown in the popup; a bare date before. */
   quoteShownOn?: string;
   lastError?: string | null;

@@ -40,8 +40,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showTimerByDefault: true,
   },
   review: { mode: 'quick' },
-  idle: { enabled: true, thresholdMin: 10 },
   streak: { minMinutes: 15 },
+  goals: { weeklyMinutes: 300 },
   pace: { maxComfortableMinutesPerDay: 240 },
   sounds: {
     enabled: true,
@@ -95,8 +95,42 @@ export const DEFAULT_SETTINGS: UserSettings = {
     barGlow: 0.7,
     barReflection: true,
     barSymmetric: false,
+    preset: 'bass',
+    customSensitivity: 0.5,
+    customDrop: 0.5,
+    customSmoothing: 0.5,
+    customMemory: 0.4,
+    customBassLow: 20,
+    customBassHigh: 140,
+    barPosition: 0.92,
+    barWidth: 0.9,
+    waveTop: true,
+    waveBottom: true,
+    waveformMirror: true,
+    ringCount: 3,
+    burst: false,
+    burstRadius: 0.2,
+    burstReach: 0.15,
+    burstSpikes: 96,
+    burstBlob: true,
+    burstRays: true,
+    speed: 1,
+    fadeWhenSilent: false,
+    barOpacity: 1,
+    burstShowSpikes: true,
+    burstSpikeOpacity: 1,
   },
   focusScreen: { openOnStart: 'ask' },
+  timelapse: {
+    record: 'ask',
+    lengthMode: 'auto',
+    lengthSeconds: 30,
+    speed: 300,
+    fps: 30,
+    showTimer: true,
+    smooth: true,
+    deflicker: true,
+  },
   dismissed: [],
 };
 
@@ -125,6 +159,9 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
       out[key] = value;
     }
   }
+
+  // Idle detection is gone; a row saved while it existed still carries its group.
+  delete out.idle;
 
   const settings = out as unknown as UserSettings;
   settings.dismissed = asList<string>(settings.dismissed, []);

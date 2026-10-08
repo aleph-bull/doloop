@@ -5,11 +5,17 @@ import type { Distracted, PaceStatus } from './types';
  *
  * Everything scales with focused time: the base is per work minute and every bonus is a
  * percentage of that base. The streak bonus is a fixed amount per streak day. A session
- * cancelled before its first work interval (pomodoro) or planned end (scheduled) earns nothing.
+ * cancelled before its first work interval (pomodoro) or planned end (scheduled) earns
+ * nothing, unless it still held `MIN_REWARDED_MINUTES` of focus or finished the task.
  */
 export const XP = {
   /** XP per focused minute. */
   PER_MINUTE: 2,
+  /**
+   * An early end still pays once this many focused minutes are in. Ten solid minutes are
+   * ten solid minutes; only a session abandoned almost at once earns nothing.
+   */
+  MIN_REWARDED_MINUTES: 10,
   /** Bonus percentages applied to the base. */
   REVIEW_SUBMITTED_PCT: 10,
   FOCUS_NO_PCT: 20,
@@ -37,8 +43,16 @@ export interface SessionXpInput {
   loggedWorkMinutesAfter: number;
   estimatedMinutes: number | null;
   streakCurrent: number;
-  /** True when the session was cancelled early (see `isEndedEarly`). No XP at all. */
+  /**
+   * True when the session was cancelled early (see `isEndedEarly`). It then earns nothing
+   * unless it held `XP.MIN_REWARDED_MINUTES` of focus or the user finished what it was for.
+   */
   endedEarly?: boolean;
+  /**
+   * The user said the work got done: the task marked complete, or the routine ticked off.
+   * Finishing early is finishing, so this always pays even when `endedEarly`.
+   */
+  subjectCompleted?: boolean;
 }
 
 export interface SessionXpBreakdown {
@@ -52,8 +66,23 @@ export interface SessionXpBreakdown {
   /** Flat streak bonus. */
   streakBonus: number;
   total: number;
-  /** True when nothing was awarded because the session ended early. */
+  /** True when nothing was awarded: ended early, too short to count, and nothing finished. */
   withheld: boolean;
+}
+
+/**
+ * Whether an early end costs the session its XP: only when it was short as well and the
+ * user did not finish the task or routine it was for.
+ */
+export function isWithheld(input: {
+  endedEarly?: boolean;
+  workMinutes: number;
+  nodeJustCompleted?: boolean;
+  subjectCompleted?: boolean;
+}): boolean {
+  if (!input.endedEarly) return false;
+  if (input.nodeJustCompleted || input.subjectCompleted) return false;
+  return Math.floor(input.workMinutes) < XP.MIN_REWARDED_MINUTES;
 }
 
 export function streakBonus(streakCurrent: number): number {
@@ -81,7 +110,7 @@ export function computeSessionXp(input: SessionXpInput): SessionXpBreakdown {
     total: 0,
     withheld: false,
   };
-  if (input.endedEarly) return { ...zero, withheld: true };
+  if (isWithheld(input)) return { ...zero, withheld: true };
   const minutes = Math.max(0, Math.floor(input.workMinutes));
   if (minutes === 0) return zero;
   const base = minutes * XP.PER_MINUTE;

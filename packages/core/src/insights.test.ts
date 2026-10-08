@@ -34,6 +34,7 @@ const session = (date: string, localHour: number, minutes: number): Session => {
     review: null,
     xpAwarded: 0,
     badgesAwarded: [],
+    sleeps: [],
   };
 };
 

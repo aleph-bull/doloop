@@ -8,6 +8,60 @@ beforeAll(async () => {
 afterAll(() => t.close());
 
 describe('nodes', () => {
+  it('keeps a template for the items under a node, and clears it', async () => {
+    const course = (
+      await t.api({
+        method: 'POST',
+        url: '/api/nodes',
+        payload: {
+          title: 'Templated',
+          kind: 'course',
+          childDefaults: { kind: 'assessment', estimatedMinutes: 90, dueTime: '17:00' },
+        },
+      })
+    ).json().node;
+    // Unset fields come back null, so a client can read every key.
+    expect(course.childDefaults).toEqual({
+      kind: 'assessment',
+      estimatedMinutes: 90,
+      dueTime: '17:00',
+      countUnit: null,
+      countUnitLabel: null,
+      color: null,
+    });
+    const plain = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'Plain' } })
+    ).json().node;
+    expect(plain.childDefaults).toBeNull();
+
+    const changed = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { childDefaults: { countUnit: 'pages', color: '#ff0000' } },
+    });
+    expect(changed.json().node.childDefaults).toMatchObject({
+      kind: null,
+      countUnit: 'pages',
+      color: '#ff0000',
+    });
+    const bad = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { childDefaults: { dueTime: 'five' } },
+    });
+    expect(bad.statusCode).toBe(400);
+    const cleared = await t.api({
+      method: 'PATCH',
+      url: `/api/nodes/${course.id}`,
+      payload: { childDefaults: null },
+    });
+    expect(cleared.json().node.childDefaults).toBeNull();
+    // The template never touches the node's own fields.
+    expect(cleared.json().node.estimatedMinutes).toBeNull();
+    for (const id of [course.id, plain.id])
+      await t.api({ method: 'DELETE', url: `/api/nodes/${id}` });
+  });
+
   it('creates a tree, rejects cycles, archives subtrees', async () => {
     const course = (
       await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'C', kind: 'course' } })

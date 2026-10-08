@@ -4,6 +4,9 @@ import {
   formatClock,
   isEndedEarly,
   isUnderAssessment,
+  isWithheld,
+  pendingSleep,
+  SLEEP_MIN_MS,
   pathLabel,
   viewTimer,
   type AdvanceOptions,
@@ -18,7 +21,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Button, Modal, useToast } from '@komogon/ui';
 import { ReviewDialog, type ReviewSubject } from '../components/ReviewDialog';
 import { api, type ActiveSession, type EndSummary, type ReviewInput } from './api';
-import { useIdleDetection } from './idle';
 import { keys } from './queries';
 import { playSound, preloadSounds } from './sounds';
 
@@ -27,7 +29,6 @@ export const PHASE_LABEL: Record<TimerState['phase'], string> = {
   'short-break': 'Short break',
   'long-break': 'Long break',
   paused: 'Paused',
-  idle: 'Idle',
   ended: 'Ended',
 };
 
@@ -56,6 +57,8 @@ export interface SessionController {
   canSkip: boolean;
   inBreak: boolean;
   wouldEndEarly: boolean;
+  /** Stopping now would earn nothing: ended early, short of ten focused minutes, unless the task gets marked done. */
+  wouldWithhold: boolean;
   send: (event: Parameters<typeof api.sessionEvent>[1]) => Promise<unknown>;
   /** Stop, asking first when it would end early and running the review when there is one. */
   stop: () => Promise<void>;
@@ -67,8 +70,8 @@ export interface SessionController {
 
 /**
  * The running session, as one hook: the local tick of the server-owned timer, the event
- * sending, idle detection, sounds, and the whole end flow with its dialogs. The timer card
- * and the focus screen are two views of this; neither keeps timer state of its own.
+ * sending, sounds, and the whole end flow with its dialogs. The timer card and the focus
+ * screen are two views of this; neither keeps timer state of its own.
  */
 export function useSessionController({
   active,
@@ -82,7 +85,6 @@ export function useSessionController({
   const [timer, setTimer] = useState<TimerState>(active.timer);
   const [now, setNow] = useState(() => Date.now());
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [idleOpen, setIdleOpen] = useState(false);
   const [earlyOpen, setEarlyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const endingRef = useRef(false);
@@ -106,7 +108,8 @@ export function useSessionController({
     : routineSession
       ? { kind: 'routine', title: active.nodeTitle }
       : null;
-  // The review, when there is one. With reviews off, a routine still asks whether to tick.
+  // The review, when there is one: a free session has nothing to review. With reviews
+  // off, a routine still asks whether to tick.
   const reviews = settings.review.mode !== 'off' && subject !== null;
   const asksTick = !reviews && routineSession;
   const index = useMemo(() => buildIndex(nodes), [nodes]);
@@ -116,14 +119,38 @@ export function useSessionController({
   // 1 s tick against the wall clock: transitions are materialized from timestamps, so a
   // throttled or dropped tick never loses time. The updater stays pure; React may call
   // it more than once, which is why playing a sound from inside it used to double-fire.
+  //
+  // The same tick notices a sleep: timers stop while the computer sleeps, so on waking the
+  // next tick finds the clock has jumped. A jump of ten minutes or more while the clock was
+  // running is logged on the session, which keeps running; the user is asked about it.
+  const lastTick = useRef(0);
+  const runningRef = useRef(false);
   useEffect(() => {
+    runningRef.current =
+      timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break';
+  }, [timer.phase]);
+  const sessionId = active.session.id;
+  useEffect(() => {
+    lastTick.current = Date.now();
     const id = window.setInterval(() => {
       const t = Date.now();
+      const slept = t - lastTick.current;
+      const from = lastTick.current;
+      lastTick.current = t;
       setNow(t);
       setTimer((prev) => advance(prev, new Date(t).toISOString(), opts));
+      if (slept >= SLEEP_MIN_MS && runningRef.current) {
+        void api
+          .sessionSleep(sessionId, {
+            from: new Date(from).toISOString(),
+            to: new Date(t).toISOString(),
+          })
+          .then((res) => qc.setQueryData(keys.active, res))
+          .catch(() => void qc.invalidateQueries({ queryKey: keys.active }));
+      }
     }, 1000);
     return () => window.clearInterval(id);
-  }, [opts]);
+  }, [opts, sessionId, qc]);
 
   const nowIso = new Date(now).toISOString();
   const view = viewTimer(timer, nowIso);
@@ -154,7 +181,7 @@ export function useSessionController({
     if (from === to) return;
     lastPhase.current = to;
     if (to === 'short-break' || to === 'long-break') alert('breakStart');
-    else if (to === 'work' && from !== 'idle') alert('workStart');
+    else if (to === 'work') alert('workStart');
     else if (to === 'ended') alert('sessionEnd');
   }, [timer.phase, alert]);
 
@@ -184,48 +211,33 @@ export function useSessionController({
     [active.session.id, qc, toast],
   );
 
-  // Idle detection (spec §4): pause the work clock and ask "Still studying?".
-  const resetIdle = useIdleDetection({
-    enabled: settings.idle.enabled && timer.phase === 'work',
-    thresholdMin: settings.idle.thresholdMin,
-    onIdle: (idleSince) => {
-      void send({ type: 'idle-start', idleSince }).then((r) => {
-        if (r?.active.timer.phase === 'idle') setIdleOpen(true);
-      });
-    },
-  });
-
-  const answerIdle = async (stillStudying: boolean) => {
-    setIdleOpen(false);
-    resetIdle();
-    const r = await send({ type: 'idle-answer', stillStudying });
-    if (!stillStudying) {
-      toast('Session saved');
-      void qc.invalidateQueries({ queryKey: keys.active });
-      void qc.invalidateQueries({ queryKey: keys.pace });
-      void qc.invalidateQueries({ queryKey: keys.me });
-    } else if (r === null) {
-      void qc.invalidateQueries({ queryKey: keys.active });
-    }
-  };
+  /** Set when the user says they stopped when the computer fell asleep: the end goes back to then. */
+  const stopAtRef = useRef<string | null>(null);
 
   const finish = async (review: ReviewInput | null, markComplete: boolean) => {
     if (endingRef.current) return;
     endingRef.current = true;
     setBusy(true);
     try {
-      const res = await api.endSession(active.session.id, { review, markComplete });
+      const res = await api.endSession(active.session.id, {
+        review,
+        markComplete,
+        ...(stopAtRef.current ? { endAt: stopAtRef.current } : {}),
+      });
       setReviewOpen(false);
       onEnded(res.summary);
       qc.setQueryData(keys.active, { now: nowIso, active: null });
       void qc.invalidateQueries({ queryKey: keys.pace });
       void qc.invalidateQueries({ queryKey: keys.me });
       void qc.invalidateQueries({ queryKey: keys.nodes });
+      void qc.invalidateQueries({ queryKey: ['analytics'] });
       // A routine session may have just ticked its occurrence off.
       if (routineSession) void qc.invalidateQueries({ queryKey: ['routines'] });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not end the session');
       endingRef.current = false;
+      stopAtRef.current = null;
+      setStopping(false);
       void qc.invalidateQueries({ queryKey: keys.active });
     } finally {
       setBusy(false);
@@ -240,13 +252,54 @@ export function useSessionController({
     plannedEndAt: timer.plannedEndAt,
   });
 
+  // Ending early only costs the XP while the session is short: from ten focused minutes on
+  // the minutes pay, and finishing the task pays whatever the clock says.
+  const wouldWithhold = isWithheld({
+    endedEarly: wouldEndEarly,
+    workMinutes: view.workSeconds / 60,
+  });
+
   const stop = async (confirmed = false) => {
-    if (wouldEndEarly && !confirmed) {
+    if (wouldWithhold && !confirmed) {
       setEarlyOpen(true);
       return;
     }
     setEarlyOpen(false);
     // Bank work now so filling in the review does not count as study time.
+    if (timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break') {
+      await send({ type: 'pause' });
+    }
+    if (reviews || asksTick) setReviewOpen(true);
+    else await finish(null, false);
+  };
+
+  // The sleep still waiting for an answer, if the computer slept while this ran.
+  const slept = pendingSleep(active.session.sleeps);
+  const sleptAt = slept
+    ? new Date(slept.from).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    : '';
+  const [answering, setAnswering] = useState(false);
+  /** True once the user chose "I stopped": the question gives way to the review. */
+  const [stopping, setStopping] = useState(false);
+
+  const keptStudying = async () => {
+    if (!slept) return;
+    setAnswering(true);
+    try {
+      const res = await api.keptStudying(active.session.id, slept.from);
+      qc.setQueryData(keys.active, res);
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not save that');
+    } finally {
+      setAnswering(false);
+    }
+  };
+
+  /** "I stopped when it fell asleep": end the session back then, through the usual review. */
+  const stoppedAtSleep = async () => {
+    if (!slept) return;
+    stopAtRef.current = slept.from;
+    setStopping(true);
     if (timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break') {
       await send({ type: 'pause' });
     }
@@ -294,6 +347,28 @@ export function useSessionController({
   const dialogs = (
     <>
       <Modal
+        open={!!slept && !reviewOpen && !stopping}
+        onClose={() => {}}
+        persistent
+        title={`Your computer went to sleep at ${sleptAt}`}
+        actions={
+          <>
+            <Button onClick={stoppedAtSleep} disabled={answering || busy}>
+              I stopped at {sleptAt}
+            </Button>
+            <Button variant="primary" onClick={keptStudying} loading={answering}>
+              I kept studying
+            </Button>
+          </>
+        }
+      >
+        <p className="muted">
+          Did you keep studying until now, or did you stop at {sleptAt}? The session kept running
+          while it slept, so nothing is lost either way.
+        </p>
+      </Modal>
+
+      <Modal
         open={earlyOpen}
         onClose={() => setEarlyOpen(false)}
         title="End early?"
@@ -309,28 +384,8 @@ export function useSessionController({
         }
       >
         <p className="muted">
-          {timer.mode === 'pomodoro'
-            ? 'The first work interval is not finished. Ending now still logs the minutes, but the session will not count toward your level.'
-            : 'The planned end has not arrived. Ending now still logs the minutes, but the session will not count toward your level.'}
-        </p>
-      </Modal>
-
-      <Modal
-        open={idleOpen}
-        onClose={() => {}}
-        persistent
-        title="Still studying?"
-        actions={
-          <>
-            <Button onClick={() => answerIdle(false)}>No, end session</Button>
-            <Button variant="primary" onClick={() => answerIdle(true)}>
-              Yes, continue
-            </Button>
-          </>
-        }
-      >
-        <p className="muted">
-          The work clock paused while you were away. Time since then is logged as idle, not work.
+          Under ten minutes of focus so far. The minutes are saved either way, but it only counts
+          toward your level after ten minutes, or if you mark the task done.
         </p>
       </Modal>
 
@@ -350,7 +405,9 @@ export function useSessionController({
             </>
           }
         >
-          <p className="muted">The minutes count either way. Not yet leaves it on your list.</p>
+          <p className="muted">
+            The minutes are saved either way. Choose Not yet to keep it on your list.
+          </p>
         </Modal>
       )}
 
@@ -382,6 +439,7 @@ export function useSessionController({
     canSkip,
     inBreak,
     wouldEndEarly,
+    wouldWithhold,
     send,
     stop: () => stop(),
     extend,

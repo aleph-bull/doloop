@@ -3,6 +3,7 @@ import {
   computeSessionXp,
   focusPct,
   isEndedEarly,
+  isWithheld,
   levelForXp,
   levelProgress,
   streakBonus,
@@ -115,9 +116,10 @@ describe('computeSessionXp', () => {
     expect(computeSessionXp({ ...base, workMinutes: 0, streakCurrent: 12 }).total).toBe(0);
   });
 
-  it('withholds everything when the session ended early', () => {
+  it('withholds everything when the session ended early and short', () => {
     const r = computeSessionXp({
       ...base,
+      workMinutes: 8,
       reviewSubmitted: true,
       distracted: 'no',
       streakCurrent: 9,
@@ -125,6 +127,39 @@ describe('computeSessionXp', () => {
     });
     expect(r.total).toBe(0);
     expect(r.withheld).toBe(true);
+  });
+
+  it('an early end still pays once ten focused minutes are in', () => {
+    const short = computeSessionXp({ ...base, workMinutes: 9.9, endedEarly: true });
+    expect(short.withheld).toBe(true);
+    const enough = computeSessionXp({ ...base, workMinutes: 10, endedEarly: true });
+    expect(enough.withheld).toBe(false);
+    expect(enough.base).toBe(20);
+    expect(computeSessionXp({ ...base, workMinutes: 25, endedEarly: true }).base).toBe(50);
+  });
+
+  it('finishing the task or routine pays however early and short the session was', () => {
+    const task = computeSessionXp({
+      ...base,
+      workMinutes: 3,
+      endedEarly: true,
+      nodeJustCompleted: true,
+      loggedWorkMinutesAfter: 3,
+    });
+    expect(task.withheld).toBe(false);
+    expect(task.base).toBe(6);
+    expect(task.estimateBeat).toBe(1);
+    const routine = computeSessionXp({
+      ...base,
+      workMinutes: 3,
+      endedEarly: true,
+      subjectCompleted: true,
+    });
+    expect(routine.withheld).toBe(false);
+    expect(routine.base).toBe(6);
+    expect(isWithheld({ endedEarly: true, workMinutes: 2, subjectCompleted: true })).toBe(false);
+    expect(isWithheld({ endedEarly: true, workMinutes: 2 })).toBe(true);
+    expect(isWithheld({ endedEarly: false, workMinutes: 0 })).toBe(false);
   });
 
   it('maps distraction answers to focus percentages', () => {

@@ -171,14 +171,14 @@ export function bucketForGreeting(s: GreetingSignals): GreetingBucket {
   return 'default';
 }
 
-/** "2 h 30 m", "45 m" - the same shape the rest of the app uses for durations. */
+/** "2 h 30 min", "45 min" - the same shape the rest of the app uses for durations. */
 function fmtHours(minutes: number): string {
   const m = Math.round(minutes);
   const h = Math.floor(m / 60);
   const rest = m % 60;
-  if (h === 0) return `${rest} m`;
+  if (h === 0) return `${rest} min`;
   if (rest === 0) return `${h} h`;
-  return `${h} h ${rest} m`;
+  return `${h} h ${rest} min`;
 }
 
 export interface GreetingContext extends GreetingSignals {

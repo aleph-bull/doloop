@@ -1,14 +1,27 @@
 import {
+  advance,
   buildIndex,
   expectedMinutes,
   focusContext,
   focusProgress,
   visualizerPalette,
+  visualizerTuning,
+  viewTimer,
   type StudyNode,
   type UserSettings,
 } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { Eye, EyeOff, Pause, Play, Settings2, SkipForward, Square, X } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Pause,
+  Play,
+  RefreshCw,
+  Settings2,
+  SkipForward,
+  Square,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
@@ -44,6 +57,14 @@ import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { SessionSummary } from '../components/SessionSummary';
 import { announceAchievements } from '../lib/achievements';
+import { cameraSupported, useTimelapseRecorder } from '../lib/timelapse';
+import {
+  recorderProblem,
+  TimelapseBadge,
+  TimelapseExport,
+  TimelapsePrompt,
+  TimelapseSettings,
+} from '../components/focus/Timelapse';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
@@ -115,6 +136,121 @@ export function Focus() {
   const [askOpen, setAskOpen] = useState(false);
   const askedRef = useRef(false);
   const session = active.data?.active ?? null;
+  /* ---------- timelapse ---------- */
+  const tl = settings?.timelapse;
+  const [recording, setRecording] = useState(false);
+  const [tlAskOpen, setTlAskOpen] = useState(false);
+  /** The session the timelapse question was settled for, so it is asked once per session. */
+  const tlAskedFor = useRef<string | null>(null);
+  /** How many stills there were when the video was last saved. */
+  const [tlSavedAt, setTlSavedAt] = useState(0);
+
+  // Where the session stands right now, from the server's timer and the wall clock: the
+  // recorder takes stills only in focus, and stamps each with the time studied.
+  const sessionRef = useRef(session);
+  const settingsRef = useRef(settings);
+  useEffect(() => {
+    sessionRef.current = session;
+    settingsRef.current = settings;
+  });
+  const sample = useCallback(() => {
+    const s = sessionRef.current;
+    const st = settingsRef.current;
+    if (!s || !st) return { phase: null, workSeconds: 0 };
+    const now = new Date().toISOString();
+    const t = advance(s.timer, now, {
+      pomodoro: s.session.pomodoroConfigSnapshot ?? st.pomodoro,
+      autoStartBreaks: st.pomodoro.autoStartBreaks,
+      autoStartWork: st.pomodoro.autoStartWork,
+    });
+    return { phase: t.phase, workSeconds: viewTimer(t, now).workSeconds };
+  }, []);
+  const [inFocus, setInFocus] = useState(false);
+  useEffect(() => {
+    if (!recording) return;
+    const tick = () => setInFocus(sample().phase === 'work');
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [recording, sample]);
+  const tlOptions = useMemo(
+    () => ({
+      lengthMode: tl?.lengthMode ?? 'auto',
+      lengthSeconds: tl?.lengthSeconds ?? 30,
+      speed: tl?.speed ?? 300,
+      fps: tl?.fps ?? 30,
+    }),
+    [tl?.lengthMode, tl?.lengthSeconds, tl?.speed, tl?.fps],
+  );
+  const recorder = useTimelapseRecorder({
+    recording,
+    capturing: inFocus,
+    options: tlOptions,
+    workSeconds: () => sample().workSeconds,
+  });
+
+  /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
+  const tlPending = recorder.count > 0 && recorder.count !== tlSavedAt;
+
+  // The camera would not start: say why once, and stop trying.
+  const problem = recorderProblem(recorder.status);
+  useEffect(() => {
+    if (!problem) return;
+    toast(problem);
+    setRecording(false);
+  }, [problem, toast]);
+
+  // The session ended, here or elsewhere: the camera goes off and the stills wait for the video.
+  useEffect(() => {
+    if (!session) setRecording(false);
+  }, [session]);
+
+  // Once per session, after the audio question if there is one: record, ask, or nothing.
+  const sessionId = session?.session.id ?? null;
+  useEffect(() => {
+    if (!tl || !sessionId || tlAskedFor.current === sessionId) return;
+    if (askOpen || audio.state === 'requesting' || !cameraSupported()) return;
+    // Last session's stills are still waiting to be saved; they come first.
+    if (tlPending) return;
+    if (tl.record === 'never') {
+      tlAskedFor.current = sessionId;
+      return;
+    }
+    const id = window.setTimeout(() => {
+      tlAskedFor.current = sessionId;
+      if (tl.record === 'always') setRecording(true);
+      else setTlAskOpen(true);
+    }, PROMPT_DELAY_MS * 1.6);
+    return () => window.clearTimeout(id);
+  }, [tl, sessionId, askOpen, audio.state, tlPending]);
+
+  // Unsaved stills live only in this tab: ask before it closes.
+  useEffect(() => {
+    if (!tlPending) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [tlPending]);
+
+  /**
+   * While a question or the browser's picker is up, the clock waits: choosing a window to
+   * share, or whether to film, is not studying. Released the moment it closes, however it went.
+   */
+  const holdTimer = askOpen || tlAskOpen || audio.state === 'requesting';
+  /** The "try again" line after a share that fell short. Closed with its x for this visit. */
+  const [retryClosed, setRetryClosed] = useState(false);
+  useEffect(() => {
+    // Each new attempt earns the line again if it fails again.
+    if (audio.state === 'requesting') setRetryClosed(false);
+  }, [audio.state]);
+  const retryVisible =
+    (audio.state === 'denied' || audio.state === 'no-audio') &&
+    !!vis &&
+    !vis.promptDismissed &&
+    !retryClosed;
 
   // Offer to share audio once per visit, once the timer is on screen, unless told never to.
   useEffect(() => {
@@ -152,6 +288,8 @@ export function Focus() {
       }),
     [vis?.colorMode, vis?.color, accent],
   );
+  // How it listens: the preset, or the custom sliders.
+  const tuning = useMemo(() => (vis ? visualizerTuning(vis) : null), [vis]);
 
   /* ---------- leaving ---------- */
   const leave = useCallback(() => {
@@ -215,9 +353,10 @@ export function Focus() {
             rings: vis.rings,
             bars: vis.bars,
             waveform: vis.waveform,
+            burst: vis.burst,
           }}
           mist={{ height: vis.mistHeight, drift: vis.mistDrift, opacity: vis.mistOpacity }}
-          waves={{ count: vis.waveCount }}
+          waves={{ count: vis.waveCount, top: vis.waveTop, bottom: vis.waveBottom }}
           bars={{
             count: vis.barCount,
             height: vis.barHeight,
@@ -225,9 +364,26 @@ export function Focus() {
             glow: vis.barGlow,
             reflection: vis.barReflection,
             symmetric: vis.barSymmetric,
+            position: vis.barPosition,
+            width: vis.barWidth,
+            opacity: vis.barOpacity,
           }}
-          waveform={{ position: vis.waveformPosition }}
+          waveform={{ position: vis.waveformPosition, mirror: vis.waveformMirror }}
+          rings={{ count: vis.ringCount }}
+          burst={{
+            radius: vis.burstRadius,
+            reach: vis.burstReach,
+            spikes: vis.burstSpikes,
+            blob: vis.burstBlob,
+            rays: vis.burstRays,
+            showSpikes: vis.burstShowSpikes,
+            spikeOpacity: vis.burstSpikeOpacity,
+          }}
+          speed={vis.speed}
+          fadeWhenSilent={vis.fadeWhenSilent}
           palette={palette}
+          analysis={tuning?.analysis}
+          barsAnalysis={tuning?.bars}
         />
       )}
 
@@ -235,6 +391,13 @@ export function Focus() {
         <span className="focus-brand">Komogon</span>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}
+        {recording && recorder.status === 'on' && (
+          <TimelapseBadge
+            recorder={recorder}
+            capturing={inFocus}
+            onStop={() => setRecording(false)}
+          />
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -250,14 +413,45 @@ export function Focus() {
         </Button>
       </div>
 
+      {retryVisible && (
+        <div className="focus-retry" role="status">
+          <span>
+            {audio.state === 'no-audio'
+              ? 'That share had no audio. Tick "share audio" in the picker.'
+              : 'Nothing was shared, so the visualizer is idling.'}
+          </span>
+          <button
+            type="button"
+            className="focus-link"
+            onClick={() => {
+              if (vis && !vis.enabled) void patch({ visualizer: { enabled: true } });
+              void audio.request();
+            }}
+          >
+            <RefreshCw size={14} aria-hidden /> Try again
+          </button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon
+            aria-label="Close"
+            onClick={() => setRetryClosed(true)}
+          >
+            <X size={14} aria-hidden />
+          </Button>
+        </div>
+      )}
+
       {session ? (
         <FocusSession
           active={session}
           settings={settings}
           nodes={nodes.data.nodes}
           chromeVisible={chromeVisible}
+          holdTimer={holdTimer}
           onEnded={(s) => {
             setSummary(s);
+            setRecording(false);
             void qc.invalidateQueries({ queryKey: keys.active });
             if (s.confetti && settings.effects.confetti) fireConfetti();
             window.setTimeout(() => announceAchievements(s.badges), 600);
@@ -266,7 +460,20 @@ export function Focus() {
       ) : summary ? (
         <main className="focus-centre">
           <Glass className="focus-summary" strong>
-            <SessionSummary summary={summary} phrasesEnabled={settings.effects.phrases} />
+            <SessionSummary
+              summary={summary}
+              phrasesEnabled={settings.effects.phrases}
+              onTrimmed={() => setSummary(null)}
+            />
+            {tl && (
+              <TimelapseExport
+                recorder={recorder}
+                value={tl}
+                onChange={patch}
+                recording={recording}
+                onSaved={() => setTlSavedAt(recorder.count)}
+              />
+            )}
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
                 Start another
@@ -313,14 +520,62 @@ export function Focus() {
             <h3 className="focus-sheet-title">Visualizer</h3>
             {vis && <VisualizerSettings value={vis} onChange={patch} audio={audio} />}
           </section>
+          {tl && (
+            <section className="focus-sheet-section" aria-label="Timelapse">
+              <h3 className="focus-sheet-title">Timelapse</h3>
+              <TimelapseSettings
+                value={tl}
+                onChange={patch}
+                recording={recording}
+                onRecordingChange={
+                  session && cameraSupported()
+                    ? (next) => {
+                        tlAskedFor.current = session.session.id;
+                        setRecording(next);
+                      }
+                    : undefined
+                }
+              />
+              {!summary && (
+                <TimelapseExport
+                  recorder={recorder}
+                  value={tl}
+                  onChange={patch}
+                  recording={recording}
+                  onSaved={() => setTlSavedAt(recorder.count)}
+                />
+              )}
+            </section>
+          )}
           <section className="focus-sheet-section">
             <Button variant="secondary" onClick={leave}>
               Exit focus
             </Button>
-            <span className="field-hint">The session keeps running. Escape does the same.</span>
+            <span className="field-hint">
+              Your session keeps running. Press Escape to leave, Space to pause or resume, and H
+              to hide the clock.
+            </span>
           </section>
         </Glass>
       )}
+
+      <TimelapsePrompt
+        open={tlAskOpen}
+        onYes={() => {
+          setTlAskOpen(false);
+          setRecording(true);
+        }}
+        onNo={() => setTlAskOpen(false)}
+        onAlways={() => {
+          setTlAskOpen(false);
+          setRecording(true);
+          void patch({ timelapse: { record: 'always' } });
+        }}
+        onNever={() => {
+          setTlAskOpen(false);
+          void patch({ timelapse: { record: 'never' } });
+        }}
+      />
 
       <AudioPermissionModal
         open={askOpen}
@@ -345,15 +600,72 @@ interface FocusSessionProps {
   settings: UserSettings;
   nodes: StudyNode[];
   chromeVisible: boolean;
+  /** Pause the clock while true and resume it when it goes false, if this paused it. */
+  holdTimer: boolean;
   onEnded: (summary: EndSummary) => void;
 }
 
 /** The running session: the same controller as the dashboard card, laid out for a whole screen. */
-function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: FocusSessionProps) {
+function FocusSession({
+  active,
+  settings,
+  nodes,
+  chromeVisible,
+  holdTimer,
+  onEnded,
+}: FocusSessionProps) {
   const ctl = useSessionController({ active, settings, nodes, onEnded });
   const routines = useRoutines();
   const pace = usePace();
   const { timer, view } = ctl;
+
+  // The hold pauses only a running clock and resumes only what it paused: a pause the
+  // user chose before the question came up is theirs to end. The resume waits for the
+  // pause to land, since a picker can be dismissed before the server has answered; a
+  // resume on a clock that is not paused is a no-op there.
+  const held = useRef<Promise<unknown> | null>(null);
+  const ctlRef = useRef(ctl);
+  useEffect(() => {
+    ctlRef.current = ctl;
+  });
+  useEffect(() => {
+    if (holdTimer) {
+      if (ctl.canPause && !held.current) held.current = ctl.send({ type: 'pause' });
+    } else if (held.current) {
+      const pausing = held.current;
+      held.current = null;
+      void pausing.then(() => {
+        if (ctlRef.current.timer.phase !== 'ended') void ctlRef.current.send({ type: 'resume' });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holdTimer]);
+
+  // Space pauses and resumes, H hides and shows the clock. Not while typing, with a
+  // modifier held, or with a dialog up, where Space belongs to the focused button.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, button, [contenteditable="true"]')) return;
+      if (document.querySelector('dialog[open], [role="dialog"]')) return;
+      const c = ctlRef.current;
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (c.busy) return;
+        if (c.canPause) void c.send({ type: 'pause' });
+        else if (c.canResume) void c.send({ type: 'resume' });
+      } else if (e.key === 'h' || e.key === 'H') {
+        void c.toggleTimerVisibility();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Hide puts away everything that stays on screen when the hands are still: the clock, the
+  // task, the progress. The phase word stays, so a glance still says paused or on a break.
+  const hidden = !timer.showTimer;
 
   const index = useMemo(() => buildIndex(nodes), [nodes]);
   const context = focusContext(index.byId, active.session.nodeId, active.nodeTitle);
@@ -391,15 +703,18 @@ function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: Focus
 
   return (
     <>
-      <main className="focus-centre">
+      <main className={`focus-centre${hidden ? ' is-bare' : ''}`}>
         <div className="focus-phase">{phase}</div>
-        <TimerDisplay
-          digits={ctl.digits}
-          hidden={!timer.showTimer}
-          meaning={timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}
-        />
-        <TaskContext subject={context.subject} child={context.child} />
-        {showProgress && <ProgressDisplay progress={progress} />}
+        {!hidden && (
+          <>
+            <TimerDisplay
+              digits={ctl.digits}
+              meaning={timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}
+            />
+            <TaskContext subject={context.subject} child={context.child} />
+            {showProgress && <ProgressDisplay progress={progress} />}
+          </>
+        )}
         <div className={`focus-actions focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
           {ctl.canPause && (
             <Button variant="ghost" onClick={() => ctl.send({ type: 'pause' })}>
@@ -424,12 +739,13 @@ function FocusSession({ active, settings, nodes, chromeVisible, onEnded }: Focus
           <Button
             variant="ghost"
             icon
-            aria-label={timer.showTimer ? 'Hide timer' : 'Show timer'}
+            aria-label={hidden ? 'Show the clock and task' : 'Hide the clock and task'}
+            title={hidden ? 'Show the clock and task' : 'Hide everything but the phase'}
             onClick={ctl.toggleTimerVisibility}
           >
-            {timer.showTimer ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+            {hidden ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}
           </Button>
-          <Button variant="danger" onClick={ctl.stop} disabled={ctl.busy || timer.phase === 'idle'}>
+          <Button variant="danger" onClick={ctl.stop} disabled={ctl.busy}>
             <Square size={14} aria-hidden /> Stop
           </Button>
         </div>

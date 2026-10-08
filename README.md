@@ -6,9 +6,9 @@ A study-planning product: a web portal, a Chrome extension remote, and an API. F
 
 - **Plan**: courses, tasks, assessments, and subtasks with estimates and due dates. Rest days and vacations that never break a streak.
 - **Pace**: a calculator tells you what to work on today, how many minutes per day you need, and whether each task is on track, behind, critical, or overdue.
-- **Study**: pomodoro, unlimited, or until-a-time sessions with idle detection, optional site blocking (extension), and a skippable end-of-session review. Starting one opens a focus screen in its own tab: a large clock, the task under it, and an optional audio-reactive visualizer.
-- **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a quote or research tip every six hours, and a positive-only "This week" page.
-- **Analyse**: an Advanced page with everything (per task, per course, estimate accuracy), a weekly review, and post-assessment follow-ups.
+- **Study**: pomodoro, unlimited, or until-a-time sessions, with or without a task, optional site blocking (extension), and a skippable end-of-session review. Starting one opens a focus screen in its own tab: a large clock, the task under it, and an optional audio-reactive visualizer.
+- **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a quote or research tip every six hours, a weekly goal, and all-time hours on the dashboard.
+- **Analyse**: a recap for the week, the month and all time (charts, "that's enough time to…" comparisons, streaks, personal records, a shareable week card), a By task page with everything per task and course, a weekly review, and post-assessment follow-ups. Film and TV posters for the comparisons come from TMDB when `TMDB_READ_TOKEN` or `TMDB_API_KEY` is set in `apps/api/.env`.
 - **Schedule**: a week view with drag-to-create blocks, free-slot suggestions, two-way Google Calendar sync into a dedicated "Study" calendar, and an .ics feed.
 
 ## Getting started
@@ -31,7 +31,8 @@ With no credentials configured the API runs on an in-process Postgres (PGlite, p
 `pnpm local:update` builds, freezes a copy of the build, and starts it hidden: the portal on http://localhost:5173 and the API on 127.0.0.1:8787, reachable from this PC only. A `Komogon` shortcut in the Windows Startup folder runs `pnpm local:start` at sign-in.
 
 - It runs the frozen copy, so rebuilding while you develop does not change it. Run `pnpm local:update` again when you want the latest.
-- Its data lives in `%LOCALAPPDATA%\Komogon\pglite`, copied once from `apps/api/.pglite` on first start. Dev servers keep `apps/api/.pglite` for testing. Logs are in `%LOCALAPPDATA%\Komogon\logs`.
+- Its data lives in `~/.komogon/pglite` (`C:\Users\<you>\.komogon`), with logs in `~/.komogon/logs`. Not under AppData: Claude's desktop app is a packaged Windows app, and Windows redirects AppData for it and everything it starts, so a copy started from a Claude session would see different files. If the folder is missing the API does not start, rather than start on empty or test data. Dev servers keep `apps/api/.pglite` for testing.
+- `pnpm local:start` and `local:update` hand the start to Windows (through WMI), so the servers outlive the terminal or Claude session that ran the command.
 - It uses the dev ports, so `pnpm local:stop` before `pnpm dev`, and `pnpm local:start` after.
 - To stop it starting at sign-in, delete `Komogon.lnk` from `shell:startup`.
 

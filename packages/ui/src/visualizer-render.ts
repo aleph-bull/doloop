@@ -53,6 +53,8 @@ export interface VisualizerLayers {
   rings: boolean;
   bars: boolean;
   waveform: boolean;
+  /** The ring of spectrum spikes around the clock. */
+  burst: boolean;
 }
 
 export const ALL_LAYERS: VisualizerLayers = {
@@ -62,6 +64,7 @@ export const ALL_LAYERS: VisualizerLayers = {
   rings: true,
   bars: true,
   waveform: true,
+  burst: true,
 };
 
 export interface MistLook {
@@ -78,9 +81,12 @@ export const DEFAULT_MIST_LOOK: MistLook = { height: 0.3, drift: 0.5, opacity: 1
 export interface WavesLook {
   /** Waves across the lower band, 1..MAX_WAVES; the upper band carries about half as many. */
   count: number;
+  /** Whether each band is drawn. */
+  top: boolean;
+  bottom: boolean;
 }
 
-export const DEFAULT_WAVES_LOOK: WavesLook = { count: 4 };
+export const DEFAULT_WAVES_LOOK: WavesLook = { count: 4, top: true, bottom: true };
 
 export interface BarsLook {
   /** How many bars stand in the row. */
@@ -95,6 +101,12 @@ export interface BarsLook {
   reflection: boolean;
   /** Bass in the middle, mirrored outward, rather than left to right. */
   symmetric: boolean;
+  /** Where the row stands, as a fraction of the height from the top. */
+  position: number;
+  /** How much of the width the row spans, 0.2..1, centred. */
+  width: number;
+  /** How strongly the row shows, 0..1, on top of the frame's opacity. */
+  opacity: number;
 }
 
 export const DEFAULT_BARS_LOOK: BarsLook = {
@@ -104,14 +116,55 @@ export const DEFAULT_BARS_LOOK: BarsLook = {
   glow: 0.7,
   reflection: true,
   symmetric: false,
+  position: 0.92,
+  width: 0.9,
+  opacity: 1,
+};
+
+export interface RingsLook {
+  /** How many circles, 1..MAX_RINGS. */
+  count: number;
+}
+
+export const MAX_RINGS = 6;
+export const DEFAULT_RINGS_LOOK: RingsLook = { count: 3 };
+
+export interface BurstLook {
+  /** The ring the spikes stand on, as a fraction of the shorter side. */
+  radius: number;
+  /** The longest spike, as a fraction of the shorter side. */
+  reach: number;
+  /** How many spikes around the ring, 16..MAX_SPIKES. */
+  spikes: number;
+  /** The glowing organic shapes behind the ring. */
+  blob: boolean;
+  /** Fine hairlines reaching past the spikes. */
+  rays: boolean;
+  /** The spikes and the ring they stand on; off leaves only the shapes and rays. */
+  showSpikes: boolean;
+  /** How strongly the spikes and ring show, 0..1. */
+  spikeOpacity: number;
+}
+
+export const MAX_SPIKES = 192;
+export const DEFAULT_BURST_LOOK: BurstLook = {
+  radius: 0.2,
+  reach: 0.15,
+  spikes: 96,
+  blob: true,
+  rays: true,
+  showSpikes: true,
+  spikeOpacity: 1,
 };
 
 export interface WaveformLook {
   /** Where the line's axis sits, as a fraction of the height from the top. */
   position: number;
+  /** The reflection hung under the axis. */
+  mirror: boolean;
 }
 
-export const DEFAULT_WAVEFORM_LOOK: WaveformLook = { position: 0.18 };
+export const DEFAULT_WAVEFORM_LOOK: WaveformLook = { position: 0.18, mirror: true };
 
 /** Points the line is drawn through; the shape array a caller passes should be this long. */
 export const WAVEFORM_POINTS = 160;
@@ -142,6 +195,10 @@ export interface VisualizerFrame {
   mist?: { look: MistLook };
   /** How many waves. Four and two when omitted. */
   waves?: { look: WavesLook };
+  /** How many circles. Three when omitted. */
+  rings?: { look: RingsLook };
+  /** The burst's spike levels (0..1, one per band counting away from the top) and its look. */
+  burst?: { levels: Float32Array; look: BurstLook };
 }
 
 /** The most waves the lower band takes; the upper band carries about half as many. */
@@ -149,8 +206,11 @@ export const MAX_WAVES = 12;
 /** Colour steps built once per palette and picked by position along the row. */
 const RIBBON_SHADES = 18;
 const RIBBON_POINTS = 64;
-const RINGS = 3;
 const RING_POINTS = 96;
+/** Points around each of the burst's shapes. */
+const BLOB_POINTS = 72;
+/** The burst's spikes are stroked in this many wedges so the palette sweeps around the ring. */
+const SPIKE_WEDGES = 6;
 /** The ribbons live in these bands of the height, clear of the timer in the middle. */
 const LOWER_BAND: readonly [number, number] = [0.73, 0.94];
 const UPPER_BAND: readonly [number, number] = [0.05, 0.19];
@@ -159,11 +219,6 @@ const RING_RADIUS = 0.3;
 const RING_STEP = 0.055;
 /** A drop's ring is gone after this many seconds. */
 export const SHOCK_SECONDS = 1.4;
-/** The bars stand on this fraction of the height, higher when a reflection hangs below. */
-const BAR_BASE = 0.965;
-const BAR_BASE_REFLECTED = 0.9;
-/** Each side of the row is left clear by this fraction of the width. */
-const BAR_MARGIN = 0.05;
 /** The reflection is this tall relative to its bar, fading to nothing over that. */
 const REFLECTION = 0.55;
 /** The line fades in and out over this fraction of the width at each end. */
@@ -207,7 +262,7 @@ export function buildColors(
   const ribbons: string[] = [];
   for (let i = 0; i < RIBBON_SHADES; i++) ribbons.push(mix(from, to, i / (RIBBON_SHADES - 1)));
   const rings: string[] = [];
-  for (let i = 0; i < RINGS; i++) rings.push(mix(from, to, i / Math.max(1, RINGS - 1)));
+  for (let i = 0; i < MAX_RINGS; i++) rings.push(mix(from, to, i / (MAX_RINGS - 1)));
   // Unit-radius bloom, scaled by a transform at draw time.
   const bloom = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
   bloom.addColorStop(0, `rgb(${from[0]} ${from[1]} ${from[2]} / 0.9)`);
@@ -394,11 +449,12 @@ function bars(
   const { width, height } = scene;
   const { levels, count, look } = frame.bars!;
   const { colors } = frame;
+  opacity *= Math.min(1, Math.max(0, look.opacity));
   const n = Math.max(1, Math.min(Math.round(count), levels.length));
-  const margin = width * BAR_MARGIN;
+  const margin = (width * (1 - Math.min(1, Math.max(0.2, look.width)))) / 2;
   const slot = (width - margin * 2) / n;
   const barW = Math.max(1, slot * (1 - Math.min(0.9, Math.max(0, look.gap))));
-  const baseY = height * (look.reflection ? BAR_BASE_REFLECTED : BAR_BASE);
+  const baseY = height * Math.min(1, Math.max(0.1, look.position));
   const maxH = height * look.height * (0.6 + 0.4 * k) * (1 + 0.12 * pulse);
   const radius = Math.min(barW / 2, 5);
   const glow = Math.min(1, Math.max(0, look.glow));
@@ -535,6 +591,7 @@ function waveform(
   ctx.globalAlpha = 0.95 * opacity;
   ctx.stroke();
 
+  if (!look.mirror) return;
   // Fainter, a little smaller and a little softer than the line, as a reflection is.
   trace(-1, 0.75);
   ctx.shadowColor = colors.mirrorCss;
@@ -547,6 +604,132 @@ function waveform(
   ctx.shadowBlur = glow * 0.5;
   ctx.globalAlpha = 0.34 * opacity;
   ctx.stroke();
+}
+
+/**
+ * The burst: a ring around the clock with a spectrum spike on every degree of it, the two
+ * halves mirrored so the picture is symmetric about the vertical. Behind it, when wanted,
+ * two organic shapes in the palette's colours turned against each other and a smaller
+ * near-white one, their edges following a smoothed spectrum, so the overlaps pile into a
+ * lit core; and fine hairlines reaching well past the spikes. The spikes are stroked in six
+ * wedges so the palette sweeps around the ring.
+ */
+function burst(
+  ctx: CanvasRenderingContext2D,
+  scene: VisualizerScene,
+  frame: VisualizerFrame,
+  k: number,
+  amp: number,
+  pulse: number,
+  glow: number,
+  opacity: number,
+): void {
+  const { width, height } = scene;
+  const { seconds, colors } = frame;
+  const { levels, look } = frame.burst!;
+  const cx = width / 2;
+  const cy = height / 2;
+  const side = Math.min(width, height);
+  const n = Math.max(16, Math.min(MAX_SPIKES, Math.round(look.spikes)));
+  const r0 = side * Math.min(0.5, Math.max(0.1, look.radius)) * (1 + 0.05 * pulse);
+  const reach = side * Math.min(0.6, Math.max(0.02, look.reach)) * (0.6 + 0.4 * k);
+  // Spike j sits clockwise from the top; the band index counts away from the top either way.
+  const angleOf = (j: number) => -Math.PI / 2 + (j / n) * Math.PI * 2;
+  const levelOf = (j: number) => levels[Math.min(j, n - j)] ?? 0;
+  const smoothAt = (j: number) => {
+    let s = 0;
+    for (let d = -3; d <= 3; d++) s += levelOf((((j + d) % n) + n) % n);
+    return s / 7;
+  };
+
+  ctx.shadowBlur = 0;
+  if (look.blob) {
+    const blob = (turn: number, scale: number, colour: string, alpha: number) => {
+      ctx.beginPath();
+      for (let q = 0; q <= BLOB_POINTS; q++) {
+        const u = (q % BLOB_POINTS) / BLOB_POINTS;
+        const a = u * Math.PI * 2 - Math.PI / 2 + turn;
+        const lvl = smoothAt(Math.round(u * n) % n);
+        const wobble = 0.08 * ringNoise(a + turn * 3, seconds * 0.8 + turn);
+        const r = r0 * scale * (1.1 + wobble) + reach * (1.1 * lvl + 0.3 * amp);
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (q === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = colour;
+      ctx.globalAlpha = alpha * opacity;
+      ctx.fill();
+    };
+    blob(0, 1, colors.fromCss, 0.28 + 0.2 * amp);
+    blob(0.55, 0.92, colors.toCss, 0.24 + 0.18 * amp);
+    blob(-0.35, 0.72, colors.hotCss, 0.16 + 0.14 * pulse);
+    // The inside of the ring stays dark, as it does in the reference, so the clock sits on the
+    // background rather than on a disc of colour: everything drawn so far is cut away there,
+    // with a soft edge just inside the ring.
+    ctx.globalCompositeOperation = 'destination-out';
+    const hole = ctx.createRadialGradient(cx, cy, r0 * 0.86, cx, cy, r0);
+    hole.addColorStop(0, 'rgb(0 0 0 / 1)');
+    hole.addColorStop(1, 'rgb(0 0 0 / 0)');
+    ctx.fillStyle = hole;
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+  }
+
+  if (look.rays) {
+    ctx.beginPath();
+    for (let j = 0; j < n; j++) {
+      const a = angleOf(j + 0.5);
+      const len = reach * (0.8 + 1.3 * levelOf(j));
+      ctx.moveTo(cx + Math.cos(a) * (r0 + 4), cy + Math.sin(a) * (r0 + 4));
+      ctx.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len));
+    }
+    ctx.strokeStyle = colors.hotCss;
+    ctx.lineWidth = 0.6;
+    ctx.globalAlpha = (0.08 + 0.1 * amp) * opacity;
+    ctx.stroke();
+  }
+
+  if (!look.showSpikes) return;
+  opacity *= Math.min(1, Math.max(0, look.spikeOpacity));
+  for (let w = 0; w < SPIKE_WEDGES; w++) {
+    ctx.beginPath();
+    const from = Math.floor((w * n) / SPIKE_WEDGES);
+    const to = Math.floor(((w + 1) * n) / SPIKE_WEDGES);
+    for (let j = from; j < to; j++) {
+      const a = angleOf(j);
+      const len = Math.max(2, reach * levelOf(j));
+      ctx.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+      ctx.lineTo(cx + Math.cos(a) * (r0 + len), cy + Math.sin(a) * (r0 + len));
+    }
+    const colour = colors.ribbons[Math.round((w / (SPIKE_WEDGES - 1)) * (RIBBON_SHADES - 1))]!;
+    ctx.strokeStyle = colour;
+    ctx.shadowColor = colour;
+    // A blurred pass for the bloom, then the spike.
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = glow;
+    ctx.globalAlpha = 0.3 * opacity;
+    ctx.stroke();
+    ctx.lineWidth = 1.6;
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.9 * opacity;
+    ctx.stroke();
+  }
+
+  // The ring the spikes stand on.
+  ctx.beginPath();
+  ctx.arc(cx, cy, r0, 0, Math.PI * 2);
+  ctx.strokeStyle = colors.hotCss;
+  ctx.shadowColor = colors.fromCss;
+  ctx.lineWidth = 1.5 + amp;
+  ctx.shadowBlur = glow * 0.8;
+  ctx.globalAlpha = (0.5 + 0.3 * amp) * opacity;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
 }
 
 /** Draw one frame. Clears the canvas first; leaves the context in its default state. */
@@ -577,14 +760,15 @@ export function renderFrame(
   // Ribbons: the lower group carries the motion, the upper group echoes it faintly. They
   // are drawn first and masked on their own, so their ends fade out while everything
   // drawn afterwards keeps its edges.
-  const lower = Math.max(1, Math.min(MAX_WAVES, Math.round(frame.waves?.look.count ?? 4)));
+  const wavesLook = frame.waves?.look ?? DEFAULT_WAVES_LOOK;
+  const lower = Math.max(1, Math.min(MAX_WAVES, Math.round(wavesLook.count)));
   const upper = Math.max(1, Math.round(lower / 2));
   const total = lower + upper;
   // The palette sweeps across the whole row whatever its length.
   const shade = (i: number) => colors.ribbons[Math.round((i / (total - 1)) * (RIBBON_SHADES - 1))]!;
   // More waves in the band means each one a little fainter, so a full band still reads as light.
   const crowd = Math.min(1, 4 / lower) ** 0.5;
-  for (let i = 0; layers.ribbons && i < lower; i++) {
+  for (let i = 0; layers.ribbons && wavesLook.bottom && i < lower; i++) {
     ribbon(
       ctx,
       scene,
@@ -598,7 +782,7 @@ export function renderFrame(
       shade(i),
     );
   }
-  for (let i = 0; layers.ribbons && i < upper; i++) {
+  for (let i = 0; layers.ribbons && wavesLook.top && i < upper; i++) {
     ribbon(
       ctx,
       scene,
@@ -636,14 +820,21 @@ export function renderFrame(
   const cy = height / 2;
   const base = Math.min(width, height) * RING_RADIUS;
   const split = shock * 5;
-  for (let i = 0; layers.rings && i < RINGS; i++) {
+  const ringCount = Math.max(
+    1,
+    Math.min(MAX_RINGS, Math.round(frame.rings?.look.count ?? DEFAULT_RINGS_LOOK.count)),
+  );
+  for (let i = 0; layers.rings && i < ringCount; i++) {
     const radius = base + i * Math.min(width, height) * RING_STEP;
     const alpha = (0.1 + 0.32 * amp + 0.15 * pulse) * opacity;
+    // The palette sweeps across however many rings there are.
+    const shade =
+      colors.rings[ringCount > 1 ? Math.round((i / (ringCount - 1)) * (MAX_RINGS - 1)) : 0]!;
     if (split > 0.4) {
       ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha * 0.6, colors.fromCss, -split);
       ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha * 0.6, colors.toCss, split);
     } else {
-      ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha, colors.rings[i]!, 0);
+      ring(ctx, i, cx, cy, radius, amp, seconds, glow * 0.8, alpha, shade, 0);
     }
   }
 
@@ -658,6 +849,8 @@ export function renderFrame(
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   // The neon bars along the bottom, then the mirrored line wherever it was hung.
+  // The burst around the clock, over the bloom and under the bars and the line.
+  if (layers.burst && frame.burst) burst(ctx, scene, frame, k, amp, pulse, glow, opacity);
   if (layers.bars && frame.bars) bars(ctx, scene, frame, k, amp, pulse, opacity);
   if (layers.waveform && frame.waveform) waveform(ctx, scene, frame, k, amp, glow, opacity);
 

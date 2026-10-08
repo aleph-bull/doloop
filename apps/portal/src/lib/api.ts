@@ -35,7 +35,51 @@ import type {
   GradeComponent,
   Gpa,
   Insight,
+  ClockProfile,
+  Consistency,
+  Cumulative,
+  DashboardStats,
+  DaySubjects,
+  FocusQuality,
+  Forecast,
+  Highlight,
+  LevelProgress,
+  Personality,
+  PersonalRecord,
+  PlanKept,
+  RangeRecap,
+  ScreenFacts,
+  SessionHistogram,
+  StudyVsGrades,
+  SubjectSlice,
 } from '@komogon/core';
+
+export type RecapRangeParam = 'week' | 'month' | 'all';
+
+/** Everything the Analytics page draws for one range, from one call. */
+export interface RecapResponse {
+  now: string;
+  range: RecapRangeParam;
+  period: RangeRecap | null;
+  subjects: Array<SubjectSlice & { colorIndex: number }>;
+  dailySubjects: DaySubjects[] | null;
+  clock: ClockProfile;
+  weekday: RhythmProfile;
+  histogram: SessionHistogram;
+  focus: FocusQuality;
+  plan: PlanKept | null;
+  cumulative: Cumulative;
+  heatmap: StudyHeatmapData | null;
+  consistency: Consistency;
+  streak: { current: number; longest: number; freezesHeld: number };
+  records: PersonalRecord[];
+  personality: Personality | null;
+  forecast: Forecast | null;
+  studyVsGrades: StudyVsGrades | null;
+  insights: Highlight[];
+  level: LevelProgress & { xp: number };
+  totals: { minutes: number; sessions: number; rangeMinutes: number; rangeSessions: number };
+}
 
 export class ApiError extends Error {
   constructor(
@@ -123,6 +167,19 @@ export interface EndSummary {
   endedEarly: boolean;
 }
 
+/** A finished session with what it was for, as the history lists it. */
+export type HistorySession = Session & { title: string };
+
+export interface TrimSummary {
+  session: HistorySession;
+  removedFocusSeconds: number;
+  removedBreakSeconds: number;
+  xpRemoved: number;
+  xpTotal: number;
+  level: number;
+  badgesRevoked: string[];
+}
+
 export type DailyPick = { kind: 'quote'; item: Quote } | { kind: 'tip'; item: ResearchTip };
 
 export interface ReviewInput {
@@ -152,6 +209,8 @@ export interface NodeInput {
   gradeMode?: StudyNode['gradeMode'];
   gradeOverall?: number | null;
   gradeCredits?: number | null;
+  /** The template for items added under this node; null clears it. */
+  childDefaults?: StudyNode['childDefaults'];
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -186,7 +245,10 @@ export const api = {
 
   activeSession: () =>
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
-  /** For a task (nodeId), or for one occurrence of a routine (routineId + routineDate). */
+  /**
+   * For a task (nodeId), for one occurrence of a routine (routineId + routineDate), or
+   * for nothing in particular: a free session with neither.
+   */
   startSession: (input: {
     nodeId?: string;
     routineId?: string;
@@ -197,8 +259,28 @@ export const api = {
   }) => request<{ now: string; active: ActiveSession }>('POST', '/api/sessions', input),
   sessionEvent: (id: string, event: TimerEvent) =>
     request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/events`, event),
-  endSession: (id: string, body: { review?: ReviewInput | null; markComplete?: boolean }) =>
-    request<{ summary: EndSummary }>('POST', `/api/sessions/${id}/end`, body),
+  endSession: (
+    id: string,
+    body: { review?: ReviewInput | null; markComplete?: boolean; endAt?: string },
+  ) => request<{ summary: EndSummary }>('POST', `/api/sessions/${id}/end`, body),
+  trimSession: (id: string, removeFocusMinutes: number) =>
+    request<TrimSummary>('POST', `/api/sessions/${id}/trim`, { removeFocusMinutes }),
+  sessionSleep: (id: string, gap: { from: string; to: string }) =>
+    request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/sleep`, gap),
+  keptStudying: (id: string, from: string) =>
+    request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/sleep/kept`, {
+      from,
+    }),
+  sessionHistory: (params: { limit?: number; before?: string } = {}) => {
+    const q = new URLSearchParams();
+    if (params.limit) q.set('limit', String(params.limit));
+    if (params.before) q.set('before', params.before);
+    const qs = q.toString();
+    return request<{ sessions: HistorySession[] }>(
+      'GET',
+      `/api/sessions/history${qs ? `?${qs}` : ''}`,
+    );
+  },
   sessions: (params: { nodeId?: string; from?: string; to?: string; limit?: number } = {}) => {
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v !== undefined) q.set(k, String(v));
@@ -274,6 +356,15 @@ export const api = {
       { note },
     ),
   followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
+  recap: (range: RecapRangeParam) =>
+    request<RecapResponse>('GET', `/api/analytics/recap?range=${range}`),
+  dashboardStats: () =>
+    request<DashboardStats & { now: string }>('GET', '/api/analytics/dashboard'),
+  screens: () =>
+    request<{ facts: ScreenFacts[]; source: 'tmdb' | 'fallback' }>(
+      'GET',
+      '/api/equivalents/screens',
+    ),
 
   shop: () =>
     request<{

@@ -48,6 +48,12 @@ export type PanelStyle = 'opaque' | 'glass' | 'custom';
 export type VisualizerColorMode = 'accent' | 'custom' | 'gradient';
 export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
 
+/**
+ * How the visualizer listens. Each preset is a different analysis: what counts as a beat,
+ * how loud a drop has to be, how quickly the light settles. 'custom' reads the sliders.
+ */
+export type VisualizerPreset = 'bass' | 'balanced' | 'mellow' | 'custom';
+
 export interface UserSettings {
   profile: {
     /** What the greeting calls you. Asked at onboarding, editable in settings. */
@@ -55,8 +61,9 @@ export interface UserSettings {
   };
   pomodoro: PomodoroConfig;
   review: { mode: ReviewMode };
-  idle: { enabled: boolean; thresholdMin: number };
   streak: { minMinutes: number };
+  /** What the dashboard ring and the Analytics week measure against. */
+  goals: { weeklyMinutes: number };
   pace: { maxComfortableMinutesPerDay: number };
   sounds: {
     enabled: boolean;
@@ -152,6 +159,48 @@ export interface UserSettings {
     /** A faint reflection under the bars, and bass in the middle mirrored outward. */
     barReflection: boolean;
     barSymmetric: boolean;
+    /** How it listens: tuned for bass-heavy music, for calm music, for anything, or by hand. */
+    preset: VisualizerPreset;
+    /**
+     * The custom preset's sliders, all 0..1 except the band edges in Hz. Sensitivity is how
+     * small a jump counts as a beat; drop is how big one has to be for the ring; smoothing
+     * is how slowly the light settles; memory is how many seconds of the recent past a
+     * beat is judged against.
+     */
+    customSensitivity: number;
+    customDrop: number;
+    customSmoothing: number;
+    customMemory: number;
+    customBassLow: number;
+    customBassHigh: number;
+    /** Where the bars stand, as a fraction of the height from the top, and how much of the width they span. */
+    barPosition: number;
+    barWidth: number;
+    /** Which wave bands are drawn: across the top, across the bottom. */
+    waveTop: boolean;
+    waveBottom: boolean;
+    /** The line's reflection under its axis. */
+    waveformMirror: boolean;
+    /** How many circles sit around the clock. */
+    ringCount: number;
+    /**
+     * The burst: a ring of spectrum spikes around the clock with glowing shapes behind it.
+     * Radius and reach are fractions of the shorter side of the screen.
+     */
+    burst: boolean;
+    burstRadius: number;
+    burstReach: number;
+    burstSpikes: number;
+    burstBlob: boolean;
+    burstRays: boolean;
+    /** Speed of the drifting parts, 1 being as designed, and whether the light fades in silence. */
+    speed: number;
+    fadeWhenSilent: boolean;
+    /** How strongly the bars show, 0..1, on top of the visualizer's opacity. */
+    barOpacity: number;
+    /** Whether the burst draws its spikes at all, and how strongly, 0..1. */
+    burstShowSpikes: boolean;
+    burstSpikeOpacity: number;
   };
   /**
    * Keys of one-off prompts and hints the user has closed. Server-side so a dismissal
@@ -163,10 +212,30 @@ export interface UserSettings {
     /** Open the focus screen when a session starts: ask each time, always, or never. */
     openOnStart: FocusOpenMode;
   };
+  /** The camera timelapse recorded on the focus screen. Frames never leave this device. */
+  timelapse: {
+    /** When a session starts on the focus screen: ask whether to record, always record, or never (and stop asking). */
+    record: FocusOpenMode;
+    /** How long the video comes out: auto (about 20-40 s, like a phone), a set length, or a speed. */
+    lengthMode: TimelapseLengthMode;
+    /** The set length, in seconds, for lengthMode 'length'. */
+    lengthSeconds: number;
+    /** How many times faster than real time, for lengthMode 'speed'. */
+    speed: number;
+    /** Frames per second of the video, as asked; the frames captured may support fewer. */
+    fps: number;
+    /** Draw the time studied in the corner of the video. */
+    showTimer: boolean;
+    /** Blend the stills behind each frame together, for a softer motion. */
+    smooth: boolean;
+    /** Even out the brightness between stills, so the video does not flicker. */
+    deflicker: boolean;
+  };
   dismissed: string[];
 }
 
 export type FocusOpenMode = 'ask' | 'always' | 'never';
+export type TimelapseLengthMode = 'auto' | 'length' | 'speed';
 
 /** One row of a grading scale: everything from `minPercent` up to the next band. */
 export interface GradeBand {
@@ -197,6 +266,22 @@ export interface User {
   streak: StreakState;
 }
 
+/**
+ * A template for the items under a node: the defaults its children's dialog opens with.
+ * Set on a course, it shapes every assignment added under it; set on a unit, it shapes
+ * that unit's tasks. The nearest ancestor with one wins. Nothing here is applied to the
+ * node itself, and a saved child keeps its own values whatever the template later says.
+ */
+export interface NodeTemplate {
+  kind: NodeKind | null;
+  estimatedMinutes: number | null;
+  /** Local "HH:MM" the due time defaults to, when a due date is picked. */
+  dueTime: string | null;
+  countUnit: CountUnit | null;
+  countUnitLabel: string | null;
+  color: string | null;
+}
+
 export interface StudyNode {
   id: string;
   userId: string;
@@ -220,6 +305,8 @@ export interface StudyNode {
   gradeOverall: number | null;
   /** Credit weight for the GPA average, e.g. 0.5 for a half course. */
   gradeCredits: number | null;
+  /** Defaults for new items added under this node. Null when none are set. */
+  childDefaults: NodeTemplate | null;
 }
 
 export interface SessionReview {
@@ -238,10 +325,24 @@ export type PomodoroSnapshot = Pick<
   'workMin' | 'shortBreakMin' | 'longBreakMin' | 'cyclesBeforeLong'
 >;
 
+/**
+ * A stretch a running session spent with the computer asleep: logged when the app wakes,
+ * then answered once. 'kept' means the user says they kept studying; 'stopped' means the
+ * session was ended at `from`.
+ */
+export interface SleepGap {
+  from: ISODateTime;
+  to: ISODateTime;
+  answer: 'kept' | 'stopped' | null;
+}
+
 export interface Session {
   id: string;
   userId: string;
-  /** The task studied. Null for a routine session: exactly one of the two is set. */
+  /**
+   * The task studied. Null for a routine session, and for a free session started with
+   * nothing picked: at most one of the two is set.
+   */
   nodeId: string | null;
   /** The routine done under the timer, for a routine session. */
   routineId: string | null;
@@ -258,6 +359,8 @@ export interface Session {
   review: SessionReview | null;
   xpAwarded: number;
   badgesAwarded: string[];
+  /** Times the computer slept while this session ran, and what the user said about each. */
+  sleeps: SleepGap[];
 }
 
 export interface PlannedBlock {

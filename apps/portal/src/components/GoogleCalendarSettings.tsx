@@ -63,7 +63,7 @@ export function GoogleCalendarSettings() {
     : !s.available
       ? 'Not configured on this server (see docs/SETUP.md).'
       : !s.connected
-        ? 'Push planned blocks to a "Study" calendar and read busy times from your primary calendar.'
+        ? 'Add your planned blocks to a Study calendar in Google, and see when you are busy.'
         : s.revoked
           ? 'Access was revoked. Reconnect to resume syncing.'
           : `Connected. ${s.lastSyncAt ? `Last sync ${fmtDate(s.lastSyncAt)} ${fmtTime(s.lastSyncAt)}.` : 'Not synced yet.'}`;

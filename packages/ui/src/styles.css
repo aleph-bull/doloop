@@ -441,6 +441,41 @@ a:hover {
 .modal[open] {
   animation: modal-in var(--dur-slow) var(--ease-out);
 }
+/* On the way out: the same move in reverse, and the scrim lifts with it. */
+.modal[open].is-closing {
+  animation: modal-out var(--dur-slow) var(--ease-out) forwards;
+  pointer-events: none;
+}
+.modal[open].is-closing::backdrop {
+  animation: backdrop-out var(--dur-slow) var(--ease-out) forwards;
+}
+@keyframes modal-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes backdrop-out {
+  to {
+    opacity: 0;
+  }
+}
+:root[data-motion='off'] .modal[open],
+:root[data-motion='off'] .modal[open].is-closing,
+:root[data-motion='off'] .modal[open].is-closing::backdrop {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .modal[open],
+  :root:not([data-motion='on']) .modal[open].is-closing,
+  :root:not([data-motion='on']) .modal[open].is-closing::backdrop {
+    animation: none;
+  }
+}
 .modal-body {
   padding: var(--space-6);
 }
@@ -486,6 +521,10 @@ a:hover {
   animation: toast-in var(--dur-slow) var(--ease-out);
   max-width: min(420px, calc(100vw - 32px));
 }
+/* A toast fades and sinks away before it is removed, rather than blinking out. */
+.toast.is-leaving {
+  animation: toast-out var(--dur-slow) var(--ease-out) forwards;
+}
 @keyframes toast-in {
   from {
     opacity: 0;
@@ -494,6 +533,22 @@ a:hover {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+:root[data-motion='off'] .toast,
+:root[data-motion='off'] .toast.is-leaving {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .toast,
+  :root:not([data-motion='on']) .toast.is-leaving {
+    animation: none;
   }
 }
 

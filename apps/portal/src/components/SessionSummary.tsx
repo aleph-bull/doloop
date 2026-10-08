@@ -1,12 +1,16 @@
 import { badgeByKey, levelProgress, type SessionXpBreakdown } from '@komogon/core';
 import { Award, Flame, Star, TrendingUp } from 'lucide-react';
+import { useState } from 'react';
 import { ProgressBar } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
 import { fmtMinutes } from '../lib/format';
+import { TrimSessionDialog } from './TrimSessionDialog';
 
 export interface SessionSummaryProps {
   summary: EndSummary;
   phrasesEnabled: boolean;
+  /** After time was deleted from the session: the sheet's figures are then out of date. */
+  onTrimmed?: () => void;
 }
 
 /** The bonuses in the order they are earned, with the words for each. */
@@ -29,7 +33,8 @@ function fmtFocused(seconds: number): string {
  * from, the numbers that mattered, the level bar, and any achievements, revealed in turn.
  * Shared by the dashboard's overlay and the focus screen's ended state.
  */
-export function SessionSummary({ summary, phrasesEnabled }: SessionSummaryProps) {
+export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSummaryProps) {
+  const [trimming, setTrimming] = useState(false);
   const lp = levelProgress(summary.xpTotal);
   const { workSeconds, breakSeconds, idleSeconds } = summary.session;
   const xp = summary.xp;
@@ -57,7 +62,7 @@ export function SessionSummary({ summary, phrasesEnabled }: SessionSummaryProps)
           </div>
           <div className="summary-score-note">
             {xp.withheld
-              ? 'Ended before the first block finished, so this one does not count toward your level. The minutes still do.'
+              ? 'Ended early.'
               : `Score for this session${summary.leveledUp ? ` · level ${summary.levelAfter} reached` : ''}`}
           </div>
         </div>
@@ -154,6 +159,20 @@ export function SessionSummary({ summary, phrasesEnabled }: SessionSummaryProps)
           {summary.routineTicked && <span>Ticked off.</span>}
         </div>
       )}
+
+      {summary.session.workSeconds > 60 && (
+        <p className="text-sm muted summary-reveal" style={stagger()}>
+          Didn&rsquo;t study all of that?{' '}
+          <button type="button" className="link-button" onClick={() => setTrimming(true)}>
+            Delete time
+          </button>
+        </p>
+      )}
+      <TrimSessionDialog
+        session={trimming ? { ...summary.session, title: 'this session' } : null}
+        onClose={() => setTrimming(false)}
+        onTrimmed={onTrimmed}
+      />
     </div>
   );
 }

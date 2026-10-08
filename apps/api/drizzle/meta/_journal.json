@@ -64,6 +64,20 @@
       "when": 1790121741415,
       "tag": "0008_drop_spotify",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790200000000,
+      "tag": "0009_templates_free_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790300000000,
+      "tag": "0010_session_sleeps",
+      "breakpoints": true
     }
   ]
 }

@@ -27,11 +27,38 @@ export function Modal({
 }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
+  // Closing plays `modal-out` first and only then closes the dialog, so a score sheet or
+  // a form fades rather than vanishes. Under reduced motion the animation is none and the
+  // close is immediate. Reopening during the fade cancels it.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
+    if (open) {
+      el.classList.remove('is-closing');
+      if (!el.open) el.showModal();
+      return;
+    }
+    if (!el.open) return;
+    el.classList.add('is-closing');
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      el.classList.remove('is-closing');
+      if (el.open) el.close();
+    };
+    if (getComputedStyle(el).animationName === 'none') {
+      finish();
+      return;
+    }
+    el.addEventListener('animationend', finish, { once: true });
+    const fallback = window.setTimeout(finish, 600);
+    return () => {
+      el.removeEventListener('animationend', finish);
+      window.clearTimeout(fallback);
+      // Unmounted or reopened mid-fade: leave nothing half-closed.
+      if (!done) el.classList.remove('is-closing');
+    };
   }, [open]);
 
   useEffect(() => {

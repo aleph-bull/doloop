@@ -2,14 +2,16 @@ import type { RoutineOccurrence } from '@komogon/core';
 import { announceAchievements } from '../lib/achievements';
 import { Check, Play } from 'lucide-react';
 import { Link } from 'react-router';
-import { Button, Chip, Glass, useToast } from '@komogon/ui';
+import { Button, Glass, useToast } from '@komogon/ui';
 import { useRoutines, useTickRoutine } from '../lib/queries';
 import { occurrenceKey, useTickedRoutines } from '../lib/routine-ticks';
 
 /**
  * Today's outstanding recurring tasks: tick one off in place, or start it as a timed
- * session and tick it off at the end. Hidden entirely when the user has no routines, so
- * the page does not grow a permanently empty card.
+ * session and tick it off at the end. Only today's: a day that went by unticked is left
+ * behind rather than carried here, and can still be ticked late on the Routines page.
+ * Hidden entirely when the user has no routines, so the page does not grow a permanently
+ * empty card.
  */
 export function RoutinesDueCard({
   onStart,
@@ -20,7 +22,7 @@ export function RoutinesDueCard({
   const q = useRoutines();
   const tick = useTickRoutine();
   const { toast } = useToast();
-  const due = useTickedRoutines(q.data?.due ?? []);
+  const due = useTickedRoutines((q.data?.due ?? []).filter((o) => !o.overdue));
 
   if (!q.data || q.data.routines.length === 0) return null;
 
@@ -72,7 +74,6 @@ export function RoutinesDueCard({
                 <span className="flex-1 min-w-0 truncate">
                   <span className="routine-title">{o.title}</span>
                 </span>
-                {o.overdue && <Chip tone="warn">missed</Chip>}
                 <span className="muted text-sm tabular">{o.estimatedMinutes}m</span>
                 {onStart && (
                   <Button

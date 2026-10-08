@@ -104,7 +104,7 @@ describe('pickGreeting', () => {
   it('substitutes hours for the time-studied buckets', () => {
     const today = pickGreeting(ctx({ minutesToday: 150, seed: 'a' }));
     expect(today.bucket).toBe('studied-today');
-    expect(today.line).toMatch(/2 h 30 m|\bboard\b|block/);
+    expect(today.line).toMatch(/2 h 30 min|\bboard\b|block/);
 
     const week = pickGreeting(ctx({ minutesThisWeek: 60, seed: 'b' }));
     expect(week.bucket).toBe('week-progress');

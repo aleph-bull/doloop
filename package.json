@@ -17,7 +17,7 @@
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm audit:contrast && pnpm build",
     "audit:contrast": "pnpm --filter @komogon/ui audit:contrast",
-    "local:start": "node scripts/local/start.mjs",
+    "local:start": "node scripts/local/start.mjs --outside",
     "local:stop": "node scripts/local/stop.mjs",
     "local:update": "pnpm build && node scripts/local/update.mjs"
   },

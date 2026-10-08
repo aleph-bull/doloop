@@ -18,7 +18,7 @@ export interface TimerCardProps {
 }
 
 /**
- * The active session card (spec §4): all three modes, idle detection, end flow. The logic
+ * The active session card (spec §4): all three modes, the end flow. The logic
  * is `useSessionController`, shared with the focus screen; this is the dashboard's view.
  */
 export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCardProps) {
@@ -119,7 +119,7 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
             <Button onClick={() => ctl.extend(15)}>+15 min</Button>
           )}
           <span className="flex-1" />
-          <Button variant="danger" onClick={ctl.stop} disabled={ctl.busy || timer.phase === 'idle'}>
+          <Button variant="danger" onClick={ctl.stop} disabled={ctl.busy}>
             <Square size={14} aria-hidden /> Stop
           </Button>
         </div>

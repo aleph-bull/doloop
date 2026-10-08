@@ -83,6 +83,7 @@ export async function createNode(
       gradeMode: input.gradeMode ?? null,
       gradeOverall: input.gradeOverall ?? null,
       gradeCredits: input.gradeCredits ?? null,
+      childDefaults: input.childDefaults ?? null,
       createdAt: dt(now),
       updatedAt: dt(now),
     })
@@ -126,6 +127,7 @@ export async function updateNode(
     'gradeMode',
     'gradeOverall',
     'gradeCredits',
+    'childDefaults',
   ] as const) {
     if (patch[key] === undefined) continue;
     const v = patch[key];

@@ -109,7 +109,7 @@ export function TrackerDialog({ open, onClose, tracker }: TrackerDialogProps) {
         />
         <Input
           label="Unit"
-          hint="The plural word for one of them. It appears on the widget and its tooltips."
+          hint="What you are counting, like pages or minutes."
           placeholder="e.g. pages"
           value={unitLabel}
           onChange={(e) => setUnitLabel(e.target.value)}
@@ -118,7 +118,6 @@ export function TrackerDialog({ open, onClose, tracker }: TrackerDialogProps) {
         />
         <Input
           label="Daily goal (optional)"
-          hint="With a goal, the colours are fixed fractions of it, so a good day always looks the same. Without one, they follow your own best and worst days."
           type="number"
           min={0}
           step="any"

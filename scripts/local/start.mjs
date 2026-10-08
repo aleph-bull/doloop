@@ -3,6 +3,9 @@
  * http://localhost:5173. Whatever is already running on either port is left alone.
  * A shortcut in the Windows Startup folder runs this at sign-in.
  *
+ * `--outside` (what `pnpm local:start` and `local:update` pass) hands the start to Windows
+ * instead, so the servers outlive the terminal or Claude session that asked for them.
+ *
  * Run: pnpm local:start
  */
 import { join } from 'node:path';
@@ -15,15 +18,27 @@ import {
   PORTAL_DIR,
   PORTAL_PORT,
   hasBuild,
+  hasData,
   hasSnapshot,
   isListening,
   launch,
   log,
   readPids,
-  seedData,
+  sleep,
   snapshot,
+  startOutside,
   writePids,
 } from './lib.mjs';
+
+if (process.argv.includes('--outside') && process.platform === 'win32') {
+  startOutside();
+  const up = async () => (await isListening(API_PORT)) && (await isListening(PORTAL_PORT));
+  for (let i = 0; i < 60 && !(await up()); i++) await sleep(250);
+  console.log(
+    (await up()) ? 'Komogon is running on http://localhost:5173' : 'Started; see ~/.komogon/logs',
+  );
+  process.exit(0);
+}
 
 if (!hasSnapshot()) {
   if (!hasBuild()) {
@@ -37,8 +52,9 @@ const pids = readPids();
 
 if (await isListening(API_PORT)) {
   log(`Something is already on port ${API_PORT}; not starting the API.`);
+} else if (!hasData()) {
+  log(`No data at ${DATA_DIR}; not starting the API rather than start it on an empty one.`);
 } else {
-  seedData();
   // cwd is apps/api so the API still reads apps/api/.env.
   pids.api = launch('api', [join(API_BUILD, 'dist/index.js')], API_DIR, {
     HOST: '127.0.0.1',

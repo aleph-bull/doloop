@@ -22,7 +22,10 @@ export function FollowUpPrompt() {
     >
       <div>
         <h2 className="text-lg">How did {node.title} go?</h2>
-        <p className="muted text-sm">Shown next to your preparedness curve. Asked once.</p>
+        <p className="muted text-sm">
+          Asked once per task. Your answer goes on the chart of how ready you felt as the due date
+          came closer.
+        </p>
       </div>
       <div
         className="flex gap-2 items-center flex-wrap"

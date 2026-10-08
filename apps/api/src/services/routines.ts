@@ -22,13 +22,13 @@ import type { Db } from '../db/client';
 import {
   routineCompletions,
   routines,
-  users,
   xpTransactions,
   type RoutineCompletionRow,
   type RoutineRow,
 } from '../db/schema';
 import { badRequest, notFound } from '../errors';
 import { dt } from './sessions-mapper';
+import { addXp } from './users';
 
 export function toRoutine(row: RoutineRow): Routine {
   return {
@@ -263,9 +263,9 @@ export async function tickRoutine(
     })
     .returning();
 
-  const xpTotal = user.xp + award;
+  let xpTotal = user.xp;
   if (award > 0) {
-    await db.update(users).set({ xp: xpTotal }).where(eq(users.id, user.id));
+    xpTotal = (await addXp(db, user.id, award)).xp;
     await db
       .insert(xpTransactions)
       .values({ userId: user.id, at: dt(now), delta: award, kind: 'routine', ref: row!.id });
@@ -368,9 +368,9 @@ export async function untickRoutine(
   });
   if (!row) throw notFound('That day is not ticked off.');
   await db.delete(routineCompletions).where(eq(routineCompletions.id, row.id));
-  const xpTotal = Math.max(0, user.xp - row.xpAwarded);
+  let xpTotal = user.xp;
   if (row.xpAwarded > 0) {
-    await db.update(users).set({ xp: xpTotal }).where(eq(users.id, user.id));
+    xpTotal = (await addXp(db, user.id, -row.xpAwarded)).xp;
     await db.insert(xpTransactions).values({
       userId: user.id,
       at: dt(now),

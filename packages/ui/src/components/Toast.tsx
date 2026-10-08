@@ -5,11 +5,16 @@ export interface ToastItem {
   id: number;
   message: ReactNode;
   tone?: 'neutral' | 'ok' | 'warn';
+  /** Playing its exit; removed once that has run. */
+  leaving?: boolean;
 }
 
 interface ToastApi {
   toast: (message: ReactNode, opts?: { tone?: ToastItem['tone']; durationMs?: number }) => void;
 }
+
+/** How long the exit animation is given before the toast is taken out of the list. */
+const LEAVE_MS = 260;
 
 const ToastContext = createContext<ToastApi | null>(null);
 
@@ -20,9 +25,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const toast = useCallback<ToastApi['toast']>((message, opts) => {
     const id = ++seq.current;
     setItems((list) => [...list, { id, message, tone: opts?.tone ?? 'neutral' }]);
+    const shownFor = Math.max(LEAVE_MS, opts?.durationMs ?? 3500);
+    // It fades for the last moment of its time, then goes.
+    window.setTimeout(() => {
+      setItems((list) => list.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
+    }, shownFor - LEAVE_MS);
     window.setTimeout(() => {
       setItems((list) => list.filter((t) => t.id !== id));
-    }, opts?.durationMs ?? 3500);
+    }, shownFor);
   }, []);
 
   const api = useMemo(() => ({ toast }), [toast]);
@@ -32,7 +42,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div className="toast-stack" aria-live="polite">
         {items.map((t) => (
-          <div key={t.id} className="glass glass-strong toast">
+          <div key={t.id} className={`glass glass-strong toast${t.leaving ? ' is-leaving' : ''}`}>
             {t.message}
           </div>
         ))}

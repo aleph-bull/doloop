@@ -1,3 +1,5 @@
+import type { VisualizerPreset } from './types';
+
 /**
  * Audio analysis for the focus screen's visualizer.
  *
@@ -57,10 +59,10 @@ export const DEFAULT_ANALYSIS: VisualizerAnalysisConfig = {
   dropFloor: 0.24,
   averageFloor: 0.04,
   refractorySeconds: 0.1,
-  attackPerSecond: 40,
-  releasePerSecond: 4.5,
-  pulseReleasePerSecond: 5,
-  shockReleasePerSecond: 2.2,
+  attackPerSecond: 32,
+  releasePerSecond: 3.4,
+  pulseReleasePerSecond: 3.8,
+  shockReleasePerSecond: 1.7,
   silenceLevel: 0.012,
 };
 
@@ -393,8 +395,8 @@ export interface BarsConfig {
 
 export const DEFAULT_BARS: BarsConfig = {
   range: [35, 14_000],
-  attackPerSecond: 30,
-  releasePerSecond: 6,
+  attackPerSecond: 24,
+  releasePerSecond: 4.5,
   tilt: 0.8,
 };
 
@@ -587,4 +589,172 @@ export function shiftHue(hex: string, degrees: number): string {
       .toString(16)
       .padStart(2, '0');
   return `#${toHex(channel(h + 1 / 3))}${toHex(channel(h))}${toHex(channel(h - 1 / 3))}`;
+}
+
+/* ---------- presets ---------- */
+
+/**
+ * The listening: what counts as a beat, how loud a drop has to be, how quickly the light
+ * settles, and how the bars follow the spectrum. A preset is one of these, tuned for a
+ * kind of music; the custom preset builds one from six sliders.
+ */
+export interface VisualizerTuning {
+  analysis: VisualizerAnalysisConfig;
+  bars: BarsConfig;
+}
+
+export interface VisualizerPresetInfo {
+  label: string;
+  description: string;
+  tuning: VisualizerTuning;
+}
+
+/** Hz the custom band edges are kept within. */
+export const BASS_HZ_LIMITS = { min: 20, max: 500 } as const;
+
+/**
+ * The named presets. 'bass' is the original analysis, built around a kick over a full
+ * mix; 'balanced' listens wider and lower, for songs whose low end is there but not
+ * driving; 'mellow' hears soft swells as movement and lets everything settle slowly.
+ */
+export const VISUALIZER_PRESETS: Record<
+  Exclude<VisualizerPreset, 'custom'>,
+  VisualizerPresetInfo
+> = {
+  bass: {
+    label: 'Bass heavy',
+    description: 'Kicks and drops. Quick to react, quick to settle, hard to fool.',
+    tuning: { analysis: DEFAULT_ANALYSIS, bars: DEFAULT_BARS },
+  },
+  balanced: {
+    label: 'Balanced',
+    description: 'Pop, rock, hip hop, soundtracks: everything else. Listens a little wider.',
+    tuning: {
+      analysis: {
+        bassRange: [20, 200],
+        windowSeconds: 2,
+        transientRatio: 1.3,
+        strongRatio: 1.85,
+        floor: 0.045,
+        dropFloor: 0.17,
+        averageFloor: 0.035,
+        refractorySeconds: 0.12,
+        attackPerSecond: 28,
+        releasePerSecond: 2.6,
+        pulseReleasePerSecond: 3,
+        shockReleasePerSecond: 1.5,
+        silenceLevel: 0.012,
+      },
+      bars: { range: [35, 14_000], attackPerSecond: 21, releasePerSecond: 3.8, tilt: 0.8 },
+    },
+  },
+  mellow: {
+    label: 'Calm and mellow',
+    description: 'Acoustic, ambient, lo-fi, classical. Gentle swells count, and the light lingers.',
+    tuning: {
+      analysis: {
+        bassRange: [30, 260],
+        windowSeconds: 3,
+        transientRatio: 1.2,
+        strongRatio: 1.6,
+        floor: 0.025,
+        dropFloor: 0.1,
+        averageFloor: 0.02,
+        refractorySeconds: 0.18,
+        attackPerSecond: 14,
+        releasePerSecond: 1.65,
+        pulseReleasePerSecond: 2,
+        shockReleasePerSecond: 1.05,
+        silenceLevel: 0.008,
+      },
+      bars: { range: [35, 14_000], attackPerSecond: 11, releasePerSecond: 2.6, tilt: 1 },
+    },
+  },
+};
+
+/** The custom preset's sliders. All 0..1 except the band edges, in Hz. */
+export interface CustomTuningKnobs {
+  /** How small a jump in the low end counts as a beat. */
+  sensitivity: number;
+  /** How big and loud a jump has to be for the ring. */
+  drop: number;
+  /** How slowly the light settles after a beat. */
+  smoothing: number;
+  /** How far back a beat is judged against: a short memory reacts to every bar, a long one to the song. */
+  memory: number;
+  bassLow: number;
+  bassHigh: number;
+}
+
+const clamp01 = (v: number) => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.5);
+const lerp = (from: number, to: number, t: number) => from + (to - from) * t;
+
+/**
+ * Six sliders into a full tuning. Each slider moves the settings it is about between the
+ * calmest and the most eager values the named presets reach, and a little past them, so
+ * the custom preset can be quieter than 'mellow' or twitchier than 'bass'.
+ */
+export function customTuning(knobs: CustomTuningKnobs): VisualizerTuning {
+  const s = clamp01(knobs.sensitivity);
+  const d = clamp01(knobs.drop);
+  const m = clamp01(knobs.smoothing);
+  const mem = clamp01(knobs.memory);
+  const lo = Math.min(
+    Math.max(BASS_HZ_LIMITS.min, Number.isFinite(knobs.bassLow) ? knobs.bassLow : 20),
+    BASS_HZ_LIMITS.max - 10,
+  );
+  const hi = Math.min(
+    Math.max(lo + 10, Number.isFinite(knobs.bassHigh) ? knobs.bassHigh : 140),
+    BASS_HZ_LIMITS.max,
+  );
+  const transientRatio = lerp(1.9, 1.12, s);
+  return {
+    analysis: {
+      bassRange: [lo, hi],
+      windowSeconds: lerp(0.5, 4, mem),
+      transientRatio,
+      // The ring always needs more than a beat does, however the drop slider sits.
+      strongRatio: Math.max(transientRatio + 0.15, lerp(3, 1.4, d)),
+      floor: lerp(0.12, 0.02, s),
+      dropFloor: lerp(0.4, 0.08, d),
+      averageFloor: lerp(0.07, 0.015, s),
+      refractorySeconds: lerp(0.2, 0.08, s),
+      attackPerSecond: lerp(60, 12, m),
+      releasePerSecond: lerp(8, 1.5, m),
+      pulseReleasePerSecond: lerp(8, 2, m),
+      shockReleasePerSecond: lerp(3.5, 1, m),
+      silenceLevel: lerp(0.02, 0.006, s),
+    },
+    bars: {
+      range: DEFAULT_BARS.range,
+      attackPerSecond: lerp(45, 10, m),
+      releasePerSecond: lerp(9, 2.5, m),
+      tilt: DEFAULT_BARS.tilt,
+    },
+  };
+}
+
+/** The settings the tuning is read from: the preset, and the sliders for 'custom'. */
+export interface VisualizerTuningInput {
+  preset: VisualizerPreset;
+  customSensitivity: number;
+  customDrop: number;
+  customSmoothing: number;
+  customMemory: number;
+  customBassLow: number;
+  customBassHigh: number;
+}
+
+/** The tuning a user's settings ask for. An unknown preset reads as 'bass'. */
+export function visualizerTuning(input: VisualizerTuningInput): VisualizerTuning {
+  if (input.preset === 'custom')
+    return customTuning({
+      sensitivity: input.customSensitivity,
+      drop: input.customDrop,
+      smoothing: input.customSmoothing,
+      memory: input.customMemory,
+      bassLow: input.customBassLow,
+      bassHigh: input.customBassHigh,
+    });
+  return (VISUALIZER_PRESETS[input.preset] ?? VISUALIZER_PRESETS.bass).tuning;
 }
