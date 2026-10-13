@@ -319,11 +319,77 @@ function CourseCard({ node, grade, components, goalPercent }: CourseCardProps) {
   );
 }
 
+type SortKey = 'tasks' | 'name' | 'high' | 'low';
+const SORT_KEY = 'komogon.grades.sort';
+
+function readSort(): SortKey {
+  try {
+    const v = localStorage.getItem(SORT_KEY);
+    return v === 'name' || v === 'high' || v === 'low' ? v : 'tasks';
+  } catch {
+    return 'tasks';
+  }
+}
+
+type CourseEntry = { node: StudyNode; grade: CourseGrade; components: GradeComponent[] };
+
+/** Courses with nothing marked yet stay below the marked ones, whichever way the marks run. */
+function sortCourses(courses: CourseEntry[], key: SortKey): CourseEntry[] {
+  if (key === 'tasks') return courses;
+  const out = [...courses];
+  if (key === 'name') return out.sort((a, b) => a.node.title.localeCompare(b.node.title));
+  return out.sort((a, b) => {
+    const pa = a.grade.percent;
+    const pb = b.grade.percent;
+    if (pa === null || pb === null) return pa === pb ? 0 : pa === null ? 1 : -1;
+    return key === 'high' ? pb - pa : pa - pb;
+  });
+}
+
+/** Courses set to "Not graded", folded away at the bottom with a way to start tracking again. */
+function UngradedList({ courses }: { courses: CourseEntry[] }) {
+  const updateNode = useUpdateNode();
+  const { toast } = useToast();
+  return (
+    <details className="grade-ungraded">
+      <summary className="text-sm">Not graded ({courses.length})</summary>
+      <Panel as="ul" className="grade-ungraded-list">
+        {courses.map(({ node }) => (
+          <li key={node.id}>
+            <span className="truncate">{node.title}</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                updateNode.mutate(
+                  { id: node.id, patch: { gradeMode: 'components' } },
+                  { onError: (e) => toast(e instanceof Error ? e.message : 'Could not save that') },
+                )
+              }
+            >
+              Track grade
+            </Button>
+          </li>
+        ))}
+      </Panel>
+    </details>
+  );
+}
+
 /** Running grade per course, plus the GPA across them, on the user's own scale. */
 export function Grades() {
   const grades = useGrades();
   const me = useMe();
   const [goal, setGoal] = useState('');
+  const [sort, setSortState] = useState<SortKey>(readSort);
+  const setSort = (v: SortKey) => {
+    setSortState(v);
+    try {
+      localStorage.setItem(SORT_KEY, v);
+    } catch {
+      /* Storage blocked: the order just resets next visit. */
+    }
+  };
 
   if (grades.isError)
     return (
@@ -406,7 +472,24 @@ export function Grades() {
             )}
           </Panel>
 
-          {courses.map(({ node, grade, components }) => (
+          {tracked.length > 1 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="muted text-sm">Sort by</span>
+              <Segmented
+                ariaLabel="Sort courses"
+                value={sort}
+                onChange={setSort}
+                options={[
+                  { value: 'tasks', label: 'Tasks order' },
+                  { value: 'name', label: 'Name' },
+                  { value: 'high', label: 'Highest mark' },
+                  { value: 'low', label: 'Lowest mark' },
+                ]}
+              />
+            </div>
+          )}
+
+          {tracked.map(({ node, grade, components }) => (
             <CourseCard
               key={node.id}
               node={node}
@@ -417,6 +500,8 @@ export function Grades() {
               }
             />
           ))}
+
+          {ungraded.length > 0 && <UngradedList courses={ungraded} />}
         </>
       )}
     </div>
