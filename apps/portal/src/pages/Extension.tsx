@@ -5,7 +5,7 @@ export function Extension() {
   const status = useExtensionStatus();
   return (
     <div className="flex flex-col gap-6 max-w-2xl">
-      <h1 className="text-3xl">Chrome extension</h1>
+      <h1 className="page-title">Chrome extension</h1>
       <Glass className="p-5 flex items-center gap-3">
         <span className="flex-1">
           {status.connected
@@ -23,12 +23,12 @@ export function Extension() {
         </Chip>
       </Glass>
       <Panel className="p-5 flex flex-col gap-3 text-sm">
-        <h2 className="text-lg">What it does</h2>
+        <h2 className="card-title">What it does</h2>
         <ul className="list-disc pl-5 muted flex flex-col gap-1">
           <li>Start and stop sessions from the toolbar; the badge shows minutes left.</li>
           <li>Blocks the sites you list in Settings during work intervals, if you turn that on.</li>
         </ul>
-        <h2 className="text-lg mt-2">Install (developer build)</h2>
+        <h2 className="card-title mt-2">Install (developer build)</h2>
         <ol className="list-decimal pl-5 muted flex flex-col gap-1">
           <li>
             Build it: <code>pnpm --filter @komogon/extension build</code>

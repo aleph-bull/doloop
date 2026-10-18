@@ -19,6 +19,7 @@ import { rewardRoutes } from './routes/rewards';
 import { routineRoutes } from './routes/routines';
 import { trackerRoutes } from './routes/trackers';
 import { gradeRoutes } from './routes/grades';
+import { planRoutes } from './routes/plans';
 import { recapRoutes } from './routes/recap';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 
@@ -87,6 +88,7 @@ export async function buildServer(opts: BuildOptions) {
   routineRoutes(app, opts.db, clock);
   trackerRoutes(app, opts.db, clock);
   gradeRoutes(app, opts.db, clock);
+  planRoutes(app, opts.db, clock);
   assetRoutes(app, opts.db, clock);
   restDayRoutes(app, opts.db, clock);
   quoteRoutes(app, opts.db, clock);

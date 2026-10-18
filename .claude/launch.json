@@ -4,19 +4,29 @@
     {
       "name": "api",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@komogon/api", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/api",
+        "dev"
+      ],
       "port": 8787
     },
     {
       "name": "portal",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": ["--filter", "@komogon/portal", "dev"],
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/portal",
+        "dev"
+      ],
       "port": 5173
     },
     {
       "name": "sandbox-api",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["scripts/local/sandbox-api.mjs"],
+      "runtimeArgs": [
+        "scripts/local/sandbox-api.mjs"
+      ],
       "port": 8797
     },
     {
@@ -31,6 +41,37 @@
         "vite.sandbox.config.ts"
       ],
       "port": 5183
+    },
+    {
+      "name": "sandbox-2-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/local/sandbox-api.mjs"
+      ],
+      "env": {
+        "SANDBOX_API_PORT": "8798",
+        "SANDBOX_PORTAL_PORT": "5184",
+        "SANDBOX_DATA": ".pglite-sandbox-2"
+      },
+      "port": 8798
+    },
+    {
+      "name": "sandbox-2",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/portal",
+        "exec",
+        "vite",
+        "--config",
+        "vite.sandbox.config.ts"
+      ],
+      "env": {
+        "SANDBOX_API_PORT": "8798",
+        "SANDBOX_PORTAL_PORT": "5184",
+        "SANDBOX_DATA": ".pglite-sandbox-2"
+      },
+      "port": 5184
     }
   ]
 }

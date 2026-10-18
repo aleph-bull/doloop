@@ -573,6 +573,7 @@ function normaliseReview(r: z.infer<typeof reviewSchema> | null | undefined): Se
       completedCount: null,
       correctCount: null,
       mood: null,
+      effort: null,
       extraMinutesAdded: null,
       note: null,
     };
@@ -584,6 +585,7 @@ function normaliseReview(r: z.infer<typeof reviewSchema> | null | undefined): Se
     completedCount: r.completedCount ?? null,
     correctCount: r.correctCount ?? null,
     mood: r.mood ?? null,
+    effort: r.effort ?? null,
     extraMinutesAdded: r.extraMinutesAdded ?? null,
     note: r.note?.trim() ? r.note.trim() : null,
   };

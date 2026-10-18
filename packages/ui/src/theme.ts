@@ -1,3 +1,5 @@
+import { contrastRatio, hslToRgb, relativeLuminance, type RGB } from './contrast';
+
 export type ResolvedTheme = 'light' | 'dark';
 
 /**
@@ -36,7 +38,7 @@ export function applyTheme(opts: ApplyThemeOptions, root: HTMLElement = document
 }
 
 export interface PanelStyleOptions {
-  panel: 'opaque' | 'glass' | 'custom';
+  panel: 'opaque' | 'glass' | 'custom' | 'matte';
   /** Hex colour for 'custom'. */
   color: string;
   /** 0..1 for 'custom'. */
@@ -63,7 +65,7 @@ function lum([r, g, b]: [number, number, number]): number {
 export function applyPanelStyle(
   opts: PanelStyleOptions,
   root: HTMLElement = document.documentElement,
-) {
+): RGB | null {
   root.dataset.panel = opts.panel;
   const clear = [
     '--panel-fill',
@@ -74,7 +76,8 @@ export function applyPanelStyle(
   ];
   if (opts.panel !== 'custom') {
     for (const v of clear) root.style.removeProperty(v);
-    return;
+    root.style.removeProperty('--panel-accent-text');
+    return null;
   }
   const rgb = hexToRgbLocal(/^#[0-9a-f]{6}$/i.test(opts.color) ? opts.color : '#151827');
   const alpha = Math.min(1, Math.max(0.2, opts.alpha));
@@ -99,6 +102,7 @@ export function applyPanelStyle(
     '--panel-border',
     lightText ? 'rgb(255 255 255 / 0.14)' : 'rgb(15 18 32 / 0.12)',
   );
+  return composite;
 }
 
 /** The preset hues, mirroring tokens.css, so an accent can be named as a colour without the DOM. */
@@ -149,11 +153,59 @@ export function accentHexFor(accent: string): string {
   return hslToHex(preset[0], preset[1], preset[2]);
 }
 
+/** The accent setting as HSL numbers (h 0-360, s/l 0-100). */
+function accentHsl(accent: string): [number, number, number] {
+  if (accent.startsWith('custom:')) {
+    const [h, s, l] = accent.slice(7).split(',').map(Number);
+    return [(((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62];
+  }
+  return ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.indigo!;
+}
+
+/** Surfaces the accent text is measured against: a light card and a dark one. */
+const LIGHT_SURFACE: RGB = [244, 245, 248];
+const DARK_SURFACE: RGB = [30, 32, 44];
+
+/**
+ * The accent, moved in lightness only as far as it takes to reach `ratio` against `bg`.
+ * Keeps hue and saturation, so a link still reads as the user's colour.
+ */
+export function readableAccent([h, s, l]: [number, number, number], bg: RGB, ratio = 4.6): string {
+  const darker = relativeLuminance(bg) > 0.4;
+  let lig = l;
+  for (let i = 0; i < 100; i++) {
+    if (contrastRatio(hslToRgb(h, s, lig), bg) >= ratio) break;
+    lig += darker ? -1 : 1;
+    if (lig <= 0 || lig >= 100) break;
+  }
+  return `hsl(${h} ${s}% ${Math.max(0, Math.min(100, lig))}%)`;
+}
+
+/**
+ * Solid accent fills never go past this saturation. A full-strength accent as a solid
+ * block (a badge medal, a primary button, a "New" pill) read as a hot, saturated colour;
+ * the user asked for it gone everywhere (2026-10-17). Text and tints keep the accent as is.
+ */
+export const FILL_MAX_SATURATION = 45;
+
+/**
+ * The fill behind white labels: the accent's hue, muted to at most FILL_MAX_SATURATION, and
+ * taken just dark enough for white to read on it. Labels stay white on every accent; nothing
+ * goes black. Only the lightness moves after that: raising saturation as it darkened
+ * (2026-10-08) is what turned a dusty pink into a magenta.
+ */
+export function accentFill([h, s, l]: [number, number, number]): string {
+  const sat = Math.min(s, FILL_MAX_SATURATION);
+  let lig = l;
+  while (lig > 0 && contrastRatio(hslToRgb(h, sat, lig), [255, 255, 255]) < 4.5) lig -= 1;
+  return `hsl(${h} ${Math.round(sat)}% ${lig}%)`;
+}
+
 export interface UserThemeLike {
   theme: {
     mode: 'system' | 'light' | 'dark';
     accent: string;
-    panel: 'opaque' | 'glass' | 'custom';
+    panel: 'opaque' | 'glass' | 'custom' | 'matte';
     panelColor: string;
     panelAlpha: number;
   };
@@ -187,8 +239,14 @@ export function applyUserTheme(
     root.style.removeProperty('--accent-s');
     root.style.removeProperty('--accent-l');
   }
+  // Measured, not guessed: accent text that clears AA on light and dark surfaces, and the
+  // fill a white button label reads on.
+  const hsl = accentHsl(settings.theme.accent);
+  root.style.setProperty('--accent-text-on-light', readableAccent(hsl, LIGHT_SURFACE));
+  root.style.setProperty('--accent-text-on-dark', readableAccent(hsl, DARK_SURFACE));
+  root.style.setProperty('--accent-fill', accentFill(hsl));
   const resolved = resolveTheme(settings.theme.mode);
-  applyPanelStyle(
+  const panelBehind = applyPanelStyle(
     {
       panel: settings.theme.panel,
       color: settings.theme.panelColor,
@@ -197,6 +255,8 @@ export function applyUserTheme(
     },
     root,
   );
+  // A custom panel colour gets its own accent text, measured against that colour.
+  if (panelBehind) root.style.setProperty('--panel-accent-text', readableAccent(hsl, panelBehind));
   return resolved;
 }
 

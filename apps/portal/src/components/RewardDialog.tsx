@@ -1,7 +1,8 @@
-import type { RewardView } from '@komogon/core';
-import { useState } from 'react';
-import { Button, Input, Modal, Textarea } from '@komogon/ui';
+import type { RewardUnlock, RewardView, StudyNode } from '@komogon/core';
+import { useMemo, useState } from 'react';
+import { Button, Input, Modal, Segmented, Select, Textarea } from '@komogon/ui';
 import type { RewardInput } from '../lib/api';
+import { useNodes } from '../lib/queries';
 
 export interface RewardDialogProps {
   open: boolean;
@@ -14,12 +15,37 @@ export interface RewardDialogProps {
 
 const SUGGESTIONS = ['🎮', '📱', '🍰', '🎧', '🧥', '🛌', '🍿', '⚽', '🎁'];
 
+/** Open tasks and tests, grouped under their course, plus the one already linked. */
+function useTaskChoices(keepId: string | null) {
+  const nodes = useNodes();
+  return useMemo(() => {
+    const all = nodes.data?.nodes ?? [];
+    const byId = new Map(all.map((n) => [n.id, n]));
+    const courseOf = (n: StudyNode): string => {
+      let cur: StudyNode | undefined = n;
+      while (cur?.parentId) cur = byId.get(cur.parentId);
+      return cur && cur.id !== n.id ? cur.title : 'Other';
+    };
+    const groups = new Map<string, StudyNode[]>();
+    for (const n of all) {
+      if (n.kind === 'course' || n.archived) continue;
+      if (n.completedAt && n.id !== keepId) continue;
+      const g = courseOf(n);
+      groups.set(g, [...(groups.get(g) ?? []), n]);
+    }
+    return [...groups.entries()];
+  }, [nodes.data, keepId]);
+}
+
 export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDialogProps) {
   const [name, setName] = useState(reward?.name ?? '');
   const [note, setNote] = useState(reward?.note ?? '');
   const [emoji, setEmoji] = useState(reward?.emoji ?? '');
   const [cost, setCost] = useState(String(reward?.costXp ?? limits.minCostXp));
   const [cooldown, setCooldown] = useState(String(reward?.cooldownDays ?? 0));
+  const [unlock, setUnlock] = useState<RewardUnlock>(reward?.unlock ?? 'xp');
+  const [taskId, setTaskId] = useState(reward?.unlockNodeId ?? '');
+  const taskGroups = useTaskChoices(reward?.unlockNodeId ?? null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -29,7 +55,8 @@ export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDi
 
   const save = async () => {
     if (!name.trim()) return setError('Give the reward a name.');
-    if (costInvalid)
+    if (unlock === 'task' && !taskId) return setError('Pick the task that unlocks it.');
+    if (unlock === 'xp' && costInvalid)
       return setError(`The price must be a whole number from ${limits.minCostXp} XP up.`);
     setBusy(true);
     setError(null);
@@ -38,8 +65,9 @@ export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDi
         name: name.trim(),
         note: note.trim() || null,
         emoji: emoji.trim() || null,
-        costXp: costNum,
-        cooldownDays: Number(cooldown) || 0,
+        ...(unlock === 'task'
+          ? { unlock, unlockNodeId: taskId, costXp: 0, cooldownDays: 0 }
+          : { unlock, unlockNodeId: null, costXp: costNum, cooldownDays: Number(cooldown) || 0 }),
       });
       onClose();
     } catch (err) {
@@ -99,27 +127,61 @@ export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDi
             />
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Price (XP)"
-            type="number"
-            min={limits.minCostXp}
-            max={limits.maxCostXp}
-            step={10}
-            value={cost}
-            onChange={(e) => setCost(e.target.value)}
-            hint={`At least ${limits.minCostXp} XP — about an hour of focused work.`}
-          />
-          <Input
-            label="Cooldown (days)"
-            type="number"
-            min={0}
-            max={limits.maxCooldownDays}
-            value={cooldown}
-            onChange={(e) => setCooldown(e.target.value)}
-            hint="0 means whenever you can afford it."
+        <div className="field">
+          <span className="field-label">How you earn it</span>
+          <Segmented
+            ariaLabel="How you earn it"
+            value={unlock}
+            onChange={(v) => setUnlock(v as RewardUnlock)}
+            options={[
+              { value: 'xp', label: 'Spend XP' },
+              { value: 'task', label: 'Finish a task' },
+            ]}
           />
         </div>
+        {unlock === 'task' ? (
+          <Select
+            label="Unlocks when this is done"
+            value={taskId}
+            onChange={(e) => setTaskId(e.target.value)}
+            hint="Mark it done in Tasks and the reward opens. It can be redeemed once."
+          >
+            <option value="" disabled>
+              Choose a task or test
+            </option>
+            {taskGroups.map(([course, list]) => (
+              <optgroup key={course} label={course}>
+                {list.map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {n.title}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </Select>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Price (XP)"
+              type="number"
+              min={limits.minCostXp}
+              max={limits.maxCostXp}
+              step={10}
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              hint={`At least ${limits.minCostXp} XP, which is about an hour of focus.`}
+            />
+            <Input
+              label="Cooldown (days)"
+              type="number"
+              min={0}
+              max={limits.maxCooldownDays}
+              value={cooldown}
+              onChange={(e) => setCooldown(e.target.value)}
+              hint="0 means whenever you can afford it."
+            />
+          </div>
+        )}
         <Textarea
           label="Note"
           placeholder="Optional — the grey one, size M"

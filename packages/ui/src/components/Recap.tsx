@@ -1,6 +1,7 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -47,6 +48,46 @@ export function useInView<T extends Element>(ref: RefObject<T | null>): boolean 
     return () => io.disconnect();
   }, [ref, seen]);
   return seen;
+}
+
+/**
+ * The figure's width in CSS pixels, so a chart draws at 1:1 and its 11px labels stay
+ * 11px however wide the tile is. `fallback` covers the first render and old browsers.
+ */
+export function useFigureWidth<T extends Element>(ref: RefObject<T | null>, fallback: number) {
+  const [width, setWidth] = useState(fallback);
+  // Before paint: a first frame at the fallback size would squeeze the drawing mid-animation.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const w = Math.round(el.getBoundingClientRect().width);
+      if (w > 0) setWidth((prev) => (Math.abs(prev - w) > 1 ? w : prev));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return width;
+}
+
+/** The element's height, kept current, for charts that grow to fill their tile. */
+export function useFigureHeight<T extends Element>(ref: RefObject<T | null>, fallback: number) {
+  const [height, setHeight] = useState(fallback);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      if (h > 0) setHeight((prev) => (Math.abs(prev - h) > 1 ? h : prev));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+  return height;
 }
 
 /* ---------- count up ---------- */
@@ -104,12 +145,15 @@ function Figure({
   table,
   className,
   figRef,
+  onTableToggle,
 }: {
   tip: Tip | null;
   children: ReactNode;
   table?: { caption: string; columns: string[]; rows: Array<Array<string | number>> };
   className?: string;
   figRef?: RefObject<HTMLElement | null>;
+  /** Told when "Show as a table" opens or closes. */
+  onTableToggle?: (open: boolean) => void;
 }) {
   return (
     <figure ref={figRef as RefObject<HTMLElement>} className={cn('rc-figure', className)}>
@@ -122,7 +166,7 @@ function Figure({
         )}
       </div>
       {table && table.rows.length > 0 && (
-        <details className="rc-table">
+        <details className="rc-table" onToggle={(e) => onTableToggle?.(e.currentTarget.open)}>
           <summary>Show as a table</summary>
           <DataTable caption={table.caption} columns={table.columns} rows={table.rows} />
         </details>
@@ -301,13 +345,13 @@ export function WeekBars({ days, fmt, ghostName, ariaLabel }: WeekBarsProps) {
   const figRef = useRef<HTMLElement>(null);
   const seen = useInView(figRef);
   const { tip, bind } = useTip();
-  const W = 640;
+  const W = useFigureWidth(figRef, 640);
   const H = 220;
   const top = 26;
   const base = H - 26;
   const max = Math.max(30, ...days.map((d) => Math.max(d.minutes, d.previousMinutes ?? 0)));
   const slot = W / days.length;
-  const bw = Math.min(24, slot * 0.46);
+  const bw = Math.min(36, slot * 0.46);
   const y = (m: number) => base - (m / max) * (base - top);
   const thin = days.length > 14;
   return (
@@ -586,23 +630,40 @@ export interface StackedDaysProps {
 /** What each day was made of: a column per day, a segment per course, 2px gaps between. */
 export function StackedDays({ days, series, fmt, ariaLabel }: StackedDaysProps) {
   const figRef = useRef<HTMLElement>(null);
+  const plotRef = useRef<HTMLDivElement>(null);
   const seen = useInView(figRef);
   const { tip, bind } = useTip();
-  const W = 640;
-  const H = 200;
+  const W = useFigureWidth(figRef, 640);
+  // As tall as the tile leaves room for, so the columns reach down to its bottom edge.
+  const measuredH = Math.max(200, useFigureHeight(plotRef, 200));
+  /**
+   * The chart's height, held while its table is open: the table then grows the tile instead
+   * of squeezing the chart, which would redraw it on every frame of the drop-down. Released
+   * once the table has finished folding away.
+   */
+  const [heldH, setHeldH] = useState<number | null>(null);
+  const releaseRef = useRef(0);
+  useEffect(() => () => window.clearTimeout(releaseRef.current), []);
+  const onTableToggle = (open: boolean) => {
+    window.clearTimeout(releaseRef.current);
+    if (open) setHeldH(measuredH);
+    else releaseRef.current = window.setTimeout(() => setHeldH(null), 400);
+  };
+  const H = heldH ?? measuredH;
   const top = 12;
-  const base = H - 24;
+  const base = H - 30;
   const totals = days.map((d) => d.segments.reduce((a, s) => a + s.minutes, 0));
   const max = Math.max(30, ...totals);
   const slot = W / days.length;
-  const bw = Math.min(24, slot * 0.5);
+  const bw = Math.min(36, slot * 0.5);
   const scale = (m: number) => (m / max) * (base - top);
   const labelOf = (key: string) => series.find((s) => s.key === key)?.label ?? key;
   return (
     <Figure
       figRef={figRef}
       tip={tip}
-      className={seen ? 'is-in' : undefined}
+      onTableToggle={onTableToggle}
+      className={cn('is-fill', seen && 'is-in')}
       table={{
         caption: ariaLabel,
         columns: ['Day', ...series.map((s) => s.label)],
@@ -612,47 +673,55 @@ export function StackedDays({ days, series, fmt, ariaLabel }: StackedDaysProps) 
         ]),
       }}
     >
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={ariaLabel}>
-        <line x1={0} x2={W} y1={base} y2={base} className="rc-axis" />
-        {days.map((d, i) => {
-          const cx = slot * i + slot / 2;
-          let y = base;
-          const segs = d.segments.filter((s) => s.minutes > 0);
-          return (
-            <g key={d.full}>
-              <g className="rc-col" style={{ '--i': i } as CSSProperties}>
-                <rect x={cx} y={base} width={0} height={0} />
-                {segs.map((s, j) => {
-                  const h = scale(s.minutes);
-                  y -= h;
-                  const last = j === segs.length - 1;
-                  const color = seriesColor(series.find((x) => x.key === s.key)?.colorIndex ?? -1);
-                  const drawH = Math.max(1, h - (j > 0 ? 2 : 0));
-                  return (
-                    <path
-                      key={s.key}
-                      d={
-                        last
-                          ? columnPath(cx - bw / 2, y, bw, drawH)
-                          : `M${cx - bw / 2},${y}h${bw}v${drawH}h${-bw}Z`
-                      }
-                      fill={color}
-                      {...bind(
-                        (cx / W) * 100,
-                        ((y + h / 2) / H) * 100,
-                        `${d.full} · ${labelOf(s.key)}: ${fmt(s.minutes)}`,
-                      )}
-                    />
-                  );
-                })}
+      <div
+        ref={plotRef}
+        className="rc-fill"
+        style={heldH !== null ? { flex: 'none', height: heldH } : undefined}
+      >
+        <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={ariaLabel}>
+          <line x1={0} x2={W} y1={base} y2={base} className="rc-axis" />
+          {days.map((d, i) => {
+            const cx = slot * i + slot / 2;
+            let y = base;
+            const segs = d.segments.filter((s) => s.minutes > 0);
+            return (
+              <g key={d.full}>
+                <g className="rc-col" style={{ '--i': i } as CSSProperties}>
+                  <rect x={cx} y={base} width={0} height={0} />
+                  {segs.map((s, j) => {
+                    const h = scale(s.minutes);
+                    y -= h;
+                    const last = j === segs.length - 1;
+                    const color = seriesColor(
+                      series.find((x) => x.key === s.key)?.colorIndex ?? -1,
+                    );
+                    const drawH = Math.max(1, h - (j > 0 ? 2 : 0));
+                    return (
+                      <path
+                        key={s.key}
+                        d={
+                          last
+                            ? columnPath(cx - bw / 2, y, bw, drawH)
+                            : `M${cx - bw / 2},${y}h${bw}v${drawH}h${-bw}Z`
+                        }
+                        fill={color}
+                        {...bind(
+                          (cx / W) * 100,
+                          ((y + h / 2) / H) * 100,
+                          `${d.full} · ${labelOf(s.key)}: ${fmt(s.minutes)}`,
+                        )}
+                      />
+                    );
+                  })}
+                </g>
+                <text x={cx} y={H - 8} textAnchor="middle" className="rc-tick is-lg">
+                  {d.label}
+                </text>
               </g>
-              <text x={cx} y={H - 6} textAnchor="middle" className="rc-tick">
-                {d.label}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
+            );
+          })}
+        </svg>
+      </div>
       {series.length > 1 && (
         <ul className="rc-legend">
           {series.map((s) => (
@@ -682,7 +751,7 @@ export function Climb({ points, milestones, fmtDate, ariaLabel }: ClimbProps) {
   const seen = useInView(figRef);
   const { tip, bind } = useTip();
   const id = useId();
-  const W = 640;
+  const W = useFigureWidth(figRef, 640);
   const H = 200;
   const pad = { l: 36, r: 16, t: 16, b: 24 };
   if (points.length === 0) return null;
@@ -772,13 +841,13 @@ export function Columns({ bars, fmt, ariaLabel, columnName }: ColumnsProps) {
   const figRef = useRef<HTMLElement>(null);
   const seen = useInView(figRef);
   const { tip, bind } = useTip();
-  const W = 400;
+  const W = useFigureWidth(figRef, 400);
   const H = 180;
   const top = 22;
   const base = H - 26;
   const max = Math.max(1, ...bars.map((b) => b.value));
   const slot = W / bars.length;
-  const bw = Math.min(24, slot * 0.5);
+  const bw = Math.min(36, slot * 0.5);
   return (
     <Figure
       figRef={figRef}

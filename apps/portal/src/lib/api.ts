@@ -52,6 +52,12 @@ import type {
   SessionHistogram,
   StudyVsGrades,
   SubjectSlice,
+  DrillItem,
+  DrillResult,
+  PlanPacing,
+  PlanWeek,
+  StudyPlan,
+  TopicProgress,
 } from '@komogon/core';
 
 export type RecapRangeParam = 'week' | 'month' | 'all';
@@ -189,6 +195,7 @@ export interface ReviewInput {
   completedCount?: number | null;
   correctCount?: number | null;
   mood?: number | null;
+  effort?: number | null;
   extraMinutesAdded?: number | null;
   note?: string | null;
 }
@@ -484,6 +491,23 @@ export const api = {
     request<{ xpTotal: number; xpRemoved: number }>('DELETE', `/api/routines/${id}/tick/${date}`),
   importRoutineIcs: (ics: string, defaultEstimate?: number) =>
     request<ImportIcsResponse>('POST', '/api/routines/import-ics', { ics, defaultEstimate }),
+
+  plans: () => request<{ plans: PlanSummary[] }>('GET', '/api/plans'),
+  plan: (id: string) => request<PlanView>('GET', `/api/plans/${id}`),
+  createPlan: (input: PlanInput) => request<PlanView>('POST', '/api/plans', input),
+  updatePlan: (id: string, patch: PlanPatch) =>
+    request<PlanView>('PATCH', `/api/plans/${id}`, patch),
+  deletePlan: (id: string) => request<void>('DELETE', `/api/plans/${id}`),
+  addTopic: (planId: string, input: TopicInput) =>
+    request<PlanView>('POST', `/api/plans/${planId}/topics`, input),
+  updateTopic: (id: string, patch: TopicPatch) =>
+    request<PlanView>('PATCH', `/api/plan-topics/${id}`, patch),
+  deleteTopic: (id: string) => request<PlanView>('DELETE', `/api/plan-topics/${id}`),
+  logDrill: (topicId: string, input: DrillInput) =>
+    request<DrillOutcome>('POST', `/api/plan-topics/${topicId}/drills`, input),
+  answerItem: (id: string, result: DrillResult) =>
+    request<DrillOutcome>('POST', `/api/drill-items/${id}/answer`, { result }),
+  deleteItem: (id: string) => request<PlanView>('DELETE', `/api/drill-items/${id}`),
 };
 
 export interface RewardInput {
@@ -492,6 +516,8 @@ export interface RewardInput {
   emoji?: string | null;
   costXp: number;
   cooldownDays?: number;
+  unlock?: 'xp' | 'task';
+  unlockNodeId?: string | null;
 }
 
 export interface RewardsResponse {
@@ -583,4 +609,82 @@ export interface ComponentInput {
   title: string;
   weight: number;
   score?: number | null;
+}
+
+/* ---------- study plans ---------- */
+
+export interface PlanView {
+  today: string;
+  plan: StudyPlan;
+  color: string | null;
+  topics: TopicProgress[];
+  pacing: PlanPacing;
+  rebalance: { raiseWeeklyTo: number | null; moveTargetTo: string | null };
+  weeks: PlanWeek[];
+  streak: number;
+  queue: Array<DrillItem & { topicTitle: string }>;
+  laterCount: number;
+  milestones: Array<{ topicId: string; title: string; at: string }>;
+  maintenance: Routine | null;
+  totals: {
+    minutes: number;
+    rounds: number;
+    answers: number;
+    accuracy: number | null;
+    cleared: number;
+    days: number;
+  };
+}
+
+export interface PlanSummary {
+  plan: StudyPlan;
+  color: string | null;
+  pacing: PlanPacing;
+  upNext: { id: string; title: string } | null;
+  dueItems: number;
+  streak: number;
+}
+
+export interface TopicInput {
+  title: string;
+  plannedMinutes: number;
+  resource?: string | null;
+  practice?: boolean;
+}
+
+export interface TopicPatch extends Partial<TopicInput> {
+  sortOrder?: number;
+  done?: boolean;
+}
+
+export interface PlanInput {
+  title: string;
+  weeklyMinutes: number;
+  targetDate?: string | null;
+  method?: string | null;
+  topics: TopicInput[];
+  maintenance?: { title: string; minutes: number } | null;
+}
+
+export interface PlanPatch {
+  title?: string;
+  weeklyMinutes?: number;
+  targetDate?: string | null;
+  method?: string | null;
+  masteryTarget?: number;
+}
+
+export interface DrillInput {
+  ok: number;
+  shaky: number;
+  miss: number;
+  misses?: string[];
+  shakies?: string[];
+  sessionId?: string | null;
+}
+
+export interface DrillOutcome {
+  view: PlanView;
+  /** Set when this answer is what made the topic mastered. */
+  mastered: { id: string; title: string } | null;
 }

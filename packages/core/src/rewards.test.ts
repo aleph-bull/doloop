@@ -17,6 +17,8 @@ const reward = (over: Partial<CustomReward> = {}): CustomReward => ({
   note: null,
   emoji: '📱',
   costXp: 200,
+  unlock: 'xp',
+  unlockNodeId: null,
   cooldownDays: 0,
   archived: false,
   createdAt: '2026-09-01T12:00:00.000Z',
@@ -41,6 +43,8 @@ describe('validateRewardDraft', () => {
       emoji: '🧥',
       costXp: 500,
       cooldownDays: 0,
+      unlock: 'xp',
+      unlockNodeId: null,
     });
   });
 
@@ -145,5 +149,31 @@ describe('toRewardView', () => {
 
   it('never calls an archived reward redeemable', () => {
     expect(toRewardView(reward({ archived: true }), 9999, now, TZ).redeemable).toBe(false);
+  });
+});
+
+describe('task rewards', () => {
+  const now = '2026-09-20T15:00:00.000Z';
+  const task = (done: boolean) => ({ id: 'n1', title: 'Midterm', kind: 'assessment', done });
+  const tied = (over: Partial<CustomReward> = {}) =>
+    reward({ unlock: 'task', unlockNodeId: 'n1', costXp: 0, ...over });
+
+  it('needs a task and costs no XP', () => {
+    expect(validateRewardDraft({ name: 'x', costXp: 0, unlock: 'task' }).ok).toBe(false);
+    const r = validateRewardDraft({ name: 'x', costXp: 999, unlock: 'task', unlockNodeId: 'n1' });
+    expect(r.ok && r.value.costXp).toBe(0);
+  });
+
+  it('opens once the task is done, then only once', () => {
+    expect(toRewardView(tied(), 0, now, TZ, task(false)).redeemable).toBe(false);
+    expect(toRewardView(tied(), 0, now, TZ, task(true)).redeemable).toBe(true);
+    expect(toRewardView(tied({ redeemedCount: 1 }), 0, now, TZ, task(true)).redeemable).toBe(false);
+    expect(toRewardView(tied(), 0, now, TZ, null).redeemable).toBe(false);
+  });
+
+  it('redeems without spending XP', () => {
+    expect(redeemReward(10, tied(), now, TZ, task(false)).ok).toBe(false);
+    const r = redeemReward(10, tied(), now, TZ, task(true));
+    expect(r.ok && r.value.xp).toBe(10);
   });
 });

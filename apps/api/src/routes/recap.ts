@@ -32,6 +32,7 @@ import { gradeBook } from '../services/grades';
 import { listNodes } from '../services/nodes';
 import { loadCompletedSessions, paceContext } from '../services/pace';
 import { listBlocks } from '../services/planned-blocks';
+import { routineTickDates } from '../services/routines';
 import { screenFacts, type FetchLike, type TmdbCredentials } from '../services/tmdb';
 import { settingsOf, syncStreak } from '../services/users';
 
@@ -101,13 +102,14 @@ export function recapRoutes(
       .parse(req.query);
     const tz = req.user.timezone;
     const settings = settingsOf(req.user);
-    const [sessions, nodes, blocks, streakSync, ctx, grades] = await Promise.all([
+    const [sessions, nodes, blocks, streakSync, ctx, grades, routineTicks] = await Promise.all([
       loadCompletedSessions(db, req.user.id),
       listNodes(db, req.user.id, true),
       listBlocks(db, req.user.id),
       syncStreak(db, req.user, now),
       paceContext(db, req.user, now),
       gradeBook(db, req.user),
+      routineTickDates(db, req.user.id),
     ]);
     const streak = streakSync.streak;
     const today = toLocalDate(now, tz);
@@ -200,7 +202,15 @@ export function recapRoutes(
         streak,
       }),
       streak: { current: streak.current, longest: streak.longest, freezesHeld: streak.freezesHeld },
-      records: personalRecords({ sessions, nodes, timezone: tz, now, weekStart, streak }),
+      records: personalRecords({
+        sessions,
+        nodes,
+        timezone: tz,
+        now,
+        weekStart,
+        streak,
+        routineTicks,
+      }),
       personality: studyPersonality({ sessions, timezone: tz, now }),
       forecast: hoursForecast({
         totalMinutes: cumulative.totalMinutes,

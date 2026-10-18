@@ -30,6 +30,13 @@ export interface CustomReward {
   /** A single emoji shown on the card, or null for the default icon. */
   emoji: string | null;
   costXp: number;
+  /**
+   * How the reward is earned: 'xp' is bought with XP; 'task' costs nothing and opens once
+   * the linked task or test is marked done, then it can be redeemed once.
+   */
+  unlock: RewardUnlock;
+  /** The task or test a 'task' reward waits on. Null if that task was deleted. */
+  unlockNodeId: string | null;
   /** 0 = redeemable whenever it is affordable. */
   cooldownDays: number;
   archived: boolean;
@@ -38,16 +45,31 @@ export interface CustomReward {
   redeemedCount: number;
 }
 
+export type RewardUnlock = 'xp' | 'task';
+
 export interface RewardDraft {
   name: string;
   note?: string | null;
   emoji?: string | null;
+  /** Ignored (stored as 0) for a 'task' reward. */
   costXp: number;
   cooldownDays?: number;
+  unlock?: RewardUnlock;
+  unlockNodeId?: string | null;
+}
+
+/** The task a 'task' reward is waiting on, as far as the reward needs to know. */
+export interface UnlockTask {
+  id: string;
+  title: string;
+  kind: string;
+  done: boolean;
 }
 
 /** A reward as the client sees it, with the affordability/cooldown verdict resolved. */
 export interface RewardView extends CustomReward {
+  /** For a 'task' reward: the task it waits on, or null if that task is gone. */
+  unlockTask: UnlockTask | null;
   affordable: boolean;
   /** Null when it can be redeemed now, else the date the cooldown lifts. */
   availableOn: ISODate | null;
@@ -65,12 +87,30 @@ export function validateRewardDraft(draft: RewardDraft): Result<Required<RewardD
   if (note.length > REWARDS.NOTE_MAX)
     return { ok: false, reason: `Notes are at most ${REWARDS.NOTE_MAX} characters.` };
 
+  const unlock = draft.unlock ?? 'xp';
+  if (unlock === 'task') {
+    if (!draft.unlockNodeId) return { ok: false, reason: 'Pick the task that unlocks it.' };
+    const emoji = (draft.emoji ?? '').trim();
+    return {
+      ok: true,
+      value: {
+        name,
+        note: note || null,
+        emoji: emoji ? [...emoji][0]! : null,
+        costXp: 0,
+        cooldownDays: 0,
+        unlock,
+        unlockNodeId: draft.unlockNodeId,
+      },
+    };
+  }
+
   if (!Number.isFinite(draft.costXp) || !Number.isInteger(draft.costXp))
     return { ok: false, reason: 'The price must be a whole number of XP.' };
   if (draft.costXp < REWARDS.MIN_COST_XP)
     return {
       ok: false,
-      reason: `The lowest price is ${REWARDS.MIN_COST_XP} XP — about an hour of focused work.`,
+      reason: `The lowest price is ${REWARDS.MIN_COST_XP} XP, which is about an hour of focus.`,
     };
   if (draft.costXp > REWARDS.MAX_COST_XP)
     return { ok: false, reason: `The highest price is ${REWARDS.MAX_COST_XP} XP.` };
@@ -91,6 +131,8 @@ export function validateRewardDraft(draft: RewardDraft): Result<Required<RewardD
       emoji: emoji ? [...emoji][0]! : null,
       costXp: draft.costXp,
       cooldownDays,
+      unlock,
+      unlockNodeId: null,
     },
   };
 }
@@ -115,11 +157,23 @@ export function toRewardView(
   xp: number,
   now: ISODateTime,
   timezone: string,
+  unlockTask: UnlockTask | null = null,
 ): RewardView {
+  if (reward.unlock === 'task') {
+    // One-off: finishing the task opens it, and redeeming it once closes it for good.
+    return {
+      ...reward,
+      unlockTask,
+      affordable: true,
+      availableOn: null,
+      redeemable: !reward.archived && !!unlockTask?.done && reward.redeemedCount === 0,
+    };
+  }
   const availableOn = cooldownUntil(reward, now, timezone);
   const affordable = xp >= reward.costXp;
   return {
     ...reward,
+    unlockTask: null,
     affordable,
     availableOn,
     redeemable: !reward.archived && affordable && availableOn === null,
@@ -131,14 +185,31 @@ export interface RedeemResult {
   reward: CustomReward;
 }
 
-/** Spend XP on a reward. Refuses when archived, unaffordable, or still cooling down. */
+/**
+ * Spend XP on a reward, or open a task reward. Refuses when archived, unaffordable, still
+ * cooling down, or (for a task reward) when the task isn't done or it was already redeemed.
+ */
 export function redeemReward(
   xp: number,
   reward: CustomReward,
   now: ISODateTime,
   timezone: string,
+  unlockTask: UnlockTask | null = null,
 ): Result<RedeemResult> {
   if (reward.archived) return { ok: false, reason: 'That reward is archived.' };
+  if (reward.unlock === 'task') {
+    if (reward.redeemedCount > 0) return { ok: false, reason: 'Already redeemed.' };
+    if (!unlockTask) return { ok: false, reason: 'The task for this reward was deleted.' };
+    if (!unlockTask.done)
+      return { ok: false, reason: `Finish ${unlockTask.title} first, then it's yours.` };
+    return {
+      ok: true,
+      value: {
+        xp,
+        reward: { ...reward, lastRedeemedAt: now, redeemedCount: reward.redeemedCount + 1 },
+      },
+    };
+  }
   if (xp < reward.costXp) {
     const short = reward.costXp - xp;
     return { ok: false, reason: `${short} XP short — ${reward.name} costs ${reward.costXp} XP.` };

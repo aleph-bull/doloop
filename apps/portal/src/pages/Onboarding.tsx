@@ -56,7 +56,7 @@ export function Onboarding() {
   return (
     <>
       <Backdrop backgroundId="aurora" theme={theme} />
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-center justify-center p-4 on-backdrop">
         <Glass className="p-8 w-full max-w-md flex flex-col gap-6" strong>
           <div className="flex gap-1" aria-label={`Step ${step + 1} of 4`}>
             {[0, 1, 2, 3].map((i) => (

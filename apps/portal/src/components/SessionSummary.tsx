@@ -1,7 +1,7 @@
-import { badgeByKey, levelProgress, type SessionXpBreakdown } from '@komogon/core';
-import { Award, Flame, Star, TrendingUp } from 'lucide-react';
+import { badgeByKey, formatClock, levelProgress, type SessionXpBreakdown } from '@komogon/core';
+import { Award, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
-import { ProgressBar } from '@komogon/ui';
+import { CountUp, ProgressBar } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
 import { fmtMinutes } from '../lib/format';
 import { TrimSessionDialog } from './TrimSessionDialog';
@@ -14,6 +14,9 @@ export interface SessionSummaryProps {
 }
 
 /** The bonuses in the order they are earned, with the words for each. */
+/** How hard it felt, as the save sheet put it. */
+const EFFORT_WORD = ['Easy', 'Moderate', 'Hard', 'Very hard', 'All out'];
+
 const BONUS_LINES: Array<{ key: keyof SessionXpBreakdown; label: string }> = [
   { key: 'base', label: 'Focused time' },
   { key: 'reviewSubmitted', label: 'Review filled in' },
@@ -24,13 +27,10 @@ const BONUS_LINES: Array<{ key: keyof SessionXpBreakdown; label: string }> = [
   { key: 'streakBonus', label: 'Streak bonus' },
 ];
 
-function fmtFocused(seconds: number): string {
-  return seconds > 0 && seconds < 30 ? '< 1 m' : fmtMinutes(seconds / 60);
-}
-
 /**
- * The end-of-session screen, laid out like the end of a level: the score, where it came
- * from, the numbers that mattered, the level bar, and any achievements, revealed in turn.
+ * The end-of-session screen, laid out like the end of a run: the time you put in as the
+ * hero, the score it earned and where that came from, then the streak, the level bar and
+ * any achievements, revealed in turn.
  * Shared by the dashboard's overlay and the focus screen's ended state.
  */
 export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSummaryProps) {
@@ -38,6 +38,8 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
   const lp = levelProgress(summary.xpTotal);
   const { workSeconds, breakSeconds, idleSeconds } = summary.session;
   const xp = summary.xp;
+  const effortScore = summary.session.review?.effort ?? null;
+  const effort = effortScore ? EFFORT_WORD[effortScore - 1] : null;
   const bonuses = BONUS_LINES.filter((b) => (xp[b.key] as number) > 0);
   const badges = summary.badges
     .map((k) => badgeByKey(k))
@@ -53,23 +55,30 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         </h2>
       </div>
 
-      <div className="summary-score summary-reveal" style={stagger()}>
-        <Star size={22} aria-hidden className="summary-score-icon" />
-        <div>
-          <div className="summary-score-value tabular">
-            {xp.withheld ? '0' : `+${xp.total}`}
-            <span className="summary-score-unit"> XP</span>
-          </div>
-          <div className="summary-score-note">
-            {xp.withheld
-              ? 'Ended early.'
-              : `Score for this session${summary.leveledUp ? ` · level ${summary.levelAfter} reached` : ''}`}
-          </div>
-        </div>
+      <div className="summary-hero summary-reveal" style={stagger()}>
+        <span className="summary-hero-label">Focused time</span>
+        <span className="summary-hero-figure tabular">
+          <CountUp value={workSeconds} format={(v) => formatClock(v)} duration={900} />
+        </span>
+        <span className={`summary-xp${xp.withheld ? ' is-withheld' : ''}`}>
+          <Sparkles size={15} aria-hidden />
+          {xp.withheld ? (
+            'Ended early, so no XP this time'
+          ) : (
+            <>
+              <strong className="tabular">+{xp.total} XP</strong>
+              {summary.leveledUp && <span> · level {summary.levelAfter} reached</span>}
+            </>
+          )}
+        </span>
       </div>
 
       {bonuses.length > 0 && !xp.withheld && (
-        <ul className="summary-bonuses summary-reveal" style={stagger()}>
+        <ul
+          className="summary-bonuses summary-reveal"
+          style={stagger()}
+          aria-label="Where the XP came from"
+        >
           {bonuses.map((b) => (
             <li key={b.key}>
               <span>{b.label}</span>
@@ -80,10 +89,12 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
       )}
 
       <dl className="summary-stats summary-reveal" style={stagger()}>
-        <div>
-          <dt>Focused</dt>
-          <dd className="tabular">{fmtFocused(workSeconds)}</dd>
-        </div>
+        {effort && (
+          <div>
+            <dt>Effort</dt>
+            <dd>{effort}</dd>
+          </div>
+        )}
         {breakSeconds > 0 && (
           <div>
             <dt>Breaks</dt>
@@ -103,7 +114,7 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
           <dd className="tabular">
             {summary.streak.current} day{summary.streak.current === 1 ? '' : 's'}
             {summary.streak.longest > summary.streak.current && (
-              <span className="summary-stat-aside"> · best {summary.streak.longest}</span>
+              <span className="summary-stat-aside">Best {summary.streak.longest}</span>
             )}
           </dd>
         </div>
@@ -115,7 +126,7 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
             {lp.level}
             <span className="summary-stat-aside">
               {' '}
-              · {lp.toNext} XP to {lp.level + 1}
+              {lp.toNext} XP to {lp.level + 1}
             </span>
           </dd>
         </div>

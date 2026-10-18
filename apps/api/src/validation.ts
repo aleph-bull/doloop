@@ -1,8 +1,11 @@
 import {
   BASS_HZ_LIMITS,
+  CUSTOM_ACCENT,
   CUSTOM_BACKGROUND_UPLOAD,
+  MAX_SAVED_ACCENTS,
   POMODORO_LIMITS,
   SOUND_PRESETS,
+  STREAK_DAY_START,
 } from '@komogon/core';
 import { z } from 'zod';
 
@@ -96,6 +99,7 @@ export const reviewSchema = z.object({
   completedCount: z.number().int().min(0).max(100_000).nullable().optional(),
   correctCount: z.number().int().min(0).max(100_000).nullable().optional(),
   mood: z.number().int().min(1).max(5).nullable().optional(),
+  effort: z.number().int().min(1).max(5).nullable().optional(),
   extraMinutesAdded: z.number().int().min(0).max(100_000).nullable().optional(),
   note: z.string().max(2000).nullable().optional(),
 });
@@ -164,7 +168,17 @@ export const settingsSchema = z
     profile: z.object({ name: z.string().trim().max(60).nullable() }).partial(),
     pomodoro: pomodoro.partial(),
     review: z.object({ mode: z.enum(['quick', 'full', 'off']) }).partial(),
-    streak: z.object({ minMinutes: z.number().int().min(1).max(240) }).partial(),
+    // dayStartChangedAt is the server's to set; a client can only ask for a new hour.
+    streak: z
+      .object({
+        minMinutes: z.number().int().min(1).max(240),
+        dayStartHour: z
+          .number()
+          .int()
+          .min(STREAK_DAY_START.MIN_HOUR)
+          .max(STREAK_DAY_START.MAX_HOUR),
+      })
+      .partial(),
     goals: z.object({ weeklyMinutes: z.number().int().min(30).max(10_080) }).partial(),
     pace: z.object({ maxComfortableMinutesPerDay: z.number().int().min(15).max(1440) }).partial(),
     sounds: z
@@ -192,10 +206,11 @@ export const settingsSchema = z
         backgroundId: z.string().max(32),
         // Only the uploaded image (or none). Remote URLs are deliberately not accepted.
         customBackgroundUrl: z.literal(CUSTOM_BACKGROUND_UPLOAD).nullable(),
-        panel: z.enum(['opaque', 'glass', 'custom']),
+        panel: z.enum(['opaque', 'glass', 'custom', 'matte']),
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),
         extensionBackground: z.string().max(32),
+        savedAccents: z.array(z.string().regex(CUSTOM_ACCENT)).max(MAX_SAVED_ACCENTS),
       })
       .partial(),
     blocking: z
@@ -211,10 +226,12 @@ export const settingsSchema = z
         logSessions: z.boolean(),
       })
       .partial(),
+    routines: z.object({ missedClearedThrough: isoDate.nullable() }).partial(),
     grading: z
       .object({
         scale: z.array(gradeBand).min(1).max(40),
         goalGpa: z.number().min(0).max(10).nullable(),
+        targetPercent: z.number().min(0).max(200).nullable(),
       })
       .partial(),
     visualizer: z
@@ -331,3 +348,81 @@ export const componentSchema = z.object({
 });
 
 export const updateComponentSchema = componentSchema.omit({ nodeId: true }).partial().strict();
+
+/* ---------- study plans ---------- */
+
+const planTopicFields = z.object({
+  title: z.string().trim().min(1).max(200),
+  plannedMinutes: z.number().int().min(0).max(100_000),
+  resource: z.string().trim().max(500).nullable().optional(),
+  practice: z.boolean().optional(),
+});
+
+export const createPlanSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    weeklyMinutes: z
+      .number()
+      .int()
+      .min(15)
+      .max(7 * 24 * 60),
+    targetDate: isoDate.nullable().optional(),
+    startedOn: isoDate.optional(),
+    method: z.string().trim().max(2000).nullable().optional(),
+    masteryTarget: z.number().min(0.5).max(1).optional(),
+    color: z.string().max(32).nullable().optional(),
+    topics: z.array(planTopicFields).min(1).max(100),
+    /** A daily top-up (re-drill misses, read the news), made as a routine on the plan. */
+    maintenance: z
+      .object({
+        title: z.string().trim().min(1).max(200),
+        minutes: z.number().int().min(1).max(600),
+      })
+      .nullable()
+      .optional(),
+  })
+  .strict();
+
+export const updatePlanSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200),
+    weeklyMinutes: z
+      .number()
+      .int()
+      .min(15)
+      .max(7 * 24 * 60),
+    targetDate: isoDate.nullable(),
+    method: z.string().trim().max(2000).nullable(),
+    masteryTarget: z.number().min(0.5).max(1),
+  })
+  .partial()
+  .strict();
+
+export const createTopicSchema = planTopicFields.strict();
+
+export const updateTopicSchema = planTopicFields
+  .partial()
+  .extend({ sortOrder: z.number().optional(), done: z.boolean().optional() })
+  .strict();
+
+export const drillResult = z.enum(['ok', 'shaky', 'miss']);
+
+export const logDrillSchema = z
+  .object({
+    ok: z.number().int().min(0).max(1000),
+    shaky: z.number().int().min(0).max(1000),
+    miss: z.number().int().min(0).max(1000),
+    /** Missed or shaky questions by name, queued to come back tomorrow. */
+    misses: z.array(z.string().trim().min(1).max(300)).max(200).optional(),
+    shakies: z.array(z.string().trim().min(1).max(300)).max(200).optional(),
+    sessionId: uuid.nullable().optional(),
+  })
+  .strict()
+  .refine(
+    (d) => d.ok + d.shaky + d.miss > 0 || (d.misses?.length ?? 0) + (d.shakies?.length ?? 0) > 0,
+    {
+      message: 'Log at least one answer',
+    },
+  );
+
+export const drillItemResultSchema = z.object({ result: drillResult }).strict();

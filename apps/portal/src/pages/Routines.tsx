@@ -11,10 +11,11 @@ import { StartSessionDialog } from '../components/StartSessionDialog';
 import { fmtDate } from '../lib/format';
 import { occurrenceKey, useTickedRoutines } from '../lib/routine-ticks';
 import {
-  useActiveSession,
+  useClearMissedRoutines,
   useCreateRoutine,
   useDeleteRoutine,
   useImportRoutineIcs,
+  useMe,
   useNodes,
   useRoutines,
   useTickRoutine,
@@ -69,11 +70,11 @@ function OccurrenceRow({
       >
         <Check size={14} aria-hidden />
       </button>
-      <span className="flex-1 min-w-0 truncate">
+      <span className="routine-name">
         <span className="routine-title">{occ.title}</span>
       </span>
       {occ.overdue && <Chip tone="warn">missed</Chip>}
-      <span className="muted text-sm tabular">{occ.estimatedMinutes}m</span>
+      <span className="routine-mins tabular">{occ.estimatedMinutes}m</span>
       {/* Kept, disabled, while a ticked row leaves: dropping it would shrink the row first. */}
       {onStart && (!done || leaving) && !future && (
         <Button
@@ -96,7 +97,8 @@ export function Routines() {
   const [weekOffset, setWeekOffset] = useState(0);
   const q = useRoutines();
   const nodes = useNodes();
-  const active = useActiveSession();
+  const me = useMe();
+  const clearMissed = useClearMissedRoutines();
   const create = useCreateRoutine();
   const update = useUpdateRoutine();
   const remove = useDeleteRoutine();
@@ -129,8 +131,8 @@ export function Routines() {
     );
 
   const { today, routines, occurrences, adherence } = q.data;
-  // One session at a time: while one runs, the rows only tick.
-  const canStart = !active.data?.active;
+  // Days before today still waiting: "Clear missed" takes them off this list.
+  const missed = dueNow.rows.filter((o) => o.date < today && !dueNow.ticked.has(occurrenceKey(o)));
   const nodeIndex = new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n]));
   // "Biology › Unit 3 › Osmosis" for a linked node, so the routine's context is visible.
   const nodeTitle = (id: string) => {
@@ -176,6 +178,19 @@ export function Routines() {
     }
   };
 
+  const clear = async () => {
+    try {
+      await clearMissed.mutateAsync({
+        through: addDays(today, -1),
+        previous: me.data?.user.settings.routines.missedClearedThrough ?? null,
+        count: missed.length,
+      });
+      toast(`Cleared ${missed.length} missed. Ctrl+Z brings them back.`, { tone: 'ok' });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not clear those.');
+    }
+  };
+
   const del = async (routine: Routine) => {
     if (!window.confirm(`Delete "${routine.title}" and all its ticks?`)) return;
     try {
@@ -189,7 +204,7 @@ export function Routines() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-3 flex-wrap">
-        <h1 className="text-3xl">Routines</h1>
+        <h1 className="page-title">Routines</h1>
         <div className="flex gap-2">
           <Button size="sm" variant="secondary" onClick={() => setImporting(true)}>
             <Upload size={15} aria-hidden /> Import .ics
@@ -222,7 +237,20 @@ export function Routines() {
       ) : (
         <>
           <Glass className="p-5 flex flex-col gap-3">
-            <h2 className="text-lg">Due now</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="card-title">Due now</h2>
+              {missed.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void clear()}
+                  loading={clearMissed.isPending}
+                  title="Take the missed days off this list. They still count in the four-week figure."
+                >
+                  <Trash2 size={14} aria-hidden /> Clear missed
+                </Button>
+              )}
+            </div>
             {dueNow.rows.length === 0 ? (
               <p className="routine-empty muted fade-in" style={{ minHeight: dueNow.emptyHeight }}>
                 Nothing outstanding. Everything due is ticked off.
@@ -239,25 +267,28 @@ export function Routines() {
                     leaves
                     last={dueNow.last === occurrenceKey(o)}
                     onToggle={(from) => void toggle(o, from)}
-                    onStart={canStart ? () => setStartFor(o) : undefined}
+                    onStart={() => setStartFor(o)}
                   />
                 ))}
               </ul>
             )}
             {adherence.rate !== null && (
-              <div>
-                <ProgressBar value={adherence.rate} label="Last four weeks" />
-                {/* Inline: the shared `p { margin: 0 }` outranks Tailwind's layered utilities. */}
-                <p className="subtle text-xs tabular" style={{ marginTop: 12 }}>
-                  {adherence.done} of {adherence.due} ticked off over the last four weeks
-                </p>
+              <div className="adherence">
+                <div className="adherence-figure tabular">
+                  {adherence.done}
+                  <small>/{adherence.due}</small>
+                </div>
+                <div className="adherence-body">
+                  <ProgressBar value={adherence.rate} label="Last four weeks" />
+                  <p className="adherence-note">ticked off over the last four weeks</p>
+                </div>
               </div>
             )}
           </Glass>
 
           <Panel className="p-5 flex flex-col gap-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <h2 className="text-lg flex-1">Week of {fmtDate(`${weekStart}T12:00:00`)}</h2>
+              <h2 className="card-title flex-1">Week of {fmtDate(`${weekStart}T12:00:00`)}</h2>
               <Button size="sm" variant="ghost" onClick={() => setWeekOffset(weekOffset - 1)}>
                 Previous
               </Button>
@@ -315,10 +346,10 @@ export function Routines() {
           </Panel>
 
           <Panel className="p-5 flex flex-col gap-3">
-            <h2 className="text-lg">All routines</h2>
+            <h2 className="card-title">All routines</h2>
             <ul className="flex flex-col">
               {routines.map((r) => (
-                <li key={r.id} className="tree-row">
+                <li key={r.id} className="routine-item">
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{r.title}</div>
                     <div className="muted text-sm">
@@ -327,7 +358,7 @@ export function Routines() {
                       {r.source === 'ics' && ' · from a calendar'}
                     </div>
                   </div>
-                  <div className="row-actions flex gap-1">
+                  <div className="routine-item-actions">
                     <Button
                       variant="ghost"
                       size="sm"

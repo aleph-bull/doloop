@@ -1,6 +1,6 @@
 import { levelProgress } from '@komogon/core';
-import { Award, Lock } from 'lucide-react';
-import { useState } from 'react';
+import { Award, ChevronDown, Lock } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   BackgroundThumb,
@@ -63,64 +63,35 @@ export function Achievements() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-3xl">Achievements</h1>
+      <h1 className="page-title">Achievements</h1>
 
-      <Glass className="p-5 flex flex-col gap-3">
-        <div className="flex items-baseline gap-3 flex-wrap">
-          <span className="text-2xl font-semibold tabular">Level {lp.level}</span>
-          <span className="muted tabular">{s.xp} XP</span>
-          <span className="flex-1" />
-          <span className="muted text-sm tabular">
-            {lp.toNext} XP to level {lp.level + 1}
+      <Glass className="ach-hero">
+        <div className="ach-hero-top">
+          <div>
+            <span className="ach-hero-label">Level</span>
+            <span className="ach-hero-level tabular">{lp.level}</span>
+          </div>
+          <div className="ach-hero-xp">
+            <span className="tabular">{s.xp.toLocaleString()}</span> XP
+          </div>
+        </div>
+        <ProgressBar value={lp.ratio} label="Progress to next level" className="ach-hero-bar" />
+        <div className="ach-hero-row tabular">
+          <span>Level {lp.level}</span>
+          <span>
+            <strong>{lp.toNext} XP</strong> to level {lp.level + 1}
           </span>
         </div>
-        <ProgressBar value={lp.ratio} label="Progress to next level" />
-        <p className="muted text-sm">
-          Levels unlock accent colours (5, 10, 20) and backgrounds (3, 5, 8, 12). XP is only ever
+        <p className="ach-hero-note">
+          Levels unlock backgrounds (3, 5, 8, 12), and every accent colour is free. XP is only ever
           earned by studying or ticking off a routine — never by buying anything.
         </p>
       </Glass>
 
-      <section className="flex flex-col gap-3" aria-labelledby="badges-h">
-        <div className="flex items-baseline gap-3">
-          <h2 id="badges-h" className="text-lg flex-1">
-            Badges
-          </h2>
-          <span className="muted text-sm tabular">
-            {unlocked.size} of {s.badges.length} unlocked
-          </span>
-        </div>
-        <div className="card-grid">
-          {s.badges.map((b) => {
-            const at = unlocked.get(b.key);
-            return (
-              <Panel
-                key={b.key}
-                className="p-4 flex gap-3 items-start"
-                style={{ opacity: at ? 1 : 0.7 }}
-              >
-                <span
-                  className="mt-0.5"
-                  style={{ color: at ? 'var(--accent)' : 'var(--fg-subtle)' }}
-                  aria-hidden
-                >
-                  {at ? <Award size={20} /> : <Lock size={20} />}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium">{b.name}</div>
-                  <div className="muted text-sm">{b.description}</div>
-                  {at && <div className="subtle text-xs mt-1">Unlocked {fmtDate(at)}</div>}
-                </div>
-              </Panel>
-            );
-          })}
-        </div>
-      </section>
-
       <RewardShelf />
 
       <section className="flex flex-col gap-3" aria-labelledby="shop-h">
-        <h2 id="shop-h" className="text-lg">
+        <h2 id="shop-h" className="section-title">
           Shop
         </h2>
         <p className="muted text-sm">
@@ -201,7 +172,7 @@ export function Achievements() {
           </Panel>
         </div>
 
-        <h3 className="font-medium mt-2">Backgrounds</h3>
+        <h3 className="card-title mt-4">Backgrounds</h3>
         <p className="muted text-sm">
           Most are free. These are the ones still to unlock — pick any of them in Settings once they
           are yours.
@@ -232,6 +203,104 @@ export function Achievements() {
           )}
         </div>
       </section>
+      <section className="flex flex-col gap-3" aria-labelledby="badges-h">
+        <div className="flex items-baseline gap-3">
+          <h2 id="badges-h" className="section-title flex-1">
+            Badges
+          </h2>
+          <span className="ach-count tabular">
+            <strong>{unlocked.size}</strong> of {s.badges.length} unlocked
+          </span>
+        </div>
+        <BadgeFold count={s.badges.length}>
+          {s.badges.map((b) => {
+            const at = unlocked.get(b.key);
+            return (
+              <Panel key={b.key} className={`badge-card${at ? ' is-earned' : ''}`}>
+                <span className="badge-medal" aria-hidden>
+                  {at ? <Award size={20} /> : <Lock size={16} />}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="badge-name">{b.name}</div>
+                  <div className="badge-desc">{b.description}</div>
+                  {at && <div className="badge-when">Unlocked {fmtDate(at)}</div>}
+                </div>
+              </Panel>
+            );
+          })}
+        </BadgeFold>
+      </section>
     </div>
+  );
+}
+
+/**
+ * The badge grid, folded: the first row in full and the second fading out, so the page
+ * isn't a wall of forty cards. "Show all" grows it to its full height.
+ */
+function BadgeFold({ count, children }: { count: number; children: ReactNode }) {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [heights, setHeights] = useState<{ folded: number; full: number } | null>(null);
+
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid || typeof ResizeObserver === 'undefined') return;
+    const measure = () => {
+      const cards = Array.from(grid.children) as HTMLElement[];
+      const top = grid.getBoundingClientRect().top;
+      const rects = cards.map((c) => c.getBoundingClientRect());
+      const first = rects[0];
+      // The first card of the second row: the first one sitting lower than card one.
+      const second = rects.find((r) => first && r.top > first.top + 1);
+      if (!first || !second) return setHeights(null);
+      setHeights({
+        folded: Math.round(second.top - top + second.height * 0.6),
+        full: grid.scrollHeight,
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(grid);
+    return () => ro.disconnect();
+  }, []);
+
+  const folds = heights !== null && heights.full > heights.folded + 4;
+
+  // On opening, the badges that were hidden fade and rise into place in a quick cascade,
+  // top to bottom, while the fold grows; the ones already on show stay put.
+  const toggle = () => {
+    const grid = gridRef.current;
+    if (grid && !open && heights) {
+      const top = grid.getBoundingClientRect().top;
+      let n = 0;
+      for (const card of Array.from(grid.children) as HTMLElement[]) {
+        if (card.getBoundingClientRect().top - top < heights.folded - 1) continue;
+        card.style.setProperty('--reveal-i', String(n++));
+        card.classList.remove('is-revealing');
+        // Restart the animation if the fold is opened again.
+        void card.offsetWidth;
+        card.classList.add('is-revealing');
+      }
+    }
+    setOpen((o) => !o);
+  };
+  return (
+    <>
+      <div
+        className={`badge-fold${folds && !open ? ' is-folded' : ''}`}
+        style={folds ? { height: open ? heights.full : heights.folded } : undefined}
+      >
+        <div ref={gridRef} className="badge-grid" inert={folds && !open ? true : undefined}>
+          {children}
+        </div>
+      </div>
+      {folds && (
+        <button type="button" className="badge-fold-toggle" aria-expanded={open} onClick={toggle}>
+          {open ? 'Show fewer' : `Show all ${count} badges`}
+          <ChevronDown size={16} aria-hidden className="badge-fold-chevron" />
+        </button>
+      )}
+    </>
   );
 }

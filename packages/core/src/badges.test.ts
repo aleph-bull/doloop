@@ -247,3 +247,45 @@ describe('badges', () => {
     expect(sessionDate(focused(n.id, '2026-09-21T03:00:00Z'), TZ)).toBe('2026-09-20');
   });
 });
+
+describe('badges added 2026-10-17', () => {
+  it('counts tasks done and a task finished under its estimate', () => {
+    const quick = node({ estimatedMinutes: 60, completedAt: '2026-09-19T15:00:00.000Z' });
+    const done = Array.from({ length: 9 }, () => node({ completedAt: '2026-09-19T15:00:00.000Z' }));
+    const s = satisfiedBadges(
+      input({
+        nodes: [quick, ...done],
+        sessions: [session(quick.id, '2026-09-19T14:00:00.000Z', 40)],
+      }),
+    );
+    expect(s.has('under-estimate')).toBe(true);
+    expect(s.has('tasks-10')).toBe(true);
+    expect(s.has('tasks-50')).toBe(false);
+  });
+
+  it('needs time logged before a task counts as under its estimate', () => {
+    const n = node({ estimatedMinutes: 60, completedAt: '2026-09-19T15:00:00.000Z' });
+    expect(satisfiedBadges(input({ nodes: [n] })).has('under-estimate')).toBe(false);
+  });
+
+  it('unlocks the longer ladders at their thresholds', () => {
+    const n = node();
+    const sessions = Array.from({ length: 10 }, (_, i) =>
+      session(n.id, `2026-09-${String(10 + i).padStart(2, '0')}T14:00:00.000Z`, 30),
+    );
+    const s = satisfiedBadges(
+      input({
+        nodes: [n],
+        sessions: [...sessions, session(n.id, '2026-09-01T12:00:00.000Z', 6 * 60)],
+        streak: { ...emptyStreak(), current: 14, longest: 14 },
+        perfectRoutineWeeks: 4,
+      }),
+    );
+    expect(s.has('sessions-10')).toBe(true);
+    expect(s.has('ultramarathon')).toBe(true);
+    expect(s.has('streak-14')).toBe(true);
+    expect(s.has('routine-perfect-4')).toBe(true);
+    expect(s.has('sessions-500')).toBe(false);
+    expect(s.has('hours-250')).toBe(false);
+  });
+});

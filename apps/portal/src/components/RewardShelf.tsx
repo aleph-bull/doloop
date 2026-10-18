@@ -63,18 +63,34 @@ function RewardCard({
         </div>
       </div>
       <div className="reward-card-meta">
-        <span className="tabular">{reward.costXp} XP</span>
+        {reward.unlock === 'task' ? (
+          <span className="min-w-0 truncate">
+            {reward.unlockTask ? `When ${reward.unlockTask.title} is done` : 'Its task was deleted'}
+          </span>
+        ) : (
+          <span className="tabular">{reward.costXp} XP</span>
+        )}
         {reward.cooldownDays > 0 && (
           <Chip tone="neutral">
             every {reward.cooldownDays} day{reward.cooldownDays === 1 ? '' : 's'}
           </Chip>
         )}
-        {reward.redeemedCount > 0 && (
+        {reward.unlock === 'xp' && reward.redeemedCount > 0 && (
           <span className="subtle text-xs tabular">taken {reward.redeemedCount}×</span>
         )}
       </div>
       <div className="flex items-center gap-2">
-        {reward.availableOn ? (
+        {reward.unlock === 'task' ? (
+          <span className="muted text-sm">
+            {reward.redeemedCount > 0
+              ? 'Redeemed'
+              : reward.unlockTask?.done
+                ? 'Ready'
+                : reward.unlockTask
+                  ? 'Not done yet'
+                  : 'Pick a new task to unlock it'}
+          </span>
+        ) : reward.availableOn ? (
           <span className="muted text-sm">Back on {fmtDate(`${reward.availableOn}T12:00:00`)}</span>
         ) : !reward.affordable ? (
           <span className="muted text-sm tabular">{short} XP to go</span>
@@ -160,7 +176,7 @@ export function RewardShelf() {
   return (
     <section className="flex flex-col gap-3" aria-labelledby="rewards-h">
       <div className="flex items-end gap-3 flex-wrap">
-        <h2 id="rewards-h" className="text-lg flex-1">
+        <h2 id="rewards-h" className="section-title flex-1">
           Your rewards
         </h2>
         <Button
@@ -172,8 +188,8 @@ export function RewardShelf() {
         </Button>
       </div>
       <p className="muted text-sm">
-        Decide what the XP is for, then buy it. The lowest price is {limits.minCostXp} XP — about an
-        hour of focused work — so a reward always costs something real.
+        Decide what the XP is for, then buy it. The lowest price is {limits.minCostXp} XP, which is
+        about an hour of focus. Or tie a reward to a task or test, and it opens once that is done.
       </p>
 
       {rewards.length === 0 ? (
@@ -210,7 +226,7 @@ export function RewardShelf() {
               <li key={`${h.at}-${i}`} className="flex items-baseline gap-2 text-sm">
                 <span aria-hidden>{h.emoji ?? '🎁'}</span>
                 <span className="flex-1 min-w-0 truncate">{h.name}</span>
-                <span className="muted tabular">{h.costXp} XP</span>
+                <span className="muted tabular">{h.costXp > 0 ? `${h.costXp} XP` : 'Earned'}</span>
                 <span className="subtle text-xs">{fmtDate(h.at)}</span>
               </li>
             ))}

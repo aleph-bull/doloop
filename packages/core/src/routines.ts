@@ -289,16 +289,27 @@ export function routineAgenda(input: RoutineAgendaInput): RoutineOccurrence[] {
   return out.sort((a, b) => compareDates(a.date, b.date) || a.title.localeCompare(b.title) || 0);
 }
 
-/** Occurrences due today, plus anything still outstanding from the recent past. */
+/**
+ * Occurrences due today, plus anything still outstanding from the recent past. Missed days
+ * on or before `clearedThrough` were cleared away by the user and are not listed; today
+ * always is. Clearing only hides them here: adherence still counts them as missed.
+ */
 export function routinesDue(
-  input: Omit<RoutineAgendaInput, 'from' | 'to'> & { graceDays?: number },
+  input: Omit<RoutineAgendaInput, 'from' | 'to'> & {
+    graceDays?: number;
+    clearedThrough?: ISODate | null;
+  },
 ): RoutineOccurrence[] {
   const grace = input.graceDays ?? 7;
+  const cleared = input.clearedThrough ?? null;
   return routineAgenda({
     ...input,
     from: addDays(input.today, -grace),
     to: input.today,
-  }).filter((o) => !o.done);
+  }).filter(
+    (o) =>
+      !o.done && (cleared === null || o.date === input.today || compareDates(o.date, cleared) > 0),
+  );
 }
 
 /** Completion rate over a window, 0..1, or null when nothing was due. */

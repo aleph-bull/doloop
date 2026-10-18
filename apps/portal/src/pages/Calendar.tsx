@@ -2,7 +2,7 @@ import { addDays, startOfWeekMonday, toLocalDate, type PlannedBlock } from '@kom
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
-import { Button, Chip, Panel, Spinner, useToast } from '@komogon/ui';
+import { Button, Panel, Spinner, useToast } from '@komogon/ui';
 import { BlockDialog } from '../components/BlockDialog';
 import { ErrorPanel } from '../components/ErrorState';
 import { api } from '../lib/api';
@@ -169,7 +169,7 @@ export function Calendar() {
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl">Calendar</h1>
+          <h1 className="page-title">Calendar</h1>
           <p className="muted text-sm mt-1">
             Drag on the grid to plan a block. Anything imported from your calendar is shown as a
             commitment, so you can plan around it.
@@ -354,9 +354,9 @@ export function Calendar() {
       </Panel>
 
       {pace.data && (
-        <section className="flex flex-col gap-2" aria-label="Planned vs needed">
-          <h2 className="text-lg">Planned vs needed</h2>
-          <div className="pill-row">
+        <Panel as="section" className="dash-card" aria-label="Planned vs needed">
+          <h2 className="card-title">Planned vs needed</h2>
+          <ul className="plan-list">
             {list
               .filter(
                 (n) =>
@@ -369,22 +369,34 @@ export function Calendar() {
                 const p = pace.data!.pace[n.id]!;
                 const planned = pace.data!.plannedMinutes[n.id] ?? 0;
                 const short = (p.remainingMinutes ?? 0) > planned;
+                const needed = p.remainingMinutes ?? 0;
                 return (
-                  <Chip
+                  <li
                     key={n.id}
-                    tone={short ? 'warn' : 'ok'}
+                    className={`plan-row${short ? ' is-short' : ''}`}
                     title={`${n.title}: planned ${fmtMinutes(planned)}, need ${fmtMinutes(p.remainingMinutes)}`}
                   >
-                    {n.title}: planned {fmtMinutes(planned)} / need {fmtMinutes(p.remainingMinutes)}
-                  </Chip>
+                    <span className="plan-dot" aria-hidden />
+                    <span className="plan-title">{n.title}</span>
+                    <span className="plan-bar" aria-hidden>
+                      <span
+                        style={{
+                          width: `${needed > 0 ? Math.min(100, (planned / needed) * 100) : 100}%`,
+                        }}
+                      />
+                    </span>
+                    <span className="plan-figures tabular">
+                      {fmtMinutes(planned)} <span>of {fmtMinutes(p.remainingMinutes)}</span>
+                    </span>
+                  </li>
                 );
               })}
-          </div>
+          </ul>
           <p className="muted text-sm">
             Connect Google Calendar in <Link to="/settings#calendar">Settings</Link> to see busy
             times here and sync blocks both ways.
           </p>
-        </section>
+        </Panel>
       )}
 
       <BlockDialog

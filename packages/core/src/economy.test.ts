@@ -112,12 +112,10 @@ describe('break days', () => {
 });
 
 describe('cosmetics', () => {
-  it('gates accents by level', () => {
+  it('makes every accent free', () => {
     expect(ACCENT_PRESETS).toHaveLength(6);
-    expect(unlockedAccents(0).map((a) => a.id)).toEqual(['indigo', 'sky', 'mint']);
-    expect(unlockedAccents(10).map((a) => a.id)).toContain('rose');
-    expect(isAccentUnlocked('violet', 19)).toBe(false);
-    expect(isAccentUnlocked('violet', 20)).toBe(true);
+    expect(unlockedAccents(0).map((a) => a.id)).toEqual(ACCENT_PRESETS.map((a) => a.id));
+    expect(isAccentUnlocked('violet', 0)).toBe(true);
     expect(isAccentUnlocked('nope', 99)).toBe(false);
   });
 
@@ -156,5 +154,19 @@ describe('cosmetics', () => {
     // No category is advertised with nothing in it.
     for (const c of BACKGROUND_CATEGORY_LABELS)
       expect(backgroundsInCategory(c.id).length).toBeGreaterThan(0);
+  });
+});
+
+describe('solid colour backgrounds', () => {
+  it('stores a colour as a free background id', async () => {
+    const { solidBackgroundId, solidColorOf, resolveBackgroundId, isBackgroundAvailable } =
+      await import('./economy');
+    const id = solidBackgroundId('#1A2B3C');
+    expect(id).toBe('solid:#1a2b3c');
+    expect(solidColorOf(id)).toBe('#1a2b3c');
+    expect(resolveBackgroundId(id)).toBe(id);
+    expect(isBackgroundAvailable(id, 1, [])).toBe(true);
+    expect(solidColorOf('solid:red')).toBeNull();
+    expect(resolveBackgroundId('solid:#12345')).toBe(DEFAULT_BACKGROUND_ID);
   });
 });

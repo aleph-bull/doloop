@@ -23,7 +23,7 @@ import {
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import {
   accentHexFor,
   AudioVisualizer,
@@ -64,6 +64,7 @@ import {
   TimelapseExport,
   TimelapsePrompt,
   TimelapseSettings,
+  timelapseSpaceWarning,
 } from '../components/focus/Timelapse';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -200,6 +201,19 @@ export function Focus() {
     setRecording(false);
   }, [problem, toast]);
 
+  // Recording started: if these settings hold an unusually large pile of stills, or the disk
+  // is short, say so once per session while there is still time to change them.
+  const tlSpaceWarnedFor = useRef<string | null>(null);
+  const spaceSessionId = session?.session.id ?? null;
+  useEffect(() => {
+    if (!recording || !spaceSessionId || tlSpaceWarnedFor.current === spaceSessionId) return;
+    tlSpaceWarnedFor.current = spaceSessionId;
+    // Not cancelled on re-render: it is marked as said already, so it must get said.
+    void timelapseSpaceWarning(tlOptions).then((msg) => {
+      if (msg) toast(msg);
+    });
+  }, [recording, spaceSessionId, tlOptions, toast]);
+
   // The session ended, here or elsewhere: the camera goes off and the stills wait for the video.
   useEffect(() => {
     if (!session) setRecording(false);
@@ -322,7 +336,7 @@ export function Focus() {
 
   if (!settings || !active.data || !nodes.data) {
     return (
-      <div className="focus-screen focus-centre">
+      <div className="focus-screen focus-centre on-backdrop">
         <Backdrop
           backgroundId={appearance.backgroundId}
           theme={appearance.theme}
@@ -334,7 +348,7 @@ export function Focus() {
   }
 
   return (
-    <div className={`focus-screen${chromeVisible ? '' : ' is-still'}`}>
+    <div className={`focus-screen on-backdrop${chromeVisible ? '' : ' is-still'}`}>
       <Backdrop
         backgroundId={appearance.backgroundId}
         theme={appearance.theme}
@@ -388,7 +402,9 @@ export function Focus() {
       )}
 
       <div className={`focus-top focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
-        <span className="focus-brand">Komogon</span>
+        <Link to="/" className="focus-brand" title="Back to Komogon">
+          Komogon
+        </Link>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}
         {recording && recorder.status === 'on' && (
@@ -458,7 +474,7 @@ export function Focus() {
           }}
         />
       ) : summary ? (
-        <main className="focus-centre">
+        <main className="focus-centre is-summary">
           <Glass className="focus-summary" strong>
             <SessionSummary
               summary={summary}
@@ -505,7 +521,7 @@ export function Focus() {
       {sheetOpen && (
         <Glass className="focus-sheet" strong role="dialog" aria-label="Focus screen controls">
           <div className="focus-sheet-head">
-            <h2 className="text-lg">Focus screen</h2>
+            <h2 className="card-title">Focus screen</h2>
             <Button
               variant="ghost"
               size="sm"
@@ -552,8 +568,8 @@ export function Focus() {
               Exit focus
             </Button>
             <span className="field-hint">
-              Your session keeps running. Press Escape to leave, Space to pause or resume, and H
-              to hide the clock.
+              Your session keeps running. Press Escape to leave, Space to pause or resume, and H to
+              hide the clock.
             </span>
           </section>
         </Glass>

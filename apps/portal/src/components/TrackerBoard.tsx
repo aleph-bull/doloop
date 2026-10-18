@@ -55,7 +55,7 @@ export function TrackerBoard() {
   return (
     <section className="flex flex-col gap-4" aria-label="Your grids">
       <div className="flex items-baseline justify-between gap-3 flex-wrap">
-        <h2 className="text-lg">Days focused</h2>
+        <h2 className="section-title">Days focused</h2>
         <div className="flex items-center gap-2 flex-wrap">
           <Segmented
             ariaLabel="Range"
@@ -75,25 +75,39 @@ export function TrackerBoard() {
       </div>
 
       {heatmap && (
-        <Panel className="p-5 flex flex-col gap-2">
-          <Heatmap
-            weeks={trim(heatmap.weeks)}
-            monthLabels={shiftLabels(heatmap.monthLabels, heatmap.weeks.length)}
-            thresholds={heatmap.thresholds}
-            ariaLabel={`Study minutes per day, ${weeks} weeks to ${heatmap.to}`}
-          />
-          <p className="muted text-sm">
-            {heatmap.activeDays === 0 ? (
-              // Nothing yet in this range: say what the squares are for, not that they are empty.
-              'Each day you study lights up a square.'
-            ) : (
-              <>
-                {fmtHours(heatmap.totalMinutes)} across {heatmap.activeDays} day
-                {heatmap.activeDays === 1 ? '' : 's'}
-                {heatmap.longestRun >= 2 && `, longest run ${heatmap.longestRun} days`}.
-              </>
-            )}
-          </p>
+        <Panel className="days-panel">
+          <div className="days-panel-grid">
+            <Heatmap
+              weeks={trim(heatmap.weeks)}
+              monthLabels={shiftLabels(heatmap.monthLabels, heatmap.weeks.length)}
+              thresholds={heatmap.thresholds}
+              ariaLabel={`Study minutes per day, ${weeks} weeks to ${heatmap.to}`}
+            />
+          </div>
+          {heatmap.activeDays === 0 ? (
+            // Nothing yet in this range: say what the squares are for, not that they are empty.
+            <p className="muted text-sm">Each day you study lights up a square.</p>
+          ) : (
+            <dl className="days-panel-stats">
+              <div>
+                <dt>Studied</dt>
+                <dd className="tabular">{fmtHours(heatmap.totalMinutes)}</dd>
+              </div>
+              <div>
+                <dt>Days</dt>
+                <dd className="tabular">{heatmap.activeDays}</dd>
+              </div>
+              {heatmap.longestRun >= 2 && (
+                <div>
+                  <dt>Longest run</dt>
+                  <dd className="tabular">
+                    {heatmap.longestRun}
+                    <small> days</small>
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
         </Panel>
       )}
 

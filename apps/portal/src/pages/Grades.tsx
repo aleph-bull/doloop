@@ -6,7 +6,7 @@ import {
   type StudyNode,
 } from '@komogon/core';
 import { Plus, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Chip, EmptyState, Input, Panel, Segmented, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
@@ -17,6 +17,7 @@ import {
   useMe,
   useUpdateComponent,
   useUpdateNode,
+  useUpdateSettings,
 } from '../lib/queries';
 
 const pct = (n: number | null) => (n === null ? '—' : `${Math.round(n * 10) / 10}%`);
@@ -192,7 +193,7 @@ function CourseCard({ node, grade, components, goalPercent }: CourseCardProps) {
     <Panel as="section" className="p-5 flex flex-col gap-4" aria-labelledby={`gr-${node.id}`}>
       <div className="flex items-start gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
-          <h2 id={`gr-${node.id}`} className="text-lg truncate">
+          <h2 id={`gr-${node.id}`} className="card-title truncate">
             {node.title}
           </h2>
           <GradeHeadline grade={grade} />
@@ -267,9 +268,9 @@ function CourseCard({ node, grade, components, goalPercent }: CourseCardProps) {
             </div>
           )}
 
-          <div className="flex items-center gap-3 flex-wrap">
+          {/* Bottoms line up: the button, the credits box and the note all sit on one baseline. */}
+          <div className="grade-foot">
             <Button
-              size="sm"
               variant="secondary"
               loading={addComponent.isPending}
               onClick={() =>
@@ -296,23 +297,24 @@ function CourseCard({ node, grade, components, goalPercent }: CourseCardProps) {
               onChange={(e) => setCredits(e.target.value)}
               onBlur={() => patch({ gradeCredits: credits.trim() === '' ? null : Number(credits) })}
             />
-            <p className="muted text-sm flex-1 min-w-0">
+            <p className="grade-foot-note">
               {grade.weightGraded > 0
                 ? `${pct(grade.percent)} of the ${grade.weightGraded}% of this course that has been marked.`
                 : 'Enter a score to see where you stand.'}{' '}
               <WeightNote components={components.length} total={grade.weightTotal} />
+              {/* Only with a target set: what the rest has to average to reach it. */}
+              {needed !== null && goalPercent !== null && (
+                <>
+                  {' '}
+                  {needed > 100
+                    ? `An average of ${goalPercent}% is out of reach: you would need ${pct(needed)} on average from the rest of your grades.`
+                    : needed <= 0
+                      ? `An average of ${goalPercent}% is already locked in.`
+                      : `You need ${pct(needed)} on average from the rest of your grades to get an average of ${goalPercent}%.`}
+                </>
+              )}
             </p>
           </div>
-
-          {needed !== null && goalPercent !== null && (
-            <p className="muted text-sm">
-              {needed > 100
-                ? `A ${goalPercent}% is out of reach: the rest would have to average ${pct(needed)}.`
-                : needed <= 0
-                  ? `A ${goalPercent}% is already locked in.`
-                  : `To finish at ${goalPercent}%, the remaining ${grade.weightTotal - grade.weightGraded}% has to average ${pct(needed)}.`}
-            </p>
-          )}
         </>
       )}
     </Panel>
@@ -380,7 +382,32 @@ function UngradedList({ courses }: { courses: CourseEntry[] }) {
 export function Grades() {
   const grades = useGrades();
   const me = useMe();
-  const [goal, setGoal] = useState('');
+  const updateSettings = useUpdateSettings();
+  const { toast } = useToast();
+  /** What is typed; null until the user types, so the saved target shows first. */
+  const [goalDraft, setGoalDraft] = useState<string | null>(null);
+  const savedTarget = me.data?.user.settings.grading.targetPercent ?? null;
+  const goal = goalDraft ?? (savedTarget === null ? '' : String(savedTarget));
+  /** The last target sent, so Enter, blur and the typing pause don't each save it. */
+  const sentTarget = useRef<number | null | undefined>(undefined);
+  const saveGoal = () => {
+    if (goalDraft === null) return;
+    const n = goalDraft.trim() === '' ? null : Number(goalDraft);
+    if (n !== null && (!Number.isFinite(n) || n < 0 || n > 200)) return;
+    if (n === savedTarget || n === sentTarget.current) return;
+    sentTarget.current = n;
+    updateSettings.mutate(
+      { grading: { targetPercent: n } },
+      { onError: (e) => toast(e instanceof Error ? e.message : 'Could not save that') },
+    );
+  };
+  // Saves a moment after typing stops too, so the target sticks without leaving the field.
+  useEffect(() => {
+    if (goalDraft === null) return;
+    const t = setTimeout(saveGoal, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [goalDraft]);
   const [sort, setSortState] = useState<SortKey>(readSort);
   const setSort = (v: SortKey) => {
     setSortState(v);
@@ -409,31 +436,27 @@ export function Grades() {
   const scale = me.data?.user.settings.grading.scale ?? [];
   const goalGpa = me.data?.user.settings.grading.goalGpa ?? null;
   const goalPercent = goal.trim() === '' ? null : Number(goal);
+  const goalLetter =
+    goalPercent !== null && Number.isFinite(goalPercent)
+      ? (bandFor(scale, goalPercent)?.letter ?? null)
+      : null;
   const points = gpa.points;
   const gpaBand = points === null ? null : scale.find((b) => b.points <= points);
+  const tracked = sortCourses(
+    courses.filter((c) => c.node.gradeMode !== 'off'),
+    sort,
+  );
+  const ungraded = courses.filter((c) => c.node.gradeMode === 'off');
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+      <div className="page-head">
         <div>
-          <h1 className="text-3xl">Grades</h1>
+          <h1 className="page-title">Grades</h1>
           <p className="muted text-sm mt-1">
-            Your own scale, set in <Link to="/settings#grading">settings</Link>. Nothing here is
-            sent anywhere.
+            Your own scale, set in <Link to="/settings#grading">settings</Link>.
           </p>
         </div>
-        {gpa.points !== null && (
-          <Panel className="p-4 text-right">
-            <div className="muted text-xs">Average across {gpa.courseCount} graded</div>
-            <div className="grade-percent tabular">{Math.round(gpa.points * 100) / 100}</div>
-            {goalGpa !== null && (
-              <div className="muted text-xs tabular">
-                {gpa.points >= goalGpa ? 'above' : 'below'} your {goalGpa} goal
-              </div>
-            )}
-            {gpaBand && <div className="muted text-xs">around {gpaBand.letter}</div>}
-          </Panel>
-        )}
       </div>
 
       {courses.length === 0 ? (
@@ -450,44 +473,69 @@ export function Grades() {
         </Panel>
       ) : (
         <>
-          <Panel className="p-4 flex items-end gap-3 flex-wrap">
-            <Input
-              label="Target for each course (%)"
-              hint="Optional. Shows the average you need on what is left to reach it."
-              type="number"
-              min={0}
-              max={100}
-              step="any"
-              inputMode="decimal"
-              className="w-36"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-            />
-            {goalPercent !== null && Number.isFinite(goalPercent) && (
-              <p className="muted text-sm flex-1">
-                {bandFor(scale, goalPercent)?.letter
-                  ? `That's ${bandFor(scale, goalPercent)!.letter} on your scale.`
-                  : ''}
-              </p>
+          <div className="grades-toolbar">
+            {tracked.length > 1 && (
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="muted text-sm">Sort by</span>
+                <Segmented
+                  ariaLabel="Sort courses"
+                  value={sort}
+                  onChange={setSort}
+                  options={[
+                    { value: 'tasks', label: 'Tasks order' },
+                    { value: 'name', label: 'Name' },
+                    { value: 'high', label: 'Highest mark' },
+                    { value: 'low', label: 'Lowest mark' },
+                  ]}
+                />
+              </div>
             )}
-          </Panel>
-
-          {tracked.length > 1 && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="muted text-sm">Sort by</span>
-              <Segmented
-                ariaLabel="Sort courses"
-                value={sort}
-                onChange={setSort}
-                options={[
-                  { value: 'tasks', label: 'Tasks order' },
-                  { value: 'name', label: 'Name' },
-                  { value: 'high', label: 'Highest mark' },
-                  { value: 'low', label: 'Lowest mark' },
-                ]}
-              />
+            <div className="grades-toolbar-end">
+              <div
+                className="grades-pill"
+                title="Each course shows the average you need on what is left to reach it."
+              >
+                <label className="muted" htmlFor="grades-target">
+                  Target
+                </label>
+                <Input
+                  id="grades-target"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="None"
+                  value={goal}
+                  onChange={(e) => setGoalDraft(e.target.value)}
+                  onBlur={saveGoal}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveGoal();
+                  }}
+                />
+                <span className="muted" aria-hidden>
+                  %
+                </span>
+                {goalLetter && <span className="grades-pill-letter">{goalLetter}</span>}
+              </div>
+              {gpa.points !== null && (
+                <div
+                  className="grades-pill"
+                  title={`Across ${gpa.courseCount} graded course${gpa.courseCount === 1 ? '' : 's'}${
+                    goalGpa !== null
+                      ? `, ${gpa.points >= goalGpa ? 'above' : 'below'} your ${goalGpa} goal`
+                      : ''
+                  }`}
+                >
+                  <span className="muted">Average</span>
+                  <span className="grades-pill-value tabular">
+                    {Math.round(gpa.points * 100) / 100}
+                  </span>
+                  {gpaBand && <span className="grades-pill-letter">{gpaBand.letter}</span>}
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {tracked.map(({ node, grade, components }) => (
             <CourseCard

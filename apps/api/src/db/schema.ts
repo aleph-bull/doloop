@@ -261,7 +261,7 @@ export const userAssets = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.kind] })],
 );
 
-/** User-defined rewards bought with XP. Komogon only enforces the price floor. */
+/** User-defined rewards, bought with XP or opened by finishing a task. */
 export const customRewards = pgTable(
   'custom_rewards',
   {
@@ -273,6 +273,11 @@ export const customRewards = pgTable(
     note: text('note'),
     emoji: text('emoji'),
     costXp: integer('cost_xp').notNull(),
+    /** 'task' rewards cost no XP: they open once the linked task or test is finished. */
+    unlock: text('unlock', { enum: ['xp', 'task'] })
+      .notNull()
+      .default('xp'),
+    unlockNodeId: uuid('unlock_node_id').references(() => nodes.id, { onDelete: 'set null' }),
     /** 0 = redeemable whenever it is affordable. */
     cooldownDays: integer('cooldown_days').notNull().default(0),
     archived: boolean('archived').notNull().default(false),
@@ -434,6 +439,95 @@ export const gradeComponents = pgTable(
   ],
 );
 
+/**
+ * A study plan: something to learn that is not a course. The plan is a node and its
+ * topics are the node's children, so sessions and pace work as they do for courses.
+ * This row holds what a course lacks: a weekly budget and how topics are worked.
+ */
+export const studyPlans = pgTable(
+  'study_plans',
+  {
+    nodeId: uuid('node_id')
+      .primaryKey()
+      .references(() => nodes.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    weeklyMinutes: integer('weekly_minutes').notNull(),
+    /** Local date the plan began. */
+    startedOn: text('started_on').notNull(),
+    method: text('method'),
+    masteryTarget: real('mastery_target').notNull().default(0.85),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('study_plans_user_idx').on(t.userId)],
+);
+
+/** What a plan's topic carries beyond its node: where the material is, and whether it is drilled. */
+export const planTopics = pgTable(
+  'plan_topics',
+  {
+    nodeId: uuid('node_id')
+      .primaryKey()
+      .references(() => nodes.id, { onDelete: 'cascade' }),
+    planId: uuid('plan_id')
+      .notNull()
+      .references(() => studyPlans.nodeId, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    resource: text('resource'),
+    practice: boolean('practice').notNull().default(false),
+  },
+  (t) => [index('plan_topics_plan_idx').on(t.planId)],
+);
+
+/** One drilling pass over a topic: counts of right, shaky and missed. */
+export const drillRounds = pgTable(
+  'drill_rounds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    nodeId: uuid('node_id')
+      .notNull()
+      .references(() => nodes.id, { onDelete: 'cascade' }),
+    sessionId: uuid('session_id').references(() => sessions.id, { onDelete: 'set null' }),
+    /** Local date of the round. */
+    date: text('date').notNull(),
+    ok: integer('ok').notNull().default(0),
+    shaky: integer('shaky').notNull().default(0),
+    miss: integer('miss').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('drill_rounds_node_idx').on(t.nodeId), index('drill_rounds_user_idx').on(t.userId)],
+);
+
+/** A missed or shaky question, queued to come back (a small Leitner box). */
+export const drillItems = pgTable(
+  'drill_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    nodeId: uuid('node_id')
+      .notNull()
+      .references(() => nodes.id, { onDelete: 'cascade' }),
+    prompt: text('prompt').notNull(),
+    lastResult: text('last_result', { enum: ['ok', 'shaky', 'miss'] }).notNull(),
+    dueOn: text('due_on').notNull(),
+    box: integer('box').notNull().default(0),
+    attempts: integer('attempts').notNull().default(1),
+    retired: boolean('retired').notNull().default(false),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    updatedAt: ts('updated_at').notNull().defaultNow(),
+  },
+  (t) => [index('drill_items_node_idx').on(t.nodeId), index('drill_items_user_idx').on(t.userId)],
+);
+
 export const schema = {
   users,
   nodes,
@@ -454,6 +548,10 @@ export const schema = {
   trackers,
   trackerEntries,
   gradeComponents,
+  studyPlans,
+  planTopics,
+  drillRounds,
+  drillItems,
 };
 
 export type UserRow = typeof users.$inferSelect;
@@ -467,3 +565,7 @@ export type RoutineCompletionRow = typeof routineCompletions.$inferSelect;
 export type TrackerRow = typeof trackers.$inferSelect;
 export type TrackerEntryRow = typeof trackerEntries.$inferSelect;
 export type GradeComponentRow = typeof gradeComponents.$inferSelect;
+export type StudyPlanRow = typeof studyPlans.$inferSelect;
+export type PlanTopicRow = typeof planTopics.$inferSelect;
+export type DrillRoundRow = typeof drillRounds.$inferSelect;
+export type DrillItemRow = typeof drillItems.$inferSelect;

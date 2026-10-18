@@ -100,10 +100,18 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'indigo', name: 'Indigo', minLevel: 0 },
   { id: 'sky', name: 'Sky', minLevel: 0 },
   { id: 'mint', name: 'Mint', minLevel: 0 },
-  { id: 'amber', name: 'Amber', minLevel: 5 },
-  { id: 'rose', name: 'Rose', minLevel: 10 },
-  { id: 'violet', name: 'Violet', minLevel: 20 },
+  // Every accent is free; levels only unlock backgrounds now.
+  { id: 'amber', name: 'Amber', minLevel: 0 },
+  { id: 'rose', name: 'Rose', minLevel: 0 },
+  { id: 'violet', name: 'Violet', minLevel: 0 },
 ];
+
+/** Accents in all: the built-in ones plus the user's own saved colours. */
+export const MAX_ACCENTS = 10;
+/** How many of the user's own colours can be saved beside the built-in accents. */
+export const MAX_SAVED_ACCENTS = MAX_ACCENTS - ACCENT_PRESETS.length;
+/** A user's own accent: 'custom:<hue>,<saturation>,<lightness>'. */
+export const CUSTOM_ACCENT = /^custom:\d{1,3},\d{1,3},\d{1,3}$/;
 
 export type BackgroundCategory =
   'minimal' | 'abstract' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
@@ -203,6 +211,22 @@ export const BACKGROUND_CATEGORY_LABELS: Array<{ id: BackgroundCategory; label: 
   { id: 'cities', label: 'Cities' },
 ];
 
+/**
+ * A plain colour the user picked, stored as a background id: `solid:#1a2b3c`. Free, and
+ * every screen that draws a backdrop understands it without a separate setting.
+ */
+export const SOLID_BACKGROUND_PREFIX = 'solid:';
+const SOLID_ID = /^solid:#[0-9a-f]{6}$/i;
+
+export function solidBackgroundId(hex: string): string {
+  return `${SOLID_BACKGROUND_PREFIX}${hex.toLowerCase()}`;
+}
+
+/** The hex of a solid-colour background id, or null when the id is not one. */
+export function solidColorOf(id: string | null | undefined): string | null {
+  return id && SOLID_ID.test(id) ? id.slice(SOLID_BACKGROUND_PREFIX.length).toLowerCase() : null;
+}
+
 /** What an unrecognised id falls back to. New accounts start on Velvet (`DEFAULT_SETTINGS`). */
 export const DEFAULT_BACKGROUND_ID = 'graphite';
 
@@ -211,6 +235,7 @@ export const DEFAULT_BACKGROUND_ID = 'graphite';
  * a background that no longer exists; those read as the default rather than as nothing.
  */
 export function resolveBackgroundId(id: string | null | undefined): string {
+  if (solidColorOf(id)) return id!.toLowerCase();
   return id && BACKGROUNDS.some((b) => b.id === id) ? id : DEFAULT_BACKGROUND_ID;
 }
 
@@ -228,6 +253,7 @@ export function isAccentUnlocked(id: string, level: number): boolean {
 }
 
 export function isBackgroundAvailable(id: string, level: number, purchasedIds: string[]): boolean {
+  if (solidColorOf(id)) return true;
   const b = BACKGROUNDS.find((x) => x.id === id);
   if (!b) return false;
   if (b.costXp !== null) return purchasedIds.includes(id);

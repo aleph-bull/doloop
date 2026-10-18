@@ -193,3 +193,23 @@ describe('evaluateStreak', () => {
     expect(r.events.map((e) => e.date)).toEqual(['2026-10-31', '2026-11-01']);
   });
 });
+
+describe('the streak day start', () => {
+  it('counts a session before the start hour for the day before', async () => {
+    const { streakDay } = await import('./streak');
+    // 1:30am in Toronto on Sep 21 (EDT, UTC-4).
+    expect(streakDay('2026-09-21T05:30:00.000Z', 'America/Toronto', 4)).toBe('2026-09-20');
+    expect(streakDay('2026-09-21T05:30:00.000Z', 'America/Toronto', 0)).toBe('2026-09-21');
+    // 4:30am is the new day.
+    expect(streakDay('2026-09-21T08:30:00.000Z', 'America/Toronto', 4)).toBe('2026-09-21');
+  });
+
+  it('holds a change for a day', async () => {
+    const { dayStartUnlocksAt } = await import('./streak');
+    expect(dayStartUnlocksAt(null, '2026-09-21T12:00:00.000Z')).toBeNull();
+    expect(dayStartUnlocksAt('2026-09-21T10:00:00.000Z', '2026-09-21T12:00:00.000Z')).toBe(
+      '2026-09-22T10:00:00.000Z',
+    );
+    expect(dayStartUnlocksAt('2026-09-20T10:00:00.000Z', '2026-09-21T12:00:00.000Z')).toBeNull();
+  });
+});

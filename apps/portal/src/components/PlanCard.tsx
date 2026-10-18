@@ -1,5 +1,5 @@
 import { pathLabel, type PlanItem, type StudyNode } from '@komogon/core';
-import { ChevronDown, Maximize2, Play } from 'lucide-react';
+import { ChevronDown, ChevronRight, Maximize2, Play } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button, Glass, Reveal } from '@komogon/ui';
 import { fmtDue, fmtMinutes } from '../lib/format';
@@ -23,14 +23,14 @@ export interface PlanCardProps {
 /** How many of the day's plan the panel names. */
 const PRESSING = 4;
 
-/** Whether the list is unfolded: folded until opened, then kept in this browser as it was left. */
+/** Whether the list is unfolded: open until folded, then kept in this browser as it was left. */
 const OPEN_KEY = 'komogon.pressing-open';
 
 function readOpen(): boolean {
   try {
-    return localStorage.getItem(OPEN_KEY) === 'true';
+    return localStorage.getItem(OPEN_KEY) !== 'false';
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -63,21 +63,28 @@ export function PlanCard({
     writeOpen(!open);
   };
   return (
-    <Glass className="p-5 flex flex-col gap-4 start-panel" as="section" aria-label="Start">
-      <div>
-        <h2 className="text-xl">Ready when you are</h2>
-        <p className="muted text-sm mt-1">
-          {todayLine ??
-            'Add an estimate and a due date to a task and Komogon will tell you what to do today.'}
-        </p>
-      </div>
-      <div className="start-panel-actions">
-        <Button variant="primary" size="lg" onClick={onStart}>
-          <Play size={16} aria-hidden /> Start a session
-        </Button>
-        <button type="button" className="link-button start-panel-focus" onClick={onOpenFocus}>
-          <Maximize2 size={13} aria-hidden /> Open the focus screen
-        </button>
+    <Glass className="start-panel" as="section" aria-label="Start">
+      <div className="start-panel-main">
+        <div className="min-w-0">
+          <h2 className="start-panel-title">Ready when you are</h2>
+          <p className="start-panel-sub">
+            {todayLine ??
+              'Add an estimate and a due date to a task and Komogon will tell you what to do today.'}
+          </p>
+        </div>
+        <div className="start-panel-actions">
+          <Button
+            size="lg"
+            className="start-panel-focus"
+            onClick={onOpenFocus}
+            title="Open the focus screen"
+          >
+            <Maximize2 size={16} aria-hidden /> Focus screen
+          </Button>
+          <Button variant="primary" size="lg" className="start-panel-go" onClick={onStart}>
+            <Play size={17} aria-hidden fill="currentColor" /> Start a session
+          </Button>
+        </div>
       </div>
       {pressing.length > 0 && (
         <div className="start-pressing">
@@ -89,14 +96,11 @@ export function PlanCard({
             onClick={toggle}
           >
             <span>Most pressing</span>
+            <span className="start-pressing-count tabular">{pressing.length}</span>
             <ChevronDown size={14} aria-hidden className="start-pressing-chevron" />
           </button>
           <Reveal open={open}>
-            <ul
-              id="most-pressing"
-              className="text-sm flex flex-col gap-1 start-pressing-list"
-              aria-label="Most pressing tasks"
-            >
+            <ul id="most-pressing" className="start-pressing-list" aria-label="Most pressing tasks">
               {pressing.map((p) => {
                 const parent = pathLabel(nodesById, p.nodeId);
                 const node = nodesById.get(p.nodeId);
@@ -108,16 +112,19 @@ export function PlanCard({
                       onClick={() => onPick(p.nodeId)}
                       title="Go to this task"
                     >
-                      <span className="truncate">
-                        {parent && <span className="subtle">{parent} · </span>}
-                        {p.title}
+                      <span className="start-pressing-text">
+                        <span className="start-pressing-title">{p.title}</span>
+                        <span className="start-pressing-where">
+                          {parent ?? 'Task'}
+                          {node?.dueAt ? ` · ${fmtDue(node.dueAt)}` : ''}
+                        </span>
                       </span>
                       <span className="start-pressing-meta">
                         <StatusChip status={p.status} />
-                        <span className="muted tabular">
+                        <span className="start-pressing-mins tabular">
                           {fmtMinutes(p.suggestedMinutes)}
-                          {node?.dueAt ? ` · ${fmtDue(node.dueAt)}` : ''}
                         </span>
+                        <ChevronRight size={16} aria-hidden className="start-pressing-go" />
                       </span>
                     </button>
                   </li>

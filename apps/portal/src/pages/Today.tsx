@@ -132,20 +132,18 @@ export function Today() {
   const anyDue = list.some((n) => n.dueAt);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-end justify-between gap-4 flex-wrap">
+    <div className="dash">
+      <div className="page-head">
         <div className="min-w-0">
-          <h1 className="text-3xl">{greeting.salutation}</h1>
+          <h1 className="page-title">{greeting.salutation}</h1>
           <p className="greeting-line">{greeting.line}</p>
         </div>
       </div>
 
       <NamePrompt />
 
-      <DashboardStats />
-
       {me.data?.streakMessage && (
-        <Glass className="p-4 text-sm" role="status">
+        <Glass className="dash-note" role="status">
           {me.data.streakMessage}
         </Glass>
       )}
@@ -174,13 +172,32 @@ export function Today() {
         />
       )}
 
-      <UpcomingDue nodes={list} pace={pace.data.pace} />
+      {/* A first visit: the one thing to do comes before any numbers. */}
+      {roots.length === 0 && (
+        <Glass className="dash-first">
+          <h2 className="section-title">Nothing to study yet</h2>
+          <p className="muted">Add a course, then the things in it, and today fills itself in.</p>
+          <Link to="/tasks" className="btn btn-primary btn-lg">
+            Add your first course
+          </Link>
+        </Glass>
+      )}
+
+      <DashboardStats />
+
+      <div className="dash-pair">
+        <UpcomingDue nodes={list} pace={pace.data.pace} />
+        <RoutinesDueCard
+          onStart={(routine) => setStartFor({ node: null, routine, minutes: null })}
+        />
+      </div>
+
       {leaves.length > 0 && (
         <CardRail
           label="Your tasks"
-          heading={<h2 className="text-lg">Tasks</h2>}
+          heading={<h2 className="section-title">Tasks</h2>}
           actions={
-            <Link to="/tasks" className="text-sm">
+            <Link to="/tasks" className="section-link">
               Manage
             </Link>
           }
@@ -197,57 +214,43 @@ export function Today() {
           ))}
         </CardRail>
       )}
-      <RoutinesDueCard
-        onStart={
-          active.data?.active
-            ? undefined
-            : (routine) => setStartFor({ node: null, routine, minutes: null })
-        }
-      />
       <FollowUpPrompt />
-
-      <Hint
-        id="rest-days"
-        when={sessionCount >= 3}
-        action={
-          <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
-            Set rest days
-          </Link>
-        }
-      >
-        Rest days never break your streak. Set the days you don't study and pace will plan around
-        them.
-      </Hint>
-      <Hint
-        id="freezes"
-        when={(me.data?.user.streak.current ?? 0) >= 3}
-        action={
-          <Link to="/achievements" className="btn btn-secondary btn-sm">
-            Open the shop
-          </Link>
-        }
-      >
-        Your streak is growing. A streak freeze from the shop covers one missed day automatically.
-      </Hint>
-      <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
-        Every session moves you toward the next level, and levels unlock accent colours and
-        backgrounds. Achievements has the details.
-      </Hint>
-      <Hint id="calendar" when={anyDue && sessionCount >= 2}>
-        Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
-        versus needed hours.
-      </Hint>
 
       <TrackerBoard />
 
-      {roots.length === 0 && (
-        <Glass className="p-6 text-center">
-          <p className="muted">No courses yet.</p>
-          <Link to="/tasks" className="btn btn-primary mt-3">
-            Add your first course
-          </Link>
-        </Glass>
-      )}
+      <div className="hint-stack">
+        <Hint
+          id="rest-days"
+          when={sessionCount >= 3}
+          action={
+            <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
+              Set rest days
+            </Link>
+          }
+        >
+          Rest days never break your streak. Set the days you don't study and pace will plan around
+          them.
+        </Hint>
+        <Hint
+          id="freezes"
+          when={(me.data?.user.streak.current ?? 0) >= 3}
+          action={
+            <Link to="/achievements" className="btn btn-secondary btn-sm">
+              Open the shop
+            </Link>
+          }
+        >
+          Your streak is growing. A streak freeze from the shop covers one missed day automatically.
+        </Hint>
+        <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
+          Every session moves you toward the next level, and levels unlock new backgrounds.
+          Achievements has the details.
+        </Hint>
+        <Hint id="calendar" when={anyDue && sessionCount >= 2}>
+          Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
+          versus needed hours.
+        </Hint>
+      </div>
 
       <RewardOverlay
         summary={summary}

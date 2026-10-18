@@ -43,7 +43,7 @@ export function CardRail({ label, heading, actions, children }: CardRailProps) {
       </div>
 
       {expanded ? (
-        <div className="card-grid">{items}</div>
+        <div className="card-grid rail-expanded">{items}</div>
       ) : (
         <div
           className={`rail scroll-edges${edges.left ? ' can-left' : ''}${

@@ -67,6 +67,58 @@ export function adaptGlassToBackdrop(avg: RGB): GlassAdaptation {
   };
 }
 
+/** The wash each theme lays over a photograph (kept in step with backgrounds.ts `scrim`). */
+export const PHOTO_SCRIM: Record<'light' | 'dark', { color: RGB; alpha: number }> = {
+  light: { color: [255, 255, 255], alpha: 0.24 },
+  dark: { color: [6, 7, 10], alpha: 0.42 },
+};
+
+export interface PhotoAdaptation extends GlassAdaptation {
+  /**
+   * Extra wash, in the glass tint, laid over the whole photo so text that sits straight on
+   * the backdrop (page titles, section headings) clears 4.5:1 against its average too.
+   */
+  pageScrim: number;
+}
+
+/**
+ * Text colour, glass and page wash for a photograph in a theme. Unlike
+ * `adaptGlassToBackdrop`, the text colour is whichever reads better against the photo as it
+ * is actually shown (under the theme's scrim), so a mid-tone image never gets the weaker one.
+ */
+export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark'): PhotoAdaptation {
+  const scrim = PHOTO_SCRIM[theme];
+  const shown = composite(scrim.color, scrim.alpha, avg);
+  const light: RGB = [242, 243, 248];
+  const dark: RGB = [15, 18, 32];
+  const lightText = contrastRatio(light, shown) >= contrastRatio(dark, shown);
+  const fg = lightText ? light : dark;
+  const fill: RGB = lightText ? [20, 22, 36] : [255, 255, 255];
+  // Thick enough that the quietest text on glass (the text colour at 64%, tokens.css
+  // --fg-on-glass-subtle) still clears 4.5:1, not just the primary text.
+  const subtleOn = (alpha: number) => {
+    const glass = composite(fill, alpha, shown);
+    return contrastRatio(composite(fg, 0.64, glass), glass);
+  };
+  let alpha = 0.45;
+  while (subtleOn(alpha) < 4.5 && alpha < MAX_ALPHA) {
+    alpha = Math.round((alpha + 0.05) * 100) / 100;
+  }
+  const ratio = contrastRatio(fg, composite(fill, alpha, shown));
+  let pageScrim = 0;
+  while (contrastRatio(fg, composite(fill, pageScrim, shown)) < 4.5 && pageScrim < 0.6) {
+    pageScrim = Math.round((pageScrim + 0.05) * 100) / 100;
+  }
+  return {
+    fg,
+    fill,
+    alpha,
+    strongAlpha: Math.min(0.97, Math.round((alpha + 0.15) * 100) / 100),
+    ratio,
+    pageScrim,
+  };
+}
+
 export function hexToRgb(hex: string): RGB {
   const h = hex.replace('#', '');
   const full =

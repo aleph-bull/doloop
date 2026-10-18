@@ -337,6 +337,77 @@ describe('personalRecords', () => {
     expect(by['latest-finish']).toMatchObject({ display: '1:10 am', when: '2026-09-11' });
   });
 
+  it('finds the month, busiest day, courses, routines and focused-run records', () => {
+    const review = (distracted: 'no' | 'a-little') => ({
+      skipped: false,
+      prepared: null,
+      distracted,
+      completedCount: null,
+      correctCount: null,
+      mood: null,
+      extraMinutesAdded: null,
+      note: null,
+    });
+    const nodes = [
+      node('bio', { kind: 'course' }),
+      node('cell', { parentId: 'bio' }),
+      node('chem', { kind: 'course' }),
+      node('acid', { parentId: 'chem' }),
+    ];
+    const ss = [
+      session('2026-08-05T10:00', 600, { nodeId: 'cell', review: review('no') }),
+      session('2026-09-22T09:00', 30, { nodeId: 'cell', review: review('no') }),
+      session('2026-09-22T11:00', 30, { nodeId: 'acid', review: review('no') }),
+      session('2026-09-22T14:00', 30, { review: review('a-little') }),
+      session('2026-09-23T09:00', 30, { nodeId: 'cell', review: review('no') }),
+    ];
+    const r = personalRecords({
+      sessions: ss,
+      nodes,
+      timezone: TZ,
+      now: NOW,
+      weekStart: '2026-09-21',
+      streak: streak(2, 2, '2026-09-23'),
+      routineTicks: [{ date: '2026-09-21' }, { date: '2026-09-22' }, { date: '2026-09-08' }],
+    });
+    const by = Object.fromEntries(r.map((x) => [x.key, x]));
+    expect(by['biggest-month']).toMatchObject({
+      when: '2026-08-01',
+      display: '10 hours',
+      isNew: false,
+    });
+    expect(by['most-sessions-day']).toMatchObject({
+      display: '3 sessions',
+      when: '2026-09-22',
+      isNew: true,
+    });
+    expect(by['most-courses-week']).toMatchObject({
+      display: '2 courses',
+      when: '2026-09-21',
+      isNew: true,
+    });
+    expect(by['most-routines-week']).toMatchObject({
+      display: '2 routines',
+      when: '2026-09-21',
+      isNew: true,
+    });
+    // Three undistracted in a row, then a distracted one, then one more: the run is three.
+    expect(by['most-focused-run']).toMatchObject({ display: '3 sessions', when: '2026-09-22' });
+  });
+
+  it('leaves the routines record out without any ticks', () => {
+    const r = personalRecords({
+      sessions: [session('2026-09-22T09:00', 30)],
+      nodes: [],
+      timezone: TZ,
+      now: NOW,
+      weekStart: '2026-09-21',
+      streak: streak(1),
+    });
+    expect(r.map((x) => x.key)).not.toContain('most-routines-week');
+    expect(r.map((x) => x.key)).not.toContain('most-focused-run');
+  });
+
   it('waits for three sessions before naming an earliest start or latest finish', () => {
     const r = personalRecords({
       sessions: [session('2026-09-22T21:27', 30), session('2026-09-23T10:00', 20)],

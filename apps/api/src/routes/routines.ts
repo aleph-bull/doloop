@@ -13,6 +13,7 @@ import {
   updateRoutine,
 } from '../services/routines';
 import { unlockNewBadges } from '../services/achievements';
+import { settingsOf } from '../services/users';
 import { isoDate, uuid } from '../validation';
 
 const draft = z.object({
@@ -35,7 +36,15 @@ export function routineRoutes(app: FastifyInstance, db: Db, clock: () => string)
   app.get('/api/routines', async (req) => {
     const q = z.object({ from: isoDate.optional(), to: isoDate.optional() }).parse(req.query);
     const now = clock();
-    const data = await agenda(db, req.user.id, now, req.user.timezone, q.from, q.to);
+    const data = await agenda(
+      db,
+      req.user.id,
+      now,
+      req.user.timezone,
+      q.from,
+      q.to,
+      settingsOf(req.user).routines.missedClearedThrough,
+    );
     return {
       ...data,
       limits: {

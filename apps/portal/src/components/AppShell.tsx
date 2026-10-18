@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { levelProgress } from '@komogon/core';
 import {
+  CalendarDays,
+  ChartColumn,
   ChevronLeft,
   ChevronRight,
   Flame,
+  GraduationCap,
+  House,
+  ListChecks,
   LogOut,
+  Repeat,
   Settings as SettingsIcon,
+  Trophy,
   WifiOff,
+  type LucideIcon,
+  Route as RouteIcon,
 } from 'lucide-react';
 import { Backdrop, Button, Glass, LogoMark } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
@@ -18,15 +28,42 @@ import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 
-const links = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/tasks', label: 'Tasks' },
-  { to: '/routines', label: 'Routines' },
-  { to: '/grades', label: 'Grades' },
-  { to: '/calendar', label: 'Calendar' },
-  { to: '/analytics', label: 'Analytics' },
-  { to: '/achievements', label: 'Achievements' },
+/** `short` is the phone tab bar's label, where seven tabs share 390px. */
+const links: Array<{ to: string; label: string; short: string; icon: LucideIcon }> = [
+  { to: '/', label: 'Dashboard', short: 'Home', icon: House },
+  { to: '/tasks', label: 'Tasks', short: 'Tasks', icon: ListChecks },
+  { to: '/routines', label: 'Routines', short: 'Routines', icon: Repeat },
+  { to: '/plans', label: 'Plans', short: 'Plans', icon: RouteIcon },
+  { to: '/grades', label: 'Grades', short: 'Grades', icon: GraduationCap },
+  { to: '/calendar', label: 'Calendar', short: 'Calendar', icon: CalendarDays },
+  { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn },
+  { to: '/achievements', label: 'Achievements', short: 'Awards', icon: Trophy },
 ];
+
+/** The level as a small ring that fills toward the next one. */
+function LevelRing({ xp, level }: { xp: number; level: number }) {
+  const ratio = levelProgress(xp).ratio;
+  const r = 12;
+  const c = 2 * Math.PI * r;
+  return (
+    <span className="nav-level" title={`Level ${level}`}>
+      <svg viewBox="0 0 30 30" width={30} height={30} aria-hidden>
+        <circle cx={15} cy={15} r={r} className="nav-level-track" />
+        <circle
+          cx={15}
+          cy={15}
+          r={r}
+          className="nav-level-fill"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - ratio)}
+          transform="rotate(-90 15 15)"
+        />
+      </svg>
+      <span className="nav-level-num tabular">{level}</span>
+      <span className="sr-only">Level {level}</span>
+    </span>
+  );
+}
 
 export function AppShell() {
   const me = useMe();
@@ -101,6 +138,21 @@ export function AppShell() {
     measureOverflow();
   }, [measureIndicator, measureOverflow, location.pathname]);
 
+  // The bars firm up as the page scrolls under them, so text passing behind stays legible;
+  // at the top they keep their usual glass. 0 at the top, 1 after the first 80px.
+  useEffect(() => {
+    const root = document.documentElement;
+    // Scroll events already arrive once per frame, so this writes straight through.
+    const update = () =>
+      root.style.setProperty('--scroll-fade', String(Math.min(1, window.scrollY / 80)));
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', update);
+      root.style.removeProperty('--scroll-fade');
+    };
+  }, []);
+
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -128,7 +180,7 @@ export function AppShell() {
       <a href="#main" className="skip-link">
         Skip to content
       </a>
-      <Glass as="header" className="nav" strong>
+      <header className="nav chrome">
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Komogon home">
             <span className="brand-logo" aria-hidden>
@@ -194,25 +246,25 @@ export function AppShell() {
           </div>
           <div className="flex-1" />
           {user && (
-            <div className="hidden sm:flex items-center gap-3 text-sm mr-1 shrink-0 whitespace-nowrap">
-              <span className="inline-flex items-center gap-1" title="Current streak">
-                <Flame size={16} aria-hidden />
+            <div className="nav-stats">
+              <NavLink to="/analytics" className="nav-streak" title="Current streak">
+                <Flame size={15} aria-hidden className="nav-streak-flame" />
                 <span className="tabular">{user.streak.current}</span>
                 <span className="sr-only">day streak</span>
-              </span>
-              <span className="tabular" title={`Level ${user.level}`}>
-                Lv {user.level}
-              </span>
+              </NavLink>
+              <LevelRing xp={user.xp} level={user.level} />
             </div>
           )}
-          <NavLink to="/settings" className="nav-link" aria-label="Settings">
+          <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden />
           </NavLink>
           <Button
             variant="ghost"
             size="sm"
             icon
+            className="nav-signout"
             aria-label="Sign out"
+            title="Sign out"
             onClick={async () => {
               await auth.signOut();
               navigate('/signin');
@@ -221,8 +273,26 @@ export function AppShell() {
             <LogOut size={16} aria-hidden />
           </Button>
         </div>
-      </Glass>
-      <main id="main" className="page" tabIndex={-1}>
+      </header>
+      <nav className="tabbar chrome" aria-label="Primary">
+        {links.map((l) => (
+          <NavLink
+            key={l.to}
+            to={l.to}
+            end={l.to === '/'}
+            className="tabbar-link"
+            aria-label={l.label}
+          >
+            <span className="tabbar-icon" aria-hidden>
+              <l.icon size={21} strokeWidth={1.9} />
+            </span>
+            <span className="tabbar-label" aria-hidden>
+              {l.short}
+            </span>
+          </NavLink>
+        ))}
+      </nav>
+      <main id="main" className="page on-backdrop" tabIndex={-1}>
         {!online && (
           <Glass className="offline-bar" role="status">
             <WifiOff size={16} aria-hidden />
@@ -233,7 +303,10 @@ export function AppShell() {
           </Glass>
         )}
         <ErrorBoundary>
-          <Outlet />
+          {/* Keyed by route so each page rises in as it arrives. */}
+          <div key={location.pathname} className="route-in">
+            <Outlet />
+          </div>
         </ErrorBoundary>
       </main>
     </>

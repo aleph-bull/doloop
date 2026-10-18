@@ -2,7 +2,7 @@ import type { RoutineOccurrence } from '@komogon/core';
 import { announceAchievements } from '../lib/achievements';
 import { Check, Play } from 'lucide-react';
 import { Link } from 'react-router';
-import { Button, Glass, useToast } from '@komogon/ui';
+import { Button, Panel, useToast } from '@komogon/ui';
 import { useRoutines, useTickRoutine } from '../lib/queries';
 import { occurrenceKey, useTickedRoutines } from '../lib/routine-ticks';
 
@@ -40,10 +40,10 @@ export function RoutinesDueCard({
   };
 
   return (
-    <Glass className="p-5 flex flex-col gap-3">
+    <Panel as="section" className="dash-card" aria-label="Routines due today">
       <div className="flex items-baseline gap-3">
-        <h2 className="text-lg flex-1">Routines</h2>
-        <Link to="/routines" className="text-sm">
+        <h2 className="card-title flex-1">Routines</h2>
+        <Link to="/routines" className="section-link">
           All routines
         </Link>
       </div>
@@ -71,10 +71,10 @@ export function RoutinesDueCard({
                 >
                   <Check size={14} aria-hidden />
                 </button>
-                <span className="flex-1 min-w-0 truncate">
+                <span className="routine-name">
                   <span className="routine-title">{o.title}</span>
                 </span>
-                <span className="muted text-sm tabular">{o.estimatedMinutes}m</span>
+                <span className="routine-mins tabular">{o.estimatedMinutes}m</span>
                 {onStart && (
                   <Button
                     variant="ghost"
@@ -93,6 +93,6 @@ export function RoutinesDueCard({
           })}
         </ul>
       )}
-    </Glass>
+    </Panel>
   );
 }

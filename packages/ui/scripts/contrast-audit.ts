@@ -3,18 +3,16 @@
  *
  * Estimates the average colour under a panel by compositing the gradient stops of each
  * background, then composites the glass and panel fills over it and checks WCAG contrast
- * for primary and muted text. Fails (exit 1) if any combination is below 4.5:1.
+ * for primary, muted and subtle text, on glass, on panels and straight on the backdrop
+ * (page titles). Photos go through the same adaptation the Backdrop runs, per theme. The
+ * accent presets are checked as text and as a button label. Fails (exit 1) if any
+ * combination is below 4.5:1.
  *
  * Run: pnpm --filter @komogon/ui audit:contrast
  */
 import { BACKGROUND_DEFS } from '../src/backgrounds';
-import {
-  adaptGlassToBackdrop,
-  composite,
-  contrastRatio,
-  hslToRgb,
-  type RGB,
-} from '../src/contrast';
+import { adaptToPhoto, composite, contrastRatio, hslToRgb, type RGB } from '../src/contrast';
+import { accentFill, readableAccent } from '../src/theme';
 
 interface Theme {
   name: 'light' | 'dark';
@@ -31,20 +29,20 @@ const THEMES: Theme[] = [
   {
     name: 'light',
     fg: [15, 18, 32],
-    fgMuted: [75, 81, 104],
+    fgMuted: [71, 77, 99],
     fgOnGlass: [15, 18, 32],
-    glassFill: { rgb: [255, 255, 255], alpha: 0.55 },
-    glassStrong: { rgb: [255, 255, 255], alpha: 0.72 },
-    panelFill: { rgb: [255, 255, 255], alpha: 0.92 },
+    glassFill: { rgb: [255, 255, 255], alpha: 0.6 },
+    glassStrong: { rgb: [255, 255, 255], alpha: 0.78 },
+    panelFill: { rgb: [255, 255, 255], alpha: 0.9 },
   },
   {
     name: 'dark',
-    fg: [242, 243, 248],
-    fgMuted: [179, 184, 204],
-    fgOnGlass: [242, 243, 248],
-    glassFill: { rgb: [20, 22, 36], alpha: 0.45 },
-    glassStrong: { rgb: [20, 22, 36], alpha: 0.65 },
-    panelFill: { rgb: [21, 24, 39], alpha: 0.94 },
+    fg: [244, 245, 249],
+    fgMuted: [184, 189, 207],
+    fgOnGlass: [244, 245, 249],
+    glassFill: { rgb: [22, 24, 36], alpha: 0.5 },
+    glassStrong: { rgb: [22, 24, 36], alpha: 0.7 },
+    panelFill: { rgb: [20, 22, 34], alpha: 0.94 },
   },
 ];
 
@@ -93,6 +91,19 @@ function averageBackground(css: string): RGB {
 let failures = 0;
 const rows: string[] = [];
 
+/** On-glass muted and subtle text are the glass text colour at 76% and 64% (tokens.css). */
+const MUTED = 0.76;
+const SUBTLE = 0.64;
+
+function check(id: string, theme: string, label: string, fg: RGB, surface: RGB): void {
+  const ratio = contrastRatio(fg, surface);
+  const ok = ratio >= 4.5;
+  if (!ok) failures++;
+  rows.push(
+    `${ok ? 'PASS' : 'FAIL'}  ${id.padEnd(13)} ${theme.padEnd(5)} ${label.padEnd(22)} ${ratio.toFixed(2)}:1`,
+  );
+}
+
 /**
  * A photograph does not use the static glass tokens: `Backdrop` thickens the fill until
  * text clears 4.5:1, using the average colour baked in at build time. So the check here is
@@ -101,14 +112,17 @@ const rows: string[] = [];
  */
 function auditPhoto(bg: (typeof BACKGROUND_DEFS)[number]): void {
   const avg = bg.photo!.avg as RGB;
-  const a = adaptGlassToBackdrop(avg);
-  const ok = a.ratio >= 4.5;
-  if (!ok) failures++;
-  rows.push(
-    `${ok ? 'PASS' : 'FAIL'}  ${bg.id.padEnd(13)} photo  adapted glass @ ${String(
-      Math.round(a.alpha * 100),
-    ).padStart(3)}%       ${a.ratio.toFixed(2)}:1`,
-  );
+  for (const t of ['light', 'dark'] as const) {
+    const a = adaptToPhoto(avg, t);
+    const scrim = t === 'dark' ? ([6, 7, 10] as RGB) : ([255, 255, 255] as RGB);
+    const shown = composite(scrim, t === 'dark' ? 0.42 : 0.24, avg);
+    const washed = composite(a.fill, a.pageScrim, shown);
+    const glass = composite(a.fill, a.alpha, shown);
+    check(bg.id, t, `glass @ ${Math.round(a.alpha * 100)}%`, a.fg, glass);
+    check(bg.id, t, 'muted on glass', composite(a.fg, MUTED, glass), glass);
+    check(bg.id, t, 'subtle on glass', composite(a.fg, SUBTLE, glass), glass);
+    check(bg.id, t, `page text, wash ${Math.round(a.pageScrim * 100)}%`, a.fg, washed);
+  }
 
   // Panels are opaque enough that they do not adapt; check them against the photo directly.
   for (const theme of THEMES) {
@@ -135,8 +149,12 @@ for (const bg of BACKGROUND_DEFS) {
   for (const theme of THEMES) {
     const variant = theme.name === 'dark' ? bg.dark : bg.light;
     const avg = averageBackground(variant.css);
+    const glass = composite(theme.glassFill.rgb, theme.glassFill.alpha, avg);
     const checks: Array<[string, RGB, RGB]> = [
-      ['fg on glass', theme.fgOnGlass, composite(theme.glassFill.rgb, theme.glassFill.alpha, avg)],
+      ['fg on glass', theme.fgOnGlass, glass],
+      ['subtle on glass', composite(theme.fgOnGlass, SUBTLE, glass), glass],
+      ['page text', theme.fgOnGlass, avg],
+      ['muted page text', composite(theme.fgOnGlass, MUTED, avg), avg],
       [
         'muted on strong glass',
         theme.fgMuted,
@@ -154,6 +172,32 @@ for (const bg of BACKGROUND_DEFS) {
       );
     }
   }
+}
+
+// The accent presets: as link text on light and dark surfaces, and as a button's label.
+const PRESETS: Record<string, [number, number, number]> = {
+  indigo: [240, 84, 62],
+  sky: [199, 89, 48],
+  mint: [160, 64, 42],
+  amber: [38, 92, 50],
+  rose: [346, 77, 56],
+  violet: [271, 81, 60],
+};
+const parseHsl = (css: string): RGB => {
+  const m = css.match(/hsl\((\d+) (\d+)% (\d+)%\)/)!;
+  return hslToRgb(Number(m[1]), Number(m[2]), Number(m[3]));
+};
+for (const [name, hsl] of Object.entries(PRESETS)) {
+  check(
+    name,
+    'light',
+    'accent text',
+    parseHsl(readableAccent(hsl, [244, 245, 248])),
+    [244, 245, 248],
+  );
+  check(name, 'dark', 'accent text', parseHsl(readableAccent(hsl, [30, 32, 44])), [30, 32, 44]);
+  // Button labels are always white, on the accent deepened as far as white needs.
+  check(name, 'both', 'white button label', [255, 255, 255], parseHsl(accentFill(hsl)));
 }
 
 console.log(rows.join('\n'));

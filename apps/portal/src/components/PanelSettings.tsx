@@ -12,7 +12,7 @@ export interface PanelSettingsProps {
   onChange: (patch: DeepPatch) => Promise<unknown>;
 }
 
-/** Surface for dense panels: opaque (default), glass, or any colour with opacity. */
+/** Surface for cards and panels: opaque (default), glass, any colour with opacity, or matte. */
 export function PanelSettings({ panel, panelColor, panelAlpha, onChange }: PanelSettingsProps) {
   const [alpha, setAlpha] = useState(panelAlpha);
   return (
@@ -27,11 +27,13 @@ export function PanelSettings({ panel, panelColor, panelAlpha, onChange }: Panel
             { value: 'opaque', label: 'Opaque' },
             { value: 'glass', label: 'Glass' },
             { value: 'custom', label: 'Custom colour' },
+            { value: 'matte', label: 'Matte' },
           ]}
         />
         <span className="field-hint">
-          Task lists, tables, and settings sit on panels. Glass shows the background through them;
-          text colour adapts automatically so it stays readable.
+          Every card and panel uses this. Glass shows the background through them; Matte turns off
+          glass everywhere, the top bar and dialogs included. Text colour adapts automatically so it
+          stays readable.
         </span>
       </div>
       {panel === 'custom' && (

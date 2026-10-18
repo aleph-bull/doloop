@@ -2,9 +2,50 @@ import {
   BACKGROUND_CATEGORY_LABELS,
   BACKGROUNDS,
   isBackgroundAvailable,
+  solidBackgroundId,
+  solidColorOf,
   type BackgroundMeta,
 } from '@komogon/core';
 import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
+import { useEffect, useRef, useState } from 'react';
+
+/** Where the colour chooser starts before one was ever picked: a quiet dark slate. */
+const DEFAULT_SOLID = '#1f2433';
+
+/**
+ * Any plain colour, from the browser's colour chooser. Saved a moment after the colour
+ * stops moving, so dragging across the chooser is one save, not hundreds.
+ */
+function SolidColourTile({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const current = solidColorOf(value);
+  const [draft, setDraft] = useState(current ?? DEFAULT_SOLID);
+  useEffect(() => {
+    if (current) setDraft(current);
+  }, [current]);
+  const timer = useRef(0);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const pick = (hex: string) => {
+    setDraft(hex);
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => onChange(solidBackgroundId(hex)), 300);
+  };
+  return (
+    <label
+      className={`bg-thumb bg-thumb-solid${current ? ' is-selected' : ''}`}
+      style={{ background: draft }}
+      title="Pick any colour"
+    >
+      <input
+        type="color"
+        className="bg-solid-input"
+        value={draft}
+        aria-label="Solid colour background"
+        onChange={(e) => pick(e.target.value)}
+      />
+      <span className="bg-thumb-label">Solid colour</span>
+    </label>
+  );
+}
 
 export interface BackgroundPickerProps {
   /** Currently selected id. */
@@ -52,7 +93,12 @@ export function BackgroundPicker({
         <div key={group.id} className="bg-group">
           <h4 className="bg-group-title">{group.label}</h4>
           <div className="bg-grid">
-            {gi === 0 && leading}
+            {gi === 0 && (
+              <>
+                <SolidColourTile value={value} onChange={onChange} />
+                {leading}
+              </>
+            )}
             {group.items.map((b) => {
               const available = isBackgroundAvailable(b.id, level, purchased);
               return (

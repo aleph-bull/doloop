@@ -78,6 +78,20 @@
       "when": 1790300000000,
       "tag": "0010_session_sleeps",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791499521882,
+      "tag": "0011_study_plans",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792271462685,
+      "tag": "0012_reward_unlock_task",
+      "breakpoints": true
     }
   ]
 }

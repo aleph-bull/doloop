@@ -60,7 +60,17 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   {
     id: 'review',
     title: 'After each session',
-    keywords: ['review', 'quick', 'full', 'prepared', 'distracted', 'mood', 'notes', 'phrases'],
+    keywords: [
+      'review',
+      'quick',
+      'full',
+      'prepared',
+      'distracted',
+      'focus',
+      'effort',
+      'notes',
+      'phrases',
+    ],
   },
   {
     id: 'focus',

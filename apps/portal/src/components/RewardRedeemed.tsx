@@ -42,10 +42,14 @@ export function RewardRedeemed({ reward, xpLeft, spent, onClose }: RewardRedeeme
         <h2 className="text-2xl leading-tight">{reward.name}</h2>
         <p className="muted">You earned this one. Go and take it.</p>
         {reward.note && <p className="text-sm">{reward.note}</p>}
-        <p className="text-sm muted tabular">
-          {spent} XP spent · {xpLeft} XP left
-          {reward.redeemedCount > 1 && ` · redeemed ${reward.redeemedCount} times`}
-        </p>
+        {reward.unlock === 'task' ? (
+          <p className="text-sm muted">Earned by finishing the task. No XP spent.</p>
+        ) : (
+          <p className="text-sm muted tabular">
+            {spent} XP spent · {xpLeft} XP left
+            {reward.redeemedCount > 1 && ` · redeemed ${reward.redeemedCount} times`}
+          </p>
+        )}
         {reward.cooldownDays > 0 && (
           <p className="subtle text-xs">
             Back on the shelf in {reward.cooldownDays} day{reward.cooldownDays === 1 ? '' : 's'}.

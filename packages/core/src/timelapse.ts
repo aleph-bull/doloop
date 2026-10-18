@@ -111,7 +111,13 @@ export function planTimelapse(
 ): TimelapsePlan {
   const fpsAsked = clampFps(opts.fps);
   if (stillCount <= 0)
-    return { fps: fpsAsked, frames: [], durationSeconds: 0, maxFps: TIMELAPSE_MAX_FPS, short: true };
+    return {
+      fps: fpsAsked,
+      frames: [],
+      durationSeconds: 0,
+      maxFps: TIMELAPSE_MAX_FPS,
+      short: true,
+    };
 
   if (opts.lengthMode === 'length') {
     const length = Math.max(1, Math.round(opts.lengthSeconds));
@@ -194,4 +200,65 @@ export function timelapseClock(seconds: number): string {
   const mm = String(m).padStart(2, '0');
   const ss = String(r).padStart(2, '0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/** A still at the capture size before any webcam has been measured: 960 px wide JPEG. */
+export const TIMELAPSE_DEFAULT_STILL_BYTES = 90_000;
+/** Bits per second the finished video is encoded at. */
+export const TIMELAPSE_VIDEO_BITRATE = 8_000_000;
+/** Above this, holding the stills is worth a word before recording starts. */
+export const TIMELAPSE_BIG_BYTES = 300_000_000;
+/** The session a speed estimate assumes, since its stills grow with the session. */
+const ESTIMATE_SESSION_SECONDS = 2 * 3600;
+
+export interface TimelapseSizeEstimate {
+  /** Most stills held at once over a long session. */
+  peakStills: number;
+  /** What those stills take up, in bytes. */
+  peakBytes: number;
+  /** About how big the finished video is, in bytes. */
+  videoBytes: number;
+  /** True when the stills alone pass TIMELAPSE_BIG_BYTES. */
+  big: boolean;
+}
+
+/**
+ * How much room a timelapse needs with these options, from the size of one still. The
+ * stills sit in the browser (memory, and disk once it spills) until the video is made.
+ */
+export function timelapseSizeEstimate(
+  opts: TimelapseOptions,
+  stillBytes: number = TIMELAPSE_DEFAULT_STILL_BYTES,
+): TimelapseSizeEstimate {
+  const fps = clampFps(opts.fps);
+  const cap = stillCap(opts);
+  let peakStills: number;
+  let videoSeconds: number;
+  if (opts.lengthMode === 'speed') {
+    const taken = Math.ceil((ESTIMATE_SESSION_SECONDS * 1000) / startIntervalMs(opts));
+    peakStills = Math.min(cap, taken);
+    videoSeconds = ESTIMATE_SESSION_SECONDS / Math.max(1, opts.speed);
+  } else if (opts.lengthMode === 'length') {
+    peakStills = cap;
+    videoSeconds = Math.max(1, Math.round(opts.lengthSeconds));
+  } else {
+    peakStills = cap;
+    videoSeconds = cap / fps;
+  }
+  const bytes =
+    Number.isFinite(stillBytes) && stillBytes > 0 ? stillBytes : TIMELAPSE_DEFAULT_STILL_BYTES;
+  const peakBytes = Math.round(peakStills * bytes);
+  return {
+    peakStills,
+    peakBytes,
+    videoBytes: Math.round((videoSeconds * TIMELAPSE_VIDEO_BITRATE) / 8),
+    big: peakBytes > TIMELAPSE_BIG_BYTES,
+  };
+}
+
+/** "45 MB", "1.2 GB": a size for a sentence. */
+export function fmtBytes(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${Math.max(1, Math.round(bytes / 1e6))} MB`;
+  return `${Math.max(1, Math.round(bytes / 1e3))} KB`;
 }

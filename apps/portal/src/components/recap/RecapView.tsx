@@ -1,5 +1,12 @@
 import { dayOfWeek, type ClockProfile, type RangeRecap } from '@komogon/core';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, Download, Sparkles } from 'lucide-react';
+import {
+  ArrowDownRight,
+  ArrowRight,
+  ArrowUpRight,
+  Download,
+  Flame as FlameIcon,
+  Sparkles,
+} from 'lucide-react';
 import { cloneElement, useState, type ReactElement, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import {
@@ -9,10 +16,10 @@ import {
   Columns,
   CountUp,
   Donut,
-  Flame,
   Gauge,
   Glass,
   Heatmap,
+  Panel,
   ProgressBar,
   RadialClock,
   Ring,
@@ -115,13 +122,13 @@ function Tile({
   children: ReactNode;
 }) {
   return (
-    <Glass as="section" className={`rc-tile is-${size}`} aria-label={title}>
+    <Panel as="section" className={`rc-tile is-${size}`} aria-label={title}>
       <div className="rc-tile-head">
         <h3 className="rc-tile-title">{title}</h3>
         {note && <p className="rc-tile-note">{note}</p>}
       </div>
       {empty ? <p className="rc-empty">{empty}</p> : children}
-    </Glass>
+    </Panel>
   );
 }
 
@@ -177,7 +184,7 @@ function Hero({ data, range }: { data: RecapResponse; range: RecapRangeParam }) 
   };
 
   return (
-    <Glass as="section" className="rc-hero rc-rise" strong aria-label="Headline">
+    <Glass as="section" className="rc-hero rc-rise" aria-label="Headline">
       <div className="rc-hero-main">
         {p && <p className="rc-hero-range">{rangeLabel(p)}</p>}
         <p className="rc-hero-figure">
@@ -234,12 +241,14 @@ function Streaks({ data }: { data: RecapResponse }) {
   const next = c.nextMilestone;
   return (
     <Glass as="section" className="rc-streaks rc-rise" aria-labelledby="streaks-h">
-      <h2 id="streaks-h" className="text-lg">
+      <h2 id="streaks-h" className="card-title">
         Streaks and consistency
       </h2>
       <div className="rc-streaks-body">
         <div className="rc-streak-main">
-          <Flame days={streak.current} size={64} />
+          <span className={`streak-badge${streak.current > 0 ? ' is-lit' : ''}`} aria-hidden>
+            <FlameIcon size={28} />
+          </span>
           <div>
             <p className="rc-streak-number">
               {streak.current} {streak.current === 1 ? 'day' : 'days'}
@@ -270,8 +279,8 @@ function Streaks({ data }: { data: RecapResponse }) {
           {next && (
             <p className="text-sm">
               {streak.current === 0
-                ? 'One session starts a streak 🔥'
-                : `${next.remaining} more ${next.remaining === 1 ? 'day' : 'days'} to a ${next.days}-day streak 🔥`}
+                ? 'One session starts a streak.'
+                : `${next.remaining} more ${next.remaining === 1 ? 'day' : 'days'} to a ${next.days}-day streak`}
             </p>
           )}
           {streak.freezesHeld > 0 && (
@@ -501,7 +510,7 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
         <div className="rc-centre">
           <Ring
             value={data.focus.ratio}
-            size={112}
+            size={136}
             stroke={10}
             label={`${Math.round(data.focus.ratio * 100)}% of reviewed sessions with no distraction`}
           >
@@ -602,7 +611,7 @@ function Insights({ data }: { data: RecapResponse }) {
   if (lines.length === 0) return null;
   return (
     <section className="rc-rise" aria-labelledby="insights-h">
-      <h2 id="insights-h" className="text-lg rc-section-title">
+      <h2 id="insights-h" className="card-title rc-section-title">
         Worth knowing
       </h2>
       <div className="rc-insights">
@@ -659,7 +668,7 @@ export function RecapView({ range }: { range: RecapRangeParam }) {
       <Charts data={data} range={range} />
       <Streaks data={data} />
       <section className="rc-rise" aria-labelledby="trophies-h">
-        <h2 id="trophies-h" className="text-lg rc-section-title">
+        <h2 id="trophies-h" className="card-title rc-section-title">
           Trophy shelf
         </h2>
         <TrophyShelf records={data.records} />
@@ -667,7 +676,7 @@ export function RecapView({ range }: { range: RecapRangeParam }) {
       <Insights data={data} />
       <Glass as="section" className="rc-review rc-rise">
         <div>
-          <h2 className="text-lg">Weekly review</h2>
+          <h2 className="card-title">Weekly review</h2>
           <p className="muted text-sm">
             Planned against done, the days that went sideways, and a note to your future self.
           </p>

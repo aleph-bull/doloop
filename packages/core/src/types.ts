@@ -43,7 +43,7 @@ export type ReviewMode = 'quick' | 'full' | 'off';
 export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
 export type ThemeMode = 'system' | 'light' | 'dark';
-export type PanelStyle = 'opaque' | 'glass' | 'custom';
+export type PanelStyle = 'opaque' | 'glass' | 'custom' | 'matte';
 /** 'accent' follows the app accent, 'custom' is one chosen colour, 'gradient' sweeps from the accent. */
 export type VisualizerColorMode = 'accent' | 'custom' | 'gradient';
 export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
@@ -61,7 +61,16 @@ export interface UserSettings {
   };
   pomodoro: PomodoroConfig;
   review: { mode: ReviewMode };
-  streak: { minMinutes: number };
+  streak: {
+    minMinutes: number;
+    /**
+     * The hour (0-8) a new streak day begins, so a 1am session still counts for the night
+     * before. Only the streak uses it; the calendar and analytics keep midnight.
+     */
+    dayStartHour: number;
+    /** When dayStartHour last changed, set by the server; it may change once a day. */
+    dayStartChangedAt: ISODateTime | null;
+  };
   /** What the dashboard ring and the Analytics week measure against. */
   goals: { weeklyMinutes: number };
   pace: { maxComfortableMinutesPerDay: number };
@@ -98,6 +107,8 @@ export interface UserSettings {
     panelAlpha: number;
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
     extensionBackground: string;
+    /** The user's own accent colours ('custom:h,s,l'), kept beside the built-in ones. */
+    savedAccents: string[];
   };
   blocking: { enabled: boolean; domains: string[] };
   calendar: {
@@ -109,11 +120,17 @@ export interface UserSettings {
     /** Record each finished session on the calendar as the block of study it was. */
     logSessions: boolean;
   };
+  routines: {
+    /** "Clear missed": outstanding days on or before this date drop off the due list. */
+    missedClearedThrough: ISODate | null;
+  };
   grading: {
     /** Percentage bands, highest first. Defaults to the U of T scale. */
     scale: GradeBand[];
     /** Shown against your running GPA when set. */
     goalGpa: number | null;
+    /** The mark aimed for in each course, as a percentage; null when none is set. */
+    targetPercent: number | null;
   };
   /** The focus screen's audio-reactive visualizer. Audio capture itself is per visit. */
   visualizer: {
@@ -315,7 +332,9 @@ export interface SessionReview {
   distracted: Distracted | null;
   completedCount: number | null;
   correctCount: number | null;
-  mood: number | null; // 1-5
+  mood: number | null; // 1-5, no longer asked; kept for older sessions
+  /** How hard the session felt, 1 (easy) to 5 (all out), like a workout's effort. */
+  effort?: number | null;
   extraMinutesAdded: number | null;
   note: string | null;
 }

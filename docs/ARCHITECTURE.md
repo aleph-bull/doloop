@@ -65,6 +65,7 @@ Added after the numbered phases, at the user's request. See `DECISIONS.md` for t
 | Long-range analytics | `insights.ts`                 | `GET /api/analytics/overview`                | `AnalyticsOverview`, `ui/components/Heatmap`                                                                                                     |
 | Local cache          | —                             | —                                            | `lib/persist.ts`, `lib/local-state.ts`                                                                                                           |
 | Focus screen         | `focus.ts`, `visualizer.ts`   | —                                            | `pages/Focus`, `components/focus/*`, `lib/session-controller`, `lib/focus-tab`; `ui/AudioVisualizer`, `ui/visualizer-render`, `ui/audio-capture` |
+| Study plans          | `study-plan.ts`               | `routes/plans.ts`, `services/plans.ts`       | `pages/Plans`, `pages/Plan`, `components/plans/*`                                                                                                |
 
 ### Local persistence
 

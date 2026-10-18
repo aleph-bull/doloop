@@ -1,8 +1,35 @@
 import { addDays, eachDay, toLocalDate } from './dates';
 import { isRestDay } from './rest-days';
-import type { ISODate, RestDayPolicy, Session, StreakState } from './types';
+import type { ISODate, ISODateTime, RestDayPolicy, Session, StreakState } from './types';
 
 export const STREAK_MILESTONES = [7, 14, 30, 60, 100] as const;
+
+/** When a streak day may begin, and how often that may change. */
+export const STREAK_DAY_START = { MIN_HOUR: 0, MAX_HOUR: 8, LOCK_HOURS: 24 } as const;
+
+/**
+ * The streak day an instant belongs to: its local date, with the day starting at
+ * `startHour` instead of midnight. At 4, a session at 1:30am counts for the day before.
+ */
+export function streakDay(instant: ISODateTime | Date, tz: string, startHour = 0): ISODate {
+  const ms =
+    (typeof instant === 'string' ? Date.parse(instant) : instant.getTime()) -
+    Math.max(0, startHour) * 3_600_000;
+  return toLocalDate(new Date(ms), tz);
+}
+
+/**
+ * When the day-start hour may next change, or null if it may change now. It is held for a
+ * day after each change, so a streak can't be saved by moving midnight around.
+ */
+export function dayStartUnlocksAt(
+  changedAt: ISODateTime | null,
+  now: ISODateTime,
+): ISODateTime | null {
+  if (!changedAt) return null;
+  const at = Date.parse(changedAt) + STREAK_DAY_START.LOCK_HOURS * 3_600_000;
+  return at > Date.parse(now) ? new Date(at).toISOString() : null;
+}
 
 export function emptyStreak(): StreakState {
   return { current: 0, longest: 0, lastCountedDate: null, freezesHeld: 0, breakDaysHeld: 0 };
@@ -23,15 +50,22 @@ export interface StreakEvaluation {
 }
 
 /**
- * Calendar days (user tz) with at least one session whose work time meets the minimum.
- * A session is credited to the local day it started, even if it ran past midnight.
+ * Streak days (user tz, starting at `startHour`) with at least one session whose work time
+ * meets the minimum. A session is credited to the day it started, even if it ran past the
+ * day's end.
  */
-export function qualifyingDays(sessions: Session[], minMinutes: number, tz: string): Set<ISODate> {
+export function qualifyingDays(
+  sessions: Session[],
+  minMinutes: number,
+  tz: string,
+  startHour = 0,
+): Set<ISODate> {
   const out = new Set<ISODate>();
   const minSeconds = Math.max(0, minMinutes) * 60;
   for (const s of sessions) {
     if (s.endedAt === null) continue; // in-progress sessions do not count yet
-    if (s.workSeconds >= minSeconds && s.workSeconds > 0) out.add(toLocalDate(s.startedAt, tz));
+    if (s.workSeconds >= minSeconds && s.workSeconds > 0)
+      out.add(streakDay(s.startedAt, tz, startHour));
   }
   return out;
 }
@@ -41,9 +75,11 @@ export interface EvaluateStreakInput {
   sessions: Session[];
   policy: RestDayPolicy;
   minMinutes: number;
-  /** Today's calendar date in the user's timezone. */
+  /** Today's streak day in the user's timezone (see streakDay). */
   today: ISODate;
   timezone: string;
+  /** The hour the streak day starts; midnight when absent. */
+  dayStartHour?: number;
 }
 
 /**
@@ -54,7 +90,7 @@ export interface EvaluateStreakInput {
  */
 export function evaluateStreak(input: EvaluateStreakInput): StreakEvaluation {
   const { policy, today, timezone } = input;
-  const days = qualifyingDays(input.sessions, input.minMinutes, timezone);
+  const days = qualifyingDays(input.sessions, input.minMinutes, timezone, input.dayStartHour ?? 0);
   const state: StreakState = { ...input.state };
   const events: StreakEvent[] = [];
   const milestonesReached: number[] = [];

@@ -32,3 +32,4 @@ export * from './recap';
 export * from './equivalents';
 export * from './session-edit';
 export * from './timelapse';
+export * from './study-plan';

@@ -1,6 +1,9 @@
 import {
+  fmtBytes,
   planTimelapse,
+  timelapseSizeEstimate,
   type TimelapseLengthMode,
+  type TimelapseOptions,
   type UserSettings,
 } from '@komogon/core';
 import { Download, Square, Video } from 'lucide-react';
@@ -18,6 +21,8 @@ import {
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
 import {
+  freeStorageBytes,
+  measuredStillBytes,
   renderTimelapse,
   timelapseFileName,
   videoSupported,
@@ -88,7 +93,9 @@ export function TimelapseBadge({ recorder, capturing, onStop }: TimelapseBadgePr
   }, [recorder.stream]);
   return (
     <span className="timelapse-badge" role="status">
-      {recorder.stream && <video ref={ref} className="timelapse-preview" autoPlay muted playsInline />}
+      {recorder.stream && (
+        <video ref={ref} className="timelapse-preview" autoPlay muted playsInline />
+      )}
       <span className={`timelapse-dot${capturing ? '' : ' is-idle'}`} aria-hidden />
       <span className="tabular">
         {capturing ? 'Recording' : 'Waiting for focus'} · {recorder.count}
@@ -150,6 +157,7 @@ export function TimelapseSettings({
         />
       </div>
       <LengthFields value={value} onChange={set} />
+      <SizeNote options={value} />
       <Toggle
         checked={value.showTimer}
         onChange={(v) => set({ showTimer: v })}
@@ -169,6 +177,53 @@ export function TimelapseSettings({
         description="Takes out the flicker of the camera's auto exposure."
       />
     </div>
+  );
+}
+
+/**
+ * What a recording takes up with these settings, from this webcam's measured stills, and a
+ * word when that is unusually big or the disk is short.
+ */
+export async function timelapseSpaceWarning(options: TimelapseOptions): Promise<string | null> {
+  const est = timelapseSizeEstimate(options, measuredStillBytes() ?? undefined);
+  const free = await freeStorageBytes();
+  if (free !== null && free < est.peakBytes * 2)
+    return `Space is short: this timelapse can hold about ${fmtBytes(est.peakBytes)} of stills and the browser has about ${fmtBytes(free)} left.`;
+  if (est.big)
+    return `This timelapse can hold about ${fmtBytes(est.peakBytes)} of stills. A shorter length or a faster speed takes less.`;
+  return null;
+}
+
+function SizeNote({ options }: { options: TimelapseOptions }) {
+  const measured = measuredStillBytes();
+  const est = timelapseSizeEstimate(options, measured ?? undefined);
+  const [free, setFree] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    void freeStorageBytes().then((f) => live && setFree(f));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const short = free !== null && free < est.peakBytes * 2;
+  return (
+    <p className="field-hint" role={short || est.big ? 'status' : undefined}>
+      Holds up to about {fmtBytes(est.peakBytes)} of stills while recording
+      {measured ? ', going by your camera' : ''}, and the video comes out around{' '}
+      {fmtBytes(est.videoBytes)}.
+      {short && (
+        <span className="timelapse-size-warn">
+          {' '}
+          The browser only has about {fmtBytes(free)} left, so free some space first.
+        </span>
+      )}
+      {!short && est.big && (
+        <span className="timelapse-size-warn">
+          {' '}
+          That is unusually big; a shorter length or a faster speed takes less.
+        </span>
+      )}
+    </p>
   );
 }
 
@@ -205,7 +260,10 @@ function LengthFields({ value, onChange, maxFps = 60 }: LengthFieldsProps) {
         </span>
       </div>
       {value.lengthMode === 'length' && (
-        <SecondsInput value={value.lengthSeconds} onChange={(n) => onChange({ lengthSeconds: n })} />
+        <SecondsInput
+          value={value.lengthSeconds}
+          onChange={(n) => onChange({ lengthSeconds: n })}
+        />
       )}
       {value.lengthMode === 'speed' && (
         <Select

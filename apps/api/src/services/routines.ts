@@ -180,6 +180,7 @@ export async function agenda(
   timezone: string,
   from?: string,
   to?: string,
+  clearedThrough: string | null = null,
 ): Promise<AgendaResult> {
   const today = toLocalDate(now, timezone);
   const start = from ?? addDays(today, -14);
@@ -197,7 +198,7 @@ export async function agenda(
     to: end,
     routines: list,
     occurrences: routineAgenda({ ...input, from: start, to: end }),
-    due: routinesDue(input),
+    due: routinesDue({ ...input, clearedThrough }),
     adherence: routineAdherence({ ...input, from: addDays(today, -27), to: today }),
     xpToday: earned,
     xpRemainingToday: Math.max(0, ROUTINES.MAX_XP_PER_DAY - earned),
@@ -459,6 +460,14 @@ export interface RoutineBadgeStats {
  * Everything the habit badges need: every tick, and how many calendar weeks had all their
  * due occurrences ticked. Only weeks that actually had something due count.
  */
+/** Every recurring-task tick's occurrence date, for the routines record on the trophy shelf. */
+export async function routineTickDates(db: Db, userId: string): Promise<{ date: string }[]> {
+  return db.query.routineCompletions.findMany({
+    where: eq(routineCompletions.userId, userId),
+    columns: { date: true },
+  });
+}
+
 export async function routineBadgeStats(
   db: Db,
   userId: string,

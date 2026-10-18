@@ -21,7 +21,7 @@ export function FollowUpPrompt() {
       aria-label="Assessment follow-up"
     >
       <div>
-        <h2 className="text-lg">How did {node.title} go?</h2>
+        <h2 className="card-title">How did {node.title} go?</h2>
         <p className="muted text-sm">
           Asked once per task. Your answer goes on the chart of how ready you felt as the due date
           came closer.

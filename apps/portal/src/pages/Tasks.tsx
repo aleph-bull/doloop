@@ -1,7 +1,6 @@
 import type { NodePace, StudyNode } from '@komogon/core';
 import {
   Check,
-  ChevronDown,
   ChevronRight,
   GripVertical,
   LayoutTemplate,
@@ -9,13 +8,12 @@ import {
   Play,
   Plus,
 } from 'lucide-react';
-import { useMemo, useState, type HTMLAttributes, type ReactNode } from 'react';
-import { Button, Chip, EmptyState, Panel, ProgressBar, Spinner, useToast } from '@komogon/ui';
+import { useMemo, useState, type HTMLAttributes, type ReactNode, type CSSProperties } from 'react';
+import { Button, EmptyState, Panel, Reveal, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TemplateDialog } from '../components/TemplateDialog';
-import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtDue, fmtMinutes, fmtPerDay } from '../lib/format';
 import { useNodes, usePace, useUpdateNode } from '../lib/queries';
 
@@ -35,6 +33,21 @@ interface RowProps {
   itemProps?: HTMLAttributes<HTMLLIElement>;
 }
 
+/** Status words for the table's Status column: a dot and a word, no pill. */
+const STATUS_WORD: Record<NodePace['status'], string> = {
+  done: 'Estimate met',
+  'on-track': 'On track',
+  behind: 'Behind',
+  critical: 'Critical',
+  overdue: 'Overdue',
+  'no-estimate': 'No estimate',
+};
+
+/**
+ * One line of the task table, Notion-style: the toggle, tick and play at the left, the title,
+ * then Due, Time and Status as columns, with the editing actions showing on hover. Every
+ * row starts folded, so the page opens as a list of courses.
+ */
 function Row({
   node,
   depth,
@@ -48,7 +61,7 @@ function Row({
   grip,
   itemProps,
 }: RowProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const kids = childrenOf.get(node.id) ?? [];
   const p = pace[node.id];
   const done = !!node.completedAt;
@@ -69,6 +82,26 @@ function Row({
       onTemplate={onTemplate}
     />
   );
+  // Finished is finished: a done item says when, never that it is overdue.
+  // Like a table cell, an empty due date is just empty.
+  const due =
+    done && node.completedAt
+      ? `Done ${fmtDate(node.completedAt)}`
+      : node.dueAt
+        ? fmtDue(node.dueAt)
+        : '';
+  const time =
+    p?.estimatedMinutes != null
+      ? `${fmtMinutes(p.loggedWorkMinutes)} / ${fmtMinutes(p.estimatedMinutes)}`
+      : // No estimate here or under it: hours logged is the only honest number. Gated on the
+        // rounded value so a few seconds do not render "0 min studied".
+        p != null && Math.round(p.loggedWorkMinutes) > 0
+        ? `${fmtMinutes(p.loggedWorkMinutes)} studied`
+        : '';
+  const perDay =
+    p?.requiredPerDay != null && !done ? `Need ${fmtPerDay(p.requiredPerDay)}/day` : null;
+  const status = p && node.kind !== 'course' && !done ? p.status : null;
+
   return (
     <li
       {...itemProps}
@@ -76,146 +109,132 @@ function Row({
         [depth === 0 ? 'tree-root' : '', itemProps?.className ?? ''].join(' ').trim() || undefined
       }
     >
-      <div className="tree-row" style={{ paddingLeft: 20 + depth * 20 }}>
-        {grip}
-        {kids.length > 0 ? (
+      <div
+        className={`tree-row${depth === 0 ? ' is-root' : ''}${done ? ' is-done' : ''}`}
+        style={{ '--depth': depth } as CSSProperties}
+      >
+        <div className="tt-name">
+          {grip}
+          {kids.length > 0 ? (
+            <button
+              type="button"
+              className="tt-toggle"
+              aria-expanded={open}
+              aria-label={open ? `Collapse ${node.title}` : `Expand ${node.title}`}
+              onClick={() => setOpen(!open)}
+            >
+              <ChevronRight size={15} aria-hidden />
+            </button>
+          ) : (
+            <span className="tt-toggle-spacer" aria-hidden />
+          )}
           <button
             type="button"
-            className="btn btn-ghost btn-sm btn-icon"
-            aria-expanded={open}
-            aria-label={open ? 'Collapse' : 'Expand'}
-            onClick={() => setOpen(!open)}
+            className="tree-tick"
+            aria-pressed={done}
+            aria-label={done ? `Mark ${node.title} as not done` : `Mark ${node.title} as done`}
+            onClick={() => onToggleDone(node)}
           >
-            {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
+            <Check size={12} strokeWidth={3} aria-hidden />
           </button>
-        ) : (
-          <span style={{ width: 32 }} aria-hidden />
-        )}
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm btn-icon"
-          aria-pressed={done}
-          aria-label={done ? `Mark ${node.title} as not done` : `Mark ${node.title} as done`}
-          onClick={() => onToggleDone(node)}
-          style={{
-            border: '1px solid var(--border-strong)',
-            borderRadius: '50%',
-            width: 24,
-            height: 24,
-            background: done ? 'var(--accent)' : 'transparent',
-            color: done ? 'var(--accent-fg)' : 'inherit',
-          }}
-        >
-          {done && <Check size={14} aria-hidden />}
-        </button>
-        {/*
-          Starting something is the point of the page, so it sits up front beside the tick and
-          stays visible rather than waiting for a hover the way the editing actions do - and a
-          touch device has no hover to wait for. Rows without one keep the space, so titles
-          line up down the tree.
-        */}
-        {node.kind !== 'course' && !done ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            icon
-            className="row-start"
-            aria-label={`Start a session on ${node.title}`}
-            title="Start a session"
-            onClick={() => onStart(node)}
-          >
-            <Play size={14} aria-hidden />
-          </Button>
-        ) : (
-          <span className="row-start-spacer" aria-hidden />
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={done ? 'line-through muted' : 'font-medium'}
-              style={
-                node.color ? { borderLeft: `3px solid ${node.color}`, paddingLeft: 8 } : undefined
-              }
+          {/*
+            Starting something is the point of the page, so play sits beside the tick and stays
+            visible rather than waiting for a hover the way the editing actions do. Rows without
+            one keep the space, so titles line up down the table.
+          */}
+          {node.kind !== 'course' && !done ? (
+            <button
+              type="button"
+              className="row-start"
+              aria-label={`Start a session on ${node.title}`}
+              title="Start a session"
+              onClick={() => onStart(node)}
             >
+              <Play size={13} aria-hidden />
+            </button>
+          ) : (
+            <span className="row-start-spacer" aria-hidden />
+          )}
+          <span className="tt-title-wrap">
+            <span className={`tree-title${depth === 0 ? ' is-root' : ''}${done ? ' is-done' : ''}`}>
+              {node.color && (
+                <span className="tree-color" style={{ background: node.color }} aria-hidden />
+              )}
               {node.title}
             </span>
-            {node.kind === 'assessment' && <Chip tone="info">Assessment</Chip>}
+            {node.kind === 'assessment' && <span className="tt-kind">Assessment</span>}
             {node.childDefaults && (
-              <Chip tone="neutral" title="Items added under this start from its template">
+              <span className="tt-kind" title="Items added under this start from its template">
                 Template
-              </Chip>
-            )}
-            {p && node.kind !== 'course' && !done && <StatusChip status={p.status} />}
-          </div>
-          <div className="row-meta text-xs muted flex gap-2 flex-wrap mt-0.5 tabular">
-            {/* Finished is finished: a done item says when, never that it is overdue. */}
-            {done && node.completedAt ? (
-              <span>Done {fmtDate(node.completedAt)}</span>
-            ) : (
-              node.dueAt && <span>{fmtDue(node.dueAt)}</span>
-            )}
-            {p?.estimatedMinutes != null ? (
-              <span>
-                {fmtMinutes(p.loggedWorkMinutes)} / {fmtMinutes(p.estimatedMinutes)}
               </span>
-            ) : (
-              // No estimate here or under it: hours logged is the only honest number.
-              // Gated on the rounded value so a few seconds do not render "0 min studied".
-              p != null &&
-              Math.round(p.loggedWorkMinutes) > 0 && (
-                <span>{fmtMinutes(p.loggedWorkMinutes)} studied</span>
-              )
             )}
-            {p?.requiredPerDay != null && !done && (
-              <span>· need {fmtPerDay(p.requiredPerDay)}/day</span>
-            )}
-          </div>
+            {kids.length > 0 && !open && <span className="tt-count tabular">{kids.length}</span>}
+          </span>
+          {/* On a phone the columns fold into one quiet line under the title. */}
+          <span className="tt-meta tabular">
+            {[due, time, perDay, status && status !== 'on-track' ? STATUS_WORD[status] : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </span>
+        </div>
+        <div className="tt-cell tt-due tabular">{due}</div>
+        <div className="tt-cell tt-time tabular" title={perDay ?? undefined}>
           {p?.progress != null && (
-            <div className="mt-1" style={{ maxWidth: 240 }}>
-              <ProgressBar value={p.progress} label={`${node.title} progress`} />
-            </div>
+            <span className="tt-bar" aria-hidden>
+              <span style={{ width: `${Math.min(100, Math.round(p.progress * 100))}%` }} />
+            </span>
+          )}
+          <span>{time}</span>
+        </div>
+        <div className="tt-cell tt-status">
+          {status && (
+            <span className={`tt-status-word is-${status}`} title={perDay ?? undefined}>
+              <span className="tt-dot" aria-hidden />
+              {STATUS_WORD[status]}
+            </span>
           )}
         </div>
-        <div className="row-actions flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon
+        <div className="row-actions">
+          <button
+            type="button"
+            className="tt-action"
             aria-label={`Add under ${node.title}`}
+            title="Add inside"
             onClick={() => onAdd(node.id)}
           >
-            <Plus size={14} aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon
+            <Plus size={15} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="tt-action"
             aria-label={`Template for items under ${node.title}`}
             title="Template for items under this"
             onClick={() => onTemplate(node)}
           >
             <LayoutTemplate size={14} aria-hidden />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon
+          </button>
+          <button
+            type="button"
+            className="tt-action"
             aria-label={`Edit ${node.title}`}
+            title="Edit"
             onClick={() => onEdit(node)}
           >
             <Pencil size={14} aria-hidden />
-          </Button>
+          </button>
         </div>
       </div>
-      {open && kids.length > 0 && (
-        <ul>
-          {activeKids.map(child)}
-          {doneKids.length > 0 && (
-            <DoneGroup depth={depth + 1} count={doneKids.length}>
-              {doneKids.map(child)}
-            </DoneGroup>
-          )}
-        </ul>
+      {kids.length > 0 && (
+        <Reveal open={open}>
+          <ul>
+            {activeKids.map(child)}
+            {doneKids.length > 0 && (
+              <DoneGroup depth={depth + 1} count={doneKids.length}>
+                {doneKids.map(child)}
+              </DoneGroup>
+            )}
+          </ul>
+        </Reveal>
       )}
     </li>
   );
@@ -241,19 +260,21 @@ function DoneGroup({
         type="button"
         className="tree-done-toggle"
         // In line with the tick buttons of the rows it holds.
-        style={{ paddingLeft: 20 + depth * 20 + 42 }}
+        style={{ '--depth': depth } as CSSProperties}
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        {open ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+        <ChevronRight size={14} aria-hidden className="tt-done-chevron" />
         Done · {count}
       </button>
-      {open && <ul>{children}</ul>}
+      <Reveal open={open}>
+        <ul>{children}</ul>
+      </Reveal>
     </li>
   );
 }
 
-/** The task tree on an opaque panel (spec §8): course -> item -> subtask. */
+/** The task table (spec §8): course -> item -> subtask, folded until opened. */
 export function Tasks() {
   const nodes = useNodes();
   const pace = usePace();
@@ -424,13 +445,13 @@ export function Tasks() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl">Tasks</h1>
+        <h1 className="page-title">Tasks</h1>
         <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
           <Plus size={16} aria-hidden /> New course
         </Button>
       </div>
 
-      <Panel className="p-2">
+      <Panel className="task-table">
         {roots.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
@@ -442,45 +463,54 @@ export function Tasks() {
             }
           />
         ) : (
-          <ul
-            aria-label="Task tree"
-            onKeyDown={(e) => {
-              if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
-              const rows = Array.from(
-                e.currentTarget.querySelectorAll<HTMLElement>(
-                  '.tree-row [tabindex], .tree-row button',
-                ),
-              ).filter((el) => el.closest('.tree-row'));
-              const current = rows.findIndex((el) => el === document.activeElement);
-              if (current === -1) return;
-              const currentRow = rows[current]!.closest('.tree-row');
-              const dir = e.key === 'ArrowDown' ? 1 : -1;
-              for (let i = current + dir; i >= 0 && i < rows.length; i += dir) {
-                if (rows[i]!.closest('.tree-row') !== currentRow) {
-                  rows[i]!.focus();
-                  e.preventDefault();
-                  return;
+          <>
+            <div className="tt-head" aria-hidden>
+              <span>Name</span>
+              <span>Due</span>
+              <span>Time</span>
+              <span>Status</span>
+              <span />
+            </div>
+            <ul
+              aria-label="Task tree"
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+                const rows = Array.from(
+                  e.currentTarget.querySelectorAll<HTMLElement>(
+                    '.tree-row [tabindex], .tree-row button',
+                  ),
+                ).filter((el) => el.closest('.tree-row'));
+                const current = rows.findIndex((el) => el === document.activeElement);
+                if (current === -1) return;
+                const currentRow = rows[current]!.closest('.tree-row');
+                const dir = e.key === 'ArrowDown' ? 1 : -1;
+                for (let i = current + dir; i >= 0 && i < rows.length; i += dir) {
+                  if (rows[i]!.closest('.tree-row') !== currentRow) {
+                    rows[i]!.focus();
+                    e.preventDefault();
+                    return;
+                  }
                 }
-              }
-            }}
-          >
-            {roots.map((r, i) => (
-              <Row
-                key={r.id}
-                node={r}
-                depth={0}
-                grip={roots.length > 1 ? courseGrip(r, i) : undefined}
-                itemProps={courseItemProps(r)}
-                childrenOf={childrenOf}
-                pace={pace.data?.pace ?? {}}
-                onEdit={(n) => setDialog({ node: n })}
-                onAdd={(parentId) => setDialog({ parentId })}
-                onStart={setStart}
-                onToggleDone={toggleDone}
-                onTemplate={setTemplate}
-              />
-            ))}
-          </ul>
+              }}
+            >
+              {roots.map((r, i) => (
+                <Row
+                  key={r.id}
+                  node={r}
+                  depth={0}
+                  grip={roots.length > 1 ? courseGrip(r, i) : undefined}
+                  itemProps={courseItemProps(r)}
+                  childrenOf={childrenOf}
+                  pace={pace.data?.pace ?? {}}
+                  onEdit={(n) => setDialog({ node: n })}
+                  onAdd={(parentId) => setDialog({ parentId })}
+                  onStart={setStart}
+                  onToggleDone={toggleDone}
+                  onTemplate={setTemplate}
+                />
+              ))}
+            </ul>
+          </>
         )}
       </Panel>
 

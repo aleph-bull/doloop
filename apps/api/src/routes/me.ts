@@ -1,11 +1,17 @@
 import type { FastifyInstance } from 'fastify';
-import { isAccentUnlocked, isBackgroundAvailable, isValidTimezone } from '@komogon/core';
+import {
+  dayStartUnlocksAt,
+  isAccentUnlocked,
+  isBackgroundAvailable,
+  isValidTimezone,
+} from '@komogon/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
 import { viewPolicy } from '../services/rest-days';
 import {
   deleteUser,
   regenerateIcsToken,
+  settingsOf,
   syncStreak,
   toUser,
   updateProfile,
@@ -60,6 +66,17 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       !isBackgroundAvailable(ext, req.user.level, req.user.purchasedBackgrounds)
     )
       throw badRequest('That background is locked or not yet purchased');
+    // The streak's day start may move once a day, and the server stamps when it did.
+    const hour = patch.streak?.dayStartHour;
+    if (hour !== undefined) {
+      const now = clock();
+      const current = settingsOf(req.user).streak;
+      if (hour !== current.dayStartHour) {
+        const until = dayStartUnlocksAt(current.dayStartChangedAt, now);
+        if (until) throw badRequest('When your day starts can change once a day. Try again later.');
+        (patch.streak as Record<string, unknown>).dayStartChangedAt = now;
+      }
+    }
     const row = await updateSettings(db, req.user, patch);
     return { settings: toUser(row).settings };
   });

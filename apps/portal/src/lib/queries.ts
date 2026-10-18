@@ -9,7 +9,13 @@ import {
 import {
   api,
   type LogTrackerInput,
+  type DrillInput,
   type NodeInput,
+  type PlanInput,
+  type PlanPatch,
+  type PlanView,
+  type TopicInput,
+  type TopicPatch,
   type RecapRangeParam,
   type TrackerBoard,
 } from './api';
@@ -44,6 +50,8 @@ export const keys = {
   dashboardStats: ['analytics', 'dashboard'] as const,
   screens: ['equivalents', 'screens'] as const,
   history: ['sessions', 'history'] as const,
+  plans: ['plans'] as const,
+  plan: (id: string) => ['plans', id] as const,
 };
 
 export function useMe() {
@@ -365,6 +373,29 @@ export function useUntickRoutine() {
   });
 }
 
+/**
+ * "Clear missed": outstanding days before today drop off the due list. One settings value
+ * holds it, so the undo puts the previous one back.
+ */
+export function useClearMissedRoutines() {
+  const invalidate = useInvalidate();
+  const save = (through: string | null) =>
+    api
+      .updateSettings({ routines: { missedClearedThrough: through } })
+      .then(() => invalidate(...ROUTINE_KEYS));
+  return useMutation({
+    mutationFn: ({ through }: { through: string; previous: string | null; count: number }) =>
+      save(through),
+    onSuccess: (_res, { through, previous, count }) => {
+      recordUndo({
+        label: `Cleared ${count} missed routine${count === 1 ? '' : 's'}`,
+        undo: () => save(previous),
+        redo: () => save(through),
+      });
+    },
+  });
+}
+
 export function useImportRoutineIcs() {
   return useRoutineMutation(({ ics, defaultEstimate }: { ics: string; defaultEstimate?: number }) =>
     api.importRoutineIcs(ics, defaultEstimate),
@@ -663,4 +694,100 @@ export function useTrimSession() {
     onSuccess: () =>
       invalidate(['sessions'], keys.me, keys.pace, keys.shop, ['analytics'], ['blocks']),
   });
+}
+
+/* ---------- study plans ---------- */
+
+export function usePlans() {
+  return useQuery({ queryKey: keys.plans, queryFn: api.plans, staleTime: 15_000 });
+}
+
+export function usePlan(id: string | undefined) {
+  return useQuery({
+    queryKey: keys.plan(id ?? ''),
+    queryFn: () => api.plan(id!),
+    enabled: !!id,
+    staleTime: 15_000,
+  });
+}
+
+/**
+ * Every plan mutation answers with the plan's fresh view: it goes straight into the cache,
+ * and the lists that plan topics also appear in (tasks, pace, routines) are refetched.
+ */
+function usePlanMutation<V, R extends PlanView | { view: PlanView }>(fn: (v: V) => Promise<R>) {
+  const qc = useQueryClient();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (res) => {
+      const view: PlanView = 'view' in res ? res.view : (res as PlanView);
+      qc.setQueryData(keys.plan(view.plan.id), view);
+      invalidate(keys.plans, keys.nodes, keys.pace, ['routines']);
+    },
+  });
+}
+
+export function useCreatePlan() {
+  return usePlanMutation((input: PlanInput) => api.createPlan(input));
+}
+
+export function useUpdatePlan() {
+  return usePlanMutation(({ id, patch }: { id: string; patch: PlanPatch }) =>
+    api.updatePlan(id, patch),
+  );
+}
+
+export function useDeletePlan() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deletePlan(id),
+    onSuccess: () => invalidate(keys.plans, keys.nodes, keys.pace, ['routines']),
+  });
+}
+
+export function useAddTopic() {
+  return usePlanMutation(({ planId, input }: { planId: string; input: TopicInput }) =>
+    api.addTopic(planId, input),
+  );
+}
+
+export function useUpdateTopic() {
+  return usePlanMutation(({ id, patch }: { id: string; patch: TopicPatch }) =>
+    api.updateTopic(id, patch),
+  );
+}
+
+export function useDeleteTopic() {
+  return usePlanMutation((id: string) => api.deleteTopic(id));
+}
+
+export function useLogDrill() {
+  const qc = useQueryClient();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ topicId, input }: { topicId: string; input: DrillInput }) =>
+      api.logDrill(topicId, input),
+    onSuccess: (res) => {
+      qc.setQueryData(keys.plan(res.view.plan.id), res.view);
+      invalidate(keys.plans, keys.nodes, keys.pace);
+    },
+  });
+}
+
+export function useAnswerItem() {
+  const qc = useQueryClient();
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, result }: { id: string; result: 'ok' | 'shaky' | 'miss' }) =>
+      api.answerItem(id, result),
+    onSuccess: (res) => {
+      qc.setQueryData(keys.plan(res.view.plan.id), res.view);
+      invalidate(keys.plans, keys.nodes, keys.pace);
+    },
+  });
+}
+
+export function useDeleteItem() {
+  return usePlanMutation((id: string) => api.deleteItem(id));
 }

@@ -2,14 +2,15 @@ import {
   type CustomReward,
   type RewardDraft,
   type RewardView,
+  type UnlockTask,
   redeemReward,
   toRewardView,
   validateRewardDraft,
   REWARDS,
 } from '@komogon/core';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { customRewards, users, xpTransactions, type CustomRewardRow } from '../db/schema';
+import { customRewards, nodes, users, xpTransactions, type CustomRewardRow } from '../db/schema';
 import { badRequest, notFound } from '../errors';
 import { dt } from './sessions-mapper';
 
@@ -21,6 +22,8 @@ function toReward(row: CustomRewardRow): CustomReward {
     note: row.note,
     emoji: row.emoji,
     costXp: row.costXp,
+    unlock: row.unlock,
+    unlockNodeId: row.unlockNodeId,
     cooldownDays: row.cooldownDays,
     archived: row.archived,
     createdAt: row.createdAt.toISOString(),
@@ -43,7 +46,43 @@ export async function listRewards(
       : and(eq(customRewards.userId, userId), eq(customRewards.archived, false)),
     orderBy: [desc(customRewards.createdAt)],
   });
-  return rows.map((r) => toRewardView(toReward(r), xp, now, timezone));
+  const tasks = await unlockTasks(
+    db,
+    userId,
+    rows.map((r) => r.unlockNodeId).filter((id): id is string => id !== null),
+  );
+  return rows.map((r) =>
+    toRewardView(toReward(r), xp, now, timezone, unlockTaskFor(r.unlockNodeId, tasks)),
+  );
+}
+
+/** The tasks that task rewards wait on, by id. Only this user's own tasks are returned. */
+async function unlockTasks(
+  db: Db,
+  userId: string,
+  ids: string[],
+): Promise<Map<string, UnlockTask>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db.query.nodes.findMany({
+    where: and(eq(nodes.userId, userId), inArray(nodes.id, ids)),
+    columns: { id: true, title: true, kind: true, completedAt: true },
+  });
+  return new Map(
+    rows.map((n) => [
+      n.id,
+      { id: n.id, title: n.title, kind: n.kind, done: n.completedAt !== null },
+    ]),
+  );
+}
+
+function unlockTaskFor(id: string | null, tasks: Map<string, UnlockTask>): UnlockTask | null {
+  return id ? (tasks.get(id) ?? null) : null;
+}
+
+/** A task reward may only point at one of the user's own tasks. */
+async function assertOwnTask(db: Db, userId: string, nodeId: string | null): Promise<void> {
+  if (!nodeId) return;
+  if ((await unlockTasks(db, userId, [nodeId])).size === 0) throw badRequest('Task not found.');
 }
 
 async function getRewardRow(db: Db, userId: string, id: string): Promise<CustomRewardRow> {
@@ -69,6 +108,7 @@ export async function createReward(
 ): Promise<CustomReward> {
   const valid = validateRewardDraft(draft);
   if (!valid.ok) throw badRequest(valid.reason);
+  await assertOwnTask(db, userId, valid.value.unlockNodeId);
   if ((await countActiveRewards(db, userId)) >= REWARDS.MAX_ACTIVE)
     throw badRequest(`You can keep at most ${REWARDS.MAX_ACTIVE} rewards. Archive one first.`);
   const [row] = await db
@@ -91,9 +131,12 @@ export async function updateReward(
     emoji: patch.emoji !== undefined ? patch.emoji : current.emoji,
     costXp: patch.costXp ?? current.costXp,
     cooldownDays: patch.cooldownDays ?? current.cooldownDays,
+    unlock: patch.unlock ?? current.unlock,
+    unlockNodeId: patch.unlockNodeId !== undefined ? patch.unlockNodeId : current.unlockNodeId,
   };
   const valid = validateRewardDraft(merged);
   if (!valid.ok) throw badRequest(valid.reason);
+  await assertOwnTask(db, userId, valid.value.unlockNodeId);
   if (patch.archived === false && current.archived) {
     if ((await countActiveRewards(db, userId)) >= REWARDS.MAX_ACTIVE)
       throw badRequest(`You can keep at most ${REWARDS.MAX_ACTIVE} rewards. Archive one first.`);
@@ -125,9 +168,17 @@ export async function redeem(
   now: string,
 ): Promise<RedeemOutcome> {
   const reward = toReward(await getRewardRow(db, user.id, id));
-  const result = redeemReward(user.xp, reward, now, user.timezone);
+  const tasks = await unlockTasks(db, user.id, reward.unlockNodeId ? [reward.unlockNodeId] : []);
+  const result = redeemReward(
+    user.xp,
+    reward,
+    now,
+    user.timezone,
+    unlockTaskFor(reward.unlockNodeId, tasks),
+  );
   if (!result.ok) throw badRequest(result.reason);
-  await db.update(users).set({ xp: result.value.xp }).where(eq(users.id, user.id));
+  if (reward.costXp > 0)
+    await db.update(users).set({ xp: result.value.xp }).where(eq(users.id, user.id));
   await db
     .update(customRewards)
     .set({ lastRedeemedAt: dt(now), redeemedCount: reward.redeemedCount + 1 })

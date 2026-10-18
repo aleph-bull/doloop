@@ -16,8 +16,11 @@ const draft = z.object({
   name: z.string().trim().min(1).max(REWARDS.NAME_MAX),
   note: z.string().max(REWARDS.NOTE_MAX).nullable().optional(),
   emoji: z.string().max(16).nullable().optional(),
-  costXp: z.number().int().min(REWARDS.MIN_COST_XP).max(REWARDS.MAX_COST_XP),
+  // A task reward costs nothing, so the floor is checked in the core validator instead.
+  costXp: z.number().int().min(0).max(REWARDS.MAX_COST_XP),
   cooldownDays: z.number().int().min(0).max(REWARDS.MAX_COOLDOWN_DAYS).optional(),
+  unlock: z.enum(['xp', 'task']).optional(),
+  unlockNodeId: uuid.nullable().optional(),
 });
 
 const patchSchema = draft.partial().extend({ archived: z.boolean().optional() });

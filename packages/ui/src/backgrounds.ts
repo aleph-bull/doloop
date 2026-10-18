@@ -51,6 +51,8 @@ export interface BackgroundDef {
   category: BackgroundCategory;
   /** Present for photographs; absent for the CSS gradients. */
   photo?: BackgroundPhoto;
+  /** Present for a solid colour the user picked: its RGB, for the glass adaptation. */
+  solid?: [number, number, number];
   light: BackgroundVariant;
   dark: BackgroundVariant;
 }
@@ -167,9 +169,10 @@ const GRADIENTS: BackgroundDef[] = [
 
 /**
  * A photograph is the same image in both themes; only the scrim over it differs, and it
- * is kept light because the glass fill already adapts to the image's own colour.
+ * is kept light because the glass fill already adapts to the image's own colour. Its
+ * average strength is PHOTO_SCRIM in contrast.ts, which the text colour is measured under.
  */
-const scrim = (theme: 'light' | 'dark'): string =>
+export const photoScrimCss = (theme: 'light' | 'dark'): string =>
   theme === 'dark'
     ? 'linear-gradient(180deg, rgb(6 7 10 / 0.35) 0%, rgb(6 7 10 / 0.5) 100%)'
     : 'linear-gradient(180deg, rgb(255 255 255 / 0.18) 0%, rgb(255 255 255 / 0.3) 100%)';
@@ -181,8 +184,8 @@ function photoDef(p: (typeof PHOTO_BACKGROUNDS)[number]): BackgroundDef {
     category: p.category as BackgroundCategory,
     photo: { src: p.src, thumb: p.thumb, avg: p.avg, lqip: p.lqip },
     // Used only as a fallback fill while the image loads, and by the contrast audit.
-    light: { css: scrim('light'), luminance: 0.6 },
-    dark: { css: scrim('dark'), luminance: 0.2 },
+    light: { css: photoScrimCss('light'), luminance: 0.6 },
+    dark: { css: photoScrimCss('dark'), luminance: 0.2 },
   };
 }
 
@@ -191,7 +194,28 @@ export const BACKGROUND_DEFS: BackgroundDef[] = [...GRADIENTS, ...PHOTO_BACKGROU
 /** The background an unknown id falls back to: the quiet one. New accounts start on Velvet. */
 export const DEFAULT_BACKGROUND_ID = 'graphite';
 
+/** A user's solid colour (`solid:#rrggbb`) as a flat background, or null for any other id. */
+function solidDef(id: string): BackgroundDef | null {
+  const m = /^solid:#([0-9a-f]{6})$/i.exec(id);
+  if (!m) return null;
+  const n = parseInt(m[1]!, 16);
+  const rgb: [number, number, number] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const hex = `#${m[1]!.toLowerCase()}`;
+  const luminance = (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+  const variant = { css: hex, luminance };
+  return {
+    id,
+    name: 'Solid colour',
+    category: 'minimal',
+    solid: rgb,
+    light: variant,
+    dark: variant,
+  };
+}
+
 export function backgroundById(id: string): BackgroundDef {
+  const solid = solidDef(id);
+  if (solid) return solid;
   return (
     BACKGROUND_DEFS.find((b) => b.id === id) ??
     BACKGROUND_DEFS.find((b) => b.id === DEFAULT_BACKGROUND_ID) ??

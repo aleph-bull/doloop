@@ -1,8 +1,8 @@
 import { pickEquivalents } from '@komogon/core';
-import { ChevronRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { ChevronRight, Flame as FlameIcon } from 'lucide-react';
+import { useMemo, type CSSProperties } from 'react';
 import { Link } from 'react-router';
-import { CountUp, Flame, Glass, Ring, SkeletonBlock, Sparkline } from '@komogon/ui';
+import { CountUp, Glass, SkeletonBlock } from '@komogon/ui';
 import { fmtHours } from '../lib/format';
 import { useDashboardStats, useScreens } from '../lib/queries';
 
@@ -15,10 +15,35 @@ function daySeed(now: string): number {
   );
 }
 
+const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+/** A count of hours as the hero shows it: one decimal under 100, whole above. */
+function Hours({ minutes }: { minutes: number }) {
+  if (minutes < 60)
+    return (
+      <>
+        <CountUp value={Math.round(minutes)} format={(v) => String(Math.round(v))} />
+        <small>min</small>
+      </>
+    );
+  const hours = minutes / 60;
+  return (
+    <>
+      <CountUp
+        value={hours}
+        format={(v) => (hours >= 100 ? String(Math.round(v)) : v.toFixed(1))}
+      />
+      <small>h</small>
+    </>
+  );
+}
+
 /**
- * The dashboard's numbers at a glance: everything studied, this week against the goal,
- * the streak beside the best one, the last seven days as a line, and one playful
- * comparison that leads to the full recap.
+ * The dashboard's numbers, run-tracker style: this week is the hero (the number you can
+ * still move), with the goal as a bar, the last seven days as columns, and everything
+ * studied and the streak beside the best one underneath. One playful comparison leads on to
+ * the full recap.
  */
 export function DashboardStats() {
   const q = useDashboardStats();
@@ -37,95 +62,123 @@ export function DashboardStats() {
 
   if (!q.data)
     return q.isError ? null : (
-      <SkeletonBlock className="dash-stats-skeleton" style={{ height: 132 }} />
+      <SkeletonBlock className="dash-stats-skeleton" style={{ height: 248 }} />
     );
   const d = q.data;
-  const hours = d.totalMinutes / 60;
 
   // Before the first session there is nothing to count, and a row of zeros says so in
   // the least welcoming way. One line instead, until there is something to show.
   if (d.totalMinutes <= 0)
     return (
-      <Glass as="section" className="dash-stats dash-stats-empty rc-rise" aria-label="Your numbers">
-        <Flame days={0} size={40} />
+      <Glass as="section" className="dash-empty rc-rise" aria-label="Your numbers">
+        <span className="streak-badge" aria-hidden>
+          <FlameIcon size={24} />
+        </span>
         <div>
-          <span className="dash-value">Your numbers live here.</span>
-          <span className="muted text-sm">
-            Time studied, the week against your {fmtHours(d.goalMinutes)} goal, and your streak
-            all start counting with your first session.
+          <span className="dash-empty-title">Your numbers live here.</span>
+          <span className="dash-empty-body">
+            Time studied, the week against your {fmtHours(d.goalMinutes)} goal, and your streak all
+            start counting with your first session.
           </span>
         </div>
       </Glass>
     );
 
+  const peak = Math.max(60, ...d.sparkline.map((x) => x.minutes));
+  const pct = Math.round(d.goalRatio * 100);
+
   return (
-    <Glass as="section" className="dash-stats rc-rise" aria-label="Your numbers">
-      <div className="dash-stat is-total">
-        <span className="dash-label">Studied, all time</span>
-        <span className="dash-figure">
-          {d.totalMinutes < 60 ? (
-            <>
-              <CountUp value={Math.round(d.totalMinutes)} format={(v) => String(Math.round(v))} />
-              <small> min</small>
-            </>
-          ) : (
-            <>
-              <CountUp
-                value={hours}
-                format={(v) => (hours >= 100 ? String(Math.round(v)) : v.toFixed(1))}
-              />
-              <small> h</small>
-            </>
-          )}
+    <Glass as="section" className="dash-hero rc-rise" aria-label="Your numbers">
+      <div className="dash-week">
+        <span className="dash-label">This week</span>
+        <span className="dash-hero-figure">
+          <Hours minutes={d.weekMinutes} />
         </span>
-      </div>
-
-      <div className="dash-stat is-week">
-        <Ring
-          value={d.goalRatio}
-          size={72}
-          stroke={8}
-          label={`${fmtHours(d.weekMinutes)} this week of a ${fmtHours(d.goalMinutes)} goal`}
-        >
-          <span className="dash-ring-text">{Math.round(d.goalRatio * 100)}%</span>
-        </Ring>
-        <div>
-          <span className="dash-label">This week</span>
-          <span className="dash-value">
-            {fmtHours(d.weekMinutes)} <small className="muted">of {fmtHours(d.goalMinutes)}</small>
-          </span>
-          <Link to="/settings#pace" className="dash-link">
-            Change goal
-          </Link>
+        <div className="dash-goal">
+          <div
+            className="dash-goal-bar"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.min(100, pct)}
+            aria-label={`${fmtHours(d.weekMinutes)} this week of a ${fmtHours(d.goalMinutes)} goal`}
+          >
+            <span style={{ width: `${Math.min(100, pct)}%` }} />
+          </div>
+          <div className="dash-goal-row">
+            <span>
+              <strong className="tabular">{pct}%</strong> of {fmtHours(d.goalMinutes)}
+            </span>
+            <Link to="/settings#pace" className="dash-link">
+              Change goal
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="dash-stat is-streak">
-        <Flame days={d.streak.current} size={40} />
-        <div>
-          <span className="dash-label">Streak</span>
-          <span className="dash-value">
-            {d.streak.current} {d.streak.current === 1 ? 'day' : 'days'}
-            <small className="muted"> · Best: {d.streak.longest}</small>
-          </span>
-        </div>
-      </div>
-
-      <div className="dash-stat is-spark">
+      <div
+        className="dash-days"
+        role="img"
+        aria-label={`Study time over the last seven days: ${d.sparkline.map((x) => fmtHours(x.minutes)).join(', ')}`}
+      >
         <span className="dash-label">Last 7 days</span>
-        <Sparkline
-          values={d.sparkline.map((x) => x.minutes)}
-          label={`Study time over the last seven days: ${d.sparkline.map((x) => fmtHours(x.minutes)).join(', ')}`}
-        />
+        <ol className="dash-days-cols" aria-hidden>
+          {d.sparkline.map((x, i) => {
+            const day = new Date(`${x.date}T12:00:00`).getDay();
+            const today = i === d.sparkline.length - 1;
+            return (
+              <li
+                key={x.date}
+                className={`dash-day${today ? ' is-today' : ''}${x.minutes > 0 ? '' : ' is-empty'}`}
+                title={`${WEEKDAY_LONG[day]}: ${x.minutes > 0 ? fmtHours(x.minutes) : 'nothing'}`}
+              >
+                <span className="dash-day-track">
+                  <span
+                    className="dash-day-bar"
+                    style={
+                      {
+                        '--h': `${Math.max(6, (x.minutes / peak) * 100)}%`,
+                        '--i': i,
+                      } as CSSProperties
+                    }
+                  />
+                </span>
+                <span className="dash-day-label">{WEEKDAY[day]}</span>
+              </li>
+            );
+          })}
+        </ol>
       </div>
 
-      {fun && (
-        <Link to="/analytics" className="dash-fun">
-          <span aria-hidden>{fun.icon}</span>
-          <span>You&rsquo;ve studied enough to {fun.text}</span>
-          <ChevronRight size={16} aria-hidden />
-        </Link>
-      )}
+      <dl className="dash-foot">
+        <div className="dash-foot-stat">
+          <dt className="dash-label">Studied, all time</dt>
+          <dd className="dash-foot-figure">
+            <Hours minutes={d.totalMinutes} />
+          </dd>
+        </div>
+        <div className="dash-foot-stat is-streak">
+          <dt className="dash-label">Streak</dt>
+          <dd className="dash-foot-figure">
+            <span>
+              {d.streak.current}
+              <small>{d.streak.current === 1 ? 'day' : 'days'}</small>
+            </span>
+          </dd>
+          <dd className="dash-foot-note">Best {d.streak.longest}</dd>
+        </div>
+        {fun && (
+          <div className="dash-foot-stat is-fun">
+            <Link to="/analytics" className="dash-fun">
+              <span className="dash-fun-icon" aria-hidden>
+                {fun.icon}
+              </span>
+              <span className="dash-fun-text">You&rsquo;ve studied enough to {fun.text}</span>
+              <ChevronRight size={16} aria-hidden className="dash-fun-chevron" />
+            </Link>
+          </div>
+        )}
+      </dl>
     </Glass>
   );
 }

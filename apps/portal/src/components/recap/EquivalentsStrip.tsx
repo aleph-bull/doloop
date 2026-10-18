@@ -46,7 +46,7 @@ export function EquivalentsStrip({ minutes, scope }: EquivalentsStripProps) {
   return (
     <section className="eq" aria-labelledby="eq-h">
       <div className="eq-head">
-        <h2 id="eq-h" className="text-lg">
+        <h2 id="eq-h" className="card-title">
           That&rsquo;s enough time to&hellip;
         </h2>
         <Button

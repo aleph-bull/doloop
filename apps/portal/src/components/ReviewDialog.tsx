@@ -1,6 +1,7 @@
-import type { Distracted, ReviewMode, StudyNode } from '@komogon/core';
+import { formatClock, type Distracted, type ReviewMode, type StudyNode } from '@komogon/core';
+import { Check, ChevronDown } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal, Segmented, Slider, Textarea, Toggle } from '@komogon/ui';
+import { Button, Input, Modal, Reveal, Textarea, Toggle } from '@komogon/ui';
 import type { ReviewInput } from '../lib/api';
 
 /**
@@ -9,12 +10,25 @@ import type { ReviewInput } from '../lib/api';
  */
 export type ReviewSubject = { kind: 'task'; node: StudyNode } | { kind: 'routine'; title: string };
 
+/** The session as it stands when it is stopped: the numbers the sheet leads with. */
+export interface ReviewStats {
+  workSeconds: number;
+  breakSeconds: number;
+  /** Completed work intervals, for a pomodoro session; null otherwise. */
+  pomodoros: number | null;
+}
+
 export interface ReviewDialogProps {
   open: boolean;
   mode: Exclude<ReviewMode, 'off'>;
   subject: ReviewSubject;
-  /** True if the node or an ancestor is an assessment (asks "Prepared"). */
+  /** Where the task sits, "ECO220 › Unit 1", for the header. */
+  path?: string;
+  stats: ReviewStats;
+  /** True if the node or an ancestor is an assessment (asks how prepared you feel). */
   underAssessment: boolean;
+  /** The assessment that readiness is asked about; the task itself if it is one. */
+  assessmentTitle?: string | null;
   onSubmit: (review: ReviewInput, markComplete: boolean) => void;
   onSkip: (markComplete: boolean) => void;
   busy?: boolean;
@@ -27,82 +41,93 @@ const UNIT_LABEL: Record<NonNullable<StudyNode['countUnit']>, string> = {
   custom: 'items',
 };
 
-function Scale({
+const FOCUS: Array<{ value: Distracted; label: string }> = [
+  { value: 'no', label: 'Locked in' },
+  { value: 'a-little', label: 'A few drifts' },
+  { value: 'a-lot', label: 'Scattered' },
+];
+const EFFORT = ['Easy', 'Moderate', 'Hard', 'Very hard', 'All out'];
+const PREPARED = ['Not yet', 'Shaky', 'Getting there', 'Mostly', 'Ready'];
+const MORE_TIME: Array<{ minutes: number; label: string }> = [
+  { minutes: 0, label: 'No' },
+  { minutes: 30, label: '+30 min' },
+  { minutes: 60, label: '+1 h' },
+  { minutes: 120, label: '+2 h' },
+];
+
+/** A row of one-tap choices; tapping the chosen one again clears it. */
+function Choices<T extends string | number>({
   label,
   value,
+  options,
   onChange,
-  low,
-  high,
+  scale = false,
 }: {
   label: string;
-  value: number | null;
-  onChange: (v: number) => void;
-  low: string;
-  high: string;
+  value: T | null;
+  options: Array<{ value: T; label: string }>;
+  onChange: (v: T | null) => void;
+  /** A graded scale: the chips fill up to the chosen one, like an effort bar. */
+  scale?: boolean;
 }) {
+  const chosen = options.findIndex((o) => o.value === value);
   return (
-    <div className="field">
-      <span className="field-label">{label}</span>
-      <div className="flex gap-2" role="radiogroup" aria-label={label}>
-        {[1, 2, 3, 4, 5].map((n) => (
+    <div className="save-q">
+      <span className="save-q-label">{label}</span>
+      <div className={`save-chips${scale ? ' is-scale' : ''}`} role="radiogroup" aria-label={label}>
+        {options.map((o, i) => (
           <button
-            key={n}
+            key={String(o.value)}
             type="button"
             role="radio"
-            aria-checked={value === n}
-            className="btn btn-secondary btn-sm"
-            style={
-              value === n
-                ? {
-                    background: 'var(--accent)',
-                    color: 'var(--accent-fg)',
-                    borderColor: 'transparent',
-                  }
-                : undefined
-            }
-            onClick={() => onChange(n)}
+            aria-checked={o.value === value}
+            className={`save-chip${scale && chosen >= 0 && i <= chosen ? ' is-filled' : ''}`}
+            onClick={() => onChange(o.value === value ? null : o.value)}
           >
-            {n}
+            {o.label}
           </button>
         ))}
-      </div>
-      <div className="flex justify-between field-hint">
-        <span>{low}</span>
-        <span>{high}</span>
       </div>
     </div>
   );
 }
 
-/** End-of-session review (spec §5). Always skippable, and skipping costs nothing. */
+/**
+ * The end of a session, like saving a workout: the numbers first, then a few one-tap
+ * questions, then Save, which hands over to the score sheet. Always skippable, and
+ * skipping costs nothing (spec §5).
+ */
 export function ReviewDialog({
   open,
   mode,
   subject,
+  path,
+  stats,
   underAssessment,
+  assessmentTitle,
   onSubmit,
   onSkip,
   busy,
 }: ReviewDialogProps) {
   const [prepared, setPrepared] = useState<number | null>(null);
-  const [distracted, setDistracted] = useState<Distracted | ''>('');
+  const [distracted, setDistracted] = useState<Distracted | null>(null);
+  const [effort, setEffort] = useState<number | null>(null);
   const [completed, setCompleted] = useState('');
   const [correct, setCorrect] = useState('');
-  const [mood, setMood] = useState<number | null>(null);
-  const [needsMore, setNeedsMore] = useState(false);
-  const [extraHours, setExtraHours] = useState(1);
+  const [moreMinutes, setMoreMinutes] = useState<number | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState('');
   const [markComplete, setMarkComplete] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setPrepared(null);
-    setDistracted('');
+    setDistracted(null);
+    setEffort(null);
     setCompleted('');
     setCorrect('');
-    setMood(null);
-    setNeedsMore(false);
-    setExtraHours(1);
+    setMoreMinutes(null);
+    setNoteOpen(false);
     setNote('');
     // Starting a routine's session is the intent to do it, so the tick starts on.
     setMarkComplete(subject.kind === 'routine');
@@ -110,29 +135,28 @@ export function ReviewDialog({
 
   const node = subject.kind === 'task' ? subject.node : null;
   const title = node ? node.title : subject.kind === 'routine' ? subject.title : '';
+  // Only a task that counts something asks how many.
   const unit = node?.countUnit
     ? node.countUnit === 'custom'
       ? node.countUnitLabel || 'items'
       : UNIT_LABEL[node.countUnit]
-    : 'activities';
+    : null;
   const gradable = node?.countUnit === 'problems' || node?.countUnit === 'cards';
   const completedNum = completed.trim() === '' ? null : Number(completed);
+  const full = mode === 'full';
 
   const submit = () => {
     onSubmit(
       {
         skipped: false,
         prepared: underAssessment ? prepared : null,
-        distracted: distracted || null,
-        completedCount: mode === 'full' ? completedNum : null,
+        distracted,
+        effort: full ? effort : null,
+        completedCount: full && unit ? completedNum : null,
         correctCount:
-          mode === 'full' && gradable && completedNum && correct.trim() !== ''
-            ? Number(correct)
-            : null,
-        mood: mode === 'full' ? mood : null,
-        extraMinutesAdded:
-          mode === 'full' && node && needsMore ? Math.round(extraHours * 60) : null,
-        note: mode === 'full' && note.trim() ? note.trim() : null,
+          full && gradable && completedNum && correct.trim() !== '' ? Number(correct) : null,
+        extraMinutesAdded: full && node && moreMinutes ? moreMinutes : null,
+        note: full && note.trim() ? note.trim() : null,
       },
       markComplete,
     );
@@ -142,53 +166,75 @@ export function ReviewDialog({
     <Modal
       open={open}
       onClose={() => onSkip(markComplete)}
-      title="How did it go?"
+      className="save-sheet"
       actions={
         <>
           <Button variant="ghost" onClick={() => onSkip(markComplete)} disabled={busy}>
             Skip
           </Button>
-          <Button variant="primary" onClick={submit} loading={busy}>
-            Save
+          <Button variant="primary" size="lg" onClick={submit} loading={busy}>
+            <Check size={17} aria-hidden /> Save session
           </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-5">
-        {underAssessment && (
-          <Scale
-            label={`How prepared do you feel for ${title}?`}
-            value={prepared}
-            onChange={setPrepared}
-            low="Not yet"
-            high="Ready"
-          />
-        )}
-        <div className="field">
-          <span className="field-label">Distracted?</span>
-          <Segmented
-            ariaLabel="Distracted"
-            value={distracted || 'unset'}
-            onChange={(v) => setDistracted(v === 'unset' ? '' : (v as Distracted))}
-            options={[
-              { value: 'no', label: 'No' },
-              { value: 'a-little', label: 'A little' },
-              { value: 'a-lot', label: 'A lot' },
-            ]}
-          />
-        </div>
+      <div className="save">
+        <header className="save-head">
+          <span className="save-kicker">Session done</span>
+          <h2 className="save-title">{title}</h2>
+          {path && <span className="save-path">{path}</span>}
+        </header>
 
-        {mode === 'full' && (
-          <>
-            <div className="grid grid-cols-2 gap-4">
+        <dl className="save-stats">
+          <div className="save-stat is-main">
+            <dt>Focused</dt>
+            <dd className="tabular">{formatClock(stats.workSeconds)}</dd>
+          </div>
+          {stats.breakSeconds > 0 && (
+            <div className="save-stat">
+              <dt>Breaks</dt>
+              <dd className="tabular">{formatClock(stats.breakSeconds)}</dd>
+            </div>
+          )}
+          {stats.pomodoros !== null && stats.pomodoros > 0 && (
+            <div className="save-stat">
+              <dt>Pomodoros</dt>
+              <dd className="tabular">{stats.pomodoros}</dd>
+            </div>
+          )}
+        </dl>
+
+        <div className="save-qs">
+          <Choices label="Focus" value={distracted} options={FOCUS} onChange={setDistracted} />
+          {full && (
+            <Choices
+              label="Effort"
+              value={effort}
+              options={EFFORT.map((label, i) => ({ value: i + 1, label }))}
+              onChange={setEffort}
+              scale
+            />
+          )}
+          {underAssessment && (
+            <Choices
+              label={`Ready for ${assessmentTitle ?? title}?`}
+              value={prepared}
+              options={PREPARED.map((label, i) => ({ value: i + 1, label }))}
+              onChange={setPrepared}
+              scale
+            />
+          )}
+
+          {full && unit && (
+            <div className="save-counts">
               <Input
-                label={`${unit[0]?.toUpperCase()}${unit.slice(1)} completed`}
+                label={`${unit[0]!.toUpperCase()}${unit.slice(1)} done`}
                 type="number"
                 min={0}
                 inputMode="numeric"
                 value={completed}
                 onChange={(e) => setCompleted(e.target.value)}
-                placeholder="optional"
+                placeholder="0"
               />
               {gradable && completedNum != null && completedNum > 0 && (
                 <Input
@@ -199,64 +245,51 @@ export function ReviewDialog({
                   inputMode="numeric"
                   value={correct}
                   onChange={(e) => setCorrect(e.target.value)}
-                  placeholder="optional"
+                  placeholder="0"
                 />
               )}
             </div>
-            <Scale
-              label="Mood after this session"
-              value={mood}
-              onChange={setMood}
-              low="Low"
-              high="Great"
-            />
-            {node && (
-              <Toggle
-                checked={needsMore}
-                onChange={setNeedsMore}
-                label="Needs more time than planned?"
-                description="Adds hours to the estimate so your pace stays honest."
-              />
-            )}
-            {node && needsMore && (
-              <div className="field">
-                <span className="field-label">How many extra hours? {extraHours}</span>
-                <Slider
-                  min={0.5}
-                  max={20}
-                  step={0.5}
-                  value={extraHours}
-                  onChange={setExtraHours}
-                  aria-label="Extra hours"
-                />
-              </div>
-            )}
-            <Textarea
-              label="Note"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="optional"
-              rows={2}
-            />
-          </>
-        )}
+          )}
 
-        {subject.kind === 'routine' ? (
+          {full && node && (
+            <Choices
+              label="Needs more time than planned?"
+              value={moreMinutes}
+              options={MORE_TIME.map((m) => ({ value: m.minutes, label: m.label }))}
+              onChange={setMoreMinutes}
+            />
+          )}
+
+          {full && (
+            <div className="save-note">
+              <button
+                type="button"
+                className="save-note-toggle"
+                aria-expanded={noteOpen}
+                onClick={() => setNoteOpen(!noteOpen)}
+              >
+                <ChevronDown size={15} aria-hidden className="save-note-chevron" />
+                Add a note
+              </button>
+              <Reveal open={noteOpen}>
+                <Textarea
+                  aria-label="Note"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="What went well, what to pick up next time"
+                  maxLength={2000}
+                />
+              </Reveal>
+            </div>
+          )}
+
           <Toggle
+            className="save-done"
             checked={markComplete}
             onChange={setMarkComplete}
-            label={`Tick off "${title}"`}
-            description="Leave this off if you are not done, and it stays on your list."
+            label={subject.kind === 'routine' ? 'Tick it off for today' : `Mark ${title} as done`}
           />
-        ) : (
-          !subject.node.completedAt && (
-            <Toggle
-              checked={markComplete}
-              onChange={setMarkComplete}
-              label={`Mark "${title}" as done`}
-            />
-          )
-        )}
+        </div>
       </div>
     </Modal>
   );

@@ -502,9 +502,14 @@ export function consistency(input: ConsistencyInput): Consistency {
 export type RecordKey =
   | 'biggest-day'
   | 'biggest-week'
+  | 'biggest-month'
   | 'longest-session'
+  | 'most-sessions-day'
   | 'longest-streak'
   | 'most-tasks-week'
+  | 'most-courses-week'
+  | 'most-routines-week'
+  | 'most-focused-run'
   | 'earliest-start'
   | 'latest-finish';
 
@@ -514,7 +519,7 @@ export interface PersonalRecord {
   icon: string;
   /** The figure as words: "3 h 20 m", "12 days", "6:05 am". */
   display: string;
-  /** The day it was set, or the Monday of the week. Null when it is not a dated thing. */
+  /** The day it was set, the Monday of the week, or the 1st of the month. Null when undated. */
   when: ISODate | null;
   /** Set during the week being looked at. */
   isNew: boolean;
@@ -531,7 +536,18 @@ export interface RecordsInput {
   now: ISODateTime;
   weekStart: ISODate;
   streak: StreakState;
+  /** Recurring-task ticks, by occurrence date, for the routines record. Absent is none. */
+  routineTicks?: { date: ISODate }[];
 }
+
+/** The entry with the largest value; the earliest one wins a tie, so a record stays put. */
+function largest<K>(m: Map<K, number>): [K, number] | null {
+  let best: [K, number] | null = null;
+  for (const e of m) if (!best || e[1] > best[1]) best = e;
+  return best;
+}
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function fmtClockTime(hour: number, minute: number): string {
   const h12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -575,6 +591,24 @@ export function personalRecords(input: RecordsInput): PersonalRecord[] {
       isNew: bestWeek[0] === input.weekStart,
     });
 
+  const months = new Map<ISODate, number>();
+  for (const t of totals.values()) {
+    const k = startOfMonth(t.date);
+    months.set(k, (months.get(k) ?? 0) + t.minutes);
+  }
+  const bestMonth = largest(months);
+  if (bestMonth && bestMonth[1] > 0)
+    out.push({
+      key: 'biggest-month',
+      label: 'Biggest month',
+      icon: '🗓️',
+      display: fmtDurationWord(bestMonth[1]),
+      when: bestMonth[0],
+      // The month being looked at holds the week being looked at.
+      isNew:
+        bestMonth[0] === startOfMonth(input.weekStart) || bestMonth[0] === startOfMonth(weekEnd),
+    });
+
   let longest: Session | null = null;
   for (const s of done(input.sessions)) if (!longest || workMin(s) > workMin(longest)) longest = s;
   if (longest && workMin(longest) > 0)
@@ -585,6 +619,18 @@ export function personalRecords(input: RecordsInput): PersonalRecord[] {
       display: fmtDurationWord(workMin(longest)),
       when: toLocalDate(longest.startedAt, tz),
       isNew: inWeek(toLocalDate(longest.startedAt, tz)),
+    });
+
+  let busiest: DayTotal | null = null;
+  for (const t of totals.values()) if (!busiest || t.sessions > busiest.sessions) busiest = t;
+  if (busiest && busiest.sessions > 0)
+    out.push({
+      key: 'most-sessions-day',
+      label: 'Most sessions in a day',
+      icon: '⏱️',
+      display: plural(busiest.sessions, 'session', 'sessions'),
+      when: busiest.date,
+      isNew: inWeek(busiest.date),
     });
 
   if (input.streak.longest > 0)
@@ -614,6 +660,66 @@ export function personalRecords(input: RecordsInput): PersonalRecord[] {
       display: `${bestDone[1]} ${bestDone[1] === 1 ? 'task' : 'tasks'}`,
       when: bestDone[0],
       isNew: bestDone[0] === input.weekStart,
+    });
+
+  // Courses touched in a week: the top of the tree above each task studied.
+  const index = buildIndex(input.nodes);
+  const coursesByWeek = new Map<ISODate, Set<string>>();
+  for (const s of done(input.sessions)) {
+    if (s.nodeId === null || workMin(s) <= 0) continue;
+    const course = rootOf(index, s.nodeId);
+    if (!course) continue;
+    const k = startOfWeekMonday(toLocalDate(s.startedAt, tz));
+    if (!coursesByWeek.has(k)) coursesByWeek.set(k, new Set());
+    coursesByWeek.get(k)!.add(course.id);
+  }
+  const bestCourses = largest(new Map([...coursesByWeek].map(([k, v]) => [k, v.size])));
+  if (bestCourses)
+    out.push({
+      key: 'most-courses-week',
+      label: 'Most courses in a week',
+      icon: '📚',
+      display: plural(bestCourses[1], 'course', 'courses'),
+      when: bestCourses[0],
+      isNew: bestCourses[0] === input.weekStart,
+    });
+
+  const ticksByWeek = new Map<ISODate, number>();
+  for (const t of input.routineTicks ?? []) {
+    const k = startOfWeekMonday(t.date);
+    ticksByWeek.set(k, (ticksByWeek.get(k) ?? 0) + 1);
+  }
+  const bestTicks = largest(ticksByWeek);
+  if (bestTicks)
+    out.push({
+      key: 'most-routines-week',
+      label: 'Most routines in a week',
+      icon: '🔁',
+      display: plural(bestTicks[1], 'routine', 'routines'),
+      when: bestTicks[0],
+      isNew: bestTicks[0] === input.weekStart,
+    });
+
+  // Sessions in a row reviewed as undistracted. Sessions without an answer neither add to
+  // a run nor break it; one reported as distracted ends it.
+  let run = 0;
+  let bestRun: { count: number; date: ISODate } | null = null;
+  const reviewedInOrder = done(input.sessions)
+    .filter((s) => s.review && !s.review.skipped && s.review.distracted !== null)
+    .sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  for (const s of reviewedInOrder) {
+    run = s.review!.distracted === 'no' ? run + 1 : 0;
+    if (run > 0 && (!bestRun || run > bestRun.count))
+      bestRun = { count: run, date: toLocalDate(s.startedAt, tz) };
+  }
+  if (bestRun)
+    out.push({
+      key: 'most-focused-run',
+      label: 'Focused in a row',
+      icon: '🎯',
+      display: plural(bestRun.count, 'session', 'sessions'),
+      when: bestRun.date,
+      isNew: inWeek(bestRun.date),
     });
 
   // Earliest start and latest finish, as clock times. A finish after midnight counts as

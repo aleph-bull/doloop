@@ -1,0 +1,490 @@
+/* Study plans: the Plans list, a plan's page, and its dialogs. */
+
+.plans-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 28px 32px;
+  max-width: 560px;
+}
+.plans-empty-icon {
+  color: var(--accent-text);
+}
+
+.plan-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plan-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 20px 22px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform 160ms ease;
+}
+.plan-card:hover {
+  transform: translateY(-1px);
+}
+.plan-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.plan-card-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.plan-card-figure,
+.plan-stat {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.plan-card-figure small,
+.plan-stat small {
+  font-size: 0.45em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+}
+.plan-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 22px;
+  margin: 0;
+}
+.plan-card-meta > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.plan-card-meta dt {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.plan-card-meta dd {
+  margin: 0;
+  font-weight: 500;
+}
+.plan-card-next {
+  flex: 1 1 140px;
+}
+.plan-card-next dd {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.plan-streak svg {
+  color: var(--accent-text);
+}
+
+.plan-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.plan-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 24px 48px;
+  padding: 28px 32px 24px;
+}
+.plan-hero-week {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.plan-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 18px 24px;
+  margin: 0;
+  align-content: start;
+}
+.plan-hero-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plan-hero-stats dd {
+  margin: 0;
+}
+.plan-hero-pace {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.plan-rebalance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.plan-today,
+.plan-recap,
+.plan-topics {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 22px;
+}
+.plan-next {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.plan-next-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.plan-next-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.plan-sub-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.plan-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.plan-queue-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plan-queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px;
+  border-top: 1px solid var(--border);
+}
+.plan-queue-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.plan-queue-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.plan-weeks {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  height: 150px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-x: auto;
+}
+.plan-week {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1 0 44px;
+  max-width: 72px;
+}
+.plan-week-value,
+.plan-week-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.plan-week-value {
+  min-height: 1.2em;
+}
+.plan-week-track {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.plan-week-bar {
+  width: 100%;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-fill, var(--accent)) 55%, transparent);
+}
+.plan-week.is-current .plan-week-bar {
+  background: var(--accent-fill, var(--accent));
+}
+/* The weekly budget, as a line across each column. */
+.plan-week-budget {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  border-top: 1px dashed color-mix(in srgb, var(--fg) 35%, transparent);
+}
+.plan-trend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.plan-milestones {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plan-milestones li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+.plan-milestones svg {
+  color: var(--accent-text);
+}
+.plan-milestones .muted {
+  margin-left: auto;
+  font-weight: 400;
+}
+
+.plan-topic-list {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.plan-topic {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border);
+}
+.plan-topic:first-child {
+  border-top: 0;
+}
+.plan-topic-num {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-muted);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.plan-topic.is-mastered .plan-topic-num {
+  color: var(--accent-fg, #fff);
+  background: var(--accent-fill, var(--accent));
+}
+.plan-topic-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+.plan-topic-line {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.plan-topic-title {
+  font-weight: 500;
+}
+.plan-topic-state {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.plan-topic-state.is-up-next,
+.plan-topic-state.is-drilling,
+.plan-topic-state.is-mastered {
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.plan-topic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 14px;
+}
+.plan-topic-bar {
+  margin-top: 4px;
+  max-width: 420px;
+}
+.plan-topic-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.plan-resource {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.plan-method {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.plan-method-label {
+  font-weight: 500;
+  color: var(--fg);
+  margin-right: 6px;
+}
+
+.plan-dialog {
+  max-width: 720px;
+}
+.plan-dialog-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+.plan-rows-head,
+.plan-row-edit {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) 64px minmax(0, 1.4fr) 44px 32px;
+  align-items: center;
+  gap: 8px;
+}
+.plan-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.drill-score {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.drill-score-figure {
+  font-family: var(--font-display);
+  font-size: 2.6rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+.drill-marks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.drill-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 16px 8px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease;
+}
+.drill-mark:hover {
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+.drill-mark:active {
+  transform: scale(0.97);
+}
+.drill-mark.is-ok svg {
+  color: var(--accent-text);
+}
+.drill-mark-count {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 500;
+  line-height: 1;
+}
+.drill-mark-label {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.drill-mark kbd {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  font-family: inherit;
+  border: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plan-card,
+  .drill-mark {
+    transition: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .plan-hero {
+    grid-template-columns: 1fr;
+    padding: 22px 20px;
+  }
+  .plan-rebalance {
+    margin-left: 0;
+  }
+  .plan-rows-head {
+    display: none;
+  }
+  .plan-row-edit {
+    grid-template-columns: minmax(0, 1fr) 64px 44px 32px;
+  }
+  .plan-row-edit > :nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .plan-topic {
+    flex-wrap: wrap;
+  }
+  .plan-topic-actions {
+    margin-left: 42px;
+  }
+}

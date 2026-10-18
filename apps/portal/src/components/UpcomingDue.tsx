@@ -44,12 +44,12 @@ export function UpcomingDue({ nodes, pace, days = 14, max = 5 }: UpcomingDueProp
   if (items.length === 0) return null;
 
   return (
-    <Panel as="section" className="p-5 flex flex-col gap-3" aria-labelledby="upcoming-h">
+    <Panel as="section" className="dash-card" aria-labelledby="upcoming-h">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 id="upcoming-h" className="text-lg">
+        <h2 id="upcoming-h" className="card-title">
           Coming up
         </h2>
-        <Link to="/tasks" className="text-sm">
+        <Link to="/tasks" className="section-link">
           All tasks
         </Link>
       </div>
@@ -62,7 +62,7 @@ export function UpcomingDue({ nodes, pace, days = 14, max = 5 }: UpcomingDueProp
               <span className="due-when tabular" data-overdue={overdue || undefined}>
                 {fmtDue(n.dueAt)}
               </span>
-              <span className="flex-1 min-w-0 truncate">{n.title}</span>
+              <span className="due-title">{n.title}</span>
               {p?.remainingMinutes != null && p.status !== 'done' && (
                 <span className="muted text-xs tabular">{fmtMinutes(p.remainingMinutes)} left</span>
               )}

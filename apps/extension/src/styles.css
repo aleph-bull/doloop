@@ -141,7 +141,7 @@ body {
   min-width: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-fg);
   font-size: 10px;
   line-height: 16px;

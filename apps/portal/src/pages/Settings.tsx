@@ -1,6 +1,5 @@
 import {
-  ACCENT_PRESETS,
-  isAccentUnlocked,
+  dayStartUnlocksAt,
   resolveBackgroundId,
   POMODORO_DURATION_KEYS,
   POMODORO_LIMITS,
@@ -8,6 +7,7 @@ import {
   SILENT_SOUND_ID,
   SOUND_EVENT_LABELS,
   SOUND_PRESETS,
+  STREAK_DAY_START,
   type UserSettings,
 } from '@komogon/core';
 import { useEffect, useState } from 'react';
@@ -16,20 +16,18 @@ import { useNavigate } from 'react-router';
 import {
   Button,
   Glass,
-  hslToRgb,
   Input,
   Panel,
   resolveTheme,
-  rgbToHsl,
   Segmented,
   Select,
   Slider,
   Spinner,
   Toggle,
   useToast,
-  hexToRgb,
 } from '@komogon/ui';
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
+import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
 import {
@@ -40,6 +38,7 @@ import {
   SettingsNav,
   useSettingsFilter,
 } from '../components/SettingsNav';
+import { AccentPicker } from '../components/AccentPicker';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
@@ -136,15 +135,52 @@ const POMODORO_LABELS: Record<(typeof POMODORO_DURATION_KEYS)[number], string> =
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-/** Mirrors the presets in packages/ui/tokens.css for swatch previews. */
-const ACCENT_HSL: Record<string, string> = {
-  indigo: 'hsl(240 84% 62%)',
-  sky: 'hsl(199 89% 48%)',
-  mint: 'hsl(160 64% 42%)',
-  amber: 'hsl(38 92% 50%)',
-  rose: 'hsl(346 77% 56%)',
-  violet: 'hsl(271 81% 60%)',
-};
+const hourLabel = (h: number) => (h === 0 ? 'Midnight' : `${h} am`);
+
+/**
+ * When a new streak day begins. It may change once a day, so it can't be used to move a
+ * late session into whichever day would save the streak.
+ */
+function DayStartField({
+  hour,
+  changedAt,
+  onChange,
+}: {
+  hour: number;
+  changedAt: string | null;
+  onChange: (hour: number) => void;
+}) {
+  const unlocksAt = dayStartUnlocksAt(changedAt, new Date().toISOString());
+  const hours: number[] = [];
+  for (let h = STREAK_DAY_START.MIN_HOUR; h <= STREAK_DAY_START.MAX_HOUR; h++) hours.push(h);
+  return (
+    <Select
+      label="A new streak day starts at"
+      value={String(hour)}
+      disabled={unlocksAt !== null}
+      hint={
+        unlocksAt
+          ? `Changed recently. You can change it again ${fmtDate(unlocksAt, { weekday: 'short' })} at ${fmtTime(unlocksAt)}.`
+          : 'Study before this hour counts toward the day before. You can change this once a day.'
+      }
+      onChange={(e) => {
+        const next = Number(e.target.value);
+        if (next === hour) return;
+        const ok = window.confirm(
+          `Start each streak day at ${hourLabel(next).toLowerCase()}? You won't be able to change it again for 24 hours.`,
+        );
+        if (ok) onChange(next);
+        else e.target.value = String(hour);
+      }}
+    >
+      {hours.map((h) => (
+        <option key={h} value={h}>
+          {hourLabel(h)}
+        </option>
+      ))}
+    </Select>
+  );
+}
 
 export function Settings() {
   const me = useMe();
@@ -198,13 +234,6 @@ export function Settings() {
       .catch((err) => toast(err instanceof Error ? err.message : 'Could not save'));
 
   const theme = resolveTheme(s.theme.mode);
-  const customAccent = s.theme.accent.startsWith('custom:');
-  const customHex = (() => {
-    if (!customAccent) return '#6366f1';
-    const [h, sat, l] = s.theme.accent.slice(7).split(',').map(Number);
-    const [r, g, b] = hslToRgb(h ?? 240, sat ?? 84, l ?? 62);
-    return `#${[r, g, b].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
-  })();
 
   const feedUrl = `${apiBaseUrl()}/calendar.ics?token=${me.data?.icsToken ?? ''}`;
   const downloadIcs = async () => {
@@ -229,7 +258,7 @@ export function Settings() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-3xl">Settings</h1>
+      <h1 className="page-title">Settings</h1>
 
       <div className="settings-layout">
         <SettingsNav
@@ -278,46 +307,11 @@ export function Settings() {
               </div>
               <div className="field">
                 <span className="field-label">Accent</span>
-                <div className="pill-row items-center">
-                  {ACCENT_PRESETS.map((a) => {
-                    const unlocked = isAccentUnlocked(a.id, level);
-                    return (
-                      <button
-                        key={a.id}
-                        type="button"
-                        className="swatch"
-                        aria-pressed={s.theme.accent === a.id}
-                        aria-label={unlocked ? a.name : `${a.name}, unlocks at level ${a.minLevel}`}
-                        title={unlocked ? a.name : `Unlocks at level ${a.minLevel}`}
-                        disabled={!unlocked}
-                        style={{ background: ACCENT_HSL[a.id] ?? 'var(--accent)' }}
-                        onClick={() => patch({ theme: { accent: a.id } })}
-                      >
-                        {!unlocked && (
-                          <span className="text-xs" style={{ color: '#fff' }}>
-                            {a.minLevel}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                  <label className="flex items-center gap-2 text-sm ml-2">
-                    <input
-                      type="color"
-                      aria-label="Custom accent"
-                      value={customHex}
-                      onChange={(e) => {
-                        const [h, sat, l] = rgbToHsl(hexToRgb(e.target.value));
-                        void patch({
-                          theme: {
-                            accent: `custom:${h},${Math.max(30, sat)},${Math.min(70, Math.max(35, l))}`,
-                          },
-                        });
-                      }}
-                    />
-                    Custom
-                  </label>
-                </div>
+                <AccentPicker
+                  value={s.theme.accent}
+                  saved={s.theme.savedAccents}
+                  onChange={(t) => patch({ theme: t })}
+                />
               </div>
               <div className="field">
                 <span className="field-label">Background</span>
@@ -413,8 +407,9 @@ export function Settings() {
                   ]}
                 />
                 <span className="field-hint">
-                  Quick asks two questions. Full also asks how it went, how you felt, whether the
-                  estimate was right, and for a note. You can always skip it.
+                  Quick asks how focused you were, and how ready you feel for an assessment. Full
+                  also asks how hard it felt, how much you got through, whether it needs more time,
+                  and for a note. You can always skip it.
                 </span>
               </div>
               <Toggle
@@ -557,6 +552,11 @@ export function Settings() {
                 min={1}
                 max={240}
                 onCommit={(v) => patch({ streak: { minMinutes: v } })}
+              />
+              <DayStartField
+                hour={s.streak.dayStartHour}
+                changedAt={s.streak.dayStartChangedAt}
+                onChange={(h) => patch({ streak: { dayStartHour: h } })}
               />
               <div className="field">
                 <span className="field-label">Daily card</span>

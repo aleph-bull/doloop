@@ -13,4 +13,4 @@ coverage/
 .eslintcache
 .pglite/
 .local-build/
-.pglite-sandbox/
+.pglite-sandbox*/

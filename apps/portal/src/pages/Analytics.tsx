@@ -47,7 +47,7 @@ function Advanced() {
   return (
     <div className="flex flex-col gap-6">
       <Panel className="p-5 flex flex-col gap-4">
-        <h2 className="text-lg">Hours by course, this week vs last</h2>
+        <h2 className="card-title">Hours by course, this week vs last</h2>
         <p className="muted text-sm">
           Where the time actually went. Each bar is one course split by its parts, so a course that
           looks busy but is all one topic shows up as a single wide band.
@@ -85,7 +85,7 @@ function Advanced() {
       </Panel>
 
       <Panel className="p-5 flex flex-col gap-3">
-        <h2 className="text-lg">Estimate accuracy</h2>
+        <h2 className="card-title">Estimate accuracy</h2>
         {estimateAccuracy.insight ? (
           <p>{estimateAccuracy.insight}</p>
         ) : (
@@ -124,7 +124,7 @@ function Advanced() {
 
       <Panel className="p-5 flex flex-col gap-4">
         <div className="flex items-center gap-3 flex-wrap">
-          <h2 className="text-lg flex-1">Per task</h2>
+          <h2 className="card-title flex-1">Per task</h2>
           {nodes.length > 0 && (
             <select
               className="select"
@@ -222,7 +222,7 @@ export function Analytics() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
-        <h1 className="text-3xl">Analytics</h1>
+        <h1 className="page-title">Analytics</h1>
         <Segmented
           ariaLabel="Analytics view"
           value={tab}

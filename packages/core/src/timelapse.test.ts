@@ -9,6 +9,9 @@ import {
   thinIfFull,
   thinStills,
   timelapseClock,
+  timelapseSizeEstimate,
+  fmtBytes,
+  TIMELAPSE_DEFAULT_STILL_BYTES,
   type TimelapseOptions,
 } from './timelapse';
 
@@ -121,4 +124,31 @@ describe('deflicker', () => {
 it('formats the studied-time clock', () => {
   expect(timelapseClock(65)).toBe('01:05');
   expect(timelapseClock(3725)).toBe('1:02:05');
+});
+
+describe('timelapseSizeEstimate', () => {
+  const base: TimelapseOptions = { lengthMode: 'auto', lengthSeconds: 30, speed: 300, fps: 30 };
+
+  it('sizes auto mode from its cap', () => {
+    const e = timelapseSizeEstimate(base, 100_000);
+    expect(e.peakStills).toBe(TIMELAPSE_AUTO_TARGET * 2);
+    expect(e.peakBytes).toBe(120_000_000);
+    expect(e.big).toBe(false);
+  });
+
+  it('flags a long set length with heavy stills', () => {
+    const e = timelapseSizeEstimate({ ...base, lengthMode: 'length', lengthSeconds: 180 }, 150_000);
+    expect(e.peakStills).toBe(TIMELAPSE_MAX_STILLS);
+    expect(e.big).toBe(true);
+    expect(e.videoBytes).toBe(180_000_000);
+  });
+
+  it('falls back to the default still size', () => {
+    expect(timelapseSizeEstimate(base, 0).peakBytes).toBe(1200 * TIMELAPSE_DEFAULT_STILL_BYTES);
+  });
+
+  it('formats sizes', () => {
+    expect(fmtBytes(45_000_000)).toBe('45 MB');
+    expect(fmtBytes(1_234_000_000)).toBe('1.2 GB');
+  });
 });

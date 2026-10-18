@@ -145,6 +145,12 @@ describe('neededOnRemaining', () => {
     expect(neededOnRemaining(graded({ percent: 40 }), 90)!).toBeGreaterThan(100);
   });
 
+  it('counts weights not entered yet as part of the rest', () => {
+    // 91.7% on the only item entered, worth 10%: the other 90% has to average about 89.8.
+    const g = graded({ percent: 91.7, weightGraded: 10, weightTotal: 10 });
+    expect(neededOnRemaining(g, 90)).toBeCloseTo((90 - 9.17) / 0.9);
+  });
+
   it('goes negative when the target is already banked', () => {
     // 40 of 100 points earned already, and the target only needs 30.
     expect(neededOnRemaining(graded({ percent: 100 }), 30)!).toBeLessThan(0);

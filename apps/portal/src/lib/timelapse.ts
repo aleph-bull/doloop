@@ -7,6 +7,7 @@ import {
   type TimelapseOptions,
   type TimelapsePlan,
 } from '@komogon/core';
+import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
@@ -28,37 +29,63 @@ export type RecorderStatus = 'off' | 'starting' | 'on' | 'denied' | 'unavailable
 /** Width stills are kept at: sharp enough for a 1080p-ish video, small enough to hold 2400. */
 const STILL_WIDTH = 960;
 const STILL_QUALITY = 0.82;
-/** How long auto exposure gets to settle before it is locked. */
-const EXPOSURE_SETTLE_MS = 2500;
+const STILL_BYTES_KEY = 'komogon.timelapse.stillBytes';
+
+/**
+ * The average size of a still from this webcam, measured while recording and kept in this
+ * browser, so the size estimates follow the real camera. Null until something was measured.
+ */
+export function measuredStillBytes(): number | null {
+  try {
+    const n = Number(localStorage.getItem(STILL_BYTES_KEY));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberStillBytes(bytes: number) {
+  try {
+    const prev = measuredStillBytes();
+    // A slow running average: one odd frame (a hand over the lens) barely moves it.
+    const next = prev === null ? bytes : prev * 0.95 + bytes * 0.05;
+    localStorage.setItem(STILL_BYTES_KEY, String(Math.round(next)));
+  } catch {
+    /* storage off: the default size is used */
+  }
+}
+
+/** Free space the browser says it may still use, in bytes, or null when it won't say. */
+export async function freeStorageBytes(): Promise<number | null> {
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (!est || est.quota === undefined) return null;
+    return Math.max(0, est.quota - (est.usage ?? 0));
+  } catch {
+    return null;
+  }
+}
 
 export const cameraSupported = (): boolean =>
   typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
 /**
- * Lock exposure and white balance where the camera allows it, once auto has settled, so the
- * light does not pump from still to still. Cameras that cannot lock still get the deflicker.
+ * Put exposure and white balance back on auto. Locking them looked steadier on paper, but on
+ * many Windows webcams the browser reports a stale or minimum exposure while auto is on, so a
+ * lock at that value turned the picture almost black, and some drivers keep a manual setting
+ * after the camera closes. Auto plus the deflicker is the safe pair.
  */
-async function lockExposure(track: MediaStreamTrack): Promise<void> {
+async function restoreAutoExposure(track: MediaStreamTrack): Promise<void> {
   const caps = (track.getCapabilities?.() ?? {}) as Record<string, unknown>;
-  const settings = track.getSettings() as Record<string, unknown>;
-  const advanced: Record<string, unknown> = {};
   const modes = (k: string) => (Array.isArray(caps[k]) ? (caps[k] as string[]) : []);
-  if (modes('exposureMode').includes('manual') && typeof settings.exposureTime === 'number') {
-    advanced.exposureMode = 'manual';
-    advanced.exposureTime = settings.exposureTime;
-  }
-  if (
-    modes('whiteBalanceMode').includes('manual') &&
-    typeof settings.colorTemperature === 'number'
-  ) {
-    advanced.whiteBalanceMode = 'manual';
-    advanced.colorTemperature = settings.colorTemperature;
-  }
+  const advanced: Record<string, unknown> = {};
+  if (modes('exposureMode').includes('continuous')) advanced.exposureMode = 'continuous';
+  if (modes('whiteBalanceMode').includes('continuous')) advanced.whiteBalanceMode = 'continuous';
   if (Object.keys(advanced).length === 0) return;
   try {
     await track.applyConstraints({ advanced: [advanced as MediaTrackConstraintSet] });
   } catch {
-    /* some drivers advertise a lock they will not take; the deflicker covers them */
+    /* a driver that refuses keeps whatever it had; the deflicker still evens it out */
   }
 }
 
@@ -67,7 +94,8 @@ function lumaOf(ctx: CanvasRenderingContext2D, source: CanvasImageSource): numbe
   ctx.drawImage(source, 0, 0, 16, 9);
   const d = ctx.getImageData(0, 0, 16, 9).data;
   let sum = 0;
-  for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+  for (let i = 0; i < d.length; i += 4)
+    sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
   return sum / (d.length / 4) / 255;
 }
 
@@ -151,6 +179,7 @@ export function useTimelapseRecorder({
         canvas.toBlob(r, 'image/jpeg', STILL_QUALITY),
       );
       if (!blob || cancelled) return;
+      rememberStillBytes(blob.size);
       const next = [...stillsRef.current, { blob, luma, workSeconds: workSeconds() }];
       const thinned = thinIfFull(next, stillCap(options));
       if (thinned) intervalRef.current *= 2;
@@ -184,7 +213,7 @@ export function useTimelapseRecorder({
         setStream(s);
         setStatus('on');
         const track = s.getVideoTracks()[0];
-        if (track) window.setTimeout(() => void lockExposure(track), EXPOSURE_SETTLE_MS);
+        if (track) void restoreAutoExposure(track);
         void loop();
       })
       .catch((err: unknown) => {
@@ -251,7 +280,7 @@ function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, seconds:
   const pad = Math.round(size * 0.55);
   const text = timelapseClock(seconds);
   ctx.save();
-  ctx.font = `600 ${size}px Inter, system-ui, sans-serif`;
+  ctx.font = `600 ${size}px 'Inter Variable', Inter, system-ui, sans-serif`;
   const tw = ctx.measureText(text).width;
   const x = Math.round(h * 0.04);
   const y = h - Math.round(h * 0.04) - size - pad;
@@ -266,40 +295,18 @@ function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, seconds:
   void w;
 }
 
-/**
- * Play the stills onto a canvas at the plan's frame rate and record it. The recorder takes
- * frames in real time, so a 30 s video takes about 30 s to make, and the tab has to stay
- * open for it.
- */
-export async function renderTimelapse(
+/** Draws frame `j` of the plan onto the canvas: decoding, blending, deflicker and clock. */
+type FrameDrawer = ((j: number) => Promise<void>) & { dispose: () => void };
+
+function frameDrawer(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
   stills: Still[],
   plan: TimelapsePlan,
   look: TimelapseLook,
-  onProgress: (fraction: number) => void,
-  signal?: AbortSignal,
-): Promise<{ blob: Blob; mime: string }> {
-  if (stills.length === 0 || plan.frames.length === 0) throw new Error('Nothing to make yet');
-  const first = await createImageBitmap(stills[0]!.blob);
-  const w = first.width;
-  const h = first.height;
-  first.close();
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('This browser cannot draw the video');
+): FrameDrawer {
   const gains = look.deflicker ? deflickerGains(stills.map((s) => s.luma)) : null;
-
-  const stream = canvas.captureStream(0);
-  const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
-  const mime = pickMime();
-  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
-  const chunks: Blob[] = [];
-  recorder.ondataavailable = (e) => {
-    if (e.data.size > 0) chunks.push(e.data);
-  };
-  const done = new Promise<void>((r) => (recorder.onstop = () => r()));
-
   // Decoded stills, kept only while a frame still needs them.
   const cache = new Map<number, ImageBitmap>();
   const bitmap = async (i: number) => {
@@ -310,54 +317,188 @@ export async function renderTimelapse(
     }
     return b;
   };
-
-  const frameMs = 1000 / plan.fps;
-  recorder.start();
-  const t0 = performance.now();
   let previous: number | null = null;
+  const draw = async (j: number) => {
+    const [from, to] = plan.frames[j]!;
+    for (const k of cache.keys()) {
+      if (k < from - 1) {
+        cache.get(k)!.close();
+        cache.delete(k);
+      }
+    }
+    let gain = 1;
+    if (gains) {
+      let g = 0;
+      for (let i = from; i < to; i++) g += gains[i]!;
+      gain = g / (to - from);
+    }
+    ctx.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
+    ctx.globalAlpha = 1;
+    if (look.smooth && to - from > 1) {
+      // Several stills behind this frame: average them, like a long shutter.
+      for (let i = from, n = 1; i < to; i++, n++) {
+        ctx.globalAlpha = 1 / n;
+        ctx.drawImage(await bitmap(i), 0, 0, w, h);
+      }
+    } else if (look.smooth && previous !== null && previous !== from) {
+      // One still per frame: a little of the last one under it softens the steps.
+      ctx.drawImage(await bitmap(previous), 0, 0, w, h);
+      ctx.globalAlpha = 0.7;
+      ctx.drawImage(await bitmap(from), 0, 0, w, h);
+    } else {
+      ctx.drawImage(await bitmap(from), 0, 0, w, h);
+    }
+    ctx.globalAlpha = 1;
+    ctx.filter = 'none';
+    if (look.showTimer) drawClock(ctx, w, h, stills[to - 1]!.workSeconds);
+    previous = to - 1;
+  };
+  return Object.assign(draw, {
+    dispose: () => {
+      for (const b of cache.values()) b.close();
+      cache.clear();
+    },
+  });
+}
+
+const AVC_CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
+
+/** An H.264 config this browser can encode at this size, or null to fall back. */
+async function pickEncoderConfig(
+  w: number,
+  h: number,
+  fps: number,
+): Promise<VideoEncoderConfig | null> {
+  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
+  for (const codec of AVC_CODECS) {
+    const config: VideoEncoderConfig = {
+      codec,
+      width: w,
+      height: h,
+      bitrate: 8_000_000,
+      framerate: fps,
+      avc: { format: 'avc' },
+    };
+    try {
+      if ((await VideoEncoder.isConfigSupported(config)).supported) return config;
+    } catch {
+      /* try the next profile */
+    }
+  }
+  return null;
+}
+
+/**
+ * Turn the stills into a video. Where the browser has WebCodecs, each frame is encoded with
+ * its own timestamp, so the video is exactly the planned length however long a frame takes
+ * to draw, and it is made faster than real time. Elsewhere the canvas is recorded in real
+ * time, which runs long when drawing can't keep up.
+ */
+export async function renderTimelapse(
+  stills: Still[],
+  plan: TimelapsePlan,
+  look: TimelapseLook,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; mime: string }> {
+  if (stills.length === 0 || plan.frames.length === 0) throw new Error('Nothing to make yet');
+  const first = await createImageBitmap(stills[0]!.blob);
+  // H.264 wants even dimensions.
+  const w = first.width - (first.width % 2);
+  const h = first.height - (first.height % 2);
+  first.close();
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('This browser cannot draw the video');
+  const draw = frameDrawer(ctx, w, h, stills, plan, look);
+  try {
+    const config = await pickEncoderConfig(w, h, plan.fps);
+    if (config) return await encodeFrames(canvas, config, plan, draw, onProgress, signal);
+    return await recordFrames(canvas, plan, draw, onProgress, signal);
+  } finally {
+    draw.dispose();
+  }
+}
+
+async function encodeFrames(
+  canvas: HTMLCanvasElement,
+  config: VideoEncoderConfig,
+  plan: TimelapsePlan,
+  draw: FrameDrawer,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; mime: string }> {
+  const target = new ArrayBufferTarget();
+  const muxer = new Muxer({
+    target,
+    video: { codec: 'avc', width: canvas.width, height: canvas.height, frameRate: plan.fps },
+    fastStart: 'in-memory',
+  });
+  let failure: unknown = null;
+  const encoder = new VideoEncoder({
+    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+    error: (e) => {
+      failure = e;
+    },
+  });
+  encoder.configure(config);
+  const frameUs = 1_000_000 / plan.fps;
+  // A keyframe every two seconds keeps scrubbing quick.
+  const keyEvery = Math.max(1, Math.round(plan.fps * 2));
   try {
     for (let j = 0; j < plan.frames.length; j++) {
       if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
-      const [from, to] = plan.frames[j]!;
-      for (const k of cache.keys()) {
-        if (k < from - 1) {
-          cache.get(k)!.close();
-          cache.delete(k);
-        }
-      }
-      let gain = 1;
-      if (gains) {
-        let g = 0;
-        for (let i = from; i < to; i++) g += gains[i]!;
-        gain = g / (to - from);
-      }
-      ctx.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
-      ctx.globalAlpha = 1;
-      if (look.smooth && to - from > 1) {
-        // Several stills behind this frame: average them, like a long shutter.
-        for (let i = from, n = 1; i < to; i++, n++) {
-          ctx.globalAlpha = 1 / n;
-          ctx.drawImage(await bitmap(i), 0, 0, w, h);
-        }
-      } else if (look.smooth && previous !== null && previous !== from) {
-        // One still per frame: a little of the last one under it softens the steps.
-        ctx.drawImage(await bitmap(previous), 0, 0, w, h);
-        ctx.globalAlpha = 0.7;
-        ctx.drawImage(await bitmap(from), 0, 0, w, h);
-      } else {
-        ctx.drawImage(await bitmap(from), 0, 0, w, h);
-      }
-      ctx.globalAlpha = 1;
-      ctx.filter = 'none';
-      if (look.showTimer) drawClock(ctx, w, h, stills[to - 1]!.workSeconds);
-      previous = to - 1;
+      if (failure) throw failure;
+      await draw(j);
+      const frame = new VideoFrame(canvas, {
+        timestamp: Math.round(j * frameUs),
+        duration: Math.round(frameUs),
+      });
+      encoder.encode(frame, { keyFrame: j % keyEvery === 0 });
+      frame.close();
+      // Let the encoder catch up rather than queueing hundreds of frames in memory.
+      while (encoder.encodeQueueSize > 6) await sleep(4);
+      onProgress((j + 1) / plan.frames.length);
+    }
+    await encoder.flush();
+    if (failure) throw failure;
+    muxer.finalize();
+  } finally {
+    if (encoder.state !== 'closed') encoder.close();
+  }
+  return { blob: new Blob([target.buffer], { type: 'video/mp4' }), mime: 'video/mp4' };
+}
+
+async function recordFrames(
+  canvas: HTMLCanvasElement,
+  plan: TimelapsePlan,
+  draw: FrameDrawer,
+  onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<{ blob: Blob; mime: string }> {
+  const stream = canvas.captureStream(0);
+  const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
+  const mime = pickMime();
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  const chunks: Blob[] = [];
+  recorder.ondataavailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+  const done = new Promise<void>((r) => (recorder.onstop = () => r()));
+  const frameMs = 1000 / plan.fps;
+  recorder.start();
+  const t0 = performance.now();
+  try {
+    for (let j = 0; j < plan.frames.length; j++) {
+      if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
+      await draw(j);
       track?.requestFrame();
       onProgress((j + 1) / plan.frames.length);
       await sleep(t0 + (j + 1) * frameMs - performance.now());
     }
   } finally {
-    for (const b of cache.values()) b.close();
-    cache.clear();
     if (recorder.state !== 'inactive') recorder.stop();
     await done;
     stream.getTracks().forEach((t) => t.stop());

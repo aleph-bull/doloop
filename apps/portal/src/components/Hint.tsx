@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { Lightbulb, X } from 'lucide-react';
 import { Button, Glass } from '@komogon/ui';
 import { useHints, type HintKey } from '../lib/hints';
 
@@ -16,9 +16,10 @@ export function Hint({ id, when, children, action }: HintProps) {
   if (!when || isDismissed(id)) return null;
   return (
     <Glass className="hint fade-in" role="note">
-      <div className="flex-1">
+      <Lightbulb size={16} aria-hidden className="hint-icon" />
+      <div className="hint-body">
         <div>{children}</div>
-        {action && <div className="mt-2">{action}</div>}
+        {action && <div className="hint-action">{action}</div>}
       </div>
       <Button variant="ghost" size="sm" icon aria-label="Dismiss hint" onClick={() => dismiss(id)}>
         <X size={14} aria-hidden />

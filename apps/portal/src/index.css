@@ -6,17 +6,92 @@
   --font-sans: var(--font-sans);
 }
 
+/*
+ * Satoshi (Indian Type Foundry, ITF Free Font License, see public/fonts/Satoshi-LICENSE.txt)
+ * for the wordmark only, with the alternate G, a and ® (ss01) and the alternate t (ss03).
+ */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-brand: 'Satoshi', var(--font-display);
+}
+
 /* Layout helpers specific to the portal. Visual values still come from tokens. */
 .page {
   width: 100%;
-  max-width: 1080px;
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 96px;
+  padding: 28px 16px 96px;
 }
 @media (min-width: 768px) {
   .page {
-    padding: 32px 24px 96px;
+    padding: 40px 28px 112px;
   }
+}
+
+/* Each page rises in as it arrives. */
+.route-in {
+  animation: route-in 420ms var(--ease-out) both;
+}
+@keyframes route-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+:root[data-motion='off'] .route-in {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .route-in {
+    animation: none;
+  }
+}
+
+/* A page's own title row: the name, a line under it, and its actions at the right. */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.page-title {
+  font-size: clamp(1.75rem, 3.6vw, 2.25rem);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  line-height: 1.05;
+}
+.page-sub {
+  margin-top: 6px;
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+  max-width: 60ch;
+}
+
+/* A section heading over cards: plain, sentence case, with a quiet link at the right. */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+.section-link {
+  font-size: var(--text-sm);
+  font-weight: 500;
 }
 
 .skip-link {
@@ -26,7 +101,7 @@
   z-index: 100;
   padding: 8px 14px;
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-fg);
   transition: top var(--dur-fast) var(--ease-out);
 }
@@ -34,52 +109,62 @@
   top: 16px;
 }
 
+/* ---------- Top bar: a floating capsule of chrome ---------- */
 .nav {
   position: sticky;
   top: 12px;
   z-index: 40;
   margin: 12px auto 0;
-  max-width: 1080px;
-  width: calc(100% - 32px);
+  max-width: 1120px;
+  width: calc(100% - 24px);
+  border-radius: var(--radius-pill);
+}
+/*
+ * Scrolled: a solid layer fades in under the bar's contents, scaled by how far the page has
+ * moved (--scroll-fade, set in AppShell), so text passing behind stops showing through.
+ */
+.nav.chrome::after,
+.tabbar.chrome::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--glass-solid);
+  opacity: calc(var(--scroll-fade, 0) * 0.82);
+  transition: opacity var(--dur-base) var(--ease-out);
+  pointer-events: none;
 }
 .nav-inner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 6px;
+  min-height: 56px;
+  padding: 7px 8px;
 }
 .nav-link {
   position: relative;
   z-index: 1;
-  padding: 6px 12px;
+  padding: 7px 14px;
   border-radius: var(--radius-pill);
   color: var(--fg-muted);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 560;
   text-decoration: none;
   white-space: nowrap;
-  transition:
-    background var(--dur-fast) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 .nav-link:hover {
-  color: var(--fg-on-glass);
+  color: var(--fg);
   text-decoration: none;
-  background: var(--accent-soft);
 }
 .nav-link[aria-current='page'] {
-  background: var(--accent);
-  color: var(--accent-fg);
+  color: var(--fg);
 }
 
-/* Primary tabs share one pill that slides between them, so the links themselves
-   stay transparent and let the indicator behind them do the highlighting. */
+/* Primary tabs share one lens that slides between them; the links stay transparent. */
 .nav-primary {
   position: relative;
-}
-.nav-primary .nav-link[aria-current='page'],
-.nav-primary .nav-link[aria-current='page']:hover {
-  background: transparent;
 }
 .nav-indicator {
   position: absolute;
@@ -87,32 +172,33 @@
   top: 0;
   bottom: 0;
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: color-mix(in srgb, var(--fg) 11%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--fg) 14%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--fg) 4%, transparent);
   pointer-events: none;
   will-change: transform, width;
   transition: opacity var(--dur-fast) var(--ease-out);
 }
 .nav-indicator.is-animated {
   transition:
-    transform var(--dur-base) var(--ease-out),
-    width var(--dur-base) var(--ease-out),
+    transform var(--dur-slow) var(--ease-spring),
+    width var(--dur-slow) var(--ease-spring),
     opacity var(--dur-fast) var(--ease-out);
 }
 .brand {
   display: flex;
   align-items: center;
-  /* The wordmark needs room from its own logo, from the pill's edge, and from the tabs. */
   gap: 10px;
+  font-family: var(--font-brand);
   font-weight: 600;
+  font-feature-settings: 'ss01', 'ss03';
+  font-size: var(--text-base);
   letter-spacing: var(--tracking-tight);
-  color: var(--fg-on-glass);
+  color: var(--fg);
   text-decoration: none;
-  /*
-   * The pill's rounded end eats into the left edge, so the logo needs more inset than a
-   * square corner would to look like it has room.
-   */
-  padding: 0 10px 0 16px;
-  margin-right: 4px;
+  padding: 0 10px 0 2px;
+  margin-right: 2px;
 }
 .brand:hover {
   text-decoration: none;
@@ -128,24 +214,278 @@
   display: grid;
   place-items: center;
 }
-/* In the nav the mark stands on its own, in the accent, with no tile behind it. */
+/* In the nav the mark sits on a round accent tile, concentric with the capsule. */
 .brand-logo {
   display: grid;
   place-items: center;
   flex: none;
   color: var(--accent);
+  padding-left: 18px;
 }
 .logo-mark {
   display: block;
   flex: none;
 }
 
+/* The streak and the level, side by side at the right of the bar. */
+.nav-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.nav-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 11px 0 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--flame) 15%, transparent);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.nav-streak:hover {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--flame) 24%, transparent);
+}
+.nav-streak-flame {
+  color: var(--flame);
+  fill: color-mix(in srgb, var(--flame) 35%, transparent);
+}
+.nav-level {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+}
+.nav-level svg {
+  position: absolute;
+  inset: 1px;
+}
+.nav-level-track,
+.nav-level-fill {
+  fill: none;
+  stroke-width: 2.5;
+}
+.nav-level-track {
+  stroke: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+.nav-level-fill {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+.nav-level-num {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+.nav-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.nav-icon:hover,
+.nav-icon[aria-current='page'] {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.nav-signout.btn-icon.btn-sm {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+/* ---------- Phone tab bar: floating, icons over short labels ---------- */
+.tabbar {
+  display: none;
+}
+@media (max-width: 767px) {
+  :root {
+    --tabbar-clearance: 76px;
+  }
+  .page {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+  .nav {
+    top: 8px;
+    margin-top: 8px;
+    width: calc(100% - 16px);
+  }
+  .nav-inner {
+    min-height: 52px;
+    padding: 6px;
+  }
+  .nav-scroll {
+    display: none !important;
+  }
+  .tabbar {
+    position: fixed;
+    z-index: 45;
+    left: 8px;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    display: grid;
+    /* One column per tab, however many there are. */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    padding: 5px;
+    border-radius: 30px;
+  }
+  .tabbar-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 7px 0 5px;
+    border-radius: 24px;
+    color: var(--fg-muted);
+    text-decoration: none;
+    transition:
+      background var(--dur-base) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .tabbar-link:hover {
+    text-decoration: none;
+  }
+  .tabbar-link:active .tabbar-icon {
+    transform: scale(0.86);
+  }
+  .tabbar-link[aria-current='page'] {
+    color: var(--accent-text);
+    background: color-mix(in srgb, var(--fg) 10%, transparent);
+  }
+  .tabbar-icon {
+    display: grid;
+    place-items: center;
+    transition: transform var(--dur-base) var(--ease-spring);
+  }
+  .tabbar-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+}
+@media (max-width: 400px) {
+  .brand > span:last-child {
+    display: none;
+  }
+}
+
+/* ---------- The running session on the dashboard ---------- */
+.timer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px 26px;
+  overflow: hidden;
+}
+/* What the clock is doing, with a dot that breathes while it runs. */
+.timer-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px 11px 4px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg);
+}
+.timer-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: timer-breathe 2s var(--ease-in-out) infinite;
+}
+.timer-live[data-phase='short-break'],
+.timer-live[data-phase='long-break'] {
+  background: color-mix(in srgb, var(--status-ok) 18%, transparent);
+}
+.timer-live[data-phase='short-break'] .timer-live-dot,
+.timer-live[data-phase='long-break'] .timer-live-dot {
+  background: var(--status-ok);
+}
+.timer-live[data-phase='paused'] {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.timer-live[data-phase='paused'] .timer-live-dot {
+  background: var(--fg-subtle);
+  animation: none;
+}
+@keyframes timer-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+:root[data-motion='off'] .timer-live-dot {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .timer-live-dot {
+    animation: none;
+  }
+}
+.timer-path {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timer-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.timer-readout {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
 .timer-digits {
-  font-size: clamp(3rem, 9vw, var(--text-timer));
+  font-family: var(--font-display);
+  font-size: clamp(3.75rem, 11vw, 6.5rem);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: var(--tracking-numeric);
-  line-height: 1;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+.timer-focused {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.timer-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .card-grid {
@@ -154,108 +494,307 @@
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
+/* ---------- Tasks: a Notion-style table ---------- */
+/*
+ * One line per item: name, then Due, Time and Status as columns. Rows are flat (no cards),
+ * separated by hairlines, with a light hover. Indentation carries the hierarchy.
+ */
+.task-table {
+  padding: 6px 0 8px;
+  overflow: hidden;
+}
+.tt-head,
+.tree-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 128px 196px 120px 96px;
+  align-items: center;
+  column-gap: 12px;
+  font-weight: 400;
+}
+.tt-head {
+  padding: 8px 16px 8px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
 .tree-row {
   position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
+  min-height: 40px;
+  padding: 4px 16px 4px calc(12px + var(--depth, 0) * 24px);
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 5%, transparent);
+  font-size: var(--text-sm);
   transition: background var(--dur-fast) var(--ease-out);
 }
 .tree-row:hover,
 .tree-row:focus-within {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
 }
-.tree-row .row-actions {
-  opacity: 0;
-  transition: opacity var(--dur-fast) var(--ease-out);
+.tree-row.is-root {
+  min-height: 46px;
 }
-/*
- * The start button is not one of the hover-revealed row actions: it is the thing the page
- * is for. It sits just left of them, always visible, and only picks up the accent on hover
- * so a tree full of tasks does not read as a wall of buttons.
- */
-.tree-row .row-start,
-.tree-row .row-start-spacer {
-  flex: none;
-  width: 32px;
-  height: 32px;
-  margin-right: 14px;
-}
-.tree-row .row-start {
-  color: var(--fg-muted);
-  transition: color var(--dur-fast) var(--ease-out);
-}
-.tree-row .row-start:hover,
-.tree-row .row-start:focus-visible {
-  color: var(--accent);
-}
-.tree-row:hover .row-actions,
-.tree-row:focus-within .row-actions {
-  opacity: 1;
-}
-/* The folded group of finished items at the bottom of a course. */
-.tree-done-toggle {
+.tt-name {
   display: flex;
   align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding-top: 8px;
-  padding-bottom: 8px;
-  padding-right: 12px;
+  gap: 4px;
+  min-width: 0;
+}
+.tt-toggle,
+.tt-toggle-spacer {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+.tt-toggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   background: none;
-  font: inherit;
-  font-size: var(--text-sm);
-  color: var(--fg-muted);
-  text-align: left;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tt-toggle svg {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.tt-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+.tt-toggle:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+/* The tick: an empty ring that fills with the accent when done. */
+.tree-tick {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  margin: 0 4px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--fg) 32%, transparent);
+  background: transparent;
+  color: transparent;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-base) var(--ease-spring);
+}
+.tree-tick:hover {
+  border-color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+.tree-tick:active {
+  transform: scale(0.85);
+}
+.tree-tick[aria-pressed='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fg);
+}
+.row-start,
+.row-start-spacer {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-right: 6px;
+}
+.row-start {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-subtle);
   cursor: pointer;
   transition:
     color var(--dur-fast) var(--ease-out),
     background var(--dur-fast) var(--ease-out);
 }
-.tree-done-toggle:hover,
-.tree-done-toggle:focus-visible {
-  color: var(--fg-on-glass);
-  background: var(--accent-soft);
+.row-start:hover,
+.row-start:focus-visible {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
-/* A value like "0 min / 3 h" never breaks across lines; whole items wrap instead. */
-.tree-row .row-meta > span {
+.tt-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.tree-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 500;
 }
-/*
- * On a phone the editing actions take a line of their own under the row, so the title
- * gets the width instead of being squeezed to a word per line.
- */
-@media (max-width: 640px) {
-  .tree-row {
-    flex-wrap: wrap;
-    row-gap: 2px;
-  }
-  .tree-row .row-start,
-  .tree-row .row-start-spacer {
-    margin-right: 8px;
-  }
-  .tree-row .row-actions {
-    flex-basis: 100%;
-    justify-content: flex-end;
-  }
+.tree-title.is-root {
+  font-weight: 600;
 }
-/* The grip that drags a course: in the row's left margin, shown on hover or focus. */
-.tree-grip {
-  position: absolute;
-  left: 2px;
-  top: 50%;
-  transform: translateY(-50%);
+.tree-title.is-done {
+  font-weight: 400;
+  color: var(--fg-muted);
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--fg) 35%, transparent);
+}
+.tree-color {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 8px;
+  border-radius: 3px;
+  vertical-align: 0.05em;
+}
+.tt-kind,
+.tt-count {
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.tt-count {
+  background: none;
+  padding: 0;
+  color: var(--fg-subtle);
+}
+.tt-meta {
+  display: none;
+}
+.tt-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.tt-time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tt-bar {
+  flex: none;
+  width: 40px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  overflow: hidden;
+}
+.tt-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.tt-status-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fg-muted);
+}
+.tt-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--status-ok);
+}
+.tt-status-word.is-behind .tt-dot {
+  background: var(--status-warn);
+}
+.tt-status-word.is-critical .tt-dot,
+.tt-status-word.is-overdue .tt-dot {
+  background: var(--status-bad);
+}
+.tt-status-word.is-no-estimate .tt-dot {
+  background: var(--fg-subtle);
+}
+.tt-status-word.is-behind,
+.tt-status-word.is-critical,
+.tt-status-word.is-overdue {
+  color: var(--fg);
+}
+/* Editing actions show on hover or focus; a touch screen keeps them. */
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.tree-row:hover .row-actions,
+.tree-row:focus-within .row-actions {
+  opacity: 1;
+}
+.tt-action {
   display: grid;
   place-items: center;
-  width: 18px;
+  width: 28px;
   height: 28px;
   padding: 0;
   border: none;
   border-radius: 6px;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+.tt-action:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+/* The folded group of finished items under a parent. */
+.tree-done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px;
+  padding: 4px 16px 4px calc(12px + 26px + var(--depth, 0) * 24px);
+  border: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--fg) 5%, transparent);
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  text-align: left;
+  cursor: pointer;
+}
+.tree-done-toggle:hover,
+.tree-done-toggle:focus-visible {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.tt-done-chevron {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.tree-done-toggle[aria-expanded='true'] .tt-done-chevron {
+  transform: rotate(90deg);
+}
+/* The grip that drags a course: in the row's left margin, shown on hover or focus. */
+.tree-grip {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
   background: none;
   color: var(--fg-subtle);
   cursor: grab;
@@ -270,11 +809,11 @@
   opacity: 1;
 }
 .tree-grip:hover {
-  color: var(--fg-on-glass);
-  background: var(--accent-soft);
+  color: var(--fg);
 }
 @media (hover: none) {
-  .tree-grip {
+  .tree-grip,
+  .row-actions {
     opacity: 1;
   }
 }
@@ -291,44 +830,107 @@
   position: absolute;
   left: 8px;
   right: 8px;
-  height: 3px;
+  height: 2px;
   border-radius: 2px;
   background: var(--accent);
   z-index: 1;
   pointer-events: none;
 }
 .tree-root.is-drop-before::before {
-  top: -2px;
+  top: -1px;
 }
 .tree-root.is-drop-after::after {
-  bottom: -2px;
+  bottom: -1px;
+}
+/*
+ * Narrower than the columns fit: the columns fold into one quiet line under the title, and
+ * the actions stay at the right.
+ */
+@media (max-width: 760px) {
+  .tt-head {
+    display: none;
+  }
+  .tree-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding-left: calc(6px + var(--depth, 0) * 14px);
+    padding-right: 8px;
+  }
+  .tt-name {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+  .tt-title-wrap {
+    flex: 1 1 0;
+  }
+  .tt-meta {
+    display: block;
+    flex-basis: 100%;
+    padding: 0 0 4px 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+  }
+  .tt-meta:empty {
+    display: none;
+  }
+  .tt-cell {
+    display: none;
+  }
+  .row-start {
+    margin-right: 2px;
+  }
+  .tree-done-toggle {
+    padding-left: calc(6px + 26px + var(--depth, 0) * 14px);
+  }
 }
 
-/* A rule between the top-level items, so one course ends where the next begins. */
-.tree-root + .tree-root {
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px solid var(--border);
+/* The dashboard's start panel: Start, the focus screen beside it, the pressing list. */
+.start-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px 24px;
 }
-
-/* The dashboard's start panel: the big Start, the focus link beside it, the pressing list. */
+.start-panel-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+/* Lighter than the 600 headings elsewhere: at this size Segoe UI Display read as bold. */
+.start-panel-title {
+  font-size: var(--text-xl);
+  font-weight: 500;
+}
+.start-panel-sub {
+  margin-top: 3px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
 .start-panel-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex-wrap: wrap;
 }
-.start-panel-focus {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  color: var(--fg-muted);
-  text-decoration: none;
+.start-panel-go {
+  min-width: 196px;
 }
-.start-panel-focus:hover {
-  color: var(--fg-on-glass);
-  text-decoration: underline;
+@media (max-width: 560px) {
+  .start-panel {
+    padding: 20px;
+  }
+  .start-panel-actions {
+    width: 100%;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .start-panel-actions .btn {
+    width: 100%;
+  }
 }
 .start-pressing {
   display: flex;
@@ -340,37 +942,41 @@
 .start-pressing-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   align-self: flex-start;
-  padding: 6px 12px 6px 14px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--accent-soft);
+  padding: 4px 8px 4px 0;
+  border: none;
+  background: none;
   font: inherit;
   font-size: var(--text-sm);
   font-weight: 500;
-  color: var(--fg-on-glass);
+  color: var(--fg);
   cursor: pointer;
-  transition:
-    background var(--dur-fast) var(--ease-out),
-    border-color var(--dur-fast) var(--ease-out);
 }
-.start-pressing-toggle:hover {
-  border-color: var(--accent);
-}
-.start-pressing-toggle[aria-expanded='true'] {
-  background: transparent;
+.start-pressing-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--fg-muted);
 }
 .start-pressing-chevron {
-  color: var(--accent);
-}
-.start-pressing-chevron {
+  color: var(--fg-subtle);
   transition: transform var(--dur-slow) var(--ease-out);
 }
 .start-pressing-toggle[aria-expanded='false'] .start-pressing-chevron {
   transform: rotate(-90deg);
 }
 .start-pressing-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   padding-top: 6px;
 }
 .start-pressing-item {
@@ -378,11 +984,11 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: 100%;
-  padding: 4px 6px;
-  margin: 0 -6px;
+  width: calc(100% + 20px);
+  padding: 9px 10px;
+  margin: 0 -10px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: none;
   font: inherit;
   color: inherit;
@@ -392,14 +998,50 @@
 }
 .start-pressing-item:hover,
 .start-pressing-item:focus-visible {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.start-pressing-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.start-pressing-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.start-pressing-where {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .start-pressing-meta {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
-  font-size: var(--text-xs);
+}
+.start-pressing-mins {
+  min-width: 3.5em;
+  text-align: right;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.start-pressing-go {
+  color: var(--fg-subtle);
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+.start-pressing-item:hover .start-pressing-go {
+  transform: translateX(2px);
+}
+@media (max-width: 480px) {
+  .start-pressing-meta .chip {
+    display: none;
+  }
 }
 /* The card a pressing task points at: a ring of accent that fades out. */
 .node-card.is-spotlit {
@@ -501,7 +1143,7 @@
   transition: background var(--dur-fast) var(--ease-out);
 }
 .picker-nav:hover {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .picker-list {
   max-height: 264px;
@@ -619,6 +1261,7 @@
 }
 .settings-section h2 {
   font-size: var(--text-lg);
+  font-weight: 600;
 }
 
 /* ---------- Settings: sidebar + search ---------- */
@@ -647,9 +1290,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 8px;
+  padding: 0 10px;
   border-radius: var(--radius-pill);
-  border: 1px solid var(--border-strong);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
   color: var(--fg-muted);
 }
 .settings-search .input {
@@ -684,12 +1327,14 @@
     color var(--dur-fast) var(--ease-out);
 }
 .settings-nav-link:hover {
-  background: var(--accent-soft);
-  color: var(--fg-on-glass);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
 }
 .settings-nav-link[aria-current='true'] {
-  background: var(--accent);
-  color: var(--accent-fg);
+  background: color-mix(in srgb, var(--fg) 11%, transparent);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 @media (max-width: 860px) {
   .settings-layout {
@@ -711,7 +1356,50 @@
 .tracker-grid {
   display: grid;
   gap: 16px;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+}
+/* Days focused: the grid, and its totals as figures beside it. */
+.days-panel {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  padding: 22px 24px;
+}
+.days-panel-grid {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+.days-panel-stats {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+.days-panel-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.days-panel-stats dt {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.days-panel-stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.days-panel-stats small {
+  font-size: 0.45em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+  margin-left: 0.3em;
 }
 
 /* ---------- Grades ---------- */
@@ -719,6 +1407,51 @@
   font-size: var(--text-2xl);
   font-weight: 600;
   line-height: 1.1;
+}
+/* Grades: sorting on the left, the target and the average as two pills on the right. */
+.grades-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  flex-wrap: wrap;
+}
+.grades-toolbar-end {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.grades-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 6px 0 14px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font-size: var(--text-sm);
+}
+.grades-pill .input {
+  width: 52px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.grades-pill-value {
+  font-weight: 600;
+}
+.grades-pill-letter {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  font-weight: 500;
+}
+.grades-pill > :last-child:not(.grades-pill-letter) {
+  margin-right: 8px;
 }
 .table-wrap {
   overflow-x: auto;
@@ -760,8 +1493,8 @@
  * on its own line at body size rather than competing with the name.
  */
 .greeting-line {
-  margin-top: 2px;
-  font-size: var(--text-base);
+  margin-top: 8px;
+  font-size: var(--text-lg);
   line-height: 1.4;
   color: var(--fg-muted);
   max-width: 46ch;
@@ -776,23 +1509,132 @@
 .due-row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 7px 0;
+  gap: 12px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
 }
 .due-row:last-child {
   border-bottom: 0;
+  padding-bottom: 0;
 }
 .due-when {
-  min-width: 10ch;
+  flex: none;
+  min-width: 9ch;
   color: var(--fg-muted);
   font-size: var(--text-xs);
+  font-weight: 400;
 }
 .due-when[data-overdue] {
-  color: var(--status-bad);
+  color: color-mix(in srgb, var(--status-bad) 60%, var(--fg));
+}
+.due-title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 450;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
+/* ---------- Task cards (dashboard rail) ---------- */
+.node-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 18px 16px;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.node-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.node-card-where {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-card-title {
+  margin-top: 2px;
+  font-size: var(--text-lg);
+  font-weight: 500;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-card-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.node-card-progress .progress {
+  height: 8px;
+}
+.node-card-figures {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.node-card-logged {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.node-card-of {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.node-card-pct {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+.node-card-foot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+}
+.node-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.node-card-due {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.node-card-play {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0 0 0 2px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--accent-fg);
+  background: var(--accent-fill);
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+.node-card-play:hover {
+  transform: scale(1.06);
+}
+.node-card-play:active {
+  transform: scale(0.92);
+}
 /* ---------- Calendar blocks ---------- */
 .cal-block {
   position: absolute;
@@ -866,6 +1708,54 @@
   cursor: not-allowed;
   opacity: 0.45;
 }
+/* One of the user's own accents, with a small remove button on its corner. */
+.swatch-own {
+  position: relative;
+  display: inline-flex;
+}
+.swatch-remove {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-elevated, #222);
+  color: var(--fg);
+  box-shadow: 0 0 0 1px var(--border-strong);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.swatch-own:hover .swatch-remove,
+.swatch-remove:focus-visible {
+  opacity: 1;
+}
+@media (hover: none) {
+  .swatch-remove {
+    opacity: 1;
+  }
+}
+/* The + that opens the colour chooser for a new accent of one's own. */
+.swatch-add {
+  border: 2px dashed var(--border-strong);
+  color: var(--fg-muted);
+  background: transparent;
+}
+.swatch-add:hover {
+  color: var(--fg);
+}
+.swatch-add-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
 
 .bg-thumb {
   width: 100%;
@@ -885,8 +1775,25 @@
   object-fit: cover;
   pointer-events: none;
 }
-.bg-thumb[aria-pressed='true'] {
+.bg-thumb[aria-pressed='true'],
+.bg-thumb.is-selected {
   border-color: var(--accent);
+}
+/* The solid colour tile: the whole tile opens the browser's colour chooser. */
+.bg-thumb-solid {
+  display: block;
+}
+.bg-solid-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.bg-thumb-solid:focus-within {
+  outline: 2px solid var(--ring, var(--accent));
+  outline-offset: 2px;
 }
 .bg-thumb:disabled {
   cursor: not-allowed;
@@ -968,7 +1875,7 @@
 
 .reward-xp {
   font-size: var(--text-3xl);
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: var(--tracking-numeric);
 }
@@ -987,7 +1894,7 @@
   margin-bottom: 16px;
   font-size: var(--text-sm);
   border-radius: var(--radius-md);
-  color: var(--fg-on-glass);
+  color: var(--fg);
 }
 .offline-bar svg {
   flex-shrink: 0;
@@ -1135,7 +2042,7 @@
   border-radius: var(--radius-md);
 }
 .routine-row:hover {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
 }
 .routine-tick {
   position: relative;
@@ -1158,8 +2065,8 @@
   transform: scale(0.85);
 }
 .routine-tick[aria-checked='true'] {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 .routine-tick:disabled {
   opacity: 0.4;
@@ -1315,7 +2222,8 @@
   border: 1px solid var(--border);
 }
 .routine-day.is-today {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 .routine-day-head {
   display: flex;
@@ -1323,11 +2231,76 @@
   justify-content: space-between;
   gap: 4px;
 }
-/* In the week grid the columns are narrow, so the rows stack instead of clipping. */
-.routine-day .routine-row {
-  flex-wrap: wrap;
-  gap: 6px;
+.routine-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.routine-mins {
   font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+/*
+ * In the week grid the columns are narrow: the title wraps beside its tick, and the
+ * minutes and any "missed" sit underneath it, so nothing is cut to "Anki r…".
+ */
+.routine-day .routine-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 6px 4px;
+  font-size: var(--text-sm);
+}
+.routine-day .routine-tick {
+  margin-top: 1px;
+}
+.routine-day .routine-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+}
+.routine-day .routine-row > :not(.routine-tick):not(.routine-name) {
+  grid-column: 2;
+  justify-self: start;
+}
+.routine-day .routine-mins {
+  font-size: var(--text-xs);
+}
+/* Four weeks of ticks, as a figure. */
+.adherence {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.adherence-figure {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+.adherence-figure small {
+  font-size: 0.5em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+  margin-left: 0.3em;
+}
+.adherence-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.adherence-note {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
 }
 @media (max-width: 900px) {
   .routine-week {
@@ -1402,8 +2375,27 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 12px 10px 12px 16px;
   font-size: var(--text-sm);
+  color: var(--fg-muted);
+  border-radius: var(--radius-md);
+}
+.hint-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent-text);
+}
+.hint-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.hint-action {
+  flex: none;
 }
 
 /* Anything that scrolls sideways (the nav tabs, a rail of cards) fades the side that
@@ -1461,13 +2453,13 @@
   background: var(--glass-fill-strong);
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  color: var(--fg-on-glass);
+  color: var(--fg);
   cursor: pointer;
   transform: translateY(-50%);
   transition: background var(--dur-fast) var(--ease-out);
 }
 .scroll-arrow:hover {
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .scroll-arrow-left {
   left: 0;
@@ -1528,24 +2520,8 @@
     scroll-behavior: auto;
   }
 }
-@media (max-width: 640px) {
-  .nav-link {
-    padding: 6px 9px;
-    flex-shrink: 0;
-  }
-  .brand span:last-child {
-    display: none;
-  }
-  /* Just the logo on a phone: keep the inset, drop the room that was for the wordmark. */
-  .brand {
-    padding: 0 4px 0 8px;
-    margin-right: 0;
-  }
-}
-
 /* Touch devices cannot hover: keep row actions visible. */
 @media (hover: none) {
-  .tree-row .row-actions,
   .reward-card .reward-card-tools {
     opacity: 1;
   }
@@ -1564,19 +2540,17 @@
   display: flex;
   flex-direction: column;
   padding: clamp(14px, 3vw, 36px);
-  color: var(--fg-on-glass);
+  color: var(--fg);
   overflow: hidden;
 }
 /*
  * Panels over the visualizer need more body than elsewhere to stay readable. Mixing toward
  * the panel fill raises the opacity and keeps the tint a photo backdrop gave the glass.
  */
-.focus-screen .glass {
-  background: color-mix(in srgb, var(--glass-fill) 70%, var(--panel-fill));
-}
+.focus-screen .glass,
 .focus-screen .glass-strong,
 :root[data-panel='glass'] .focus-screen .panel {
-  background: color-mix(in srgb, var(--glass-fill-strong) 62%, var(--panel-fill));
+  background: color-mix(in srgb, var(--glass-solid) 92%, transparent);
 }
 .focus-screen.is-still {
   cursor: none;
@@ -1644,7 +2618,7 @@
   align-items: baseline;
   gap: 16px;
   font-size: var(--text-sm);
-  color: var(--fg-on-glass);
+  color: var(--fg);
 }
 .focus-progress-row small {
   font-size: var(--text-xs);
@@ -1670,7 +2644,7 @@
   position: relative;
   height: 3px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--fg-on-glass) 16%, transparent);
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
   overflow: hidden;
 }
 /* The whole fill is the total; work from before this session is drawn over its start. */
@@ -1685,7 +2659,7 @@
   background: var(--accent);
 }
 .focus-bar-prior {
-  background: var(--fg-on-glass);
+  background: var(--fg);
   border-top-right-radius: 0;
   border-bottom-right-radius: 0;
 }
@@ -1711,6 +2685,7 @@
 }
 .focus-brand {
   font-weight: 600;
+  text-decoration: none;
   letter-spacing: var(--tracking-tight);
   color: var(--fg-muted);
   padding: 0 6px;
@@ -1768,8 +2743,8 @@
     background var(--dur-fast) var(--ease-out);
 }
 .focus-link:hover {
-  color: var(--fg-on-glass);
-  background: var(--accent-soft);
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 
 /* The timelapse: a recording pill in the top bar, and the card that makes the video. */
@@ -1938,9 +2913,8 @@
   height: 44px;
   flex: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: #fff;
-  box-shadow: 0 0 24px var(--accent-soft);
+  background: var(--accent-fill);
+  color: var(--accent-fg);
 }
 .achievement-text {
   min-width: 0;
@@ -1981,12 +2955,12 @@
   gap: 18px;
 }
 .summary-reveal {
-  animation: summary-reveal 460ms var(--ease-out) both;
+  animation: summary-reveal 520ms var(--ease-spring) both;
 }
 @keyframes summary-reveal {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -1995,87 +2969,115 @@
 }
 .summary-title {
   font-size: var(--text-2xl);
-  line-height: 1.15;
-}
-.summary-score {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  background: var(--accent-soft);
-}
-.summary-score-icon {
-  flex: none;
-  color: var(--accent);
-}
-.summary-score-value {
-  font-size: var(--text-3xl);
-  font-weight: 700;
-  line-height: 1;
-}
-.summary-score-unit {
-  font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--fg-muted);
+  line-height: 1.15;
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
 }
-.summary-score-note {
-  margin-top: 4px;
+/* The hero: the time you put in, as big as the sheet allows, and what it earned under it. */
+.summary-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.summary-hero-label {
   font-size: var(--text-sm);
+  font-weight: 400;
   color: var(--fg-muted);
 }
+.summary-hero-figure {
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 12vw, 4.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+.summary-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 12px 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+  font-size: var(--text-sm);
+}
+.summary-xp strong {
+  font-weight: 600;
+}
+.summary-xp.is-withheld {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg-muted);
+  box-shadow: none;
+}
+/* Where the score came from: a row of small tallies rather than a ledger. */
 .summary-bonuses {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 4px 16px;
-  font-size: var(--text-sm);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--text-xs);
 }
 .summary-bonuses li {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 3px 0;
-  border-bottom: 1px solid var(--border);
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
   color: var(--fg-muted);
 }
 .summary-bonuses li span:last-child {
   color: var(--fg);
-  font-weight: 500;
+  font-weight: 600;
 }
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px 16px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
   margin: 0;
 }
 .summary-stats div {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
 }
 .summary-stats dt {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   font-size: var(--text-xs);
+  font-weight: 400;
   color: var(--fg-muted);
 }
 .summary-stats dd {
   margin: 0;
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 .summary-stat-aside {
+  display: block;
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: 400;
+  font-weight: 500;
+  letter-spacing: 0;
   color: var(--fg-subtle);
 }
 .summary-section-title {
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--fg-muted);
 }
 .summary-badges {
@@ -2087,24 +3089,40 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
 }
 .summary-badge-icon {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   flex: none;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: #fff;
+  background: var(--accent-fill);
+  color: var(--accent-fg);
 }
 .focus-summary {
   width: min(560px, 100%);
   padding: 24px;
   text-align: left;
+}
+/*
+ * The end screen can run taller than the window (badges, timelapse export), so it scrolls.
+ * Auto margins centre it while it fits and let it start at the top once it does not, where
+ * centring with justify-content would push the top out of reach.
+ */
+.focus-centre.is-summary {
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-block: 8px;
+}
+.focus-centre.is-summary > .focus-summary {
+  flex-shrink: 0;
+  margin-block: auto;
 }
 :root[data-motion='off'] .summary-reveal,
 :root[data-motion='off'] .achievement {
@@ -2172,11 +3190,6 @@
   gap: 40px;
   padding: 40px 48px;
   flex-wrap: wrap;
-  background-image: radial-gradient(
-    120% 140% at 100% 0%,
-    color-mix(in srgb, var(--accent) 30%, transparent),
-    transparent 60%
-  );
 }
 .rc-hero-main {
   flex: 1 1 360px;
@@ -2194,10 +3207,11 @@
   margin-top: 4px;
 }
 .rc-hero-number {
-  font-size: clamp(3.4rem, 9vw, 5.6rem);
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
 }
 .rc-hero-unit {
   font-size: clamp(var(--text-lg), 2.4vw, var(--text-2xl));
@@ -2230,7 +3244,7 @@
   border-radius: var(--radius-pill);
   font-size: var(--text-sm);
   font-weight: 500;
-  background: color-mix(in srgb, var(--fg-on-glass) 9%, transparent);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
 }
 .rc-chip.is-up {
   background: color-mix(in srgb, var(--status-ok) 18%, transparent);
@@ -2291,7 +3305,7 @@
 }
 .rc-ring-big {
   font-size: var(--text-lg);
-  font-weight: 700;
+  font-weight: 600;
 }
 .rc-ring-small {
   font-size: var(--text-xs);
@@ -2304,8 +3318,11 @@
 .rc-gauge-caption {
   margin-top: -38px;
 }
+/* Centred in whatever height the tile has, not just at its top. */
 .rc-centre {
+  flex: 1;
   display: flex;
+  align-items: center;
   justify-content: center;
   padding: 6px 0;
 }
@@ -2320,13 +3337,10 @@
 .rc-tile {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: 14px;
+  padding: 22px 24px;
   min-width: 0;
   transition: transform var(--dur-slow) var(--ease-out);
-}
-.rc-tile:hover {
-  transform: translateY(-3px);
 }
 .rc-tile.is-wide {
   grid-column: span 2;
@@ -2340,7 +3354,7 @@
   gap: 2px;
 }
 .rc-tile-title {
-  font-size: var(--text-base);
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 .rc-tile-note {
@@ -2389,6 +3403,29 @@
 .rc-plot {
   position: relative;
 }
+/* A chart that grows to the tile's bottom edge: its drawing area (.rc-fill) takes the spare
+   height and the svg sits over it, so the size comes from the tile, not from the drawing.
+   A legend stays below it. */
+.rc-tile > .rc-figure.is-fill {
+  flex: 1;
+  min-height: 0;
+}
+.rc-figure.is-fill .rc-plot {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rc-fill {
+  position: relative;
+  flex: 1;
+  min-height: 200px;
+}
+.rc-fill > svg {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+}
 .rc-plot svg {
   display: block;
   overflow: visible;
@@ -2409,9 +3446,12 @@
   font-size: 11px;
   fill: var(--fg-muted);
 }
+.rc-tick.is-lg {
+  font-size: 14px;
+}
 .rc-tick.is-today {
-  fill: var(--fg-on-glass);
-  font-weight: 700;
+  fill: var(--fg);
+  font-weight: 600;
 }
 .rc-tick.is-future {
   opacity: 0.5;
@@ -2419,7 +3459,7 @@
 .rc-value {
   font-size: 11px;
   font-weight: 600;
-  fill: var(--fg-on-glass);
+  fill: var(--fg);
 }
 .rc-bar,
 .rc-wedge {
@@ -2429,7 +3469,7 @@
   fill: var(--accent);
 }
 .rc-ghost {
-  fill: color-mix(in srgb, var(--fg-on-glass) 10%, transparent);
+  fill: color-mix(in srgb, var(--fg) 10%, transparent);
 }
 .rc-line {
   fill: none;
@@ -2489,7 +3529,7 @@
   flex-wrap: nowrap;
   gap: 8px;
   font-size: var(--text-sm);
-  color: var(--fg-on-glass);
+  color: var(--fg);
 }
 .rc-legend.is-column li {
   display: grid;
@@ -2507,7 +3547,7 @@
   border-radius: 3px;
 }
 .rc-swatch.is-ghost {
-  background: color-mix(in srgb, var(--fg-on-glass) 16%, transparent);
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
 }
 .rc-table summary {
   font-size: var(--text-xs);
@@ -2700,12 +3740,12 @@
   border-radius: 50%;
   border: 1.5px solid var(--border-strong);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent-fg);
 }
 .rc-dot-day.is-on .rc-dot-mark {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
 }
 .rc-dot-day.is-today .rc-dot-mark {
   box-shadow: 0 0 0 3px var(--accent-soft);
@@ -2719,8 +3759,8 @@
   color: var(--fg-muted);
 }
 .rc-dot-day.is-today .rc-dot-label {
-  color: var(--fg-on-glass);
-  font-weight: 700;
+  color: var(--fg);
+  font-weight: 600;
 }
 
 /* The streak flame animates itself (StreakFlame.tsx); unlit, it is a grey ghost of itself. */
@@ -2792,10 +3832,10 @@
   right: 8px;
   padding: 1px 7px;
   border-radius: var(--radius-pill);
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--accent-fg);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
 }
 .trophy-value {
   font-size: var(--text-xl);
@@ -2864,9 +3904,9 @@
   border-radius: var(--radius-lg);
   background: linear-gradient(
     100deg,
-    color-mix(in srgb, var(--fg-on-glass) 6%, transparent) 30%,
-    color-mix(in srgb, var(--fg-on-glass) 12%, transparent) 50%,
-    color-mix(in srgb, var(--fg-on-glass) 6%, transparent) 70%
+    color-mix(in srgb, var(--fg) 6%, transparent) 30%,
+    color-mix(in srgb, var(--fg) 12%, transparent) 50%,
+    color-mix(in srgb, var(--fg) 6%, transparent) 70%
   );
   background-size: 300% 100%;
   animation: rc-skeleton 1.6s linear infinite;
@@ -2880,102 +3920,344 @@
   }
 }
 
-/* ---------- dashboard stat strip ---------- */
-.dash-stats {
+/* ---------- dashboard ---------- */
+.dash {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (min-width: 768px) {
+  .dash {
+    gap: 24px;
+  }
+}
+.dash-note {
+  padding: 14px 18px;
+  font-size: var(--text-sm);
+}
+/* Coming up and Routines, side by side when there is room, full width when alone. */
+.dash-pair {
   display: grid;
-  grid-template-columns: 1.1fr 1.3fr 1.1fr 1fr;
-  align-items: center;
-  gap: 18px 24px;
-  padding: 20px 24px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  gap: 20px;
+  align-items: start;
 }
-/* Before the first session: the flame and one line, in place of a row of zeros. */
-.dash-stats.dash-stats-empty {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.dash-pair:empty {
+  display: none;
 }
-.dash-stats-empty > div {
+/* A card's own heading row, inside it. */
+.dash-card {
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-.dash-stat {
-  display: flex;
-  align-items: center;
   gap: 12px;
-  min-width: 0;
 }
-.dash-stat > div,
-.dash-stat.is-total,
-.dash-stat.is-spark {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.dash-stat.is-total,
-.dash-stat.is-spark {
-  align-items: flex-start;
-}
-.dash-label {
-  font-size: var(--text-xs);
-  color: var(--fg-muted);
-}
-.dash-figure {
-  font-size: 2.6rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-}
-.dash-figure small {
-  font-size: var(--text-lg);
-  font-weight: 500;
-  color: var(--fg-muted);
-}
-.dash-value {
+.card-title {
   font-size: var(--text-lg);
   font-weight: 600;
 }
-.dash-value small {
+/* The dashboard's Coming up and Routines cards: lighter, like the start panel above them. */
+.dash-card .card-title {
+  font-weight: 500;
+}
+.dash-first {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.dash-first .btn {
+  margin-top: 8px;
+}
+
+/* The stat hero: this week leads, the last seven days beside it, the rest underneath. */
+.dash-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 28px 48px;
+  padding: 28px 32px 24px;
+  overflow: hidden;
+}
+.dash-label {
   font-size: var(--text-sm);
   font-weight: 400;
+  color: var(--fg-muted);
 }
-.dash-ring-text {
-  font-size: var(--text-sm);
+.dash-week {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.dash-hero-figure {
+  margin-top: 2px;
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
   font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.dash-hero-figure small {
+  margin-left: 0.3em;
+  font-size: 0.34em;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--fg-muted);
+}
+.dash-goal {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dash-goal-bar {
+  height: 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  overflow: hidden;
+}
+.dash-goal-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 14%, transparent);
+  animation: dash-grow-x 1.1s var(--ease-out) both;
+  transform-origin: left;
+}
+@keyframes dash-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+.dash-goal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.dash-goal-row strong {
+  color: var(--fg);
+  font-weight: 600;
 }
 .dash-link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.dash-days {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.dash-days-cols {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 132px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dash-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.dash-day-track {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  overflow: hidden;
+}
+.dash-day-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--h);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fg) 12%, transparent);
+  transform-origin: bottom;
+  animation: dash-grow-y 800ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 50ms + 150ms);
+}
+.dash-day.is-empty .dash-day-bar {
+  background: color-mix(in srgb, var(--fg) 14%, transparent);
+}
+.dash-day.is-today .dash-day-bar {
+  background: var(--accent);
+}
+@keyframes dash-grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+.dash-day-label {
   font-size: var(--text-xs);
+  font-weight: 400;
   color: var(--fg-subtle);
 }
-.dash-fun {
+.dash-day.is-today .dash-day-label {
+  color: var(--fg);
+}
+
+.dash-foot {
   grid-column: 1 / -1;
   display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 18px 40px;
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.dash-foot-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+.dash-foot-stat dd {
+  margin: 0;
+}
+.dash-foot-figure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+.dash-foot-figure small {
+  margin-left: 0.3em;
+  font-size: 0.45em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+}
+.dash-foot-figure .rc-flame {
+  margin-left: -4px;
+}
+.dash-foot-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  font-weight: 400;
+}
+.dash-foot-stat.is-fun {
+  flex: 1 1 280px;
+  align-items: flex-end;
+}
+.dash-fun {
+  display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
+  gap: 12px;
+  max-width: 420px;
+  padding: 10px 12px 10px 10px;
   border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  color: var(--fg-on-glass);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg);
   font-size: var(--text-sm);
+  line-height: 1.35;
   text-decoration: none;
   transition: background var(--dur-fast) var(--ease-out);
 }
-.dash-fun span:nth-child(2) {
+.dash-fun:hover {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.dash-fun-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  font-size: 20px;
+}
+.dash-fun-text {
   flex: 1;
 }
-.dash-fun:hover {
-  background: color-mix(in srgb, var(--accent) 26%, transparent);
+.dash-fun-chevron {
+  flex: none;
+  color: var(--fg-subtle);
 }
-@media (max-width: 900px) {
-  .dash-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+/* Before the first session: the flame and one line, in place of a row of zeros. */
+.dash-empty {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 24px 28px;
 }
-@media (max-width: 480px) {
-  .dash-stats {
+.dash-empty > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-empty-title {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+.dash-empty-body {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  max-width: 56ch;
+}
+@media (max-width: 760px) {
+  .dash-hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: 18px;
+    padding: 22px 20px 20px;
+    gap: 24px;
   }
+  .dash-days-cols {
+    min-height: 104px;
+  }
+  .dash-foot {
+    gap: 16px 32px;
+  }
+  .dash-foot-stat.is-fun {
+    flex-basis: 100%;
+    align-items: stretch;
+  }
+  .dash-fun {
+    max-width: none;
+  }
+}
+:root[data-motion='off'] .dash-goal-bar span,
+:root[data-motion='off'] .dash-day-bar {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .dash-goal-bar span,
+  :root:not([data-motion='on']) .dash-day-bar {
+    animation: none;
+  }
+}
+
+/* Tips sit at the bottom of the page, quiet, one line each where they fit. */
+.hint-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.hint-stack:empty {
+  display: none;
 }
 
 /* Reduced motion: the finished picture, nothing moving. */
@@ -3091,6 +4373,291 @@
   font-weight: 600;
 }
 
+/* ---------- Achievements ---------- */
+.ach-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 28px 22px;
+  overflow: hidden;
+}
+.ach-hero-top {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.ach-hero-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.ach-hero-level {
+  display: block;
+  font-family: var(--font-display);
+  font-size: var(--text-hero);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+}
+.ach-hero-xp {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+.ach-hero-xp span {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  color: var(--fg);
+}
+.ach-hero-bar.progress {
+  height: 10px;
+}
+.ach-hero-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.ach-hero-row strong {
+  color: var(--fg);
+}
+.ach-hero-note {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  max-width: 70ch;
+}
+.ach-count {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.ach-count strong {
+  color: var(--fg);
+}
+/*
+ * Badges, folded to one row and a fading second. The fade is a mask whose length is a
+ * registered property, so it can transition away as the fold opens rather than snap.
+ */
+@property --badge-fade {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+.badge-fold {
+  --badge-fade: 0px;
+  overflow: hidden;
+  /* Room for the cards' shadows inside the clip. */
+  padding: 2px;
+  margin: -2px;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--badge-fade)), transparent);
+  /* Ease in and out: a long open that starts and settles gently instead of leaping. */
+  transition:
+    height 700ms cubic-bezier(0.45, 0, 0.2, 1),
+    --badge-fade 700ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+.badge-card.is-revealing {
+  animation: badge-reveal 460ms cubic-bezier(0.2, 0, 0.2, 1) both;
+  animation-delay: calc(min(var(--reveal-i, 0), 24) * 22ms + 80ms);
+}
+/* A card rail opened to "See all": the grid fades in rather than snapping. */
+.rail-expanded {
+  animation: badge-reveal var(--dur-slow) var(--ease-out) both;
+}
+@keyframes badge-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.badge-fold.is-folded {
+  --badge-fade: 90px;
+}
+.badge-fold-toggle {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+}
+.badge-fold-toggle:hover {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.badge-fold-chevron {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.badge-fold-toggle[aria-expanded='true'] .badge-fold-chevron {
+  transform: rotate(180deg);
+}
+:root[data-motion='off'] .badge-fold {
+  transition: none;
+}
+:root[data-motion='off'] .badge-card.is-revealing {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .badge-fold {
+    transition: none;
+  }
+  :root:not([data-motion='on']) .badge-card.is-revealing {
+    animation: none;
+  }
+}
+.badge-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+}
+.badge-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+}
+.badge-medal {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg-subtle);
+}
+.badge-card.is-earned .badge-medal {
+  color: var(--accent-fg);
+  background: var(--accent-fill);
+}
+.badge-name {
+  font-weight: 500;
+}
+.badge-card:not(.is-earned) .badge-name {
+  color: var(--fg-muted);
+}
+.badge-desc {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.badge-when {
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.badge-card:not(.is-earned) {
+  box-shadow: none;
+  background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
+}
+:root[data-panel='glass'] .badge-card:not(.is-earned) {
+  background: color-mix(in srgb, var(--glass-fill) 80%, transparent);
+}
+
+/* ---------- Calendar: planned against needed ---------- */
+.plan-list {
+  display: flex;
+  flex-direction: column;
+}
+.plan-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(80px, 160px) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+}
+.plan-row:last-child {
+  border-bottom: 0;
+}
+.plan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--status-ok);
+}
+.plan-row.is-short .plan-dot {
+  background: var(--status-warn);
+}
+.plan-title {
+  font-weight: 560;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plan-bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  overflow: hidden;
+}
+.plan-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--status-ok);
+}
+.plan-row.is-short .plan-bar span {
+  background: var(--status-warn);
+}
+.plan-figures {
+  min-width: 9em;
+  text-align: right;
+  font-weight: 400;
+}
+.plan-figures span {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+@media (max-width: 560px) {
+  .plan-row {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .plan-bar {
+    display: none;
+  }
+}
+
+/* The streak's flame: the same line icon as the top bar, on a soft tile. No emoji. */
+.streak-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg-subtle);
+}
+.streak-badge.is-lit {
+  background: color-mix(in srgb, var(--flame) 16%, transparent);
+  color: var(--flame);
+}
+.focus-brand:hover {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* Grades: Add item, Credits and the running note share the bottom edge of the input. */
+.grade-foot {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 /* Grades: courses set to "Not graded", folded away below the rest. */
 .grade-ungraded > summary {
   cursor: pointer;
@@ -3110,4 +4677,281 @@
 }
 .grade-ungraded-list li + li {
   border-top: 1px solid var(--border);
+}
+.grade-foot-note {
+  flex: 1;
+  min-width: 200px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* Routines: the list of every routine, with its edit actions on hover. */
+.routine-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.routine-item:hover,
+.routine-item:focus-within {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.routine-item-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.routine-item:hover .routine-item-actions,
+.routine-item:focus-within .routine-item-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .routine-item-actions {
+    opacity: 1;
+  }
+}
+
+/*
+ * Cards that sit straight on the backdrop without being a Glass or a Panel (the
+ * equivalents, the trophy shelf) take the same surface and text as every other card.
+ */
+.eq-card,
+.trophy {
+  --fg: var(--ink);
+  --fg-muted: var(--ink-muted);
+  --fg-subtle: var(--ink-subtle);
+  --border: var(--ink-line);
+  color: var(--fg);
+  background: var(--panel-fill);
+  border-color: var(--panel-border);
+  box-shadow: var(--panel-shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-panel='glass'] .eq-card,
+:root[data-panel='glass'] .trophy {
+  --fg: var(--fg-on-glass);
+  --fg-muted: var(--fg-on-glass-muted);
+  --fg-subtle: var(--fg-on-glass-subtle);
+  --border: var(--line-on-glass);
+  background: var(--glass-fill);
+  border-color: var(--glass-border);
+  box-shadow: var(--glass-border-inner), var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+:root[data-panel='custom'] .eq-card,
+:root[data-panel='custom'] .trophy {
+  --fg: var(--panel-fg);
+  --fg-muted: var(--panel-fg-muted);
+  --fg-subtle: var(--panel-fg-subtle);
+  --border: var(--panel-border);
+}
+
+/* Glass mode: the round play buttons are accent glass too, labelled in the screen's text colour. */
+:root[data-panel='glass'] .node-card-play {
+  background: color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--fg);
+}
+
+/* ---------- Saving a session (the post-session review) ---------- */
+/*
+ * Like saving a workout: what you did, big, then a few one-tap questions. Chips, not number
+ * keys; a graded question fills its chips up to the one chosen.
+ */
+.save-sheet {
+  max-width: min(600px, calc(100vw - 32px));
+}
+.save {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.save-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.save-kicker {
+  font-size: var(--text-sm);
+  color: var(--accent-text);
+}
+.save-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+}
+.save-path {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+.save-stats {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.save-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.save-stat dt {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.save-stat dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.save-stat.is-main dd {
+  font-size: clamp(2.75rem, 9vw, 3.5rem);
+  letter-spacing: -0.01em;
+}
+.save-qs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.save-q {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.save-q-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.save-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.save-chip {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-base) var(--ease-spring);
+}
+.save-chip:hover {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.save-chip:active {
+  transform: scale(0.95);
+}
+.save-chip[aria-checked='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fg);
+}
+/* A graded scale: equal segments, filled up to the choice, deepening toward it. */
+.save-chips.is-scale {
+  flex-wrap: nowrap;
+  gap: 4px;
+}
+.save-chips.is-scale .save-chip {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 6px;
+  border-radius: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.save-chips.is-scale .save-chip:first-child {
+  border-radius: var(--radius-pill) 0 0 var(--radius-pill);
+}
+.save-chips.is-scale .save-chip:last-child {
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+}
+.save-chips.is-scale .save-chip.is-filled:not([aria-checked='true']) {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+:root[data-panel='glass'] .save-chip[aria-checked='true'] {
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  color: var(--fg);
+}
+.save-counts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.save-note-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.save-note-toggle:hover {
+  color: var(--fg);
+}
+.save-note-chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.save-note-toggle[aria-expanded='true'] .save-note-chevron {
+  transform: none;
+}
+.save-note .reveal-inner > * {
+  margin-top: 8px;
+}
+.save-done {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 480px) {
+  .save-chips.is-scale {
+    flex-wrap: wrap;
+  }
+  .save-chips.is-scale .save-chip,
+  .save-chips.is-scale .save-chip:first-child,
+  .save-chips.is-scale .save-chip:last-child {
+    flex: 1 1 30%;
+    border-radius: var(--radius-pill);
+  }
+}
+
+/* A size warning in the timelapse settings: the same quiet hint, in the warning tone. */
+.timelapse-size-warn {
+  color: color-mix(in srgb, var(--status-warn) 70%, var(--fg));
+}
+
+/* Worth knowing and the Weekly review bar: text cards over the photo, so mostly solid. */
+.glass.rc-insight,
+.glass.rc-review {
+  background: color-mix(in srgb, var(--glass-solid) 78%, transparent);
 }

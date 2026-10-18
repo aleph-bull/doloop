@@ -125,15 +125,18 @@ export function courseGrade(input: CourseGradeInput): CourseGrade {
 }
 
 /**
- * What a component still to be marked has to score for the course to land on `target`.
+ * What everything still to be marked has to average for the course to land on `target`.
+ * The course is the whole 100%: weights not entered yet are still to come, so they count
+ * as part of the rest. Items adding to more than 100% make the course that much larger.
  * Returns null when nothing is left to mark; the number can exceed 100 (out of reach)
  * or fall below 0 (already safe), which the caller says out loud rather than clamping.
  */
 export function neededOnRemaining(grade: CourseGrade, targetPercent: number): number | null {
-  const remaining = grade.weightTotal - grade.weightGraded;
+  const course = Math.max(100, grade.weightTotal);
+  const remaining = course - grade.weightGraded;
   if (remaining <= 0) return null;
   const earned = ((grade.percent ?? 0) * grade.weightGraded) / 100;
-  return ((targetPercent * grade.weightTotal) / 100 - earned) / (remaining / 100);
+  return ((targetPercent * course) / 100 - earned) / (remaining / 100);
 }
 
 export interface GpaInput {

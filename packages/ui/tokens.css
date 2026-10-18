@@ -5,14 +5,38 @@
   Theme switching: `data-theme="light" | "dark"` on <html>. When absent, follows
   prefers-color-scheme, but the app sets the attribute on boot (dark by default when
   the system preference is unknown - kickoff decision).
+
+  Three materials, in order of how much of the backdrop they let through:
+  - chrome  (--chrome-*): floating controls. Nav, tab bar, toolbars. Thin, bright rim.
+  - glass   (--glass-*):  cards and sheets that float over the backdrop.
+  - content (--panel-*):  dense things to read. Task tree, tables, charts. Near-opaque.
+
+  Text has two contexts. `--ink*` is the theme's own text, for opaque surfaces. Anything
+  that sits on the backdrop or on glass reads `--fg-on-glass*`, which the Backdrop adapts to
+  the chosen photo, so a dark photo in light mode still gets light text. The `.on-backdrop`
+  rule in styles.css points `--fg`, `--fg-muted`, `--fg-subtle` and `--border` at the right
+  set, so components only ever use those four.
 */
+
+/* Inter (SIL OFL), bundled, with the optical-size axis so headings get its display cut. */
+@import '@fontsource-variable/inter/opsz.css';
 
 :root {
   /* ---------- Typography ---------- */
+  /* Inter everywhere; the platform's own face only while it loads or if it can't. */
   --font-sans:
-    'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable Text',
+    'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Headings and big numbers: the same Inter, whose optical size tightens it at display sizes. */
+  --font-display:
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-rounded:
+    ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display',
+    'Segoe UI', system-ui, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --text-2xs: 0.6875rem;
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
   --text-base: 1rem;
@@ -20,14 +44,19 @@
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
   --text-3xl: 2.25rem;
+  /* Stat figures: a dashboard number, a recap hero. */
+  --text-stat: clamp(2.25rem, 4.6vw, 3.25rem);
+  --text-hero: clamp(3rem, 7vw, 4.5rem);
   --text-timer: 4.5rem;
   --tracking-tight: -0.02em;
-  --tracking-numeric: -0.03em;
+  --tracking-display: 0;
+  --tracking-numeric: -0.01em;
   --leading-tight: 1.15;
   --leading-normal: 1.5;
 
-  /* ---------- Radius ---------- */
-  --radius-sm: 8px;
+  /* ---------- Radius (concentric: inner = outer - padding) ---------- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
   --radius-md: 14px;
   --radius-lg: 22px;
   --radius-xl: 30px;
@@ -36,9 +65,11 @@
   /* ---------- Motion ---------- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* A soft overshoot, for things that are pressed or land. */
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
   --dur-fast: 150ms;
-  --dur-base: 200ms;
-  --dur-slow: 250ms;
+  --dur-base: 220ms;
+  --dur-slow: 320ms;
 
   /* ---------- Spacing scale (4px base) ---------- */
   --space-1: 4px;
@@ -52,9 +83,9 @@
   --space-12: 48px;
 
   /* ---------- Glass recipe ---------- */
-  --glass-blur: 24px;
-  --glass-saturate: 160%;
-  --glass-blur-strong: 40px;
+  --glass-blur: 28px;
+  --glass-saturate: 180%;
+  --glass-blur-strong: 44px;
 
   /* ---------- Accent (overridden by data-accent / custom) ---------- */
   --accent-h: 240;
@@ -64,19 +95,23 @@
   --accent-strong: hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) - 10%));
   --accent-soft: hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.18);
   --accent-fg: #ffffff;
+  /* What white labels sit on: the accent, deepened when white would not read on it. */
+  --accent-fill: hsl(var(--accent-h) var(--accent-s) min(var(--accent-l), 40%));
+  /*
+   * The accent as text: links, "Manage", the active settings item. Pulled darker on light
+   * surfaces and lighter on dark ones until it reads; applyUserTheme replaces these CSS
+   * estimates with values measured against WCAG AA.
+   */
+  --accent-text-on-light: hsl(var(--accent-h) var(--accent-s) min(var(--accent-l), 32%));
+  --accent-text-on-dark: hsl(var(--accent-h) var(--accent-s) max(var(--accent-l), 72%));
 
   /* ---------- Status ---------- */
   --status-ok: #22c55e;
   --status-warn: #f59e0b;
   --status-bad: #ef4444;
   --status-info: #38bdf8;
-
-  /* ---------- Charts (categorical, fixed order, validated) ---------- */
-  --chart-1: #2a78d6;
-  --chart-2: #eb6834;
-  --chart-3: #1baf7a;
-  --chart-4: #eda100;
-  --chart-5: #e87ba4;
+  /* The streak's own colour, wherever the flame appears. */
+  --flame: #ff7a1a;
 
   /*
    * Sequential ramp for the contribution grids. Built from the accent hue so it follows
@@ -114,7 +149,6 @@
   --accent-h: 38;
   --accent-s: 92%;
   --accent-l: 50%;
-  --accent-fg: #1a1207;
 }
 :root[data-accent='rose'] {
   --accent-h: 346;
@@ -136,107 +170,159 @@
   --bg-elevated: #ffffff;
   --bg-sunken: #e3e6ee;
 
-  --fg: #0f1220;
-  --fg-muted: #4b5168;
-  --fg-subtle: #7b819a;
+  --ink: #0f1220;
+  --ink-muted: #474d63;
+  /* 4.9:1 on the base: subtle, never illegible. */
+  --ink-subtle: #5f6579;
+  --ink-line: rgb(15 18 32 / 0.09);
+  --ink-line-strong: rgb(15 18 32 / 0.17);
+
   --fg-on-glass: #0f1220;
+  --glass-solid: #f6f7fa;
+  --accent-text: var(--accent-text-on-light);
 
-  --border: rgb(15 18 32 / 0.08);
-  --border-strong: rgb(15 18 32 / 0.16);
+  /* Chrome: the thinnest, brightest material. */
+  --chrome-fill: rgb(255 255 255 / 0.58);
+  --chrome-rim: rgb(255 255 255 / 0.85);
+  --chrome-shadow: 0 1px 1px rgb(15 18 32 / 0.04), 0 12px 32px -8px rgb(15 18 32 / 0.22);
 
-  /* Glass: low-alpha fill + inner 1px light border. Panels for dense content are opaque. */
-  --glass-fill: rgb(255 255 255 / 0.55);
-  --glass-fill-strong: rgb(255 255 255 / 0.72);
-  --glass-border: rgb(255 255 255 / 0.65);
-  --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.6);
-  --glass-shadow: 0 10px 40px -10px rgb(15 18 32 / 0.25);
-  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.26), rgb(255 255 255 / 0) 38%);
+  --glass-fill: rgb(255 255 255 / 0.6);
+  --glass-fill-strong: rgb(255 255 255 / 0.78);
+  --glass-border: rgb(255 255 255 / 0.7);
+  --glass-border-inner:
+    inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 0 0 1px rgb(255 255 255 / 0.35);
+  --glass-shadow: 0 1px 2px rgb(15 18 32 / 0.05), 0 18px 48px -18px rgb(15 18 32 / 0.28);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.4), rgb(255 255 255 / 0) 42%);
 
-  --panel-fill: rgb(255 255 255 / 0.92);
+  --panel-fill: rgb(255 255 255 / 0.9);
+  --matte-fill: #fbfbfd;
   --panel-border: rgb(15 18 32 / 0.06);
+  --panel-shadow: 0 1px 2px rgb(15 18 32 / 0.05), 0 10px 30px -14px rgb(15 18 32 / 0.2);
 
-  --overlay-scrim: rgb(15 18 32 / 0.35);
+  --overlay-scrim: rgb(15 18 32 / 0.32);
 }
 
 /* ---------- Dark theme ---------- */
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --chart-1: #3987e5;
-  --chart-2: #d95926;
-  --chart-3: #199e70;
-  --chart-4: #c98500;
-  --chart-5: #d55181;
 
-  --heat-0: rgb(255 255 255 / 0.06);
+  --heat-0: rgb(255 255 255 / 0.07);
   --heat-1: hsl(var(--accent-h) calc(var(--accent-s) * 0.6) 24%);
   --heat-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.8) 37%);
   --heat-3: hsl(var(--accent-h) var(--accent-s) 53%);
   --heat-4: hsl(var(--accent-h) var(--accent-s) 70%);
 
   --bg-base: #0b0d14;
-  --bg-elevated: #151827;
+  --bg-elevated: #171a26;
   --bg-sunken: #070810;
 
-  --fg: #f2f3f8;
-  --fg-muted: #b3b8cc;
-  --fg-subtle: #7f8599;
-  --fg-on-glass: #f2f3f8;
+  --ink: #f4f5f9;
+  --ink-muted: #b8bdcf;
+  --ink-subtle: #8d93a8;
+  --ink-line: rgb(255 255 255 / 0.09);
+  --ink-line-strong: rgb(255 255 255 / 0.17);
 
-  --border: rgb(255 255 255 / 0.08);
-  --border-strong: rgb(255 255 255 / 0.16);
+  --fg-on-glass: #f4f5f9;
+  --glass-solid: #1a1c28;
+  --accent-text: var(--accent-text-on-dark);
 
-  --glass-fill: rgb(20 22 36 / 0.45);
-  --glass-fill-strong: rgb(20 22 36 / 0.65);
-  --glass-border: rgb(255 255 255 / 0.14);
-  --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
-  --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
-  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 38%);
+  --chrome-fill: rgb(30 32 44 / 0.5);
+  --chrome-rim: rgb(255 255 255 / 0.16);
+  --chrome-shadow: 0 1px 1px rgb(0 0 0 / 0.2), 0 16px 40px -10px rgb(0 0 0 / 0.6);
 
-  --panel-fill: rgb(21 24 39 / 0.94);
-  --panel-border: rgb(255 255 255 / 0.06);
+  --glass-fill: rgb(22 24 36 / 0.5);
+  --glass-fill-strong: rgb(22 24 36 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.12);
+  --glass-border-inner:
+    inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+  --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 24px 60px -20px rgb(0 0 0 / 0.7);
+  --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 40%);
 
-  --overlay-scrim: rgb(0 0 0 / 0.55);
+  --panel-fill: rgb(20 22 34 / 0.94);
+  --matte-fill: #181a25;
+  --panel-border: rgb(255 255 255 / 0.07);
+  --panel-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -18px rgb(0 0 0 / 0.7);
+
+  --overlay-scrim: rgb(0 0 0 / 0.5);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     color-scheme: dark;
-    --chart-1: #3987e5;
-    --chart-2: #d95926;
-    --chart-3: #199e70;
-    --chart-4: #c98500;
-    --chart-5: #d55181;
 
-    --heat-0: rgb(255 255 255 / 0.06);
+    --heat-0: rgb(255 255 255 / 0.07);
     --heat-1: hsl(var(--accent-h) calc(var(--accent-s) * 0.6) 24%);
     --heat-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.8) 37%);
     --heat-3: hsl(var(--accent-h) var(--accent-s) 53%);
     --heat-4: hsl(var(--accent-h) var(--accent-s) 70%);
 
     --bg-base: #0b0d14;
-    --bg-elevated: #151827;
+    --bg-elevated: #171a26;
     --bg-sunken: #070810;
 
-    --fg: #f2f3f8;
-    --fg-muted: #b3b8cc;
-    --fg-subtle: #7f8599;
-    --fg-on-glass: #f2f3f8;
+    --ink: #f4f5f9;
+    --ink-muted: #b8bdcf;
+    --ink-subtle: #8d93a8;
+    --ink-line: rgb(255 255 255 / 0.09);
+    --ink-line-strong: rgb(255 255 255 / 0.17);
 
-    --border: rgb(255 255 255 / 0.08);
-    --border-strong: rgb(255 255 255 / 0.16);
+    --fg-on-glass: #f4f5f9;
+    --glass-solid: #1a1c28;
+    --accent-text: var(--accent-text-on-dark);
 
-    --glass-fill: rgb(20 22 36 / 0.45);
-    --glass-fill-strong: rgb(20 22 36 / 0.65);
-    --glass-border: rgb(255 255 255 / 0.14);
-    --glass-border-inner: inset 0 0 0 1px rgb(255 255 255 / 0.1);
-    --glass-shadow: 0 16px 50px -12px rgb(0 0 0 / 0.6);
-    --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 38%);
+    --chrome-fill: rgb(30 32 44 / 0.5);
+    --chrome-rim: rgb(255 255 255 / 0.16);
+    --chrome-shadow: 0 1px 1px rgb(0 0 0 / 0.2), 0 16px 40px -10px rgb(0 0 0 / 0.6);
 
-    --panel-fill: rgb(21 24 39 / 0.94);
-    --panel-border: rgb(255 255 255 / 0.06);
+    --glass-fill: rgb(22 24 36 / 0.5);
+    --glass-fill-strong: rgb(22 24 36 / 0.7);
+    --glass-border: rgb(255 255 255 / 0.12);
+    --glass-border-inner:
+      inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 0 0 1px rgb(255 255 255 / 0.04);
+    --glass-shadow: 0 1px 2px rgb(0 0 0 / 0.25), 0 24px 60px -20px rgb(0 0 0 / 0.7);
+    --glass-highlight: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 40%);
 
-    --overlay-scrim: rgb(0 0 0 / 0.55);
+    --panel-fill: rgb(20 22 34 / 0.94);
+    --matte-fill: #181a25;
+    --panel-border: rgb(255 255 255 / 0.07);
+    --panel-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -18px rgb(0 0 0 / 0.7);
+
+    --overlay-scrim: rgb(0 0 0 / 0.5);
   }
+}
+
+/*
+ * Derived from whatever the theme or the Backdrop decided. Declared once, on the root, so
+ * an adapted --fg-on-glass (set inline on <html>) flows into all of them.
+ */
+:root {
+  --fg-on-glass-muted: color-mix(in srgb, var(--fg-on-glass) 76%, transparent);
+  --fg-on-glass-subtle: color-mix(in srgb, var(--fg-on-glass) 64%, transparent);
+  --line-on-glass: color-mix(in srgb, var(--fg-on-glass) 11%, transparent);
+  --line-strong-on-glass: color-mix(in srgb, var(--fg-on-glass) 20%, transparent);
+  /* The Backdrop swaps this to the dark- or light-surface value to match its glass. */
+  --accent-text-glass: var(--accent-text);
+  /* The text set components read. Contexts re-point these (see styles.css). */
+  --fg: var(--ink);
+  --fg-muted: var(--ink-muted);
+  --fg-subtle: var(--ink-subtle);
+  --border: var(--ink-line);
+  --border-strong: var(--ink-line-strong);
+  --bg: var(--bg-base);
+
+  /*
+   * Chart series: the accent and its relatives, in a fixed order. Lightness alternates so
+   * neighbours separate, and the last two lean a little either side of the hue.
+   */
+  --chart-1: var(--accent);
+  --chart-2: hsl(var(--accent-h) calc(var(--accent-s) * 0.8) min(calc(var(--accent-l) + 20%), 84%));
+  --chart-3: hsl(var(--accent-h) var(--accent-s) max(calc(var(--accent-l) - 18%), 26%));
+  --chart-4: hsl(
+    calc(var(--accent-h) + 28) calc(var(--accent-s) * 0.75) min(calc(var(--accent-l) + 8%), 76%)
+  );
+  --chart-5: hsl(
+    calc(var(--accent-h) - 28) calc(var(--accent-s) * 0.85) max(calc(var(--accent-l) - 6%), 34%)
+  );
 }
 
 /* ---------- Reduced motion ---------- */

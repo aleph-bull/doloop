@@ -240,6 +240,22 @@ describe('routineAgenda', () => {
     const due = routinesDue({ routines: [routine()], completions, today: '2026-09-23' });
     expect(due.map((o) => o.date)).toEqual(['2026-09-22', '2026-09-23']);
   });
+
+  it('drops missed days up to the cleared date but keeps today', () => {
+    const base = { routines: [routine()], completions: [], today: '2026-09-25' };
+    expect(routinesDue({ ...base, clearedThrough: '2026-09-24' }).map((o) => o.date)).toEqual([
+      '2026-09-25',
+    ]);
+    expect(routinesDue({ ...base, clearedThrough: '2026-09-22' }).map((o) => o.date)).toEqual([
+      '2026-09-23',
+      '2026-09-24',
+      '2026-09-25',
+    ]);
+    // Cleared through a later day (a clock change, an edited setting): today still shows.
+    expect(routinesDue({ ...base, clearedThrough: '2026-09-30' }).map((o) => o.date)).toEqual([
+      '2026-09-25',
+    ]);
+  });
 });
 
 describe('routineAdherence', () => {

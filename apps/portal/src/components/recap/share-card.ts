@@ -58,7 +58,7 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   canvas.height = SIZE;
   const ctx = canvas.getContext('2d')!;
   const font = (weight: number, px: number) =>
-    `${weight} ${px}px Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
+    `${weight} ${px}px "Inter Variable", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`;
 
   // Night backdrop with a wash of the accent from the top corner.
   const bg = ctx.createLinearGradient(0, 0, SIZE, SIZE);

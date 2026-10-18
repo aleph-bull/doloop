@@ -32,7 +32,7 @@ export function NamePrompt() {
   return (
     <Glass className="p-5 flex flex-col gap-3 fade-in" role="region" aria-label="Your name">
       <div>
-        <h2 className="text-lg">What should we call you?</h2>
+        <h2 className="card-title">What should we call you?</h2>
         <p className="muted text-sm">Only used to say hello.</p>
       </div>
       <form className="flex items-end gap-2 flex-wrap" onSubmit={save}>

@@ -1,6 +1,6 @@
-import type { PersonalRecord } from '@komogon/core';
+import type { PersonalRecord, RecordKey } from '@komogon/core';
 import { fireSparks, prefersStill } from '@komogon/ui';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fmtDate } from '../../lib/format';
 
 /** Records the user has already seen marked new, kept in this browser so the sparkle plays once. */
@@ -22,6 +22,36 @@ function writeSeen(seen: Set<string>): void {
   }
 }
 
+/** Records dated by the Monday of their week, shown as "week of Sep 21". */
+const WEEK_RECORDS = new Set<RecordKey>([
+  'biggest-week',
+  'most-tasks-week',
+  'most-courses-week',
+  'most-routines-week',
+]);
+
+function whenLabel(r: PersonalRecord & { when: string }): string {
+  const day = `${r.when}T12:00:00`;
+  if (r.key === 'biggest-month')
+    return new Date(day).toLocaleDateString([], { month: 'long', year: 'numeric' });
+  return `${WEEK_RECORDS.has(r.key) ? 'week of ' : ''}${fmtDate(day)}`;
+}
+
+/** The narrowest a medal gets, and the gap between them; matches .trophies in index.css. */
+const MIN_TROPHY = 150;
+const TROPHY_GAP = 12;
+
+/**
+ * Columns that share the medals out evenly: as many rows as the width needs, then as few
+ * columns as fill them. Seven medals that fit six across sit four and three, not six and one.
+ */
+function balancedColumns(count: number, width: number): number {
+  const fit = Math.max(1, Math.floor((width + TROPHY_GAP) / (MIN_TROPHY + TROPHY_GAP)));
+  if (count <= fit) return Math.max(1, count);
+  const rows = Math.ceil(count / fit);
+  return Math.ceil(count / rows);
+}
+
 /** A record's identity for "have I celebrated this one": the record and its figure. */
 const idOf = (r: PersonalRecord) => `${r.key}:${r.display}:${r.when ?? ''}`;
 
@@ -32,6 +62,19 @@ const idOf = (r: PersonalRecord) => `${r.key}:${r.display}:${r.when ?? ''}`;
  */
 export function TrophyShelf({ records }: { records: PersonalRecord[] }) {
   const refs = useRef(new Map<string, HTMLElement>());
+  const listRef = useRef<HTMLUListElement>(null);
+  const [width, setWidth] = useState(0);
+  const hasRecords = records.length > 0;
+
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(([entry]) => {
+      if (entry) setWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasRecords]);
 
   useEffect(() => {
     const seen = readSeen();
@@ -61,7 +104,17 @@ export function TrophyShelf({ records }: { records: PersonalRecord[] }) {
     );
 
   return (
-    <ul className="trophies">
+    <ul
+      ref={listRef}
+      className="trophies"
+      style={
+        width > 0
+          ? {
+              gridTemplateColumns: `repeat(${balancedColumns(records.length, width)}, minmax(0, 1fr))`,
+            }
+          : undefined
+      }
+    >
       {records.map((r) => (
         <li
           key={r.key}
@@ -77,12 +130,7 @@ export function TrophyShelf({ records }: { records: PersonalRecord[] }) {
           </span>
           <span className="trophy-value">{r.display}</span>
           <span className="trophy-label">{r.label}</span>
-          {r.when && (
-            <span className="trophy-when">
-              {r.key === 'biggest-week' || r.key === 'most-tasks-week' ? 'week of ' : ''}
-              {fmtDate(`${r.when}T12:00:00`)}
-            </span>
-          )}
+          {r.when && <span className="trophy-when">{whenLabel({ ...r, when: r.when })}</span>}
         </li>
       ))}
     </ul>

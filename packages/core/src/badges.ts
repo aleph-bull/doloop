@@ -114,6 +114,46 @@ export const BADGES: BadgeDef[] = [
     name: 'Three down',
     description: 'Mark three courses as done.',
   },
+  // --- added 2026-10-17: more steps along the same ladders ---
+  { key: 'sessions-10', name: 'Getting going', description: 'Finish ten sessions.' },
+  {
+    key: 'sessions-500',
+    name: 'Five hundred sessions',
+    description: 'Finish five hundred sessions.',
+  },
+  {
+    key: 'hours-250',
+    name: 'Long haul',
+    description: 'Two hundred and fifty hours of focused work, all time.',
+  },
+  { key: 'streak-14', name: 'Two weeks', description: 'A 14-day streak.' },
+  {
+    key: 'focus-100',
+    name: 'Focused 100',
+    description: 'One hundred sessions with no distraction reported.',
+  },
+  {
+    key: 'ultramarathon',
+    name: 'Ultramarathon',
+    description: 'Six hours of focused work in a single day.',
+  },
+  {
+    key: 'under-estimate',
+    name: 'Ahead of time',
+    description: 'Finish a task in less time than you estimated.',
+  },
+  { key: 'tasks-10', name: 'Ten done', description: 'Mark ten tasks as done.' },
+  { key: 'tasks-50', name: 'Fifty done', description: 'Mark fifty tasks as done.' },
+  {
+    key: 'routine-perfect-4',
+    name: 'Four perfect weeks',
+    description: 'Complete every recurring task due in four calendar weeks.',
+  },
+  {
+    key: 'reviewer-100',
+    name: 'Thoughtful',
+    description: 'Submit one hundred end-of-session reviews.',
+  },
 ];
 
 export interface BadgeInput {
@@ -172,6 +212,7 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (reviewed.length >= 1) done.add('first-review');
   if (focused.length >= 5) done.add('focus-5');
   if (focused.length >= 25) done.add('focus-25');
+  if (focused.length >= 100) done.add('focus-100');
 
   // estimate-oracle: completed nodes with estimate, logged within ±10%.
   const loggedByNode = new Map<string, number>();
@@ -186,6 +227,22 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   }
   if (oracle >= 3) done.add('estimate-oracle');
 
+  // A task done in less time than its estimate, with some time actually logged on it.
+  if (
+    input.nodes.some((n) => {
+      if (!n.completedAt || !n.estimatedMinutes || n.kind === 'course') return false;
+      const logged = loggedByNode.get(n.id) ?? 0;
+      return logged > 0 && logged < n.estimatedMinutes;
+    })
+  )
+    done.add('under-estimate');
+
+  const tasksDone = input.nodes.filter(
+    (n) => n.kind !== 'course' && n.completedAt && !n.archived,
+  ).length;
+  if (tasksDone >= 10) done.add('tasks-10');
+  if (tasksDone >= 50) done.add('tasks-50');
+
   if (sessions.filter((s) => localHour(s.startedAt, input.timezone) < 8).length >= 5)
     done.add('early-bird');
   if (sessions.filter((s) => overlapsBlock(s, input.plannedBlocks)).length >= 10)
@@ -193,6 +250,7 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
 
   const best = Math.max(input.streak.current, input.streak.longest);
   if (best >= 7) done.add('streak-7');
+  if (best >= 14) done.add('streak-14');
   if (best >= 30) done.add('streak-30');
   if (best >= 100) done.add('streak-100');
 
@@ -205,7 +263,10 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (totalMinutes >= 10 * 60) done.add('hours-10');
   if (totalMinutes >= 50 * 60) done.add('hours-50');
   if (totalMinutes >= 100 * 60) done.add('hours-100');
+  if (totalMinutes >= 250 * 60) done.add('hours-250');
+  if (sessions.length >= 10) done.add('sessions-10');
   if (sessions.length >= 100) done.add('sessions-100');
+  if (sessions.length >= 500) done.add('sessions-500');
   if (sessions.some((s) => s.workSeconds >= 2 * 3600)) done.add('deep-work');
 
   /* --- rhythm --- */
@@ -218,6 +279,7 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
     minutesByDay.set(d, (minutesByDay.get(d) ?? 0) + s.workSeconds / 60);
   }
   if ([...minutesByDay.values()].some((m) => m >= 4 * 60)) done.add('marathon');
+  if ([...minutesByDay.values()].some((m) => m >= 6 * 60)) done.add('ultramarathon');
 
   const studiedDays = new Set(minutesByDay.keys());
   // A weekend counts when both its Saturday and the following Sunday were studied.
@@ -240,8 +302,10 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (ticks.length >= 1) done.add('routine-starter');
   if (ticks.length >= 50) done.add('routine-50');
   if ((input.perfectRoutineWeeks ?? 0) >= 1) done.add('routine-perfect-week');
+  if ((input.perfectRoutineWeeks ?? 0) >= 4) done.add('routine-perfect-4');
 
   if (reviewed.length >= 25) done.add('reviewer-25');
+  if (reviewed.length >= 100) done.add('reviewer-100');
   if ((input.weeklyNotes ?? 0) >= 4) done.add('weekly-reviewer');
   if ((input.rewardsRedeemed ?? 0) >= 1) done.add('first-reward');
   if ((input.rewardsRedeemed ?? 0) >= 5) done.add('reward-5');

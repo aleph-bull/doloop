@@ -6,7 +6,7 @@ import {
   levelForXp,
   materializePendingRestDays,
   resolveBackgroundId,
-  toLocalDate,
+  streakDay,
   withDefaults,
   type RestDayPolicy,
   type Session,
@@ -142,7 +142,9 @@ export interface StreakSync {
  */
 export async function syncStreak(db: Db, row: UserRow, now: string): Promise<StreakSync> {
   const settings = settingsOf(row);
-  const today = toLocalDate(now, row.timezone);
+  // The streak's own day, which can start a few hours after midnight.
+  const dayStartHour = settings.streak.dayStartHour;
+  const today = streakDay(now, row.timezone, dayStartHour);
   let policy = await getPolicy(db, row.id);
   const materialized = materializePendingRestDays(policy, today);
   if (materialized !== policy) {
@@ -170,6 +172,7 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
     minMinutes: settings.streak.minMinutes,
     today,
     timezone: row.timezone,
+    dayStartHour,
   });
   if (JSON.stringify(result.state) !== JSON.stringify(row.streak)) {
     await db.update(users).set({ streak: result.state }).where(eq(users.id, row.id));

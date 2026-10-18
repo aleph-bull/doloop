@@ -1226,21 +1226,25 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 ## Review fixes, Tasks play button, QoL, timelapse (user request, 2026-10-06)
 
 ### Bugs from the 2026-10-05 review
+
 - **A session is finished once.** `persistTimer` writes the end only `WHERE ended_at IS NULL` and reports whether this request `claimed` it; only the claimant runs `finalize`. `view()` itself finalizes an auto-ended scheduled session it claims, so every path (polling, sleep, events, a new start over a stale one) shares the guard. A second End gets 409. Tests in `session-races.test.ts`.
 - **XP changes are one statement.** `addXp(db, userId, delta, { withLevel })` in `services/users.ts` does `xp = greatest(0, xp + delta)`, used by session end, trim, and routine tick/untick. Shop and reward spending still write a computed total: they check the balance first, and a double-spend race there is unlikely and bounded by the price.
 - **Two starts at once** map the one-active index's unique violation (23505, possibly wrapped by Drizzle) to the usual 409.
 - **The start dialog fills once per open,** reading its props through a ref, so a refetch no longer resets it. It remembers the last style and length in `localStorage` (`komogon.start.last`, tasks and free sessions only; a routine brings its own length). "Until a time" that has already passed says it means tomorrow.
 
 ### Tasks
+
 - **Play sits right after the tick,** with 14 px after it (8 px on a phone). Rows without one keep a same-size spacer so titles line up. Opening the dialog from it passes `lockSubject`: the picker gives way to the task's name and path.
 - **On a phone** (≤640 px) the edit actions wrap onto their own line, and each meta item (`0 min / 3 h`) never breaks inside itself.
 
 ### QoL
+
 - **Durations say "min"**, not "m", everywhere (`fmtMinutes`, `fmtHours`, greetings, chart axes). Per-day needs round up to 5 like the plan does (`fmtPerDay`).
 - **First run:** with nothing studied yet the stat strip is one welcoming line, and the heatmap says what its squares are for instead of "0 h across 0 days".
 - **Focus screen keys:** Space pauses or resumes, H hides or shows the clock. Ignored while typing, on a focused button, with a modifier, or with any dialog open.
 
 ### Timelapse
+
 - **Local only.** Stills live in the focus tab's memory; nothing is uploaded. Leaving with unsaved stills asks first (`beforeunload`).
 - **Asked once per session,** after the audio question: Record / Not now / Always record / Never ask again (`settings.timelapse.record`, `ask | always | never`), also in the focus sheet and Settings > Focus screen. The clock waits while the question is up.
 - **Capture, Apple-style:** a still every 0.5 s to start; when the buffer passes its cap the stills are thinned to every other and the interval doubles. Thinning one past the cap keeps the newest still, so spacing stays even (a test caught the uneven version). Speed mode captures at `speed / fps` seconds. Stills are 960 px JPEGs, taken in focus only (not breaks or a pause), and saved unmirrored so writing reads the right way round; only the live preview is a mirror.
@@ -1252,3 +1256,51 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 
 - **A ticked-off item is never overdue.** Its row on Tasks, and a node card, say "Done <date>" in place of the due line.
 - **Finished items move into a folded "Done · N" group** at the bottom of their parent, closed by default, and come back up when unticked. Top-level courses are left in place, since their drag and Alt+arrow ordering counts every course.
+
+## Visual and UX overhaul (user request, 2026-10-08)
+
+- **Liquid-glass shell, solid content, running-app numbers.** Full write-up, critique and plan in `docs/REDESIGN.md`. No features, settings or personalization options were added.
+- **Three materials**: chrome (nav, phone tab bar), glass (cards, sheets), content panel (lists, tables, charts). The user's Panels setting still overrides the content material.
+- **Text on the backdrop follows the backdrop.** `.on-backdrop`, `.glass` and glass panels read `--fg-on-glass*`; opaque panels read the theme's `--ink*`. Components only use `--fg`, `--fg-muted`, `--fg-subtle`, `--border`, `--accent-text`.
+- **Photo text colour is measured** against the photo under the theme's scrim (`adaptToPhoto`), not picked by a luminance threshold; glass thickens until 64% text clears 4.5:1; a page wash only when titles need it.
+- **Accent as text and the label on accent buttons are computed** (`readableAccent`, `accentForeground`), so mint and sky buttons now carry dark labels.
+- **System fonts** (SF Pro / Segoe UI Variable); Inter was never loaded.
+- **Phone navigation** is a floating seven-tab bar (Home, Tasks, Routines, Grades, Calendar, Stats, Awards).
+- **"Done" for a used-up estimate reads "Estimate met"**; Tasks shows status chips only for statuses that need a look (not "On track").
+
+## Redesign review fixes (user request, 2026-10-08)
+
+- **No black labels**: accent buttons always carry white text on `--accent-fill` (the accent, deepened only as far as white needs). Logo back to the plain accent mark.
+- **Matte, flat buttons; no glows; no radial gradients in panels**; weights capped at 600 (labels 500), smaller hero numbers.
+- **Every card follows the Panels setting** (glass cards included), so cards side by side always match. New Panels option **Matte**: solid cards, top bar, tab bar and dialogs.
+- **Tasks is a Notion-style table** (Name, Due, Time, Status), every row folded on arrival; edit actions on hover; play stays beside the tick.
+- **Charts use accent shades**; Streaks panel uses the line flame, no emoji. Focus-screen panels near-opaque; its Komogon name links home. Days focused grid back to its original size. Grades footer aligned.
+
+## Study plans, first version (user request, 2026-10-09)
+
+- **A plan is a node, its topics are its children.** The plan root is a course-kind node with grading off (kept off the Grades page), its target date is the node's due date, and each topic is a task with the planned hours as its estimate. So sessions, the start dialog, pace, streaks, the Tasks tree and Analytics all work on plans with no special cases. What a course lacks lives beside it: `study_plans` (weekly budget, start day, method, mastery bar) and `plan_topics` (resource, drilled or not). Migration 0011.
+- **Drills are rounds plus named misses.** A round is a tally of ✓ / shaky / ✗ (`drill_rounds`); only the misses you choose to name become queue items (`drill_items`), so drilling out loud does not mean typing every question. Shaky counts as half right.
+- **Miss queue is a three-box Leitner.** A miss or a wobble comes back the next day, from box 0; a clean answer moves it out 1, 3, then 7 days and retires it. Answered from the plan page's Due back list.
+- **Learned means accuracy, not hours.** A drilled topic is marked learned automatically when its last two rounds pooled reach the bar (85% by default, editable) and every named miss has been redone cleanly. Hours-only topics are ticked by hand. A topic that crosses the bar early frees its leftover hours from the remaining total.
+- **Pacing against a weekly budget.** Projected finish assumes the budget from today; status is ahead / on track / needs more time against the target. When it needs more time the page offers the two honest fixes as buttons (more hours a week, or a later target), never a nag. The chip reads "Needs more time", not "Behind".
+- **Two ways in, one structure.** "Paste an outline" reads a table or list (`parseOutline`, hours and resources picked up when present) into editable rows; "Build it" is the same rows by hand. The optional daily top-up is an ordinary daily routine linked to the plan, and its ticks count as plan time and plan days.
+- **"Describe it" generation is not built yet.** It needs a model call from the API; the paste path covers the case where the user already has a syllabus. Next steps are in `docs/IDEAS.md`.
+- Plans tab added to the nav and the phone tab bar (now eight tabs; the bar sizes its columns to the tab count).
+
+## The post-session review becomes "save session" (user request, 2026-10-12)
+
+- **Like saving a workout**: the sheet leads with what you did (focused time, breaks, pomodoros), then one-tap chips. Save hands over to the score sheet; Skip still costs nothing.
+- **Focus**: Locked in / A few drifts / Scattered (stored as distracted no / a-little / a-lot). **Readiness** (under an assessment, naming that assessment): Not yet / Shaky / Getting there / Mostly / Ready (1-5).
+- **Effort replaces mood** (full mode): Easy / Moderate / Hard / Very hard / All out, stored as `review.effort` 1-5 and shown on the score sheet. Mood is no longer asked; old values stay.
+- **Count only when the task has a unit; "needs more time" is +30 min / +1 h / +2 h; the note is folded.**
+
+## Notes from 2026-10-17, built the same day (user request)
+
+- **One session at a time, asked not refused.** Starting while one runs opens "<Session> is still running. Cancel to start <new>?". Cancel and start ends the running one (minutes saved, no review) and starts the new one; Keep it running leaves it. A 409 from a session started elsewhere asks the same question. Play buttons on Routines, the dashboard Routines card and Plans no longer hide while a session runs, so the question can be asked.
+- **Focus end screen scrolls** when taller than the window; auto margins keep it centred while it fits.
+- **Clear missed routines**: one button on Routines › Due now sets `settings.routines.missedClearedThrough` to yesterday, and `routinesDue` leaves out missed days on or before it (today always shows). The four-week figure still counts them as missed. Ctrl+Z puts the previous date back.
+- **Grades target is remembered** (`settings.grading.targetPercent`) and, only when set, each by-weight course ends its note with "You need X% on average from the rest of your grades to get an average of Y%." Weights not entered yet count as part of the rest (`neededOnRemaining` treats the course as at least 100%).
+- **Dashboard weights**: "Ready when you are", the Coming up and Routines card headings and the task card time are 500, due task names 450. Headings elsewhere stay 600.
+- **Trophy shelf: twelve records** (added biggest month, most sessions in a day, most courses in a week, most routines in a week, focused in a row). The grid balances its columns so no medal sits alone on a row.
+- **Badges: 40** (added Getting going, Five hundred sessions, Long haul, Two weeks, Focused 100, Ultramarathon, Ahead of time, Ten done, Fifty done, Four perfect weeks, Thoughtful).
+- **No saturated accent fills**: `accentFill` no longer raises saturation as it darkens and caps it at 45% (`FILL_MAX_SATURATION`), so medals, primary buttons and pills are a muted shade of the accent. Badge unlock dates are grey. Text, tints and chart marks keep the accent as chosen.

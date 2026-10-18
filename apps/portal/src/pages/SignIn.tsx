@@ -32,7 +32,7 @@ export function SignIn() {
   return (
     <>
       <Backdrop backgroundId="aurora" theme="dark" />
-      <main className="min-h-screen flex items-center justify-center p-4">
+      <main className="min-h-screen flex items-center justify-center p-4 on-backdrop">
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
           <div>
             <div className="brand-mark mb-3" aria-hidden>

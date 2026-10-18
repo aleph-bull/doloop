@@ -44,7 +44,7 @@ export function WeeklyReviewPage() {
           <Link to="/analytics" className="text-sm">
             Analytics
           </Link>
-          <h1 className="text-3xl">Weekly review</h1>
+          <h1 className="page-title">Weekly review</h1>
           <p className="muted text-sm mt-1">
             {fmtDate(`${r.weekStart}T12:00:00`)} to {fmtDate(`${r.weekEnd}T12:00:00`)}
           </p>
@@ -86,7 +86,7 @@ export function WeeklyReviewPage() {
       </div>
 
       <Panel className="p-5 flex flex-col gap-3">
-        <h2 className="text-lg">Hours by day</h2>
+        <h2 className="card-title">Hours by day</h2>
         <Bars
           ariaLabel="Study minutes per day this week"
           bars={r.hoursByDay.map((d, i) => ({ label: DAY[i] ?? d.date, value: d.minutes }))}
@@ -94,7 +94,7 @@ export function WeeklyReviewPage() {
       </Panel>
 
       <Panel className="p-5 flex flex-col gap-2 text-sm">
-        <h2 className="text-lg">Notes</h2>
+        <h2 className="card-title">Notes</h2>
         {r.topDistractionDays.length > 0 ? (
           <p>
             Most distracted:{' '}
@@ -115,7 +115,7 @@ export function WeeklyReviewPage() {
       </Panel>
 
       <Panel className="p-5 flex flex-col gap-3">
-        <h2 className="text-lg">What should change next week?</h2>
+        <h2 className="card-title">What should change next week?</h2>
         <Textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}

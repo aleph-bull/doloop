@@ -115,6 +115,14 @@ export function useSessionController({
   const index = useMemo(() => buildIndex(nodes), [nodes]);
   const underAssessment = node ? isUnderAssessment(index, node.id) : false;
   const nodePath = node ? pathLabel(index.byId, node.id) : '';
+  // The assessment the readiness question is about: the nearest one up the tree.
+  let assessmentTitle: string | null = null;
+  for (let cur = node; cur; cur = cur.parentId ? index.byId.get(cur.parentId) : undefined) {
+    if (cur.kind === 'assessment') {
+      assessmentTitle = cur.title;
+      break;
+    }
+  }
 
   // 1 s tick against the wall clock: transitions are materialized from timestamps, so a
   // throttled or dropped tick never loses time. The updater stays pure; React may call
@@ -416,7 +424,14 @@ export function useSessionController({
           open={reviewOpen}
           mode={settings.review.mode}
           subject={subject}
+          path={nodePath}
+          stats={{
+            workSeconds: view.workSeconds,
+            breakSeconds: view.breakSeconds,
+            pomodoros: timer.mode === 'pomodoro' ? timer.cycle : null,
+          }}
           underAssessment={underAssessment}
+          assessmentTitle={assessmentTitle}
           busy={busy}
           onSubmit={(review, markComplete) => finish(review, markComplete)}
           onSkip={(markComplete) => finish({ skipped: true }, markComplete)}

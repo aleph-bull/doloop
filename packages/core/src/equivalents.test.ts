@@ -4,6 +4,7 @@ import {
   equivalentCard,
   fallbackFacts,
   pickEquivalents,
+  fmtCount,
   SCREEN_TITLES,
   screenCard,
   walkLandmark,
@@ -63,12 +64,60 @@ describe('equivalents', () => {
   });
 
   it('names a place for a walking distance', () => {
-    expect(walkLandmark(3)).toBeNull();
-    expect(walkLandmark(140)!.name).toBe('Toronto to Niagara Falls');
+    expect(walkLandmark(0.5)).toBeNull();
+    expect(walkLandmark(9)!.name).toBe('a lap around Central Park in New York');
+    expect(walkLandmark(42)!.name).toBe('a full marathon');
+    expect(walkLandmark(120)!.name).toBe("the length of Hadrian's Wall");
+    // Nothing within 30%: no "about" rather than a stretch.
+    expect(walkLandmark(100_000)).toBeNull();
     const walk = EQUIVALENTS.find((e) => e.id === 'walk')!;
-    expect(equivalentCard(walk, 130 * 12)!.text).toBe(
-      'walk ~130 km at a stroll, about Toronto to Niagara Falls',
+    expect(equivalentCard(walk, 9 * 12)!.text).toBe(
+      'walk ~9 km at a stroll, about a lap around Central Park in New York',
     );
+  });
+
+  it('counts what the world does meanwhile', () => {
+    const births = EQUIVALENTS.find((e) => e.id === 'births')!;
+    expect(equivalentCard(births, 60)!.text).toBe('see ~16,000 babies born around the world');
+    const searches = EQUIVALENTS.find((e) => e.id === 'searches')!;
+    expect(equivalentCard(searches, 60)!.text).toBe('see ~350 million Google searches made');
+    const iss = EQUIVALENTS.find((e) => e.id === 'iss')!;
+    expect(equivalentCard(iss, 60)).toBeNull();
+    expect(equivalentCard(iss, 93)!.text).toBe('watch the space station circle Earth once');
+    expect(fmtCount(1_234_000_000)).toBe('1.2 billion');
+  });
+
+  it('keeps world facts to two a hand', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const hand = pickEquivalents({ minutes: 600, seed, count: 4 });
+      const world = hand.filter((c) =>
+        EQUIVALENTS.some((e) => e.id === c.id && e.kind === 'world'),
+      );
+      expect(world.length).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('climbs stairs, then mountains', () => {
+    const card = (id: string, minutes: number) =>
+      equivalentCard(
+        EQUIVALENTS.find((e) => e.id === id)!,
+        minutes,
+      );
+    expect(card('climb-cn-tower', 20)).toBeNull();
+    expect(card('climb-cn-tower', 35)!.text).toBe("walk up the CN Tower's 1,776 steps once");
+    expect(card('climb-cn-tower', 104)!.text).toBe("walk up the CN Tower's 1,776 steps ~3 times");
+    expect(card('climb-empire-state', 64)!.text).toBe(
+      "walk up the Empire State Building's 1,576 steps twice",
+    );
+    expect(card('climb-everest', 500)).toBeNull();
+    expect(card('climb-everest', 885)!.text).toBe('climb Mount Everest from sea level once');
+  });
+
+  it('keeps climbs to one a hand', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const hand = pickEquivalents({ minutes: 300, seed, count: 4 });
+      expect(hand.filter((c) => c.id.startsWith('climb-')).length).toBeLessThanOrEqual(1);
+    }
   });
 
   it('flies part of the way before it flies there and back', () => {

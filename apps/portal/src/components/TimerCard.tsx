@@ -37,13 +37,16 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
 
   return (
     <>
-      <Glass as="section" className="p-6 flex flex-col gap-5" strong aria-label="Current session">
+      <Glass as="section" className="timer-card" aria-label="Current session">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <div className="subtle text-sm">{PHASE_LABEL[timer.phase]}</div>
-            {ctl.nodePath && <div className="muted text-sm truncate">{ctl.nodePath}</div>}
-            <h2 className="text-xl truncate">{active.nodeTitle}</h2>
-            <div className="muted text-sm mt-1 flex gap-2 flex-wrap">
+            <div className="timer-live" data-phase={timer.phase}>
+              <span className="timer-live-dot" aria-hidden />
+              {PHASE_LABEL[timer.phase]}
+            </div>
+            {ctl.nodePath && <div className="timer-path">{ctl.nodePath}</div>}
+            <h2 className="timer-title">{active.nodeTitle}</h2>
+            <div className="timer-chips">
               <Chip tone="neutral">
                 {timer.mode === 'pomodoro'
                   ? `Pomodoro · cycle ${timer.cycle + 1}`
@@ -77,7 +80,7 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
           </Button>
         </div>
 
-        <div className="flex items-end gap-4 flex-wrap">
+        <div className="timer-readout">
           {timer.showTimer ? (
             <div
               className="timer-digits"
@@ -93,33 +96,35 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
               </span>
             </div>
           )}
-          <div className="muted text-sm tabular pb-2">
+          <div className="timer-focused tabular">
             {formatClock(view.workSeconds)} focused
             {view.breakSeconds > 0 && ` · ${formatClock(view.breakSeconds)} break`}
           </div>
         </div>
 
-        <div className="flex gap-2 flex-wrap">
+        <div className="timer-controls">
           {ctl.canPause && (
-            <Button onClick={() => ctl.send({ type: 'pause' })}>
+            <Button size="lg" onClick={() => ctl.send({ type: 'pause' })}>
               <Pause size={16} aria-hidden /> Pause
             </Button>
           )}
           {ctl.canResume && (
-            <Button variant="primary" onClick={() => ctl.send({ type: 'resume' })}>
+            <Button variant="primary" size="lg" onClick={() => ctl.send({ type: 'resume' })}>
               <Play size={16} aria-hidden /> Resume
             </Button>
           )}
           {ctl.canSkip && (
-            <Button onClick={() => ctl.send({ type: 'skip-break' })}>
+            <Button size="lg" onClick={() => ctl.send({ type: 'skip-break' })}>
               <SkipForward size={16} aria-hidden /> Skip break
             </Button>
           )}
           {timer.mode === 'scheduled' && timer.plannedEndAt && (
-            <Button onClick={() => ctl.extend(15)}>+15 min</Button>
+            <Button size="lg" onClick={() => ctl.extend(15)}>
+              +15 min
+            </Button>
           )}
           <span className="flex-1" />
-          <Button variant="danger" onClick={ctl.stop} disabled={ctl.busy}>
+          <Button variant="danger" size="lg" onClick={ctl.stop} disabled={ctl.busy}>
             <Square size={14} aria-hidden /> Stop
           </Button>
         </div>

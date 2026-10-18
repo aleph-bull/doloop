@@ -5,12 +5,20 @@ import type {
   StudyNode,
 } from '@komogon/core';
 import { buildIndex, describeCut, modeForPlan, pathLabel, pomodoroCut } from '@komogon/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
-import { ApiError } from '../lib/api';
+import { api, ApiError } from '../lib/api';
 import { openFocusTab } from '../lib/focus-tab';
-import { useMe, useRoutines, useStartSession, useUpdateSettings } from '../lib/queries';
+import {
+  keys,
+  useActiveSession,
+  useMe,
+  useRoutines,
+  useStartSession,
+  useUpdateSettings,
+} from '../lib/queries';
 
 export interface StartSessionDialogProps {
   open: boolean;
@@ -121,6 +129,8 @@ export function StartSessionDialog({
   const routines = useRoutines();
   const start = useStartSession();
   const update = useUpdateSettings();
+  const activeSession = useActiveSession();
+  const qc = useQueryClient();
   const navigate = useNavigate();
   const { toast } = useToast();
   const settings = me.data?.user.settings;
@@ -135,6 +145,9 @@ export function StartSessionDialog({
   const [showTimer, setShowTimer] = useState(true);
   /** Set when the chosen length cuts a block short; cleared by confirming. */
   const [confirmCut, setConfirmCut] = useState<string | null>(null);
+  /** The "still running" question, asked when another session is going. */
+  const [askReplace, setAskReplace] = useState(false);
+  const [replacing, setReplacing] = useState(false);
 
   // Fill the form once each time the dialog opens. Reading the props through a ref keeps a
   // background refetch (new task list, saved settings) from wiping what the user picked.
@@ -167,6 +180,7 @@ export function StartSessionDialog({
     }
     setShowTimer(settings?.pomodoro.showTimerByDefault ?? true);
     setConfirmCut(null);
+    setAskReplace(false);
   }, [open]);
 
   // Outstanding occurrences; the preselected one stays listed even if the query lags.
@@ -174,6 +188,18 @@ export function StartSessionDialog({
   const routineOptions =
     routine && !due.some((o) => routineKey(o) === routineKey(routine)) ? [routine, ...due] : due;
   const today = routines.data?.today;
+  const running = activeSession.data?.active ?? null;
+
+  /** What the new session would be on, for the "still running" question. */
+  const newTitle = (() => {
+    if (subject.startsWith('node:')) {
+      const id = subject.slice(5);
+      return (node?.id === id ? node : nodes.find((n) => n.id === id))?.title ?? 'this task';
+    }
+    if (subject.startsWith('routine:'))
+      return routineOptions.find((o) => routineKey(o) === subject)?.title ?? 'this routine';
+    return 'a free session';
+  })();
   const lockedPath = useMemo(
     () => (lockSubject && node ? pathLabel(buildIndex(nodes).byId, node.id) : ''),
     [lockSubject, node, nodes],
@@ -232,10 +258,10 @@ export function StartSessionDialog({
       }
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
-        toast('A session is already running');
-        // Starting again while one runs brings the focus screen forward instead.
-        onClose();
-        if (!onStarted) openFocusTab();
+        // One started somewhere else since this page last looked: ask about it.
+        const res = await activeSession.refetch();
+        if (res.data?.active) setAskReplace(true);
+        else toast('Could not start. Try again.');
       } else toast(err instanceof Error ? err.message : 'Could not start');
     }
   };
@@ -259,9 +285,40 @@ export function StartSessionDialog({
   };
 
   const go = () => {
+    if (!subject) return toast('Pick something to study');
     // Confirm once when the length does not land on a block boundary.
     if (cutMessage && confirmCut !== cutMessage) return setConfirmCut(cutMessage);
+    // Only one session runs at a time: ask before replacing the one that is going.
+    if (running) return setAskReplace(true);
     void submit();
+  };
+
+  /** "Cancel to start": end the running session (its minutes are saved), then start this one. */
+  const replace = async () => {
+    if (!running) {
+      setAskReplace(false);
+      return void submit();
+    }
+    setReplacing(true);
+    try {
+      await api.endSession(running.session.id, { review: null, markComplete: false });
+    } catch (err) {
+      // Already ended elsewhere is fine; anything else stops here.
+      if (!(err instanceof ApiError && (err.status === 409 || err.status === 404))) {
+        toast(err instanceof Error ? err.message : 'Could not end the running session');
+        setReplacing(false);
+        return;
+      }
+    }
+    qc.setQueryData(keys.active, { now: new Date().toISOString(), active: null });
+    void qc.invalidateQueries({ queryKey: keys.pace });
+    void qc.invalidateQueries({ queryKey: keys.me });
+    void qc.invalidateQueries({ queryKey: keys.nodes });
+    void qc.invalidateQueries({ queryKey: ['analytics'] });
+    void qc.invalidateQueries({ queryKey: ['routines'] });
+    setAskReplace(false);
+    setReplacing(false);
+    await submit();
   };
 
   const styleHelp =
@@ -433,6 +490,27 @@ export function StartSessionDialog({
             description="You can hide the numbers and just study."
           />
         </div>
+      </Modal>
+      <Modal
+        open={open && askReplace}
+        onClose={() => setAskReplace(false)}
+        title={`${running?.nodeTitle ?? 'Another session'} is still running. Cancel to start ${newTitle}?`}
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setAskReplace(false)} disabled={replacing}>
+              Keep it running
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void replace()}
+              loading={replacing || start.isPending}
+            >
+              Cancel and start
+            </Button>
+          </>
+        }
+      >
+        <p className="muted">The minutes it has so far are saved.</p>
       </Modal>
     </>
   );

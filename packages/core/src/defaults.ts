@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showTimerByDefault: true,
   },
   review: { mode: 'quick' },
-  streak: { minMinutes: 15 },
+  streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null },
   goals: { weeklyMinutes: 300 },
   pace: { maxComfortableMinutesPerDay: 240 },
   sounds: {
@@ -61,6 +61,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     panelColor: '#151827',
     panelAlpha: 0.92,
     extensionBackground: 'same',
+    savedAccents: [],
   },
   blocking: { enabled: false, domains: [] },
   calendar: {
@@ -70,7 +71,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     readBusyTimes: true,
     logSessions: true,
   },
-  grading: { scale: UOFT_GRADE_SCALE, goalGpa: null },
+  routines: { missedClearedThrough: null },
+  grading: { scale: UOFT_GRADE_SCALE, goalGpa: null, targetPercent: null },
   visualizer: {
     enabled: false,
     promptDismissed: false,

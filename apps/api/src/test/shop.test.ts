@@ -18,7 +18,7 @@ describe('shop', () => {
     expect(body.freeze).toEqual({ cost: 150, held: 0, max: 2 });
     expect(body.breakDay.cost).toBe(300);
     expect(body.badges.length).toBeGreaterThan(10);
-    expect(body.accents.find((a: { id: string }) => a.id === 'violet').unlocked).toBe(false);
+    expect(body.accents.find((a: { id: string }) => a.id === 'violet').unlocked).toBe(true);
   });
 
   it('refuses purchases without XP', async () => {
@@ -71,13 +71,13 @@ describe('shop', () => {
       url: '/api/me/settings',
       payload: { theme: { accent: 'violet' } },
     });
-    expect(res.statusCode).toBe(400);
+    expect(res.statusCode).toBe(200); // every accent is free
     res = await t.api({
       method: 'PATCH',
       url: '/api/me/settings',
       payload: { theme: { accent: 'amber' } },
     });
-    expect(res.statusCode).toBe(200); // level 6 >= 5
+    expect(res.statusCode).toBe(200);
     res = await t.api({
       method: 'PATCH',
       url: '/api/me/settings',
