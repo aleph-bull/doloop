@@ -669,6 +669,18 @@
   padding: 0;
   color: var(--fg-subtle);
 }
+/* A folded course's item count, in the play button's slot: left-aligned, one column. */
+.tt-count-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  /* Clear of the tick, inside the slot's own width, so the titles don't move. */
+  box-sizing: border-box;
+  padding-left: 8px;
+  overflow: visible;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
 .tt-meta {
   display: none;
 }
@@ -692,6 +704,9 @@
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--fg) 10%, transparent);
   overflow: hidden;
+}
+.tt-bar.is-empty {
+  background: none;
 }
 .tt-bar span {
   display: block;
@@ -1108,6 +1123,53 @@
   min-width: 0;
 }
 /* Back, where you are, and the way back to the top, on one line above the list. */
+/* Search above the list: typing swaps the course pages for one flat list of matches. */
+.picker-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.picker-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.picker-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 34px 0 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+}
+.picker-search-input::placeholder {
+  color: var(--fg-subtle);
+}
+.picker-search-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+/* The browser's own clear button; ours sits in its place. */
+.picker-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.picker-search-clear {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
 .picker-bar {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -1146,7 +1208,10 @@
   background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
 .picker-list {
-  max-height: 264px;
+  /* A fixed height, browsing or searching: the sheet never resizes under the cursor as
+     results come and go; a long list scrolls inside, a short one leaves calm space. */
+  height: 264px;
+  flex: none;
   overflow: auto;
   padding: 4px;
   border-radius: var(--radius-md);
@@ -1249,6 +1314,8 @@
 }
 .picker-empty {
   padding: 12px;
+  text-align: center;
+  margin: auto 0;
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }
@@ -1434,12 +1501,20 @@
   font-size: var(--text-sm);
 }
 .grades-pill .input {
-  width: 52px;
+  /* Snug around up to three digits, centred, with no spinner arrows taking room. */
+  width: 46px;
   height: 28px;
-  padding: 0 8px;
+  padding: 0 4px;
   border-radius: var(--radius-pill);
-  text-align: right;
+  text-align: center;
   font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.grades-pill .input::-webkit-outer-spin-button,
+.grades-pill .input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .grades-pill-value {
   font-weight: 600;
@@ -1797,6 +1872,30 @@
 }
 .bg-thumb:disabled {
   cursor: not-allowed;
+}
+/* Locked but clickable: it offers the way to the shop. */
+.bg-thumb.is-locked {
+  opacity: 0.5;
+}
+.bg-thumb.is-locked:hover {
+  opacity: 0.7;
+}
+/* A background arrived at from Settings: a ring that pulses twice, then settles. */
+.shop-bg {
+  border-radius: var(--radius-md);
+  transition: box-shadow 400ms var(--ease-out);
+}
+.shop-bg.is-spotlit {
+  animation: spotlight 1300ms var(--ease-out) 2;
+}
+@keyframes spotlight {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  40% {
+    box-shadow: 0 0 0 4px var(--accent);
+  }
 }
 .bg-thumb-label {
   position: absolute;
@@ -2684,7 +2783,10 @@
   min-height: 40px;
 }
 .focus-brand {
+  /* The same wordmark as the portal nav: Satoshi with its alternate G, a and t. */
+  font-family: var(--font-brand);
   font-weight: 600;
+  font-feature-settings: 'ss01', 'ss03';
   text-decoration: none;
   letter-spacing: var(--tracking-tight);
   color: var(--fg-muted);
@@ -2722,6 +2824,37 @@
   animation: fade-in var(--dur-slow) var(--ease-out);
 }
 /* Hidden: only the phase word, given a little more presence on an otherwise bare screen. */
+/* Hiding and showing the clock: a slower fold than the default, with a fade and a slight
+   shrink, so the phase word and the buttons glide together instead of jumping. */
+.reveal.focus-fold {
+  width: 100%;
+  transition:
+    grid-template-rows 480ms cubic-bezier(0.45, 0, 0.2, 1),
+    opacity 360ms var(--ease-out);
+}
+.focus-fold > .reveal-inner {
+  display: flex;
+  justify-content: center;
+}
+.focus-fold-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 480ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+.reveal.focus-fold:not(.is-open) .focus-fold-inner {
+  transform: scale(0.94);
+}
+:root[data-motion='off'] .reveal.focus-fold,
+:root[data-motion='off'] .focus-fold-inner {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .reveal.focus-fold,
+  :root:not([data-motion='on']) .focus-fold-inner {
+    transition: none;
+  }
+}
 .focus-centre.is-bare .focus-phase {
   font-size: var(--text-base);
   letter-spacing: 0.28em;
@@ -3549,14 +3682,47 @@
 .rc-swatch.is-ghost {
   background: color-mix(in srgb, var(--fg) 16%, transparent);
 }
-.rc-table summary {
+/* The chart and its table share one place; the toggle cross-fades between them. */
+.rc-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+.rc-figure.is-fill .rc-stage {
+  flex: 1;
+  min-height: 0;
+}
+.rc-stage > .rc-plot {
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.rc-stage.is-table > .rc-plot {
+  opacity: 0;
+}
+.rc-table-over {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.rc-stage.is-table > .rc-table-over {
+  opacity: 1;
+  pointer-events: auto;
+}
+.rc-table-toggle {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-size: var(--text-xs);
   color: var(--fg-subtle);
   cursor: pointer;
-  width: max-content;
 }
-.rc-table[open] summary {
-  margin-bottom: 6px;
+.rc-table-toggle:hover {
+  color: var(--fg);
 }
 
 /* Draw-in: bars grow from the baseline, wedges and arcs fade in, the climb draws itself. */
@@ -4552,6 +4718,27 @@
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }
+/* What the badge pays: a quiet pill at the card's right, accented once earned. */
+.badge-xp {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+.badge-card.is-earned .badge-xp {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-text);
+}
+.achievement-xp {
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+}
 .badge-when {
   margin-top: 4px;
   font-size: var(--text-xs);
@@ -4954,4 +5141,149 @@
 .glass.rc-insight,
 .glass.rc-review {
   background: color-mix(in srgb, var(--glass-solid) 78%, transparent);
+}
+
+/* Saved looks: a preview of each, its background with a little card in its panel style. */
+.preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+.preset {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.preset-preview {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.preset-preview:hover {
+  border-color: color-mix(in srgb, var(--fg) 30%, transparent);
+}
+.preset-preview:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.preset-panel {
+  width: 62%;
+  padding: 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.preset-panel.is-glossy {
+  background: rgb(255 255 255 / 0.16);
+  border: 1px solid rgb(255 255 255 / 0.28);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+  backdrop-filter: blur(6px);
+}
+.preset-panel.is-matte {
+  background: rgb(22 24 34 / 0.92);
+  border: 1px solid rgb(255 255 255 / 0.06);
+}
+.preset-accent {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.preset-lines {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.preset-lines span {
+  height: 3px;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.55);
+}
+.preset-lines span + span {
+  width: 60%;
+  background: rgb(255 255 255 / 0.3);
+}
+.preset-missing {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 10px;
+}
+.preset-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  font-size: var(--text-sm);
+}
+.preset-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 500;
+}
+.preset-kind {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.preset-tool {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+}
+.preset-tool:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+/* When you study: a density curve across the day. */
+.rc-density-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.rc-density-area,
+.rc-density-line {
+  transition: opacity 700ms var(--ease-out);
+}
+.rc-density:not(.is-in) .rc-density-area,
+.rc-density:not(.is-in) .rc-density-line {
+  opacity: 0;
+}
+.rc-density-peak line {
+  stroke: color-mix(in srgb, var(--accent) 60%, transparent);
+  stroke-dasharray: 3 3;
+}
+.rc-density-peak circle {
+  fill: var(--accent);
+  stroke: var(--bg-base, #111);
+  stroke-width: 2;
+}
+.rc-density-guide {
+  stroke: color-mix(in srgb, var(--fg) 35%, transparent);
+  stroke-width: 1;
+  pointer-events: none;
+}
+.rc-density .rc-hit {
+  fill: transparent;
+  outline: none;
 }

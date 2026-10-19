@@ -394,7 +394,7 @@ export const api = {
         owned: boolean;
       }>;
       accents: Array<{ id: string; name: string; minLevel: number; unlocked: boolean }>;
-      badges: Array<{ key: string; name: string; description: string }>;
+      badges: Array<{ key: string; name: string; description: string; xp: number }>;
       achievements: Array<{ key: string; unlockedAt: string }>;
     }>('GET', '/api/shop'),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),

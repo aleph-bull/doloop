@@ -4,6 +4,7 @@ import {
   bucketForSession,
   computePace,
   computeSessionXp,
+  estimateAfterMoreTime,
   isEndedEarly,
   isUnderAssessment,
   buildIndex,
@@ -48,7 +49,7 @@ import type {
 } from '../validation';
 import { getNodeRow } from './nodes';
 import { routineForSession, tickFromSession } from './routines';
-import { loadCompletedSessions, paceContext } from './pace';
+import { loadCompletedSessions, paceContext, paceSnapshot } from './pace';
 import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
 import { pushBlockCreated, pushBlockUpdated, type CalendarDeps } from './calendar-sync';
 import { dt, dtn, toNode, toSession } from './sessions-mapper';
@@ -117,7 +118,9 @@ async function persistTimer(
   const [updated] = await db
     .update(sessions)
     .set({ timer, ...derivedColumns(timer), lastSeenAt: dt(now) })
-    .where(ending ? and(eq(sessions.id, row.id), isNull(sessions.endedAt)) : eq(sessions.id, row.id))
+    .where(
+      ending ? and(eq(sessions.id, row.id), isNull(sessions.endedAt)) : eq(sessions.id, row.id),
+    )
     .returning();
   if (updated) return { row: updated, claimed: ending };
   // Another request ended it first: carry on with what that one saved.
@@ -626,7 +629,10 @@ async function finishTask(
   let node = await getNodeRow(db, user.id, nodeId);
   if (review && !review.skipped && review.extraMinutesAdded && review.extraMinutesAdded > 0) {
     const from = node.estimatedMinutes;
-    const to = (from ?? 0) + review.extraMinutesAdded;
+    // Time studied on it so far (with everything under it), this session included, so the
+    // extra time goes on from where the user is when there's no estimate or it's passed.
+    const logged = (await paceSnapshot(db, user, now)).pace.get(node.id)?.loggedWorkMinutes ?? 0;
+    const to = estimateAfterMoreTime(from, logged, review.extraMinutesAdded);
     await db.insert(estimateChanges).values({
       userId: user.id,
       nodeId: node.id,
@@ -827,7 +833,8 @@ async function finalize(
   return {
     session: toSession(saved!),
     xp,
-    xpTotal,
+    // After any badges this session unlocked were paid.
+    xpTotal: user.xp,
     levelBefore,
     levelAfter,
     leveledUp: levelAfter > levelBefore,

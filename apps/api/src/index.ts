@@ -2,6 +2,7 @@ import { createHsVerifier, createSupabaseVerifier, type Verifier } from './auth/
 import { createDb, createPgliteDb, migratePg } from './db/client';
 import { loadEnv } from './env';
 import { buildServer } from './server';
+import { backPayBadges } from './services/achievements';
 import { createGoogleClient } from './services/google';
 import type { CalendarDeps } from './services/calendar-sync';
 
@@ -30,6 +31,11 @@ if (env.databaseUrl) {
   console.warn(`[api] DATABASE_URL not set; using PGlite at ${env.pgliteDataDir} (dev only).`);
   ({ db, close } = await createPgliteDb(env.pgliteDataDir));
 }
+
+// Badges unlocked before they paid XP are paid once; after that this finds nothing to do.
+const backPaid = await backPayBadges(db, new Date().toISOString());
+if (backPaid > 0)
+  console.warn(`[api] Paid the XP for ${backPaid} badges earned before badges paid XP.`);
 
 let calendarDeps: CalendarDeps | null = null;
 if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {

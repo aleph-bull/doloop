@@ -453,3 +453,19 @@ describe('getDailyPlan', () => {
     expect(plan.map((p) => p.title)).toEqual(['A', 'B', 'C', 'D']);
   });
 });
+
+describe('estimateAfterMoreTime', () => {
+  it('adds to the estimate while the task is still inside it', async () => {
+    const { estimateAfterMoreTime } = await import('./pace');
+    expect(estimateAfterMoreTime(120, 40, 60)).toBe(180);
+  });
+  it('adds to the time studied once the estimate is passed', async () => {
+    const { estimateAfterMoreTime } = await import('./pace');
+    // Estimated 1 h, studied 1 h 40 min, "+1 h": 2 h 40 min, not 2 h.
+    expect(estimateAfterMoreTime(60, 100, 60)).toBe(160);
+  });
+  it('adds to the time studied when there was no estimate', async () => {
+    const { estimateAfterMoreTime } = await import('./pace');
+    expect(estimateAfterMoreTime(null, 25, 30)).toBe(55);
+  });
+});

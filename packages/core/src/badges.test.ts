@@ -289,3 +289,14 @@ describe('badges added 2026-10-17', () => {
     expect(s.has('hours-250')).toBe(false);
   });
 });
+
+describe('badge XP', () => {
+  it('pays every badge, more for the ones that ask more', async () => {
+    const { BADGES, BADGE_XP, badgeXp } = await import('./badges');
+    for (const b of BADGES) expect(BADGE_XP[b.key], b.key).toBeGreaterThan(0);
+    expect(Object.keys(BADGE_XP).sort()).toEqual(BADGES.map((b) => b.key).sort());
+    expect(badgeXp('streak-100')).toBeGreaterThan(badgeXp('streak-30'));
+    expect(badgeXp('streak-30')).toBeGreaterThan(badgeXp('streak-7'));
+    expect(badgeXp('hours-250')).toBeGreaterThan(badgeXp('hours-10'));
+  });
+});

@@ -1,3 +1,4 @@
+import { badgeXp } from '@komogon/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { advanceClock, createTestApp, type TestApp } from './helpers';
 
@@ -38,7 +39,9 @@ describe('deleting time from a session', () => {
     expect(r.removedFocusSeconds).toBe(240 * 60);
     expect(r.session.xpAwarded).toBe(Math.floor((summary.xp.total * 90) / 330));
     expect(r.xpRemoved).toBe(summary.xp.total - r.session.xpAwarded);
-    expect(r.xpTotal).toBe(before.xp - r.xpRemoved);
+    // Taking back deep-work and marathon takes their XP with them.
+    const revokedXp = r.badgesRevoked.reduce((s: number, k: string) => s + badgeXp(k), 0);
+    expect(r.xpTotal).toBe(before.xp - r.xpRemoved - revokedXp);
     // 1 h 30 m is neither a two-hour session nor a four-hour day any more.
     expect(r.badgesRevoked).toEqual(expect.arrayContaining(['deep-work', 'marathon']));
     expect(r.badgesRevoked).not.toContain('first-session');

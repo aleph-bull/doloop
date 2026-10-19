@@ -6,9 +6,69 @@ export interface BadgeDef {
   key: string;
   name: string;
   description: string;
+  /** XP paid once, when the badge unlocks: more for what takes longer or asks more. */
+  xp: number;
 }
 
-export const BADGES: BadgeDef[] = [
+/**
+ * What each badge pays, in tiers by how much it asks: a first step (25), a habit forming
+ * (50-100), weeks of work (150-300), a month or more (400-800), and the long hauls
+ * (1,500-2,000). For scale, an hour of focus earns about 150 XP.
+ */
+export const BADGE_XP: Record<string, number> = {
+  // First steps
+  'first-session': 25,
+  'first-review': 25,
+  'routine-starter': 25,
+  'first-reward': 50,
+  'under-estimate': 50,
+  // A habit forming
+  'focus-5': 50,
+  'sessions-10': 75,
+  'tasks-10': 75,
+  'early-bird': 75,
+  'night-owl': 75,
+  'hours-10': 100,
+  'deep-work': 100,
+  'estimate-oracle': 100,
+  planner: 100,
+  'streak-7': 100,
+  // Weeks of work
+  'focus-25': 150,
+  'weekend-warrior': 150,
+  'full-week': 150,
+  'routine-perfect-week': 150,
+  'reviewer-25': 150,
+  'weekly-reviewer': 150,
+  'reward-5': 150,
+  'streak-14': 200,
+  marathon: 200,
+  'routine-50': 250,
+  'course-complete': 300,
+  'tasks-50': 300,
+  // A month or more
+  'streak-30': 400,
+  'hours-50': 400,
+  ultramarathon: 400,
+  'no-freeze-30': 500,
+  'sessions-100': 500,
+  'routine-perfect-4': 500,
+  'reviewer-100': 500,
+  'course-complete-3': 600,
+  'focus-100': 600,
+  'hours-100': 800,
+  // The long hauls
+  'streak-100': 1500,
+  'sessions-500': 1500,
+  'hours-250': 2000,
+};
+
+/** What a badge pays when it unlocks. */
+export function badgeXp(key: string): number {
+  return BADGE_XP[key] ?? 50;
+}
+
+const CATALOGUE: Array<Omit<BadgeDef, 'xp'>> = [
   { key: 'first-session', name: 'First session', description: 'Complete your first session.' },
   {
     key: 'first-review',
@@ -155,6 +215,8 @@ export const BADGES: BadgeDef[] = [
     description: 'Submit one hundred end-of-session reviews.',
   },
 ];
+
+export const BADGES: BadgeDef[] = CATALOGUE.map((b) => ({ ...b, xp: badgeXp(b.key) }));
 
 export interface BadgeInput {
   nodes: StudyNode[];

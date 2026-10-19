@@ -1,3 +1,4 @@
+import { badgeXp } from '@komogon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { advanceClock, createTestApp, type TestApp } from './helpers';
 
@@ -37,10 +38,11 @@ describe('a session ended from two places at once', () => {
     for (const r of reads) expect(r.json().active).toBeNull();
     const gained = (await xp()) - before;
     expect(gained).toBeGreaterThan(0);
-    const history = (
-      await t.api({ method: 'GET', url: '/api/sessions/history?limit=1' })
-    ).json().sessions;
-    expect(history[0].xpAwarded).toBe(gained);
+    const history = (await t.api({ method: 'GET', url: '/api/sessions/history?limit=1' })).json()
+      .sessions;
+    // Paid once: the session's own XP plus its badges', not two or three times over.
+    const badgeTotal = history[0].badgesAwarded.reduce((s: number, k: string) => s + badgeXp(k), 0);
+    expect(history[0].xpAwarded + badgeTotal).toBe(gained);
   });
 
   it('ends once when End is sent twice together', async () => {
@@ -66,7 +68,11 @@ describe('a session ended from two places at once', () => {
   it('answers a double-clicked Start with 409, not a server error', async () => {
     const starts = await Promise.all(
       [1, 2].map(() =>
-        t.api({ method: 'POST', url: '/api/sessions', payload: { nodeId: taskId, mode: 'unlimited' } }),
+        t.api({
+          method: 'POST',
+          url: '/api/sessions',
+          payload: { nodeId: taskId, mode: 'unlimited' },
+        }),
       ),
     );
     expect(starts.map((r) => r.statusCode).sort()).toEqual([201, 409]);

@@ -206,7 +206,7 @@ export const xpTransactions = pgTable(
     at: ts('at').notNull().defaultNow(),
     delta: integer('delta').notNull(),
     kind: text('kind', {
-      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine'],
+      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine', 'badge'],
     }).notNull(),
     ref: text('ref'),
   },

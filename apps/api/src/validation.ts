@@ -2,7 +2,6 @@ import {
   BASS_HZ_LIMITS,
   CUSTOM_ACCENT,
   CUSTOM_BACKGROUND_UPLOAD,
-  MAX_SAVED_ACCENTS,
   POMODORO_LIMITS,
   SOUND_PRESETS,
   STREAK_DAY_START,
@@ -210,7 +209,9 @@ export const settingsSchema = z
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),
         extensionBackground: z.string().max(32),
-        savedAccents: z.array(z.string().regex(CUSTOM_ACCENT)).max(MAX_SAVED_ACCENTS),
+        // A hard ceiling only; the route refuses growing past MAX_SAVED_ACCENTS, so a list saved
+        // under an older, higher limit can still be trimmed or reordered.
+        savedAccents: z.array(z.string().regex(CUSTOM_ACCENT)).max(16),
       })
       .partial(),
     blocking: z
@@ -285,6 +286,14 @@ export const settingsSchema = z
         burstSpikeOpacity: z.number().min(0).max(1),
       })
       .partial(),
+    features: z
+      .object({
+        routines: z.boolean(),
+        plans: z.boolean(),
+        grades: z.boolean(),
+        calendar: z.boolean(),
+      })
+      .partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z
       .object({
@@ -296,6 +305,8 @@ export const settingsSchema = z
         showTimer: z.boolean(),
         smooth: z.boolean(),
         deflicker: z.boolean(),
+        recordBreaks: z.boolean(),
+        breakClock: z.enum(['break', 'running']),
       })
       .partial(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),

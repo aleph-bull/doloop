@@ -224,6 +224,13 @@ export interface UserSettings {
    * holds across devices and reinstalls - closing a prompt means never again, not
    * "until this browser forgets".
    */
+  /** Optional pages. Turning one off takes it out of the nav; its data is kept. */
+  features: {
+    routines: boolean;
+    plans: boolean;
+    grades: boolean;
+    calendar: boolean;
+  };
   /** The focus screen tab. */
   focusScreen: {
     /** Open the focus screen when a session starts: ask each time, always, or never. */
@@ -247,6 +254,13 @@ export interface UserSettings {
     smooth: boolean;
     /** Even out the brightness between stills, so the video does not flicker. */
     deflicker: boolean;
+    /** Keep taking stills during breaks, not only during focus. */
+    recordBreaks: boolean;
+    /**
+     * With breaks recorded, what the corner clock shows during one: the break's own time
+     * ('break'), or the session's running time, counting on through it ('running').
+     */
+    breakClock: 'break' | 'running';
   };
   dismissed: string[];
 }

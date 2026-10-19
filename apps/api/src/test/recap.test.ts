@@ -67,8 +67,9 @@ describe('recap', () => {
       ['free', -1],
     ]);
     expect(r.dailySubjects).toHaveLength(7);
-    // Both sessions start in the 10 am hour (10:00 and 10:50).
-    expect(r.clock.hours[10]).toBe(70);
+    // 10:00-10:50 and 10:50-11:10: sixty minutes in the 10 am hour, ten in the 11.
+    expect(r.clock.hours[10]).toBe(60);
+    expect(r.clock.hours[11]).toBe(10);
     expect(r.cumulative.totalMinutes).toBe(70);
     expect(r.records.map((x: { key: string }) => x.key)).toContain('biggest-day');
     expect(r.level.level).toBeGreaterThanOrEqual(0);

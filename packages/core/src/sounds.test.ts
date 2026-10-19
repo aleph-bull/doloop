@@ -36,15 +36,16 @@ describe('the sound catalogue', () => {
   });
 
   it('resolves a known id to itself', () => {
-    expect(soundPresetById('bell').name).toBe('Bell');
+    expect(soundPresetById('bell').name).toBe('Bloop');
     expect(isSilentSound('bell')).toBe(false);
   });
 
-  it('lists presets shortest first, so the picker reads sensibly', () => {
-    const audible = SOUND_PRESETS.filter((p) => p.file !== '');
-    for (let i = 1; i < audible.length; i++) {
-      expect(audible[i]!.seconds).toBeGreaterThanOrEqual(audible[i - 1]!.seconds);
-    }
+  it('leads with Slow ding, keeps the notify family together, and ends on Silent', () => {
+    const ids = SOUND_PRESETS.map((p) => p.id);
+    expect(ids[0]).toBe('slow-ding');
+    expect(ids[ids.length - 1]).toBe(SILENT_SOUND_ID);
+    const notify = ids.flatMap((id, i) => (id.includes('notify') ? [i] : []));
+    expect(notify[notify.length - 1]! - notify[0]!).toBe(notify.length - 1);
   });
 
   it('formats a length for the picker, and nothing for silence', () => {
@@ -61,9 +62,13 @@ describe('sound settings', () => {
     }
   });
 
-  it('defaults work and break to different sounds, which is the point of splitting them', () => {
+  it('defaults every moment to Slow ding', () => {
     const { sounds } = DEFAULT_SETTINGS;
-    expect(sounds.workStart).not.toBe(sounds.breakStart);
+    expect([sounds.workStart, sounds.breakStart, sounds.sessionEnd]).toEqual([
+      'slow-ding',
+      'slow-ding',
+      'slow-ding',
+    ]);
   });
 
   it('defaults to audible sounds at a level you can actually hear', () => {

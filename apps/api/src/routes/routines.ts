@@ -86,8 +86,10 @@ export function routineRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const { date } = z.object({ date: isoDate }).parse(req.body);
     const now = clock();
     const out = await tickRoutine(db, req.user, id, date, now);
-    const badges = await unlockNewBadges(db, { ...req.user, xp: out.xpTotal }, now);
-    return { ...out, badges };
+    const user = { ...req.user, xp: out.xpTotal };
+    const badges = await unlockNewBadges(db, user, now);
+    // The total includes whatever a newly unlocked badge paid.
+    return { ...out, xpTotal: user.xp, badges };
   });
 
   app.delete('/api/routines/:id/tick/:date', async (req) => {

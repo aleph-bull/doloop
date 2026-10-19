@@ -1,3 +1,4 @@
+import { badgeXp } from '@komogon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { advanceClock, createTestApp, type TestApp } from './helpers';
 
@@ -128,14 +129,17 @@ describe('session lifecycle', () => {
     expect(summary.phrase).not.toBeNull();
     expect(summary.isFirstSessionOnNode).toBe(true);
     expect(summary.confetti).toBe(true);
-    expect(summary.xpTotal).toBe(summary.xp.total);
+    // The total also holds what the badges this session unlocked paid.
+    const badgeTotal = summary.badges.reduce((s: number, k: string) => s + badgeXp(k), 0);
+    expect(badgeTotal).toBeGreaterThan(0);
+    expect(summary.xpTotal).toBe(summary.xp.total + badgeTotal);
 
     const nodesRes = await t.api({ method: 'GET', url: '/api/nodes' });
     const hw = nodesRes.json().nodes.find((n: { id: string }) => n.id === hwId);
     expect(hw.estimatedMinutes).toBe(180);
 
     const me = await t.api({ method: 'GET', url: '/api/me' });
-    expect(me.json().user.xp).toBe(summary.xp.total);
+    expect(me.json().user.xp).toBe(summary.xpTotal);
     expect(me.json().user.streak.current).toBe(1);
 
     const again = await t.api({

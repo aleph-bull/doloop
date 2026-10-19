@@ -1,3 +1,4 @@
+import { badgeXp } from '@komogon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { advanceClock, createTestApp, type TestApp } from './helpers';
 
@@ -72,7 +73,8 @@ describe('routine sessions', () => {
     expect(summary.streak.current).toBe(1);
     // 40 timed minutes out-earn the 30-minute tick, so the tick adds nothing on top.
     expect(summary.xp.total).toBeGreaterThan(30);
-    expect((await xpNow()) - before).toBe(summary.xp.total);
+    const badgeTotal = summary.badges.reduce((s: number, k: string) => s + badgeXp(k), 0);
+    expect((await xpNow()) - before).toBe(summary.xp.total + badgeTotal);
 
     const occ = await occurrence(reading, '2026-09-21');
     expect(occ).toMatchObject({ done: true, xpAwarded: 0 });

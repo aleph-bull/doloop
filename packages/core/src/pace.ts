@@ -342,3 +342,18 @@ export function getDailyPlan(
   });
   return items;
 }
+
+/**
+ * The estimate after "needs more time" at the end of a session. Added to the estimate while
+ * the task is still inside it; added to the time already studied when there was no estimate
+ * or it has been passed, so the extra time is really ahead of the user, not behind them.
+ */
+export function estimateAfterMoreTime(
+  estimatedMinutes: number | null,
+  loggedWorkMinutes: number,
+  extraMinutes: number,
+): number {
+  const logged = Math.max(0, loggedWorkMinutes);
+  const from = estimatedMinutes === null || logged >= estimatedMinutes ? logged : estimatedMinutes;
+  return Math.round(from + Math.max(0, extraMinutes));
+}

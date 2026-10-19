@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { levelProgress } from '@komogon/core';
+import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
   ChartColumn,
@@ -28,14 +28,29 @@ import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 
-/** `short` is the phone tab bar's label, where seven tabs share 390px. */
-const links: Array<{ to: string; label: string; short: string; icon: LucideIcon }> = [
+/**
+ * `short` is the phone tab bar's label, where seven tabs share 390px. `feature` names the
+ * setting that can take a page out of the nav.
+ */
+const links: Array<{
+  to: string;
+  label: string;
+  short: string;
+  icon: LucideIcon;
+  feature?: keyof UserSettings['features'];
+}> = [
   { to: '/', label: 'Dashboard', short: 'Home', icon: House },
   { to: '/tasks', label: 'Tasks', short: 'Tasks', icon: ListChecks },
-  { to: '/routines', label: 'Routines', short: 'Routines', icon: Repeat },
-  { to: '/plans', label: 'Plans', short: 'Plans', icon: RouteIcon },
-  { to: '/grades', label: 'Grades', short: 'Grades', icon: GraduationCap },
-  { to: '/calendar', label: 'Calendar', short: 'Calendar', icon: CalendarDays },
+  { to: '/routines', label: 'Routines', short: 'Routines', icon: Repeat, feature: 'routines' },
+  { to: '/plans', label: 'Plans', short: 'Plans', icon: RouteIcon, feature: 'plans' },
+  { to: '/grades', label: 'Grades', short: 'Grades', icon: GraduationCap, feature: 'grades' },
+  {
+    to: '/calendar',
+    label: 'Calendar',
+    short: 'Calendar',
+    icon: CalendarDays,
+    feature: 'calendar',
+  },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn },
   { to: '/achievements', label: 'Achievements', short: 'Awards', icon: Trophy },
 ];
@@ -77,6 +92,7 @@ export function AppShell() {
   useUndoShortcuts();
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
+  const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
 
   // The active pill is one element that slides and resizes between links, so a tab
   // change reads as movement rather than a jump.
@@ -98,7 +114,7 @@ export function AppShell() {
   const measureIndicator = useCallback(() => {
     const active = navRef.current?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
     if (!active) {
-      // No primary tab is active (Settings, say) — fade the pill out where it stands.
+      // No primary tab is active (Settings, say) â€” fade the pill out where it stands.
       setIndicator((prev) => (prev.width === 0 ? prev : { ...prev, width: 0, animate: true }));
       return;
     }
@@ -219,7 +235,7 @@ export function AppShell() {
                 }}
                 aria-hidden
               />
-              {links.map((l) => (
+              {shown.map((l) => (
                 <NavLink
                   key={l.to}
                   to={l.to}
@@ -275,7 +291,7 @@ export function AppShell() {
         </div>
       </header>
       <nav className="tabbar chrome" aria-label="Primary">
-        {links.map((l) => (
+        {shown.map((l) => (
           <NavLink
             key={l.to}
             to={l.to}
@@ -297,7 +313,7 @@ export function AppShell() {
           <Glass className="offline-bar" role="status">
             <WifiOff size={16} aria-hidden />
             <span>
-              You are offline. This is your saved data — it will refresh once you reconnect, and
+              You are offline. This is your saved data â€” it will refresh once you reconnect, and
               anything you change now will not be saved.
             </span>
           </Glass>

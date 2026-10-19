@@ -46,9 +46,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sounds: {
     enabled: true,
     volume: 0.8,
-    workStart: 'notify-2',
-    breakStart: 'chime',
-    sessionEnd: 'soft-fade',
+    workStart: 'slow-ding',
+    breakStart: 'slow-ding',
+    sessionEnd: 'slow-ding',
   },
   effects: { confetti: true, badgeToasts: true, phrases: true, reducedMotion: 'system' },
   quote: { mode: 'quotes' },
@@ -122,6 +122,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstShowSpikes: true,
     burstSpikeOpacity: 1,
   },
+  features: { routines: true, plans: true, grades: true, calendar: true },
   focusScreen: { openOnStart: 'ask' },
   timelapse: {
     record: 'ask',
@@ -132,6 +133,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showTimer: true,
     smooth: true,
     deflicker: true,
+    recordBreaks: false,
+    breakClock: 'break',
   },
   dismissed: [],
 };

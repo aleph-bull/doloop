@@ -33,6 +33,7 @@ import {
   Glass,
   Spinner,
   useToast,
+  Reveal,
 } from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
@@ -157,19 +158,31 @@ export function Focus() {
   const sample = useCallback(() => {
     const s = sessionRef.current;
     const st = settingsRef.current;
-    if (!s || !st) return { phase: null, workSeconds: 0 };
+    if (!s || !st) return { phase: null, workSeconds: 0, breakSeconds: null, totalSeconds: 0 };
     const now = new Date().toISOString();
     const t = advance(s.timer, now, {
       pomodoro: s.session.pomodoroConfigSnapshot ?? st.pomodoro,
       autoStartBreaks: st.pomodoro.autoStartBreaks,
       autoStartWork: st.pomodoro.autoStartWork,
     });
-    return { phase: t.phase, workSeconds: viewTimer(t, now).workSeconds };
+    const v = viewTimer(t, now);
+    const onBreak = t.phase === 'short-break' || t.phase === 'long-break';
+    return {
+      phase: t.phase,
+      workSeconds: v.workSeconds,
+      breakSeconds: onBreak ? v.phaseElapsedSeconds : null,
+      totalSeconds: v.workSeconds + v.breakSeconds,
+    };
   }, []);
   const [inFocus, setInFocus] = useState(false);
   useEffect(() => {
     if (!recording) return;
-    const tick = () => setInFocus(sample().phase === 'work');
+    // Stills are taken in focus, and in breaks too when the user asked for them.
+    const tick = () => {
+      const phase = sample().phase;
+      const onBreak = phase === 'short-break' || phase === 'long-break';
+      setInFocus(phase === 'work' || (onBreak && !!settingsRef.current?.timelapse.recordBreaks));
+    };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
@@ -187,7 +200,10 @@ export function Focus() {
     recording,
     capturing: inFocus,
     options: tlOptions,
-    workSeconds: () => sample().workSeconds,
+    stamp: () => {
+      const { workSeconds, breakSeconds, totalSeconds } = sample();
+      return { workSeconds, breakSeconds, totalSeconds };
+    },
   });
 
   /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
@@ -721,16 +737,17 @@ function FocusSession({
     <>
       <main className={`focus-centre${hidden ? ' is-bare' : ''}`}>
         <div className="focus-phase">{phase}</div>
-        {!hidden && (
-          <>
+        {/* Folds away rather than vanishing: the clock fades and shrinks as its space closes. */}
+        <Reveal open={!hidden} className="focus-fold">
+          <div className="focus-fold-inner">
             <TimerDisplay
               digits={ctl.digits}
               meaning={timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}
             />
             <TaskContext subject={context.subject} child={context.child} />
             {showProgress && <ProgressDisplay progress={progress} />}
-          </>
-        )}
+          </div>
+        </Reveal>
         <div className={`focus-actions focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
           {ctl.canPause && (
             <Button variant="ghost" onClick={() => ctl.send({ type: 'pause' })}>

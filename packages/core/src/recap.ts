@@ -239,23 +239,50 @@ export function recapSummary(s: SummaryInput): string {
 /* ---------- the clock ---------- */
 
 export interface ClockProfile {
-  /** Minutes by local hour a session started, 0 to 23. */
+  /** Focused minutes by local hour of the day they fell in, 0 to 23. */
   hours: number[];
   peakHour: number | null;
   totalMinutes: number;
 }
 
+/** How far an hour's minutes spread into its neighbours, in hours (matches the day chart). */
+export const CLOCK_BANDWIDTH = 0.9;
+/** The slices a session's time is walked in to place it in hours; fine enough for any zone. */
+const CLOCK_SLICE_MS = 5 * 60_000;
+
+/**
+ * When in the day the studying happened. A session's focused minutes are spread over the
+ * span it ran, start to end, in proportion, so a two-hour session from 1 pm fills 1 and 2 pm
+ * rather than piling onto the hour it began. Breaks inside it thin each slice evenly.
+ */
 export function timeOfDayClock(sessions: Session[], tz: string): ClockProfile {
   const hours = new Array<number>(24).fill(0);
   for (const s of done(sessions)) {
-    const h = toLocalParts(s.startedAt, tz).hour;
-    hours[h] = (hours[h] ?? 0) + workMin(s);
+    const work = workMin(s);
+    if (work <= 0) continue;
+    const start = Date.parse(s.startedAt);
+    const end = Math.max(start + 60_000, Date.parse(s.endedAt!));
+    const span = end - start;
+    for (let t = start; t < end; t += CLOCK_SLICE_MS) {
+      const len = Math.min(CLOCK_SLICE_MS, end - t);
+      const h = toLocalParts(new Date(t + len / 2).toISOString(), tz).hour;
+      hours[h] = (hours[h] ?? 0) + (work * len) / span;
+    }
   }
+  for (let h = 0; h < 24; h++) hours[h] = round1(hours[h]!);
   const total = hours.reduce((a, b) => a + b, 0);
+  // The peak of the smoothed day, as the chart draws it: two busy neighbouring hours beat
+  // one slightly busier hour on its own, so the caption and the curve agree.
+  const smoothed = hours.map((_, h) =>
+    hours.reduce((sum, m, k) => {
+      const d = Math.min(Math.abs(h - k), 24 - Math.abs(h - k));
+      return sum + m * Math.exp(-(d * d) / (2 * CLOCK_BANDWIDTH * CLOCK_BANDWIDTH));
+    }, 0),
+  );
   let peakHour: number | null = null;
   if (total > 0) {
     peakHour = 0;
-    for (let h = 1; h < 24; h++) if (hours[h]! > hours[peakHour]!) peakHour = h;
+    for (let h = 1; h < 24; h++) if (smoothed[h]! > smoothed[peakHour]!) peakHour = h;
   }
   return { hours, peakHour, totalMinutes: total };
 }

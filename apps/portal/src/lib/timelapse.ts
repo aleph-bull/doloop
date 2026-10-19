@@ -7,6 +7,7 @@ import {
   type TimelapseOptions,
   type TimelapsePlan,
 } from '@komogon/core';
+import { LOGO_PATH, LOGO_VIEWBOX } from '@komogon/ui';
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -22,7 +23,14 @@ export interface Still {
   luma: number;
   /** Focused seconds of the session when it was taken, for the clock drawn into the video. */
   workSeconds: number;
+  /** How far into a break it was taken, or null for a still taken during focus. */
+  breakSeconds: number | null;
+  /** The session's running time, focus and breaks together, when it was taken. */
+  totalSeconds: number;
 }
+
+/** Where the session stood when a still was taken. */
+export type StillStamp = Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds'>;
 
 export type RecorderStatus = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
 
@@ -105,8 +113,8 @@ export interface TimelapseRecorderArgs {
   /** Stills are taken only while true: during focus, not breaks or a pause. */
   capturing: boolean;
   options: TimelapseOptions;
-  /** The session's focused seconds right now. */
-  workSeconds: () => number;
+  /** Where the session stands right now: focused time, break time, running time. */
+  stamp: () => StillStamp;
 }
 
 export interface TimelapseRecorder {
@@ -127,7 +135,7 @@ export function useTimelapseRecorder({
   recording,
   capturing,
   options,
-  workSeconds,
+  stamp,
 }: TimelapseRecorderArgs): TimelapseRecorder {
   const [status, setStatus] = useState<RecorderStatus>('off');
   const [count, setCount] = useState(0);
@@ -135,9 +143,9 @@ export function useTimelapseRecorder({
   const stillsRef = useRef<Still[]>([]);
   const intervalRef = useRef(startIntervalMs(options));
   // The loop reads the latest of these without restarting.
-  const live = useRef({ capturing, options, workSeconds });
+  const live = useRef({ capturing, options, stamp });
   useEffect(() => {
-    live.current = { capturing, options, workSeconds };
+    live.current = { capturing, options, stamp };
   });
 
   // A change of mode before anything is captured starts at that mode's pace.
@@ -165,7 +173,7 @@ export function useTimelapseRecorder({
     const tinyCtx = tiny.getContext('2d', { willReadFrequently: true });
 
     const take = async () => {
-      const { capturing, options, workSeconds } = live.current;
+      const { capturing, options, stamp } = live.current;
       if (!capturing || video.readyState < 2 || !ctx || !tinyCtx) return;
       const w = video.videoWidth || 1280;
       const h = video.videoHeight || 720;
@@ -180,7 +188,7 @@ export function useTimelapseRecorder({
       );
       if (!blob || cancelled) return;
       rememberStillBytes(blob.size);
-      const next = [...stillsRef.current, { blob, luma, workSeconds: workSeconds() }];
+      const next = [...stillsRef.current, { blob, luma, ...stamp() }];
       const thinned = thinIfFull(next, stillCap(options));
       if (thinned) intervalRef.current *= 2;
       stillsRef.current = thinned ?? next;
@@ -235,7 +243,10 @@ export function useTimelapseRecorder({
   const stills = useCallback(() => stillsRef.current, []);
   const spanSeconds = useCallback(() => {
     const s = stillsRef.current;
-    return s.length < 2 ? 0 : s[s.length - 1]!.workSeconds - s[0]!.workSeconds;
+    if (s.length < 2) return 0;
+    // With breaks in the stills, the video covers the whole session, not just its focus.
+    const key = s.some((x) => x.breakSeconds !== null) ? 'totalSeconds' : 'workSeconds';
+    return s[s.length - 1]![key] - s[0]![key];
   }, []);
   const clear = useCallback(() => {
     stillsRef.current = [];
@@ -252,6 +263,18 @@ export interface TimelapseLook {
   showTimer: boolean;
   smooth: boolean;
   deflicker: boolean;
+  /** During a recorded break: the break's own time, or the session's running time. */
+  breakClock?: 'break' | 'running';
+}
+
+/** What the corner clock says on a still. */
+function clockText(still: Still, look: TimelapseLook): string {
+  if (look.breakClock === 'running') {
+    const t = timelapseClock(still.totalSeconds);
+    return still.breakSeconds !== null ? `${t} · Break` : t;
+  }
+  if (still.breakSeconds !== null) return `Break ${timelapseClock(still.breakSeconds)}`;
+  return timelapseClock(still.workSeconds);
 }
 
 const MIME_CHOICES = [
@@ -275,10 +298,9 @@ function pickMime(): string {
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, Math.max(0, ms)));
 
 /** The studied-time clock in the bottom corner: a soft pill, sized to the video. */
-function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, seconds: number) {
+function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, text: string) {
   const size = Math.round(h * 0.055);
   const pad = Math.round(size * 0.55);
-  const text = timelapseClock(seconds);
   ctx.save();
   ctx.font = `600 ${size}px 'Inter Variable', Inter, system-ui, sans-serif`;
   const tw = ctx.measureText(text).width;
@@ -295,6 +317,76 @@ function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, seconds:
   void w;
 }
 
+/** The watermark's colour: black on a light corner, white on a dark one. */
+type WatermarkTone = '#000000' | '#ffffff';
+
+/**
+ * Black or white for the watermark, chosen once for the whole video from the 30th frame (or
+ * the last, in a shorter one): the brightness of the corner the mark sits in, not the
+ * frame's average, since a bright window behind a dark desk would mislead it.
+ */
+async function watermarkTone(
+  stills: Still[],
+  plan: TimelapsePlan,
+  w: number,
+  h: number,
+): Promise<WatermarkTone> {
+  const frame = plan.frames[Math.min(29, plan.frames.length - 1)];
+  const still = frame ? stills[frame[0]] : stills[stills.length - 1];
+  if (!still) return '#ffffff';
+  try {
+    const bmp = await createImageBitmap(still.blob);
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = Math.max(1, Math.round((64 * h) / w));
+    const x = c.getContext('2d', { willReadFrequently: true });
+    if (!x) return '#ffffff';
+    x.drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    // The bottom-right third, where the mark goes.
+    const sx = Math.floor(c.width * 0.62);
+    const sy = Math.floor(c.height * 0.8);
+    const d = x.getImageData(sx, sy, c.width - sx, c.height - sy).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4)
+      sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+    const luma = sum / (d.length / 4) / 255;
+    return luma > 0.55 ? '#000000' : '#ffffff';
+  } catch {
+    return '#ffffff';
+  }
+}
+
+const LOGO_SHAPE = typeof Path2D !== 'undefined' ? new Path2D(LOGO_PATH) : null;
+const [LOGO_X, LOGO_Y, LOGO_SIZE] = LOGO_VIEWBOX.split(' ').map(Number) as [number, number, number];
+
+/**
+ * The Komogon watermark in the bottom-right corner: the mark and the wordmark, as in the
+ * portal nav, at 30% opacity, in the tone picked for this video.
+ */
+function drawWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, tone: WatermarkTone) {
+  const size = Math.round(h * 0.05);
+  const margin = Math.round(h * 0.04);
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = tone;
+  ctx.font = `600 ${Math.round(size * 0.78)}px Satoshi, 'Inter Variable', system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+  const text = 'Komogon';
+  const tw = ctx.measureText(text).width;
+  const gap = Math.round(size * 0.35);
+  const right = w - margin;
+  const cy = h - margin - size / 2;
+  ctx.fillText(text, right - tw, cy + 1);
+  if (LOGO_SHAPE) {
+    ctx.translate(right - tw - gap - size, cy - size / 2);
+    ctx.scale(size / LOGO_SIZE, size / LOGO_SIZE);
+    ctx.translate(-LOGO_X, -LOGO_Y);
+    ctx.fill(LOGO_SHAPE, 'evenodd');
+  }
+  ctx.restore();
+}
+
 /** Draws frame `j` of the plan onto the canvas: decoding, blending, deflicker and clock. */
 type FrameDrawer = ((j: number) => Promise<void>) & { dispose: () => void };
 
@@ -305,6 +397,7 @@ function frameDrawer(
   stills: Still[],
   plan: TimelapsePlan,
   look: TimelapseLook,
+  mark: WatermarkTone,
 ): FrameDrawer {
   const gains = look.deflicker ? deflickerGains(stills.map((s) => s.luma)) : null;
   // Decoded stills, kept only while a frame still needs them.
@@ -350,7 +443,8 @@ function frameDrawer(
     }
     ctx.globalAlpha = 1;
     ctx.filter = 'none';
-    if (look.showTimer) drawClock(ctx, w, h, stills[to - 1]!.workSeconds);
+    if (look.showTimer) drawClock(ctx, w, h, clockText(stills[to - 1]!, look));
+    drawWatermark(ctx, w, h, mark);
     previous = to - 1;
   };
   return Object.assign(draw, {
@@ -412,7 +506,10 @@ export async function renderTimelapse(
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('This browser cannot draw the video');
-  const draw = frameDrawer(ctx, w, h, stills, plan, look);
+  const mark = await watermarkTone(stills, plan, w, h);
+  // The wordmark is in Satoshi; a canvas draws in whatever font is loaded by then.
+  await document.fonts?.load('600 24px Satoshi').catch(() => undefined);
+  const draw = frameDrawer(ctx, w, h, stills, plan, look, mark);
   try {
     const config = await pickEncoderConfig(w, h, plan.fps);
     if (config) return await encodeFrames(canvas, config, plan, draw, onProgress, signal);

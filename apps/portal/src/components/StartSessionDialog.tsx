@@ -404,7 +404,25 @@ export function StartSessionDialog({
                 { value: 'continuous', label: 'Continuous' },
               ]}
             />
-            <span className="field-hint">{styleHelp}</span>
+            <span className="field-hint">
+              {styleHelp}
+              {style === 'pomodoro' && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="link-button"
+                    onClick={() => {
+                      // The lengths live in Settings, under Timer; the dialog closes on the way.
+                      onClose();
+                      navigate('/settings#timer');
+                    }}
+                  >
+                    Change these
+                  </button>
+                </>
+              )}
+            </span>
           </div>
 
           <div className="field">

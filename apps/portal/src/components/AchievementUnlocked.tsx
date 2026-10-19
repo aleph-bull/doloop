@@ -13,6 +13,7 @@ interface Shown {
   key: string;
   name: string;
   description: string;
+  xp: number;
   leaving: boolean;
 }
 
@@ -44,7 +45,13 @@ export function AchievementToasts() {
         next();
         return;
       }
-      setCurrent({ key, name: badge.name, description: badge.description, leaving: false });
+      setCurrent({
+        key,
+        name: badge.name,
+        description: badge.description,
+        xp: badge.xp,
+        leaving: false,
+      });
       if (effectsRef.current?.confetti !== false) fireConfetti({ count: 90, durationMs: 1700 });
       timers.current.push(
         window.setTimeout(() => setCurrent((c) => (c ? { ...c, leaving: true } : c)), SHOW_MS),
@@ -78,7 +85,9 @@ export function AchievementToasts() {
         <div className="achievement-text">
           <div className="achievement-kicker">Achievement unlocked</div>
           <div className="achievement-name">{current.name}</div>
-          <div className="achievement-desc">{current.description}</div>
+          <div className="achievement-desc">
+            {current.description} <span className="achievement-xp tabular">+{current.xp} XP</span>
+          </div>
         </div>
       </div>
     </div>

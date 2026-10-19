@@ -39,6 +39,7 @@ import {
   useSettingsFilter,
 } from '../components/SettingsNav';
 import { AccentPicker } from '../components/AccentPicker';
+import { AppearancePresets } from '../components/AppearancePresets';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
@@ -210,7 +211,9 @@ export function Settings() {
   // it on arrival and whenever it changes.
   useEffect(() => {
     const fromHash = () => {
-      const id = window.location.hash.slice(1);
+      const raw = window.location.hash.slice(1);
+      // Account and You were one tab apart before they merged; old links still land.
+      const id = raw === 'account' ? 'profile' : raw;
       if (id && SETTINGS_SECTIONS.some((x) => x.id === id)) {
         setQuery('');
         setActiveId(id);
@@ -275,7 +278,7 @@ export function Settings() {
               <NoSettingsMatch query={query.trim()} onClear={() => setQuery('')} />
             )}
 
-            <Section id="profile" title="You">
+            <Section id="profile" title="Account">
               <Input
                 label="Name"
                 hint="Only used to say hello."
@@ -289,9 +292,107 @@ export function Settings() {
                   void patch({ profile: { name: next || null } });
                 }}
               />
+              <Select
+                label="Timezone"
+                value={me.data!.user.timezone}
+                onChange={async (e) => {
+                  await api.updateMe({ timezone: e.target.value });
+                  void me.refetch();
+                }}
+              >
+                {Intl.supportedValuesOf('timeZone').map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </Select>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  onClick={async () => {
+                    const data = await api.exportData();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], {
+                      type: 'application/json',
+                    });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'komogon-export.json';
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                  }}
+                >
+                  Export my data (JSON)
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={async () => {
+                    await clearQueryCache();
+                    qc.clear();
+                    toast('Offline copy cleared', { tone: 'ok' });
+                  }}
+                >
+                  Clear offline copy
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={async () => {
+                    if (!window.confirm('Delete your account and all data? This cannot be undone.'))
+                      return;
+                    await api.deleteAccount();
+                    await auth.signOut();
+                    navigate('/signin');
+                  }}
+                >
+                  Delete account
+                </Button>
+              </div>
+              <p className="field-hint">
+                Signed in as {me.data!.user.email || auth.email}. Komogon keeps a copy of your data
+                in this browser so it opens quickly and works offline. That copy stays on this
+                device and is cleared when you sign out. Nothing about you is tracked.
+              </p>
+            </Section>
+
+            <Section id="pages" title="Pages">
+              <p className="field-hint">
+                Turn off the pages you don't use and they leave the nav. Anything already in them is
+                kept, so turning one back on brings it all back.
+              </p>
+              <Toggle
+                checked={s.features.routines}
+                onChange={(v) => patch({ features: { routines: v } })}
+                label="Routines"
+                description="Things you do on a schedule, every day or every week."
+              />
+              <Toggle
+                checked={s.features.plans}
+                onChange={(v) => patch({ features: { plans: v } })}
+                label="Plans"
+                description="Study plans for anything without a syllabus."
+              />
+              <Toggle
+                checked={s.features.grades}
+                onChange={(v) => patch({ features: { grades: v } })}
+                label="Grades"
+                description="Your marks by class and what you need on the next one."
+              />
+              <Toggle
+                checked={s.features.calendar}
+                onChange={(v) => patch({ features: { calendar: v } })}
+                label="Calendar"
+                description="Your week laid out with deadlines and sessions."
+              />
             </Section>
 
             <Section id="theme" title="Appearance" glass>
+              <AppearancePresets
+                theme={s.theme}
+                resolved={theme}
+                patch={patch}
+                onImageApplied={() => {
+                  void qc.invalidateQueries({ queryKey: keys.background });
+                  void me.refetch();
+                }}
+              />
               <div className="field">
                 <span className="field-label">Theme</span>
                 <Segmented
@@ -780,67 +881,6 @@ export function Settings() {
 
             <Section id="history" title="Session history">
               <SessionHistory />
-            </Section>
-
-            <Section id="account" title="Account">
-              <Select
-                label="Timezone"
-                value={me.data!.user.timezone}
-                onChange={async (e) => {
-                  await api.updateMe({ timezone: e.target.value });
-                  void me.refetch();
-                }}
-              >
-                {Intl.supportedValuesOf('timeZone').map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </Select>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={async () => {
-                    const data = await api.exportData();
-                    const blob = new Blob([JSON.stringify(data, null, 2)], {
-                      type: 'application/json',
-                    });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'komogon-export.json';
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                  }}
-                >
-                  Export my data (JSON)
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={async () => {
-                    await clearQueryCache();
-                    qc.clear();
-                    toast('Offline copy cleared', { tone: 'ok' });
-                  }}
-                >
-                  Clear offline copy
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    if (!window.confirm('Delete your account and all data? This cannot be undone.'))
-                      return;
-                    await api.deleteAccount();
-                    await auth.signOut();
-                    navigate('/signin');
-                  }}
-                >
-                  Delete account
-                </Button>
-              </div>
-              <p className="field-hint">
-                Signed in as {me.data!.user.email || auth.email}. Komogon keeps a copy of your data
-                in this browser so it opens quickly and works offline. That copy stays on this
-                device and is cleared when you sign out. Nothing about you is tracked.
-              </p>
             </Section>
           </div>
         </SettingsFilterProvider>

@@ -19,9 +19,42 @@ export interface SettingsSectionMeta {
 
 export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   {
+    // You and your account, in one place.
     id: 'profile',
-    title: 'You',
-    keywords: ['name', 'greeting', 'hello', 'what to call me', 'display name'],
+    title: 'Account',
+    keywords: [
+      'you',
+      'name',
+      'greeting',
+      'hello',
+      'what to call me',
+      'display name',
+      'timezone',
+      'export data',
+      'delete account',
+      'sign out',
+      'email',
+      'offline copy',
+      'privacy',
+    ],
+  },
+  {
+    id: 'pages',
+    title: 'Pages',
+    keywords: [
+      'pages',
+      'nav',
+      'navigation',
+      'tabs',
+      'hide',
+      'disable',
+      'turn off',
+      'routines',
+      'plans',
+      'study plans',
+      'grades',
+      'calendar',
+    ],
   },
   {
     id: 'theme',
@@ -160,19 +193,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'forgot to stop',
       'left running',
       'edit session',
-    ],
-  },
-  {
-    id: 'account',
-    title: 'Account',
-    keywords: [
-      'timezone',
-      'export data',
-      'delete account',
-      'sign out',
-      'email',
-      'offline copy',
-      'privacy',
     ],
   },
 ];

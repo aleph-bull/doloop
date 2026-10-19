@@ -145,31 +145,46 @@ function Figure({
   table,
   className,
   figRef,
-  onTableToggle,
 }: {
   tip: Tip | null;
   children: ReactNode;
   table?: { caption: string; columns: string[]; rows: Array<Array<string | number>> };
   className?: string;
   figRef?: RefObject<HTMLElement | null>;
-  /** Told when "Show as a table" opens or closes. */
-  onTableToggle?: (open: boolean) => void;
 }) {
+  /**
+   * "Show as a table" swaps the chart for its table in the same place, at the same size,
+   * rather than opening below it: the tile, its row and the charts beside it never move.
+   * A table longer than the chart scrolls inside.
+   */
+  const [asTable, setAsTable] = useState(false);
+  const hasTable = !!table && table.rows.length > 0;
   return (
     <figure ref={figRef as RefObject<HTMLElement>} className={cn('rc-figure', className)}>
-      <div className="rc-plot">
-        {children}
-        {tip && (
-          <div className="rc-tip" style={{ left: `${tip.x}%`, top: `${tip.y}%` }} role="status">
-            {tip.text}
+      <div className={cn('rc-stage', asTable && 'is-table')}>
+        <div className="rc-plot" aria-hidden={asTable || undefined} inert={asTable || undefined}>
+          {children}
+          {tip && (
+            <div className="rc-tip" style={{ left: `${tip.x}%`, top: `${tip.y}%` }} role="status">
+              {tip.text}
+            </div>
+          )}
+        </div>
+        {hasTable && (
+          <div className="rc-table-over" aria-hidden={!asTable} inert={!asTable || undefined}>
+            <DataTable caption={table.caption} columns={table.columns} rows={table.rows} />
           </div>
         )}
       </div>
-      {table && table.rows.length > 0 && (
-        <details className="rc-table" onToggle={(e) => onTableToggle?.(e.currentTarget.open)}>
-          <summary>Show as a table</summary>
-          <DataTable caption={table.caption} columns={table.columns} rows={table.rows} />
-        </details>
+      {hasTable && (
+        <button
+          type="button"
+          className="rc-table-toggle"
+          aria-pressed={asTable}
+          onClick={() => setAsTable((v) => !v)}
+        >
+          {asTable ? 'Show as a chart' : 'Show as a table'}
+        </button>
       )}
     </figure>
   );
@@ -442,6 +457,155 @@ export function WeekBars({ days, fmt, ghostName, ariaLabel }: WeekBarsProps) {
 
 /* ---------- radial clock ---------- */
 
+export interface DayDensityProps {
+  /** Focused minutes by hour of the day, 0..23. */
+  hours: number[];
+  fmt: (minutes: number) => string;
+  ariaLabel: string;
+}
+
+/** How far each hour's minutes spread into its neighbours, in hours: a soft, readable curve. */
+const DENSITY_BANDWIDTH = 0.9;
+/** Points along the day the curve is drawn through: every ten minutes. */
+const DENSITY_STEPS = 144;
+
+/**
+ * When in the day the studying happens, as a density curve across 24 hours: each hour's
+ * minutes smoothed into the hours around it (wrapping past midnight), so the shape of the
+ * day reads at a glance. Hovering an hour shows its own minutes.
+ */
+export function DayDensity({ hours, fmt, ariaLabel }: DayDensityProps) {
+  const figRef = useRef<HTMLElement>(null);
+  const plotRef = useRef<HTMLDivElement>(null);
+  const seen = useInView(figRef);
+  const [hover, setHover] = useState<number | null>(null);
+  const W = useFigureWidth(figRef, 400);
+  const H = Math.max(180, useFigureHeight(plotRef, 180));
+  const top = 26;
+  const base = H - 26;
+  const left = 4;
+  const right = W - 4;
+  const xAt = (hour: number) => left + (hour / 24) * (right - left);
+
+  // Circular Gaussian smoothing, so 11 pm and 1 am are neighbours.
+  const curve: number[] = [];
+  for (let i = 0; i <= DENSITY_STEPS; i++) {
+    const x = (i / DENSITY_STEPS) * 24;
+    let d = 0;
+    for (let h = 0; h < 24; h++) {
+      const m = hours[h] ?? 0;
+      if (m <= 0) continue;
+      let dist = Math.abs(x - (h + 0.5));
+      dist = Math.min(dist, 24 - dist);
+      d += m * Math.exp(-(dist * dist) / (2 * DENSITY_BANDWIDTH * DENSITY_BANDWIDTH));
+    }
+    curve.push(d);
+  }
+  const max = Math.max(1e-6, ...curve);
+  const yAt = (d: number) => base - (d / max) * (base - top);
+  const pts = curve.map((d, i) => [xAt((i / DENSITY_STEPS) * 24), yAt(d)] as const);
+  const line = pts.map(([x, y], i) => `${i ? 'L' : 'M'}${x.toFixed(1)},${y.toFixed(1)}`).join('');
+  const area = `${line}L${right},${base}L${left},${base}Z`;
+  const gradId = useId();
+  // The peak is the curve's highest point, so the marker sits where the shape says it does,
+  // which can differ from the single busiest hour when two busy hours sit side by side.
+  const peakIndex = curve.indexOf(Math.max(...curve));
+  const hasData = hours.some((m) => m > 0);
+  const peakAt = (peakIndex / DENSITY_STEPS) * 24;
+  const peakHour = hasData ? Math.floor(peakAt) % 24 : null;
+  const peakX = hasData ? xAt(peakAt) : null;
+  const peakY = hasData ? yAt(curve[peakIndex]!) : null;
+
+  return (
+    <Figure
+      figRef={figRef}
+      tip={
+        hover === null
+          ? null
+          : {
+              x: (xAt(hover + 0.5) / W) * 100,
+              y: 8,
+              text: `${hourLabel(hover)}: ${(hours[hover] ?? 0) > 0 ? fmt(hours[hover]!) : 'nothing'}`,
+            }
+      }
+      className={cn('is-fill rc-density', seen && 'is-in')}
+      table={{
+        caption: ariaLabel,
+        columns: ['Hour', 'Studied'],
+        rows: hours.map((m, h) => [hourLabel(h), fmt(m)]).filter((_, h) => hours[h]! > 0),
+      }}
+    >
+      <div ref={plotRef} className="rc-fill">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          width="100%"
+          role="img"
+          aria-label={ariaLabel}
+          onMouseLeave={() => setHover(null)}
+        >
+          <defs>
+            <linearGradient id={gradId} x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.04" />
+            </linearGradient>
+          </defs>
+          {[6, 12, 18].map((h) => (
+            <line key={h} x1={xAt(h)} x2={xAt(h)} y1={top - 8} y2={base} className="rc-grid" />
+          ))}
+          <path d={area} fill={`url(#${gradId})`} className="rc-density-area" />
+          <path d={line} className="rc-density-line" />
+          <line x1={left} x2={right} y1={base} y2={base} className="rc-axis" />
+          {peakX !== null && peakY !== null && (
+            <g className="rc-density-peak">
+              <line x1={peakX} x2={peakX} y1={peakY} y2={base} />
+              <circle cx={peakX} cy={peakY} r={4} />
+              <text x={peakX} y={peakY - 10} textAnchor="middle" className="rc-value">
+                Peak {hourLabel(peakHour!)}
+              </text>
+            </g>
+          )}
+          {hover !== null && (
+            <line
+              x1={xAt(hover + 0.5)}
+              x2={xAt(hover + 0.5)}
+              y1={top - 8}
+              y2={base}
+              className="rc-density-guide"
+            />
+          )}
+          {[0, 6, 12, 18, 24].map((h) => (
+            <text
+              key={h}
+              x={xAt(h)}
+              y={H - 6}
+              textAnchor={h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}
+              className="rc-tick is-lg"
+            >
+              {hourLabel(h % 24).replace(' ', '')}
+            </text>
+          ))}
+          {/* One hit strip per hour, the full height, so the hour under the pointer is the one read. */}
+          {hours.map((m, h) => (
+            <rect
+              key={h}
+              x={xAt(h)}
+              y={0}
+              width={xAt(h + 1) - xAt(h)}
+              height={base}
+              className="rc-hit"
+              tabIndex={0}
+              aria-label={`${hourLabel(h)}: ${m > 0 ? fmt(m) : 'nothing'}`}
+              onMouseEnter={() => setHover(h)}
+              onFocus={() => setHover(h)}
+              onBlur={() => setHover(null)}
+            />
+          ))}
+        </svg>
+      </div>
+    </Figure>
+  );
+}
+
 export interface RadialClockProps {
   /** Minutes by hour, 0..23. */
   hours: number[];
@@ -635,21 +799,7 @@ export function StackedDays({ days, series, fmt, ariaLabel }: StackedDaysProps) 
   const { tip, bind } = useTip();
   const W = useFigureWidth(figRef, 640);
   // As tall as the tile leaves room for, so the columns reach down to its bottom edge.
-  const measuredH = Math.max(200, useFigureHeight(plotRef, 200));
-  /**
-   * The chart's height, held while its table is open: the table then grows the tile instead
-   * of squeezing the chart, which would redraw it on every frame of the drop-down. Released
-   * once the table has finished folding away.
-   */
-  const [heldH, setHeldH] = useState<number | null>(null);
-  const releaseRef = useRef(0);
-  useEffect(() => () => window.clearTimeout(releaseRef.current), []);
-  const onTableToggle = (open: boolean) => {
-    window.clearTimeout(releaseRef.current);
-    if (open) setHeldH(measuredH);
-    else releaseRef.current = window.setTimeout(() => setHeldH(null), 400);
-  };
-  const H = heldH ?? measuredH;
+  const H = Math.max(200, useFigureHeight(plotRef, 200));
   const top = 12;
   const base = H - 30;
   const totals = days.map((d) => d.segments.reduce((a, s) => a + s.minutes, 0));
@@ -662,7 +812,6 @@ export function StackedDays({ days, series, fmt, ariaLabel }: StackedDaysProps) 
     <Figure
       figRef={figRef}
       tip={tip}
-      onTableToggle={onTableToggle}
       className={cn('is-fill', seen && 'is-in')}
       table={{
         caption: ariaLabel,
@@ -673,11 +822,7 @@ export function StackedDays({ days, series, fmt, ariaLabel }: StackedDaysProps) 
         ]),
       }}
     >
-      <div
-        ref={plotRef}
-        className="rc-fill"
-        style={heldH !== null ? { flex: 'none', height: heldH } : undefined}
-      >
+      <div ref={plotRef} className="rc-fill">
         <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={ariaLabel}>
           <line x1={0} x2={W} y1={base} y2={base} className="rc-axis" />
           {days.map((d, i) => {

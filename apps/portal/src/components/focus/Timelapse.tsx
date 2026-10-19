@@ -165,6 +165,31 @@ export function TimelapseSettings({
         description="A small clock in the corner of the video."
       />
       <Toggle
+        checked={value.recordBreaks}
+        onChange={(v) => set({ recordBreaks: v })}
+        label="Record breaks too"
+        description="Keep taking stills while you rest, not only while you focus."
+      />
+      {value.recordBreaks && value.showTimer && (
+        <div className="field">
+          <span className="field-label">During a break, the clock shows</span>
+          <Segmented
+            ariaLabel="What the clock shows during a break"
+            value={value.breakClock}
+            onChange={(v) => set({ breakClock: v as TimelapseSettingsValue['breakClock'] })}
+            options={[
+              { value: 'break', label: 'Break time' },
+              { value: 'running', label: 'Keeps counting' },
+            ]}
+          />
+          <span className="field-hint">
+            {value.breakClock === 'break'
+              ? 'A break clock, so the video shows when you were resting.'
+              : 'The session’s running time, counting on through each break.'}
+          </span>
+        </div>
+      )}
+      <Toggle
         checked={value.smooth}
         onChange={(v) => set({ smooth: v })}
         label="Smooth motion"

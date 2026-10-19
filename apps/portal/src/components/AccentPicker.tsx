@@ -11,14 +11,18 @@ export interface AccentPickerProps {
   onChange: (patch: { accent?: string; savedAccents?: string[] }) => void;
 }
 
-/** A picked colour as a custom accent, kept in the range where text on it stays readable. */
+/**
+ * A picked colour as a custom accent, exactly as picked. Text stays readable by other means:
+ * accent text is moved in lightness only where it sits (readableAccent), and labels on a
+ * fill switch between white and dark (ownAccentFill).
+ */
 function toAccent(hex: string): string {
   const [h, s, l] = rgbToHsl(hexToRgb(hex));
-  return `custom:${h},${Math.max(30, s)},${Math.min(70, Math.max(35, l))}`;
+  return `custom:${h},${s},${l}`;
 }
 
 /**
- * The six built-in accents and up to four of the user's own, ten in all. The + tile opens
+ * The six built-in accents and up to eight of the user's own. The + tile opens
  * the browser's colour chooser; dragging across it saves one colour, not one per step.
  */
 export function AccentPicker({ value, saved, onChange }: AccentPickerProps) {

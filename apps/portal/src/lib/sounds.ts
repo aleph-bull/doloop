@@ -12,6 +12,46 @@ import { soundPresetById } from '@komogon/core';
 
 let ctx: AudioContext | null = null;
 const buffers = new Map<string, AudioBuffer>();
+/** Per file: the gain that lifts its loudest moment to full scale, so no sound is quieter. */
+const levels = new Map<string, number>();
+/** Everything plays through one limiter, so the boost never clips. */
+let limiter: DynamicsCompressorNode | null = null;
+
+/**
+ * Extra loudness on top of the evened-out level, about +9 dB (10^(9/20)). The files are
+ * mixed quietly, and a gain can only go down from them, so without this the loudest setting
+ * stays soft.
+ */
+const BOOST = 2.82;
+/** Never lift a near-silent file by more than this (+18 dB), or hiss would come up too. */
+const MAX_NORMALISE = 8;
+
+/** The gain that brings this buffer's peak to just under full scale. */
+function normaliseGain(buffer: AudioBuffer): number {
+  let peak = 0;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const data = buffer.getChannelData(c);
+    for (let i = 0; i < data.length; i++) {
+      const v = Math.abs(data[i]!);
+      if (v > peak) peak = v;
+    }
+  }
+  return peak > 0 ? Math.min(MAX_NORMALISE, 0.98 / peak) : 1;
+}
+
+/** A brick-wall-ish limiter in front of the speakers: loud stays loud, but never crackles. */
+function output(ac: AudioContext): AudioNode {
+  if (!limiter) {
+    limiter = ac.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.002;
+    limiter.release.value = 0.12;
+    limiter.connect(ac.destination);
+  }
+  return limiter;
+}
 const pending = new Map<string, Promise<AudioBuffer | null>>();
 let listening = false;
 
@@ -51,6 +91,7 @@ async function load(file: string): Promise<AudioBuffer | null> {
       const res = await fetch(`/${file}`);
       if (!res.ok) return null;
       const decoded = await ac.decodeAudioData(await res.arrayBuffer());
+      levels.set(file, normaliseGain(decoded));
       buffers.set(file, decoded);
       return decoded;
     } catch {
@@ -72,8 +113,10 @@ export function preloadSounds(ids: string[]): void {
 }
 
 /**
- * Play a preset at `volume` (0..1). Never throws, and does nothing for the silent preset,
- * a zero volume, or a browser that will not give us audio.
+ * Play a preset at `volume` (0..1). Every file is first evened out to the same peak, then
+ * boosted and limited, so the slider runs from a whisper to properly loud. The slider is
+ * squared, the way loudness is heard, so its low end stays fine-grained. Never throws, and
+ * does nothing for the silent preset, a zero volume, or a browser that will not give us audio.
  */
 export function playSound(id: string, volume: number): void {
   const preset = soundPresetById(id);
@@ -85,9 +128,10 @@ export function playSound(id: string, volume: number): void {
     if (!buffer || !ctx) return;
     const source = ctx.createBufferSource();
     const gain = ctx.createGain();
-    gain.gain.value = Math.min(1, Math.max(0, volume));
+    const v = Math.min(1, Math.max(0, volume));
+    gain.gain.value = v * v * (levels.get(preset.file!) ?? 1) * BOOST;
     source.buffer = buffer;
-    source.connect(gain).connect(ctx.destination);
+    source.connect(gain).connect(output(ctx));
     source.start();
     source.onended = () => {
       source.disconnect();

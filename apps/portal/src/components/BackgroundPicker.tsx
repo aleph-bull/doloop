@@ -8,6 +8,7 @@ import {
 } from '@komogon/core';
 import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 
 /** Where the colour chooser starts before one was ever picked: a quiet dark slate. */
 const DEFAULT_SOLID = '#1f2433';
@@ -82,6 +83,13 @@ export function BackgroundPicker({
   onChange,
   leading,
 }: BackgroundPickerProps) {
+  const navigate = useNavigate();
+  /** A locked background offers the way to it: Achievements, scrolled to it and lit up. */
+  const offerShop = (b: BackgroundMeta) => {
+    const how = b.costXp !== null ? 'is in the shop' : `unlocks at level ${b.minLevel}`;
+    if (window.confirm(`${b.name} ${how}. See it in Achievements?`))
+      navigate(`/achievements#bg-${b.id}`);
+  };
   const groups = BACKGROUND_CATEGORY_LABELS.map((c) => ({
     ...c,
     items: BACKGROUNDS.filter((b) => b.category === c.id),
@@ -111,8 +119,8 @@ export function BackgroundPicker({
                   ariaLabel={available ? b.name : `${b.name}, ${lockLabel(b)}`}
                   title={available ? b.name : `${b.name} — ${lockHint(b)}`}
                   selected={value === b.id}
-                  disabled={!available}
-                  onClick={() => onChange(b.id)}
+                  className={available ? undefined : 'is-locked'}
+                  onClick={() => (available ? onChange(b.id) : offerShop(b))}
                 />
               );
             })}

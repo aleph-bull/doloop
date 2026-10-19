@@ -48,12 +48,45 @@ const FOCUS: Array<{ value: Distracted; label: string }> = [
 ];
 const EFFORT = ['Easy', 'Moderate', 'Hard', 'Very hard', 'All out'];
 const PREPARED = ['Not yet', 'Shaky', 'Getting there', 'Mostly', 'Ready'];
+/** The "Custom" choice: any amount, typed in. */
+const CUSTOM_MORE = -1;
 const MORE_TIME: Array<{ minutes: number; label: string }> = [
   { minutes: 0, label: 'No' },
   { minutes: 30, label: '+30 min' },
   { minutes: 60, label: '+1 h' },
   { minutes: 120, label: '+2 h' },
+  { minutes: CUSTOM_MORE, label: 'Custom' },
 ];
+/** The most a custom answer may add: a hundred hours. */
+const MAX_CUSTOM_MINUTES = 6000;
+
+/**
+ * Minutes from what was typed: "45", "45 min", "1.5 h", "3h", "1h 30", "1:30". A bare
+ * number is minutes. Null when it can't be read or isn't more than nothing.
+ */
+export function parseMoreTime(text: string): number | null {
+  const t = text.trim().toLowerCase().replace(',', '.');
+  if (!t) return null;
+  let minutes: number | null = null;
+  const clock = /^(\d+):(\d{1,2})$/.exec(t);
+  const hm = /^(\d+(?:\.\d+)?)\s*h(?:ours?|rs?)?\s*(?:(\d+)\s*m(?:in(?:utes?|s)?)?)?$/.exec(t);
+  const hThenMin = /^(\d+)\s*h\s*(\d+)$/.exec(t);
+  const m = /^(\d+(?:\.\d+)?)\s*(?:m|min|mins|minutes?)?$/.exec(t);
+  if (clock) minutes = Number(clock[1]) * 60 + Number(clock[2]);
+  else if (hThenMin) minutes = Number(hThenMin[1]) * 60 + Number(hThenMin[2]);
+  else if (hm) minutes = Number(hm[1]) * 60 + (hm[2] ? Number(hm[2]) : 0);
+  else if (m) minutes = Number(m[1]);
+  if (minutes === null || !Number.isFinite(minutes) || minutes <= 0) return null;
+  return Math.min(MAX_CUSTOM_MINUTES, Math.round(minutes));
+}
+
+/** "45 min", "3 h", "1 h 30 min", for the custom answer's hint. */
+function formatMinutes(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+}
 
 /** A row of one-tap choices; tapping the chosen one again clears it. */
 function Choices<T extends string | number>({
@@ -115,6 +148,10 @@ export function ReviewDialog({
   const [completed, setCompleted] = useState('');
   const [correct, setCorrect] = useState('');
   const [moreMinutes, setMoreMinutes] = useState<number | null>(null);
+  const [customMore, setCustomMore] = useState('');
+  const customMinutes = parseMoreTime(customMore);
+  /** What the answer adds, whichever way it was given. */
+  const extraMinutes = moreMinutes === CUSTOM_MORE ? customMinutes : moreMinutes;
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState('');
   const [markComplete, setMarkComplete] = useState(false);
@@ -155,7 +192,7 @@ export function ReviewDialog({
         completedCount: full && unit ? completedNum : null,
         correctCount:
           full && gradable && completedNum && correct.trim() !== '' ? Number(correct) : null,
-        extraMinutesAdded: full && node && moreMinutes ? moreMinutes : null,
+        extraMinutesAdded: full && node && extraMinutes ? extraMinutes : null,
         note: full && note.trim() ? note.trim() : null,
       },
       markComplete,
@@ -252,12 +289,29 @@ export function ReviewDialog({
           )}
 
           {full && node && (
-            <Choices
-              label="Needs more time than planned?"
-              value={moreMinutes}
-              options={MORE_TIME.map((m) => ({ value: m.minutes, label: m.label }))}
-              onChange={setMoreMinutes}
-            />
+            <div className="flex flex-col gap-2">
+              <Choices
+                label="Needs more time than planned?"
+                value={moreMinutes}
+                options={MORE_TIME.map((m) => ({ value: m.minutes, label: m.label }))}
+                onChange={setMoreMinutes}
+              />
+              <Reveal open={moreMinutes === CUSTOM_MORE}>
+                <Input
+                  aria-label="How much more time"
+                  placeholder="e.g. 45 min or 3 h"
+                  value={customMore}
+                  onChange={(e) => setCustomMore(e.target.value)}
+                  hint={
+                    customMore.trim() === ''
+                      ? 'Minutes or hours.'
+                      : customMinutes
+                        ? `Adds ${formatMinutes(customMinutes)}.`
+                        : 'Try "45 min" or "1.5 h".'
+                  }
+                />
+              </Reveal>
+            </div>
           )}
 
           {full && (

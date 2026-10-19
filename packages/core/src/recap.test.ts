@@ -177,7 +177,7 @@ describe('recapSummary', () => {
 });
 
 describe('timeOfDayClock', () => {
-  it('buckets minutes by the local hour a session starts', () => {
+  it('buckets minutes by the local hour they fell in', () => {
     const c = timeOfDayClock(
       [
         session('2026-09-22T22:10', 50),
@@ -191,6 +191,14 @@ describe('timeOfDayClock', () => {
     expect(c.peakHour).toBe(22);
     expect(c.totalMinutes).toBe(100);
     expect(timeOfDayClock([], TZ).peakHour).toBeNull();
+  });
+
+  it('spreads a long session over the hours it ran', () => {
+    const c = timeOfDayClock([session('2026-09-22T13:00', 120)], TZ);
+    expect(c.hours[13]).toBe(60);
+    expect(c.hours[14]).toBe(60);
+    expect(c.hours[15]).toBe(0);
+    expect(c.totalMinutes).toBe(120);
   });
 });
 

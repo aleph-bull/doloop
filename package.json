@@ -16,6 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm audit:contrast && pnpm build",
+    "alpha:check": "pnpm check && node scripts/alpha-preflight.mjs",
+    "alpha:preflight": "node scripts/alpha-preflight.mjs",
     "audit:contrast": "pnpm --filter @komogon/ui audit:contrast",
     "local:start": "node scripts/local/start.mjs --outside",
     "local:stop": "node scripts/local/stop.mjs",

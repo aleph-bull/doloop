@@ -106,10 +106,10 @@ export const ACCENT_PRESETS: AccentPreset[] = [
   { id: 'violet', name: 'Violet', minLevel: 0 },
 ];
 
-/** Accents in all: the built-in ones plus the user's own saved colours. */
-export const MAX_ACCENTS = 10;
 /** How many of the user's own colours can be saved beside the built-in accents. */
-export const MAX_SAVED_ACCENTS = MAX_ACCENTS - ACCENT_PRESETS.length;
+export const MAX_SAVED_ACCENTS = 8;
+/** Accents in all: the built-in ones plus the user's own saved colours. */
+export const MAX_ACCENTS = ACCENT_PRESETS.length + MAX_SAVED_ACCENTS;
 /** A user's own accent: 'custom:<hue>,<saturation>,<lightness>'. */
 export const CUSTOM_ACCENT = /^custom:\d{1,3},\d{1,3},\d{1,3}$/;
 

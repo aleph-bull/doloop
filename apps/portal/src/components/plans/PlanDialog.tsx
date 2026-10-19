@@ -39,10 +39,16 @@ function aiPrompt(title: string, weeklyHours: string, target: string): string {
     .filter(Boolean)
     .join(', and ');
   return `I'm making a study plan for: ${subject}.
-${budget ? `${budget}.\n` : ''}
-Break it into the topics I should work through, in the order I should learn them. For each topic, estimate the hours it needs and suggest one specific resource (a book chapter, course module, video series or link).
+${budget ? `${budget}.\n` : ''}Resources I already have: [list them here, or write "find them for me"]
+
+Break it into the topics I should work through, in the order I should learn them. For each topic, estimate the hours it needs and name one specific resource (a book chapter, course module, video series or link).
 ${weekly > 0 && target ? 'Keep the total hours realistic for my weekly time and date.\n' : ''}
-Reply with only this table, nothing before or after it:
+About resources:
+- If I listed some, use those first and point to the exact part (chapter, module, unit).
+- If I asked you to find them, choose well-known, specific ones that you are confident exist.
+- If that line is blank or still in brackets, or you are not sure what fits a topic, ask me before you make the table. Never invent a resource.
+
+When you give me the plan, reply with only this table, nothing before or after it:
 
 | Topic | Hours | Resource |
 | --- | --- | --- |
@@ -231,7 +237,7 @@ export function PlanDialog({ open, onClose, onCreate, busy }: PlanDialogProps) {
                 <Copy size={14} aria-hidden /> Copy a prompt for your AI
               </Button>
               <span className="muted text-sm">
-                Paste it into ChatGPT or Claude, then paste the table it gives back here.
+                Paste it into ChatGPT or Claude, fill in your resources, then paste the table back here.
               </span>
             </div>
           </div>

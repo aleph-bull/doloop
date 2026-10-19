@@ -140,7 +140,8 @@ function Row({
           {/*
             Starting something is the point of the page, so play sits beside the tick and stays
             visible rather than waiting for a hover the way the editing actions do. Rows without
-            one keep the space, so titles line up down the table.
+            one keep the space, so titles line up down the table, and a folded course shows how
+            many items it holds there, in one left-aligned column.
           */}
           {node.kind !== 'course' && !done ? (
             <button
@@ -152,6 +153,13 @@ function Row({
             >
               <Play size={13} aria-hidden />
             </button>
+          ) : kids.length > 0 && !open ? (
+            <span
+              className="row-start-spacer tt-count-slot tabular"
+              title={`${kids.length} inside`}
+            >
+              {kids.length}
+            </span>
           ) : (
             <span className="row-start-spacer" aria-hidden />
           )}
@@ -168,7 +176,10 @@ function Row({
                 Template
               </span>
             )}
-            {kids.length > 0 && !open && <span className="tt-count tabular">{kids.length}</span>}
+            {/* Rows with a play button keep their count after the title. */}
+            {kids.length > 0 && !open && node.kind !== 'course' && !done && (
+              <span className="tt-count tabular">{kids.length}</span>
+            )}
           </span>
           {/* On a phone the columns fold into one quiet line under the title. */}
           <span className="tt-meta tabular">
@@ -179,10 +190,13 @@ function Row({
         </div>
         <div className="tt-cell tt-due tabular">{due}</div>
         <div className="tt-cell tt-time tabular" title={perDay ?? undefined}>
-          {p?.progress != null && (
+          {/* Every row keeps the bar's slot, so the times start at one edge down the column. */}
+          {p?.progress != null ? (
             <span className="tt-bar" aria-hidden>
               <span style={{ width: `${Math.min(100, Math.round(p.progress * 100))}%` }} />
             </span>
+          ) : (
+            <span className="tt-bar is-empty" aria-hidden />
           )}
           <span>{time}</span>
         </div>

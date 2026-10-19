@@ -21,7 +21,7 @@ import {
   Heatmap,
   Panel,
   ProgressBar,
-  RadialClock,
+  DayDensity,
   Ring,
   SkeletonBlock,
   StackedDays,
@@ -423,21 +423,11 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
       note={clockNote ?? undefined}
       empty={data.clock.totalMinutes === 0 ? 'Your hours of the day fill in as you study.' : null}
     >
-      <RadialClock
+      <DayDensity
         hours={data.clock.hours}
         fmt={fmtHours}
-        ariaLabel="Study time by hour of the day"
-      >
-        {data.clock.peakHour !== null && (
-          <>
-            <span className="rc-ring-small">peak</span>
-            <span className="rc-ring-big">
-              {data.clock.peakHour % 12 === 0 ? 12 : data.clock.peakHour % 12}
-              {data.clock.peakHour < 12 ? ' am' : ' pm'}
-            </span>
-          </>
-        )}
-      </RadialClock>
+        ariaLabel="Study time across the hours of the day"
+      />
     </Tile>,
   );
 

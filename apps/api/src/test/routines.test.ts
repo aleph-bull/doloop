@@ -1,3 +1,4 @@
+import { badgeXp } from '@komogon/core';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from './helpers';
 
@@ -77,7 +78,10 @@ describe('recurring tasks', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toMatchObject({ xpAwarded: 20, cappedByDailyLimit: false });
     const after = (await t.api({ method: 'GET', url: '/api/me' })).json().user.xp;
-    expect(after).toBe(before + 20);
+    // Plus the first-tick badge, if this tick unlocked it.
+    const badgeTotal = res.json().badges.reduce((s: number, k: string) => s + badgeXp(k), 0);
+    expect(after).toBe(before + 20 + badgeTotal);
+    expect(res.json().xpTotal).toBe(after);
   });
 
   it('refuses to pay twice for the same day', async () => {

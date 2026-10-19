@@ -4,6 +4,7 @@ import {
   isAccentUnlocked,
   isBackgroundAvailable,
   isValidTimezone,
+  MAX_SAVED_ACCENTS,
 } from '@komogon/core';
 import type { Db } from '../db/client';
 import { badRequest } from '../errors';
@@ -66,6 +67,14 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       !isBackgroundAvailable(ext, req.user.level, req.user.purchasedBackgrounds)
     )
       throw badRequest('That background is locked or not yet purchased');
+    // Saved accents can't grow past the limit, but a longer list from an older limit can
+    // still shrink.
+    const saved = patch.theme?.savedAccents;
+    if (saved && saved.length > MAX_SAVED_ACCENTS) {
+      const had = settingsOf(req.user).theme.savedAccents.length;
+      if (saved.length > had)
+        throw badRequest(`You can keep up to ${MAX_SAVED_ACCENTS} colours of your own.`);
+    }
     // The streak's day start may move once a day, and the server stamps when it did.
     const hour = patch.streak?.dayStartHour;
     if (hour !== undefined) {

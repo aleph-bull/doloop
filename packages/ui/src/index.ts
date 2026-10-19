@@ -89,6 +89,7 @@ export {
   Flame,
   Gauge,
   prefersStill,
+  DayDensity,
   RadialClock,
   Ring,
   SkeletonBlock,

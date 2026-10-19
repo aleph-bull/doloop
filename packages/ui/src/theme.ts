@@ -201,6 +201,19 @@ export function accentFill([h, s, l]: [number, number, number]): string {
   return `hsl(${h} ${Math.round(sat)}% ${lig}%)`;
 }
 
+/**
+ * A colour the user picked themselves is used exactly as picked, fills included; the label
+ * on it is whichever of white or near-black reads better, rather than the colour being
+ * changed to suit a white label.
+ */
+export function ownAccentFill([h, s, l]: [number, number, number]): { fill: string; fg: string } {
+  const rgb = hslToRgb(h, s, l);
+  const dark: RGB = [17, 19, 24];
+  const fg =
+    contrastRatio(rgb, [255, 255, 255]) >= contrastRatio(rgb, dark) ? '#ffffff' : '#111318';
+  return { fill: `hsl(${h} ${s}% ${l}%)`, fg };
+}
+
 export interface UserThemeLike {
   theme: {
     mode: 'system' | 'light' | 'dark';
@@ -244,7 +257,14 @@ export function applyUserTheme(
   const hsl = accentHsl(settings.theme.accent);
   root.style.setProperty('--accent-text-on-light', readableAccent(hsl, LIGHT_SURFACE));
   root.style.setProperty('--accent-text-on-dark', readableAccent(hsl, DARK_SURFACE));
-  root.style.setProperty('--accent-fill', accentFill(hsl));
+  if (custom) {
+    const own = ownAccentFill(hsl);
+    root.style.setProperty('--accent-fill', own.fill);
+    root.style.setProperty('--accent-fg', own.fg);
+  } else {
+    root.style.setProperty('--accent-fill', accentFill(hsl));
+    root.style.removeProperty('--accent-fg');
+  }
   const resolved = resolveTheme(settings.theme.mode);
   const panelBehind = applyPanelStyle(
     {

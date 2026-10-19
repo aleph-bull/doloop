@@ -28,6 +28,20 @@ export function Achievements() {
   const [breakDate, setBreakDate] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Arriving from a locked background in Settings (#bg-<id>): scroll to it and light it up.
+  const ready = !!shop.data && !!me.data;
+  useEffect(() => {
+    if (!ready) return;
+    const id = window.location.hash.slice(1);
+    if (!id.startsWith('bg-')) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('is-spotlit');
+    const t = window.setTimeout(() => el.classList.remove('is-spotlit'), 2600);
+    return () => window.clearTimeout(t);
+  }, [ready]);
+
   if (shop.isError)
     return (
       <ErrorPanel
@@ -84,7 +98,7 @@ export function Achievements() {
         </div>
         <p className="ach-hero-note">
           Levels unlock backgrounds (3, 5, 8, 12), and every accent colour is free. XP is only ever
-          earned by studying or ticking off a routine — never by buying anything.
+          earned by studying, ticking off a routine or unlocking a badge, never by buying anything.
         </p>
       </Glass>
 
@@ -181,7 +195,7 @@ export function Achievements() {
           {s.backgrounds
             .filter((b) => !b.owned)
             .map((b) => (
-              <div key={b.id} className="flex flex-col gap-1">
+              <div key={b.id} id={`bg-${b.id}`} className="shop-bg flex flex-col gap-1">
                 <BackgroundThumb id={b.id} theme={theme} label={b.name} disabled />
                 {b.costXp !== null ? (
                   <Button
@@ -225,6 +239,13 @@ export function Achievements() {
                   <div className="badge-desc">{b.description}</div>
                   {at && <div className="badge-when">Unlocked {fmtDate(at)}</div>}
                 </div>
+                <span
+                  className="badge-xp tabular"
+                  title={at ? `Earned ${b.xp} XP` : `Earns ${b.xp} XP`}
+                >
+                  {at ? '' : '+'}
+                  {b.xp} XP
+                </span>
               </Panel>
             );
           })}

@@ -21,21 +21,29 @@ export interface SoundPreset {
 /** Silence. Selectable so one event can be muted without turning every sound off. */
 export const SILENT_SOUND_ID = 'none';
 
-/** Ordered roughly shortest and softest first. */
+/**
+ * Slow ding first, as the default; then the rest by name, with the notify family kept
+ * together; Silent last. Names can change freely, ids can't.
+ */
 export const SOUND_PRESETS: SoundPreset[] = [
-  { id: 'notify-2', name: 'Notify 2', file: 'sounds/notify-2.mp3', seconds: 1.06 },
+  { id: 'slow-ding', name: 'Slow ding', file: 'sounds/slow-ding.mp3', seconds: 3.08 },
+  { id: 'bell', name: 'Bloop', file: 'sounds/bell.mp3', seconds: 2.12 },
   { id: 'chime', name: 'Chime', file: 'sounds/chime.mp3', seconds: 1.1 },
-  { id: 'soft-notify', name: 'Soft notify', file: 'sounds/soft-notify.mp3', seconds: 1.41 },
+  { id: 'minimal-ding', name: 'Correct ding', file: 'sounds/minimal-ding.mp3', seconds: 3.1 },
+  {
+    id: 'digital-alert',
+    name: 'Descend ascend',
+    file: 'sounds/digital-alert.mp3',
+    seconds: 8.83,
+  },
+  { id: 'message', name: 'Jingle', file: 'sounds/message.mp3', seconds: 2.43 },
   { id: 'soft-alert', name: 'Soft alert', file: 'sounds/soft-alert.mp3', seconds: 1.59 },
+  { id: 'soft-fade', name: 'Soft bells', file: 'sounds/soft-fade.mp3', seconds: 3.27 },
+  { id: 'notify-1', name: 'Notify 1', file: 'sounds/notify-1.mp3', seconds: 2.3 },
+  { id: 'notify-2', name: 'Notify 2', file: 'sounds/notify-2.mp3', seconds: 1.06 },
   { id: 'notify-3', name: 'Notify 3', file: 'sounds/notify-3.mp3', seconds: 1.78 },
   { id: 'notify-4', name: 'Notify 4', file: 'sounds/notify-4.mp3', seconds: 1.94 },
-  { id: 'bell', name: 'Bell', file: 'sounds/bell.mp3', seconds: 2.12 },
-  { id: 'notify-1', name: 'Notify 1', file: 'sounds/notify-1.mp3', seconds: 2.3 },
-  { id: 'message', name: 'Message', file: 'sounds/message.mp3', seconds: 2.43 },
-  { id: 'slow-ding', name: 'Slow ding', file: 'sounds/slow-ding.mp3', seconds: 3.08 },
-  { id: 'minimal-ding', name: 'Minimal ding', file: 'sounds/minimal-ding.mp3', seconds: 3.1 },
-  { id: 'soft-fade', name: 'Soft fade', file: 'sounds/soft-fade.mp3', seconds: 3.27 },
-  { id: 'digital-alert', name: 'Digital alert', file: 'sounds/digital-alert.mp3', seconds: 8.83 },
+  { id: 'soft-notify', name: 'Soft dot', file: 'sounds/soft-notify.mp3', seconds: 1.41 },
   { id: SILENT_SOUND_ID, name: 'Silent', file: '', seconds: 0 },
 ];
 
