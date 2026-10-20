@@ -63,6 +63,7 @@ export {
   applyPanelStyle,
   applyTheme,
   applyUserTheme,
+  recommendedTheme,
   resolveExtensionBackdrop,
   resolveTheme,
   type ResolvedTheme,

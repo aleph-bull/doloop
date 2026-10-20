@@ -4,6 +4,8 @@
  *
  *  - the portal favicon, as SVG;
  *  - the apple-touch icon, square-cornered because iOS rounds and shadows it itself;
+ *  - the web app manifest icons (192/512, plus a full-bleed maskable 512 that Android crops
+ *    to its own shape, so the face sits inside the central safe zone);
  *  - the extension's 16/48/128 icons.
  *
  * Run: pnpm --filter @komogon/ui prepare:icons
@@ -32,6 +34,9 @@ async function main() {
   console.log('portal/public/favicon.svg');
 
   await png(logoSvg({ inset: 12, radius: 0 }), 180, resolve(PORTAL_PUBLIC, 'apple-touch-icon.png'));
+  await png(logoSvg({ inset: 11 }), 192, resolve(PORTAL_PUBLIC, 'icon-192.png'));
+  await png(logoSvg({ inset: 11 }), 512, resolve(PORTAL_PUBLIC, 'icon-512.png'));
+  await png(logoSvg({ inset: 17, radius: 0 }), 512, resolve(PORTAL_PUBLIC, 'icon-maskable-512.png'));
 
   // Small sizes get a tighter inset so the face is not lost at 16px.
   await png(logoSvg({ inset: 6 }), 16, resolve(EXTENSION_ICONS, 'icon16.png'));

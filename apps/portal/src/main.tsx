@@ -11,6 +11,8 @@ import { AuthProvider } from './lib/auth';
 import { unlockAudio } from './lib/sounds';
 import { restoreQueryCache } from './lib/persist';
 import { migrateOldStorage } from './lib/rename-migration';
+import { registerServiceWorker } from './lib/pwa';
+import { initMonitoring } from './lib/monitoring';
 
 // Before anything reads a storage key: move Doloop- and KomodoIt-era keys to Komogon names.
 migrateOldStorage();
@@ -42,6 +44,12 @@ await restoreQueryCache(queryClient);
 // A browser keeps an AudioContext suspended until the page has been interacted with, and
 // an alert fired by a timer is not an interaction. Arm it on the first click or keypress.
 unlockAudio();
+
+// Installable and able to open offline, on the hosted build only.
+registerServiceWorker();
+
+// Error reports for the closed test, when VITE_SENTRY_DSN is set.
+initMonitoring();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

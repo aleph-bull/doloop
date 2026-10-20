@@ -28,6 +28,8 @@ export interface BuildOptions {
   verifier: Verifier;
   logger?: boolean;
   corsOrigins?: string[];
+  /** Invite list for a closed test (`ALLOWED_EMAILS`); empty lets everyone in. */
+  allowedEmails?: string[];
   /** Injectable clock for tests. */
   clock?: () => string;
   /** Google Calendar integration; null disables the connect flow. */
@@ -70,7 +72,11 @@ export async function buildServer(opts: BuildOptions) {
     service: 'komogon-api',
   }));
 
-  await app.register(authPlugin, { db: opts.db, verifier: opts.verifier });
+  await app.register(authPlugin, {
+    db: opts.db,
+    verifier: opts.verifier,
+    allowedEmails: opts.allowedEmails,
+  });
 
   const calendar: CalendarRouteOptions = {
     deps: opts.calendar?.deps ?? null,

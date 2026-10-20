@@ -10,13 +10,13 @@ import {
   Input,
   Panel,
   ProgressBar,
-  resolveTheme,
   Spinner,
   useToast,
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RewardShelf } from '../components/RewardShelf';
 import { api } from '../lib/api';
+import { useResolvedTheme } from '../lib/appearance';
 import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop } from '../lib/queries';
 
@@ -42,6 +42,7 @@ export function Achievements() {
     return () => window.clearTimeout(t);
   }, [ready]);
 
+  const resolvedTheme = useResolvedTheme(me.data?.user.settings);
   if (shop.isError)
     return (
       <ErrorPanel
@@ -57,7 +58,7 @@ export function Achievements() {
     );
   const s = shop.data;
   const lp = levelProgress(s.xp);
-  const theme = resolveTheme(me.data.user.settings.theme.mode);
+  const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
 
   const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
@@ -97,8 +98,9 @@ export function Achievements() {
           </span>
         </div>
         <p className="ach-hero-note">
-          Levels unlock backgrounds (3, 5, 8, 12), and every accent colour is free. XP is only ever
-          earned by studying, ticking off a routine or unlocking a badge, never by buying anything.
+          Each of levels 1 to 6 unlocks a background, and more open at 8, 10 and 12. Others can be
+          bought with XP, and every accent colour is free. XP is only ever earned by studying,
+          ticking off a routine or unlocking a badge, never by buying anything.
         </p>
       </Glass>
 

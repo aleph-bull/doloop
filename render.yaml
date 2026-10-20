@@ -1,0 +1,36 @@
+# Render blueprint for the Komogon API (closed alpha). The portal is on Vercel
+# (apps/portal/vercel.json); data and sign-in are on Supabase. Setup: docs/ALPHA.md.
+#
+# Values marked `sync: false` are asked for when the blueprint is first applied, and live
+# only in Render's dashboard, never in the repo.
+services:
+  - type: web
+    name: komogon-api
+    runtime: node
+    plan: free # sleeps after 15 idle minutes; the first request then takes ~30-60 s
+    region: ohio
+    buildCommand: npx -y pnpm@12.5.1 install --frozen-lockfile && npx -y pnpm@12.5.1 --filter @komogon/api build
+    # From apps/api so the migrations beside dist/ are found.
+    startCommand: cd apps/api && node dist/index.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: '24'
+      - key: HOST
+        value: 0.0.0.0
+      # Supabase: Project settings > Data API / JWT keys / Database (session pooler URI)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_JWT_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      # The Vercel address, e.g. https://komogon.vercel.app (no trailing slash)
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PORTAL_URL
+        sync: false
+      # Invite list: tester emails or @domain, comma separated
+      - key: ALLOWED_EMAILS
+        sync: false

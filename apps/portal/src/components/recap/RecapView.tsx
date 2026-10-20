@@ -249,7 +249,7 @@ function Hero({
           personality: data.personality
             ? `${data.personality.emoji} ${data.personality.label}`
             : null,
-          accent: accentHexFor(me.data?.user.settings.theme.accent ?? 'indigo'),
+          accent: accentHexFor(me.data?.user.settings.theme.accent ?? 'violet'),
         },
         `komogon-week-${p.from}.png`,
       );

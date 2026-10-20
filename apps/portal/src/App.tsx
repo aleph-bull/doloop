@@ -1,9 +1,10 @@
-import { lazy, Suspense, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, type ReactNode } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { Spinner } from '@komogon/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
-import { useAuth } from './lib/auth';
+import { ApiError } from './lib/api';
+import { NOT_INVITED_MESSAGE, useAuth } from './lib/auth';
 import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
@@ -61,10 +62,28 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/** The API turned this account away (`ALLOWED_EMAILS`): sign out and say why. */
+function NotInvited() {
+  const auth = useAuth();
+  const { signOut } = auth;
+  useEffect(() => {
+    void signOut();
+  }, [signOut]);
+  if (auth.status === 'signed-in')
+    return (
+      <Centered>
+        <Spinner />
+      </Centered>
+    );
+  return <Navigate to="/signin" replace state={{ error: NOT_INVITED_MESSAGE }} />;
+}
+
 /** Sends new users through onboarding once; everything else renders in the shell. */
 function Gate({ children }: { children: ReactNode }) {
   const me = useMe();
   const location = useLocation();
+  if (me.error instanceof ApiError && me.error.status === 403 && me.error.message === 'invite_only')
+    return <NotInvited />;
   if (me.isError && !me.data)
     return (
       <Centered>

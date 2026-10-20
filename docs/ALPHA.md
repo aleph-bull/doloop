@@ -30,8 +30,79 @@ Runs everything in order and stops at the first failure:
    - no git remote
 
 As of 2026-10-18 the checks pass and the preflight reports 7 blockers, all about hosting: the
-app only runs on this computer with dev sign-in. Hosting setup is in [SETUP.md](SETUP.md)
-(Phase 2) and the wider list in [BETA-REVIEW.md](BETA-REVIEW.md) under "Before a private beta".
+app only runs on this computer with dev sign-in. Hosting setup is under "Hosting it" below, and the wider list in [BETA-REVIEW.md](BETA-REVIEW.md) under "Before a private beta".
+
+## Hosting it (closed alpha)
+
+The portal goes on **Vercel**, the API on **Render**, data and sign-in on a new **Supabase**
+project. All three have free tiers that cover a handful of testers. The repo already holds
+the config: `apps/portal/vercel.json` and `render.yaml`. What is left needs your accounts.
+
+**1. Push the code.** Commit, then push `main` to the GitHub remote (`origin`). Vercel and
+Render deploy from it, and every later push redeploys both.
+
+**2. Supabase** (a new project just for the alpha, so your own data stays on this computer;
+the IB plan and everything else in `~/.komogon` never leaves it)
+
+- New project, region close to you. Note the project URL and the anon key (Project
+  settings › API), the JWT secret (JWT keys), and the **Session pooler** connection string
+  (Connect › Session pooler; the direct one is IPv6-only and Render can't reach it).
+- Authentication › Sign In / Providers: turn **off "Allow new users to sign up"**. Only
+  people you invite can then sign in, by magic link or Google.
+- Authentication › URL configuration: Site URL = the Vercel address (step 4); add
+  `https://<vercel address>/auth/callback` to Redirect URLs. Fill these in after step 4.
+- Authentication › Users › **Invite user** for each tester. They get an email, and the link
+  signs them straight in.
+- Supabase's built-in email sends only a few messages an hour. That's fine for three
+  testers. For more, add your own SMTP (Resend's free tier works) under Authentication ›
+  Emails.
+
+**3. Render** (the API)
+
+- New › Blueprint › pick the repo. It reads `render.yaml` and asks for: `SUPABASE_URL`,
+  `SUPABASE_JWT_SECRET`, `DATABASE_URL` (the session pooler string), `CORS_ORIGINS` and
+  `PORTAL_URL` (both the Vercel address, no trailing slash) and `ALLOWED_EMAILS` (the
+  testers' emails, comma separated, as a second lock behind Supabase).
+- The first start creates the tables. `https://<api>.onrender.com/api/health` should
+  answer `{"ok":true}`.
+- The free plan sleeps after 15 idle minutes, and the next visit then waits about a minute.
+  To keep it awake, have cron-job.org (free) open the health URL every 10 minutes. One
+  always-on service fits inside Render's free monthly hours.
+
+**4. Vercel** (the portal)
+
+- Add New › Project › import the repo. Set **Root Directory to `apps/portal`** and leave
+  the build settings alone (`vercel.json` sets them).
+- Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`
+  (the Render address), and optionally `VITE_FEEDBACK_URL` and `VITE_SENTRY_DSN` (step 5).
+  Never set `VITE_DEV_AUTH_SECRET` here.
+- Deploy, then go back and put the Vercel address into Render (`CORS_ORIGINS`,
+  `PORTAL_URL`) and Supabase (URL configuration).
+- Google sign-in (optional): the new Supabase project has its own callback URI, shown under
+  Authentication › Providers › Google. Add it to the OAuth client's redirect URIs in Google
+  Cloud, and paste the client ID and secret into that provider.
+
+**5. Feedback and errors** (optional, both off until set)
+
+- Make a short **Tally** form (the questions in section 4 below) and put its link in
+  `VITE_FEEDBACK_URL`. A "Send feedback" icon then appears in the top bar.
+- Make a **Sentry** project (platform: React) and put its DSN in `VITE_SENTRY_DSN`. Crashes
+  and page errors are then reported. Errors only: no session replay, no tracing.
+
+**6. Check it.** Copy the hosted values into `apps/api/.env.alpha` and
+`apps/portal/.env.alpha` (git ignores them, and unlike `.env.production` the local build
+never reads them), then run `pnpm alpha:check`. Then do the manual pass below on the
+Vercel address.
+
+**Installing it.** The portal is an installable web app (manifest and service worker, on the
+hosted address only). Tell testers:
+
+- iPhone: open the link in Safari › Share › Add to Home Screen.
+- Android: open it in Chrome › menu › Install app.
+- Computer: Chrome or Edge › the install icon at the right of the address bar.
+
+It then opens in its own window with the Komogon icon, and it still opens without a
+connection, showing the last data it had.
 
 ## 2. Manual pass (about 30 minutes, on the hosted build)
 
@@ -85,7 +156,7 @@ Pomodoro app already and one who doesn't.
 
 Send them:
 
-- the link, and a note that it is an early alpha: their data could be reset
+- the link, how to install it (above), and a note that it is an early alpha: their data could be reset
 - what to try in the first week: plan one course in Tasks, do at least three sessions, look
   at Analytics at the end of the week
 - the Chrome extension, if it's ready for the hosted address (unlisted Web Store item or a

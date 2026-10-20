@@ -11,6 +11,7 @@ import {
   House,
   ListChecks,
   LogOut,
+  MessageSquareText,
   Repeat,
   Settings as SettingsIcon,
   Trophy,
@@ -21,6 +22,7 @@ import {
 import { Backdrop, Button, Glass, LogoMark } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
 import { useAuth } from '../lib/auth';
+import { FEEDBACK_URL } from '../lib/monitoring';
 import { useOnlineStatus } from '../lib/local-state';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
@@ -277,6 +279,18 @@ export function AppShell() {
               </NavLink>
               <LevelPill xp={user.xp} level={user.level} />
             </div>
+          )}
+          {FEEDBACK_URL && (
+            <a
+              href={FEEDBACK_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="nav-icon"
+              aria-label="Send feedback"
+              title="Send feedback"
+            >
+              <MessageSquareText size={18} aria-hidden />
+            </a>
           )}
           <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden />

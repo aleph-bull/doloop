@@ -4217,6 +4217,88 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  --dash-gap: 20px;
+}
+@media (min-width: 768px) {
+  .dash {
+    --dash-gap: 24px;
+  }
+}
+
+/*
+ * A tip about the app between the start panel and the stats. Closing it pops the card,
+ * then folds its row (and the gap after it) to nothing so the stats slide up smoothly.
+ * The timings are in step with TipCard.tsx.
+ */
+.tip-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 320ms var(--ease-out),
+    margin-bottom 320ms var(--ease-out);
+}
+.tip-fold.is-closing {
+  grid-template-rows: 0fr;
+  margin-bottom: calc(-1 * var(--dash-gap));
+}
+.tip-fold-inner {
+  min-height: 0;
+}
+.tip-fold.is-closing .tip-fold-inner {
+  overflow: hidden;
+}
+.tip-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.tip-card p {
+  line-height: 1.45;
+}
+.tip-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.tip-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  margin: -4px -6px 0 0;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tip-close:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.tip-card.is-popping {
+  animation: tip-pop 240ms var(--ease-out) forwards;
+}
+@keyframes tip-pop {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  35% {
+    transform: scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.82);
+    opacity: 0;
+  }
 }
 @media (min-width: 768px) {
   .dash {

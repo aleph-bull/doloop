@@ -17,7 +17,6 @@ import {
   Glass,
   Input,
   Panel,
-  resolveTheme,
   Segmented,
   Select,
   Slider,
@@ -51,6 +50,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
+import { useResolvedTheme } from '../lib/appearance';
 import {
   useAddVacation,
   useMe,
@@ -194,6 +194,7 @@ export function Settings() {
   const removeVacation = useRemoveVacation();
 
   const s = me.data?.user.settings;
+  const resolvedTheme = useResolvedTheme(s);
   const level = me.data?.user.level ?? 0;
   const purchased = me.data?.purchasedBackgrounds ?? [];
 
@@ -234,7 +235,7 @@ export function Settings() {
       .mutateAsync(p)
       .catch((err) => toast(err instanceof Error ? err.message : 'Could not save'));
 
-  const theme = resolveTheme(s.theme.mode);
+  const theme = resolvedTheme;
 
   const feedUrl = `${apiBaseUrl()}/calendar.ics?token=${me.data?.icsToken ?? ''}`;
   const downloadIcs = async () => {
@@ -366,11 +367,18 @@ export function Settings() {
                   value={s.theme.mode}
                   onChange={(mode) => patch({ theme: { mode } })}
                   options={[
+                    { value: 'recommended', label: 'Recommended' },
                     { value: 'system', label: 'System' },
                     { value: 'light', label: 'Light' },
                     { value: 'dark', label: 'Dark' },
                   ]}
                 />
+                {s.theme.mode === 'recommended' && (
+                  <p className="field-hint">
+                    Light or dark, whichever suits your background. On the plain gradients it
+                    follows your system.
+                  </p>
+                )}
               </div>
               <div className="field">
                 <span className="field-label">Accent</span>
@@ -639,6 +647,12 @@ export function Settings() {
                   ]}
                 />
               </div>
+              <Toggle
+                checked={s.quote.appTips}
+                onChange={(v) => patch({ quote: { appTips: v } })}
+                label="Tips about the app"
+                description="Now and then the daily card shows a tip about Komogon, with a link to it."
+              />
             </Section>
 
             <Section id="grading" title="Grades">

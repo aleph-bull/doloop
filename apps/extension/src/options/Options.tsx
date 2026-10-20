@@ -5,6 +5,7 @@ import {
   Button,
   DEFAULT_BACKGROUND_ID,
   Glass,
+  recommendedTheme,
   resolveExtensionBackdrop,
   resolveTheme,
 } from '@komogon/ui';
@@ -18,18 +19,20 @@ export function Options() {
     void getAll().then(setStore);
   }, []);
   const settings = store?.snapshot?.settings ?? null;
-  useEffect(() => {
-    if (settings) applyUserTheme(settings);
-  }, [settings]);
   const portal = store?.connection?.portalUrl ?? FALLBACK_PORTAL;
   const choice = settings
     ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
     : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
+  // An upload is not sampled here, so Recommended follows the system on one.
+  const recommended = choice.customImageUrl ? null : recommendedTheme(choice.backgroundId);
+  useEffect(() => {
+    if (settings) applyUserTheme(settings, document.documentElement, recommended);
+  }, [settings, recommended]);
   return (
     <main style={{ padding: 32, maxWidth: 520 }}>
       <Backdrop
         backgroundId={choice.backgroundId}
-        theme={settings ? resolveTheme(settings.theme.mode) : 'dark'}
+        theme={settings ? resolveTheme(settings.theme.mode, undefined, recommended) : 'dark'}
         customImageUrl={choice.customImageUrl}
         assetBase={portal}
       />

@@ -37,6 +37,9 @@ const backPaid = await backPayBadges(db, new Date().toISOString());
 if (backPaid > 0)
   console.warn(`[api] Paid the XP for ${backPaid} badges earned before badges paid XP.`);
 
+if (env.allowedEmails.length > 0)
+  console.warn(`[api] Invite-only: ${env.allowedEmails.length} allowed addresses or domains.`);
+
 let calendarDeps: CalendarDeps | null = null;
 if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
   calendarDeps = {
@@ -58,6 +61,7 @@ const app = await buildServer({
   verifier,
   logger: true,
   corsOrigins: env.corsOrigins,
+  allowedEmails: env.allowedEmails,
   calendar: {
     deps: calendarDeps,
     stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',

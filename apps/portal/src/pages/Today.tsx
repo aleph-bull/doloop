@@ -24,6 +24,7 @@ import { RewardOverlay } from '../components/RewardOverlay';
 import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TimerCard } from '../components/TimerCard';
+import { TipCard } from '../components/TipCard';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
@@ -171,6 +172,8 @@ export function Today() {
           footer={<QuoteCard inline />}
         />
       )}
+
+      <TipCard />
 
       {/* A first visit: the one thing to do comes before any numbers. */}
       {roots.length === 0 && (

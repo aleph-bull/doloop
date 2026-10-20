@@ -20,6 +20,8 @@ export interface Env {
   port: number;
   host: string;
   corsOrigins: string[];
+  /** Invite list (`ALLOWED_EMAILS`): addresses or `@domain`, comma separated. Empty is open. */
+  allowedEmails: string[];
   databaseUrl: string | undefined;
   supabaseUrl: string | undefined;
   supabaseJwtSecret: string | undefined;
@@ -46,6 +48,10 @@ export function loadEnv(): Env {
     port: Number(str('PORT', '8787')),
     host: str('HOST', '0.0.0.0')!,
     corsOrigins: str('CORS_ORIGINS', 'http://localhost:5173')!
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+    allowedEmails: str('ALLOWED_EMAILS', '')!
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),

@@ -96,15 +96,29 @@ export interface AccentPreset {
   minLevel: number;
 }
 
+/**
+ * The pastel row (2026-10-20). Ids are stored in settings, so the old ones are kept where a
+ * pastel took their place; Indigo left the row and reads as Lilac (`resolveAccent`).
+ * Every accent is free; levels only unlock backgrounds.
+ */
 export const ACCENT_PRESETS: AccentPreset[] = [
-  { id: 'indigo', name: 'Indigo', minLevel: 0 },
-  { id: 'sky', name: 'Sky', minLevel: 0 },
-  { id: 'mint', name: 'Mint', minLevel: 0 },
-  // Every accent is free; levels only unlock backgrounds now.
-  { id: 'amber', name: 'Amber', minLevel: 0 },
-  { id: 'rose', name: 'Rose', minLevel: 0 },
-  { id: 'violet', name: 'Violet', minLevel: 0 },
+  { id: 'rose', name: 'Blush', minLevel: 0 },
+  { id: 'sky', name: 'Powder', minLevel: 0 },
+  { id: 'mint', name: 'Sage', minLevel: 0 },
+  { id: 'violet', name: 'Lilac', minLevel: 0 },
+  { id: 'amber', name: 'Peach', minLevel: 0 },
+  { id: 'lemon', name: 'Lemon', minLevel: 0 },
 ];
+
+/** The accent new accounts start on, and what a retired preset reads as. */
+export const DEFAULT_ACCENT = 'violet';
+
+/** A stored accent as one that still exists: a custom colour, a preset, or the default. */
+export function resolveAccent(accent: string | null | undefined): string {
+  if (accent && (accent.startsWith('custom:') || ACCENT_PRESETS.some((a) => a.id === accent)))
+    return accent;
+  return DEFAULT_ACCENT;
+}
 
 /** How many of the user's own colours can be saved beside the built-in accents. */
 export const MAX_SAVED_ACCENTS = 8;
@@ -163,25 +177,25 @@ export const BACKGROUNDS: BackgroundMeta[] = [
   { id: 'milky-way', name: 'Milky Way', category: 'night', minLevel: 5, costXp: null },
   { id: 'ice-canyon', name: 'Ice Canyon', category: 'night', minLevel: 8, costXp: null },
   // --- coast ---
-  { id: 'vestrahorn', name: 'Vestrahorn', category: 'coast', minLevel: 3, costXp: null },
-  { id: 'stormlight', name: 'Stormlight', category: 'coast', minLevel: 5, costXp: null },
+  { id: 'vestrahorn', name: 'Vestrahorn', category: 'coast', minLevel: 0, costXp: 400 },
+  { id: 'stormlight', name: 'Stormlight', category: 'coast', minLevel: 0, costXp: 500 },
   { id: 'shipwreck', name: 'Shipwreck', category: 'coast', minLevel: 0, costXp: 600 },
   // --- forest ---
   { id: 'redwood', name: 'Redwood', category: 'forest', minLevel: 0, costXp: null },
-  { id: 'frozen-lake', name: 'Frozen Lake', category: 'forest', minLevel: 3, costXp: null },
+  { id: 'frozen-lake', name: 'Frozen Lake', category: 'forest', minLevel: 0, costXp: 400 },
   // --- open country ---
   { id: 'cloud-valley', name: 'Cloud Valley', category: 'country', minLevel: 0, costXp: null },
   { id: 'ridgeline', name: 'Ridgeline', category: 'country', minLevel: 0, costXp: null },
-  { id: 'badlands', name: 'Badlands', category: 'country', minLevel: 5, costXp: null },
+  { id: 'badlands', name: 'Badlands', category: 'country', minLevel: 0, costXp: 500 },
   { id: 'emberlight', name: 'Emberlight', category: 'country', minLevel: 12, costXp: null },
   // --- cities ---
   { id: 'hallstatt', name: 'Hallstatt', category: 'cities', minLevel: 8, costXp: null },
   { id: 'victoria-peak', name: 'Victoria Peak', category: 'cities', minLevel: 0, costXp: 800 },
   // --- added 2026-09-22; a handful were locked later so levels and XP keep something to open ---
-  { id: 'summit-glow', name: 'Summit Glow', category: 'mountains', minLevel: 3, costXp: null },
+  { id: 'summit-glow', name: 'Summit Glow', category: 'mountains', minLevel: 0, costXp: 450 },
   { id: 'highland', name: 'Highland', category: 'mountains', minLevel: 0, costXp: null },
   { id: 'lookout', name: 'Lookout', category: 'mountains', minLevel: 0, costXp: null },
-  { id: 'polar-lights', name: 'Polar Lights', category: 'night', minLevel: 5, costXp: null },
+  { id: 'polar-lights', name: 'Polar Lights', category: 'night', minLevel: 0, costXp: 600 },
   { id: 'star-field', name: 'Star Field', category: 'night', minLevel: 0, costXp: null },
   { id: 'canyon-stars', name: 'Canyon Stars', category: 'night', minLevel: 0, costXp: null },
   { id: 'shoreline', name: 'Shoreline', category: 'coast', minLevel: 0, costXp: null },
@@ -208,44 +222,44 @@ export const BACKGROUNDS: BackgroundMeta[] = [
   { id: 'sea-glass', name: 'Sea Glass', category: 'abstract', minLevel: 0, costXp: null },
   { id: 'swell', name: 'Swell', category: 'abstract', minLevel: 0, costXp: null },
   // --- added 2026-10-19, from Pexels ---
-  { id: 'seawall', name: 'Seawall', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'seawall', name: 'Seawall', category: 'coast', minLevel: 0, costXp: 350 },
   { id: 'slot-canyon', name: 'Slot Canyon', category: 'desert', minLevel: 0, costXp: null },
-  { id: 'golden-hour', name: 'Golden Hour', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'golden-hour', name: 'Golden Hour', category: 'abstract', minLevel: 1, costXp: null },
   { id: 'tide-pool', name: 'Tide Pool', category: 'coast', minLevel: 0, costXp: null },
   { id: 'breakwater', name: 'Breakwater', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'ferryman', name: 'Ferryman', category: 'lakes', minLevel: 0, costXp: null },
+  { id: 'ferryman', name: 'Ferryman', category: 'lakes', minLevel: 0, costXp: 400 },
   { id: 'golden-willow', name: 'Golden Willow', category: 'lakes', minLevel: 0, costXp: null },
   { id: 'ripples', name: 'Ripples', category: 'abstract', minLevel: 0, costXp: null },
   { id: 'valley-light', name: 'Valley Light', category: 'country', minLevel: 0, costXp: null },
-  { id: 'violet-hour', name: 'Violet Hour', category: 'sky', minLevel: 3, costXp: null },
+  { id: 'violet-hour', name: 'Violet Hour', category: 'sky', minLevel: 0, costXp: 350 },
   { id: 'morning-rays', name: 'Morning Rays', category: 'lakes', minLevel: 0, costXp: 600 },
   { id: 'ember-grass', name: 'Ember Grass', category: 'country', minLevel: 0, costXp: null },
-  { id: 'mist-lake', name: 'Mist Lake', category: 'lakes', minLevel: 3, costXp: null },
-  { id: 'rolling-fields', name: 'Rolling Fields', category: 'country', minLevel: 0, costXp: null },
-  { id: 'brushstroke', name: 'Brushstroke', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'mist-lake', name: 'Mist Lake', category: 'lakes', minLevel: 0, costXp: 450 },
+  { id: 'rolling-fields', name: 'Rolling Fields', category: 'country', minLevel: 0, costXp: 350 },
+  { id: 'brushstroke', name: 'Brushstroke', category: 'abstract', minLevel: 0, costXp: 400 },
   { id: 'dusk', name: 'Dusk', category: 'abstract', minLevel: 0, costXp: null },
   { id: 'sea-mist', name: 'Sea Mist', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'black-sand', name: 'Black Sand', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'green-hills', name: 'Green Hills', category: 'country', minLevel: 0, costXp: null },
+  { id: 'black-sand', name: 'Black Sand', category: 'coast', minLevel: 0, costXp: 350 },
+  { id: 'green-hills', name: 'Green Hills', category: 'country', minLevel: 0, costXp: 300 },
   { id: 'antelope', name: 'Antelope', category: 'desert', minLevel: 8, costXp: null },
   { id: 'blue-ridges', name: 'Blue Ridges', category: 'mountains', minLevel: 0, costXp: null },
-  { id: 'peyto', name: 'Peyto', category: 'lakes', minLevel: 5, costXp: null },
-  { id: 'gilded-surf', name: 'Gilded Surf', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'valley-lake', name: 'Valley Lake', category: 'lakes', minLevel: 0, costXp: null },
-  { id: 'storm-ridge', name: 'Storm Ridge', category: 'mountains', minLevel: 0, costXp: null },
-  { id: 'agave', name: 'Agave', category: 'forest', minLevel: 0, costXp: null },
+  { id: 'peyto', name: 'Peyto', category: 'lakes', minLevel: 6, costXp: null },
+  { id: 'gilded-surf', name: 'Gilded Surf', category: 'coast', minLevel: 0, costXp: 500 },
+  { id: 'valley-lake', name: 'Valley Lake', category: 'lakes', minLevel: 0, costXp: 500 },
+  { id: 'storm-ridge', name: 'Storm Ridge', category: 'mountains', minLevel: 0, costXp: 450 },
+  { id: 'agave', name: 'Agave', category: 'forest', minLevel: 0, costXp: 350 },
   { id: 'feather-grass', name: 'Feather Grass', category: 'country', minLevel: 0, costXp: null },
-  { id: 'dune-lagoon', name: 'Dune Lagoon', category: 'desert', minLevel: 0, costXp: null },
+  { id: 'dune-lagoon', name: 'Dune Lagoon', category: 'desert', minLevel: 4, costXp: null },
   { id: 'shallows', name: 'Shallows', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'red-tide', name: 'Red Tide', category: 'coast', minLevel: 0, costXp: null },
-  { id: 'still-bay', name: 'Still Bay', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'red-tide', name: 'Red Tide', category: 'coast', minLevel: 0, costXp: 400 },
+  { id: 'still-bay', name: 'Still Bay', category: 'coast', minLevel: 0, costXp: 400 },
   { id: 'midnight-silk', name: 'Midnight Silk', category: 'abstract', minLevel: 0, costXp: 500 },
-  { id: 'rosy-clouds', name: 'Rosy Clouds', category: 'sky', minLevel: 0, costXp: null },
-  { id: 'lilac-sky', name: 'Lilac Sky', category: 'sky', minLevel: 0, costXp: null },
+  { id: 'rosy-clouds', name: 'Rosy Clouds', category: 'sky', minLevel: 0, costXp: 300 },
+  { id: 'lilac-sky', name: 'Lilac Sky', category: 'sky', minLevel: 2, costXp: null },
   { id: 'cotton-candy', name: 'Cotton Candy', category: 'sky', minLevel: 0, costXp: null },
-  { id: 'rainfall', name: 'Rainfall', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'rainfall', name: 'Rainfall', category: 'abstract', minLevel: 0, costXp: 300 },
   { id: 'wild-oats', name: 'Wild Oats', category: 'country', minLevel: 0, costXp: null },
-  { id: 'afterglow', name: 'Afterglow', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'afterglow', name: 'Afterglow', category: 'abstract', minLevel: 0, costXp: 450 },
 ];
 
 /** Display order and labels for the grouped pickers. */
@@ -280,7 +294,7 @@ export function solidColorOf(id: string | null | undefined): string | null {
   return id && SOLID_ID.test(id) ? id.slice(SOLID_BACKGROUND_PREFIX.length).toLowerCase() : null;
 }
 
-/** What an unrecognised id falls back to. New accounts start on Velvet (`DEFAULT_SETTINGS`). */
+/** What an unrecognised id falls back to. New accounts start on Cotton Candy (`DEFAULT_SETTINGS`). */
 export const DEFAULT_BACKGROUND_ID = 'graphite';
 
 /**

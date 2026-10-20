@@ -197,7 +197,9 @@ export const settingsSchema = z
         reducedMotion: z.enum(['system', 'on', 'off']),
       })
       .partial(),
-    quote: z.object({ mode: z.enum(['quotes', 'research-tips', 'both', 'off']) }).partial(),
+    quote: z
+      .object({ mode: z.enum(['quotes', 'research-tips', 'both', 'off']), appTips: z.boolean() })
+      .partial(),
     theme: z
       .object({
         mode: z.enum(['system', 'light', 'dark', 'recommended']),

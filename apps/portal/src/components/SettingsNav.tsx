@@ -165,6 +165,10 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'streak',
       'minimum minutes',
       'freeze',
+      'quote',
+      'daily card',
+      'tips',
+      'app tips',
     ],
   },
   {

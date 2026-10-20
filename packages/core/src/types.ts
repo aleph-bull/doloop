@@ -89,7 +89,8 @@ export interface UserSettings {
     phrases: boolean;
     reducedMotion: ReducedMotion;
   };
-  quote: { mode: QuoteMode };
+  /** `appTips`: about 1 in 5 cards shows a tip about the app instead of a quote. */
+  quote: { mode: QuoteMode; appTips: boolean };
   theme: {
     mode: ThemeMode;
     accent: string;

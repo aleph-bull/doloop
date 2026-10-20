@@ -130,35 +130,40 @@
 }
 
 /* ---------- Accent presets (§8: 6 presets, some level-gated in-app) ---------- */
-:root[data-accent='indigo'] {
-  --accent-h: 240;
-  --accent-s: 84%;
-  --accent-l: 62%;
+:root[data-accent='rose'] {
+  --accent-h: 5;
+  --accent-s: 91%;
+  --accent-l: 83%;
 }
 :root[data-accent='sky'] {
-  --accent-h: 199;
-  --accent-s: 89%;
-  --accent-l: 48%;
+  --accent-h: 207;
+  --accent-s: 46%;
+  --accent-l: 80%;
 }
 :root[data-accent='mint'] {
-  --accent-h: 160;
-  --accent-s: 64%;
-  --accent-l: 42%;
-}
-:root[data-accent='amber'] {
-  --accent-h: 38;
-  --accent-s: 92%;
-  --accent-l: 50%;
-}
-:root[data-accent='rose'] {
-  --accent-h: 346;
-  --accent-s: 77%;
-  --accent-l: 56%;
+  --accent-h: 109;
+  --accent-s: 49%;
+  --accent-l: 85%;
 }
 :root[data-accent='violet'] {
-  --accent-h: 271;
-  --accent-s: 81%;
-  --accent-l: 60%;
+  --accent-h: 286;
+  --accent-s: 32%;
+  --accent-l: 85%;
+}
+:root[data-accent='amber'] {
+  --accent-h: 35;
+  --accent-s: 98%;
+  --accent-l: 82%;
+}
+:root[data-accent='lemon'] {
+  --accent-h: 60;
+  --accent-s: 100%;
+  --accent-l: 90%;
+}
+:root[data-accent='indigo'] {
+  --accent-h: 286;
+  --accent-s: 32%;
+  --accent-l: 85%;
 }
 
 /* ---------- Light theme ---------- */

@@ -5,8 +5,8 @@
  * The automated checks (lint, types, tests including the alpha journey, contrast, build)
  * run first through `pnpm alpha:check`; this script then looks at what those can't: how the
  * build is configured and whether the code is backed up. It reads the env files the API and
- * portal are built with (`.env.production` if present, else `.env`) and reports by key name
- * only. It never prints a value, since some are secrets.
+ * portal are built with (`.env.alpha`, a copy of the hosted values kept only for this check,
+ * then `.env.production`, then `.env`) and reports by key name only. It never prints a value, since some are secrets.
  *
  * Exit code 1 when anything is a blocker, so it can gate a release script or CI.
  */
@@ -18,7 +18,7 @@ const root = new URL('..', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '
 
 /** Parse a dotenv file into a map; values are only ever tested, not shown. */
 function readEnv(dir) {
-  for (const name of ['.env.production', '.env']) {
+  for (const name of ['.env.alpha', '.env.production', '.env']) {
     const file = join(root, dir, name);
     if (!existsSync(file)) continue;
     const env = {};
@@ -58,6 +58,11 @@ else {
       `${api.file}: CORS_ORIGINS is unset or local, so the API would refuse the hosted portal. Set it to the portal's address.`,
     );
   else pass(`${api.file}: the API accepts the hosted portal.`);
+  if (set(api.env, 'ALLOWED_EMAILS')) pass(`${api.file}: only invited emails can use the API.`);
+  else
+    warn(
+      `${api.file}: ALLOWED_EMAILS is empty, so any account Supabase lets in can use the API. Turn off sign-ups in Supabase, or list the testers.`,
+    );
 }
 
 // --- Portal configuration

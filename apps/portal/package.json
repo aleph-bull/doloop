@@ -12,6 +12,7 @@
   "dependencies": {
     "@komogon/core": "workspace:*",
     "@komogon/ui": "workspace:*",
+    "@sentry/react": "^11.8.0",
     "@supabase/supabase-js": "^2.116.0",
     "@tanstack/react-query": "^5.103.1",
     "jose": "^6.2.12",

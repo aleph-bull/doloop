@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { Button, Glass } from '@komogon/ui';
+import { reportError } from '../lib/monitoring';
 
 export function ErrorPanel({
   message = 'Something went wrong.',
@@ -45,6 +46,9 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, BoundarySt
   override state: BoundaryState = { error: null };
   static getDerivedStateFromError(error: Error): BoundaryState {
     return { error };
+  }
+  override componentDidCatch(error: Error) {
+    reportError(error);
   }
   override render() {
     if (this.state.error) {

@@ -23,6 +23,19 @@ export const authMode: 'supabase' | 'dev' | 'none' =
 export const supabase: SupabaseClient | null =
   authMode === 'supabase' ? createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!) : null;
 
+/** Shown when someone not on the closed test's invite list tries to sign in. */
+export const NOT_INVITED_MESSAGE =
+  "Komogon is in a small private test at the moment, and this email isn't on the list. If you were invited, use the address the invite was sent to.";
+
+/**
+ * Sign-in errors in plain words. With sign-ups turned off in Supabase, a magic link or Google
+ * sign-in for an unknown email fails with "Signups not allowed…"; that means not invited.
+ */
+export function friendlyAuthError(message: string): string {
+  if (/signups? not allowed|not allowed for otp/i.test(message)) return NOT_INVITED_MESSAGE;
+  return message;
+}
+
 interface AuthState {
   status: 'loading' | 'signed-out' | 'signed-in';
   email: string | null;

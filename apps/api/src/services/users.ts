@@ -5,6 +5,7 @@ import {
   evaluateStreak,
   levelForXp,
   materializePendingRestDays,
+  resolveAccent,
   resolveBackgroundId,
   streakDay,
   withDefaults,
@@ -72,8 +73,11 @@ export function settingsOf(row: UserRow): UserSettings {
   // A background saved before the catalogue changed may no longer exist; read it as the
   // default rather than handing the client an id nothing can render or select.
   const backgroundId = resolveBackgroundId(settings.theme.backgroundId);
-  if (backgroundId === settings.theme.backgroundId) return settings;
-  return { ...settings, theme: { ...settings.theme, backgroundId } };
+  // Likewise an accent preset that left the row (Indigo, 2026-10-20) reads as the default.
+  const accent = resolveAccent(settings.theme.accent);
+  if (backgroundId === settings.theme.backgroundId && accent === settings.theme.accent)
+    return settings;
+  return { ...settings, theme: { ...settings.theme, backgroundId, accent } };
 }
 
 export function toPolicy(row: RestDayPolicyRow | undefined, userId: string): RestDayPolicy {

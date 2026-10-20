@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router';
+import { Navigate, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komogon/ui';
-import { useAuth } from '../lib/auth';
+import { friendlyAuthError, useAuth } from '../lib/auth';
 
 export function SignIn() {
   const auth = useAuth();
   const { toast } = useToast();
+  // Set by the auth callback or the invite check when a sign-in was turned away.
+  const turnedAway = (useLocation().state as { error?: string } | null)?.error ?? null;
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,7 +25,7 @@ export function SignIn() {
         setSent(true);
       }
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Sign-in failed');
+      toast(err instanceof Error ? friendlyAuthError(err.message) : 'Sign-in failed');
     } finally {
       setBusy(false);
     }
@@ -46,6 +48,12 @@ export function SignIn() {
             <p className="text-sm" style={{ color: 'var(--status-warn)' }}>
               No auth configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, or
               VITE_DEV_AUTH_SECRET for local development.
+            </p>
+          )}
+
+          {turnedAway && !sent && (
+            <p className="text-sm" role="alert">
+              {turnedAway}
             </p>
           )}
 
@@ -76,7 +84,11 @@ export function SignIn() {
           {auth.mode === 'supabase' && (
             <>
               <div className="divider" style={{ margin: 0 }} />
-              <Button onClick={() => auth.signInWithGoogle().catch((e) => toast(e.message))}>
+              <Button
+                onClick={() =>
+                  auth.signInWithGoogle().catch((e) => toast(friendlyAuthError(e.message)))
+                }
+              >
                 Continue with Google
               </Button>
             </>

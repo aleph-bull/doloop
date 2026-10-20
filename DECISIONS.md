@@ -1304,3 +1304,11 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Trophy shelf: twelve records** (added biggest month, most sessions in a day, most courses in a week, most routines in a week, focused in a row). The grid balances its columns so no medal sits alone on a row.
 - **Badges: 40** (added Getting going, Five hundred sessions, Long haul, Two weeks, Focused 100, Ultramarathon, Ahead of time, Ten done, Fifty done, Four perfect weeks, Thoughtful).
 - **No saturated accent fills**: `accentFill` no longer raises saturation as it darkens and caps it at 45% (`FILL_MAX_SATURATION`), so medals, primary buttons and pills are a muted shade of the accent. Badge unlock dates are grey. Text, tints and chart marks keep the accent as chosen.
+
+## Closed alpha hosting, 2026-10-19 (user request)
+
+- **Vercel for the portal, Render for the API, a new Supabase project for data and sign-in.** Config in `apps/portal/vercel.json` and `render.yaml`; steps in docs/ALPHA.md › Hosting it. A separate Supabase project keeps the user's own data (and the IB plan) on this computer.
+- **Invite-only twice over**: sign-ups off in Supabase, plus `ALLOWED_EMAILS` on the API (addresses or `@domain`), checked before an account row is created; a refused account gets 403 `invite_only`, and the portal signs it out with a calm "small private test" message. Empty list = open.
+- **Installable web app** rather than app stores: manifest, 192/512/maskable icons from `prepare:icons`, and a hand-written `public/sw.js` (pages network-first, `/assets` cache-first, `/api` never cached). Registered only on hosted addresses, never localhost, where the always-on copy and dev share port 5173.
+- **Feedback link and Sentry are env-only** (`VITE_FEEDBACK_URL`, `VITE_SENTRY_DSN`). Sentry is errors only, loaded on demand, and left out of the bundle when no DSN is set. No product analytics or session replay.
+- Preflight reads `.env.alpha` first: a local copy of the hosted values for the check, which Vite never loads (unlike `.env.production`, which would point `pnpm local:update` at the hosted project).

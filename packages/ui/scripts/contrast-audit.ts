@@ -11,8 +11,8 @@
  * Run: pnpm --filter @komogon/ui audit:contrast
  */
 import { BACKGROUND_DEFS } from '../src/backgrounds';
-import { adaptToPhoto, composite, contrastRatio, hslToRgb, type RGB } from '../src/contrast';
-import { accentFill, readableAccent } from '../src/theme';
+import { adaptToPhoto, composite, contrastRatio, hexToRgb, hslToRgb, type RGB } from '../src/contrast';
+import { ACCENT_PRESET_HSL, ownAccentFill, readableAccent } from '../src/theme';
 
 interface Theme {
   name: 'light' | 'dark';
@@ -174,15 +174,9 @@ for (const bg of BACKGROUND_DEFS) {
   }
 }
 
-// The accent presets: as link text on light and dark surfaces, and as a button's label.
-const PRESETS: Record<string, [number, number, number]> = {
-  indigo: [240, 84, 62],
-  sky: [199, 89, 48],
-  mint: [160, 64, 42],
-  amber: [38, 92, 50],
-  rose: [346, 77, 56],
-  violet: [271, 81, 60],
-};
+// The accent presets, read from theme.ts so the audit can never check stale colours: as
+// link text on light and dark surfaces, and as a button's label on the fill.
+const PRESETS = ACCENT_PRESET_HSL;
 const parseHsl = (css: string): RGB => {
   const m = css.match(/hsl\((\d+) (\d+)% (\d+)%\)/)!;
   return hslToRgb(Number(m[1]), Number(m[2]), Number(m[3]));
@@ -196,8 +190,9 @@ for (const [name, hsl] of Object.entries(PRESETS)) {
     [244, 245, 248],
   );
   check(name, 'dark', 'accent text', parseHsl(readableAccent(hsl, [30, 32, 44])), [30, 32, 44]);
-  // Button labels are always white, on the accent deepened as far as white needs.
-  check(name, 'both', 'white button label', [255, 255, 255], parseHsl(accentFill(hsl)));
+  // Fills are the colour as it is; the label is whichever of white or near-black reads.
+  const own = ownAccentFill(hsl);
+  check(name, 'both', 'button label', hexToRgb(own.fg), parseHsl(own.fill));
 }
 
 console.log(rows.join('\n'));

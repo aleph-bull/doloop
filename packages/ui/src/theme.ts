@@ -52,11 +52,13 @@ export interface ApplyThemeOptions {
   mode: ThemeMode;
   accent: string;
   reducedMotion: 'system' | 'on' | 'off';
+  /** The background's pick, for the Recommended mode. */
+  recommended?: ResolvedTheme | null;
 }
 
 /** Write theme/accent/motion attributes onto <html>. Safe to call repeatedly. */
 export function applyTheme(opts: ApplyThemeOptions, root: HTMLElement = document.documentElement) {
-  root.dataset.theme = resolveTheme(opts.mode);
+  root.dataset.theme = resolveTheme(opts.mode, undefined, opts.recommended ?? null);
   root.dataset.accent = opts.accent;
   // data-motion: 'on' forces animations even if the OS prefers reduced; 'off' disables them.
   if (opts.reducedMotion === 'system') delete root.dataset.motion;
@@ -132,13 +134,13 @@ export function applyPanelStyle(
 }
 
 /** The preset hues, mirroring tokens.css, so an accent can be named as a colour without the DOM. */
-const ACCENT_PRESET_HSL: Record<string, [number, number, number]> = {
-  indigo: [240, 84, 62],
-  sky: [199, 89, 48],
-  mint: [160, 64, 42],
-  amber: [38, 92, 50],
-  rose: [346, 77, 56],
-  violet: [271, 81, 60],
+export const ACCENT_PRESET_HSL: Record<string, [number, number, number]> = {
+  rose: [5, 91, 83],
+  sky: [207, 46, 80],
+  mint: [109, 49, 85],
+  violet: [286, 32, 85],
+  amber: [35, 98, 82],
+  lemon: [60, 100, 90],
 };
 
 function hslToHex(h: number, s: number, l: number): string {
@@ -167,7 +169,7 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
- * The accent setting ('indigo', or 'custom:<h>,<s>,<l>') as a hex colour. Computed from
+ * The accent setting ('violet', or 'custom:<h>,<s>,<l>') as a hex colour. Computed from
  * the setting rather than read back from <html>, which may not have been themed yet.
  */
 export function accentHexFor(accent: string): string {
@@ -175,7 +177,7 @@ export function accentHexFor(accent: string): string {
     const [h, s, l] = accent.slice(7).split(',').map(Number);
     return hslToHex((((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62);
   }
-  const preset = ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.indigo!;
+  const preset = ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.violet!;
   return hslToHex(preset[0], preset[1], preset[2]);
 }
 
@@ -185,7 +187,7 @@ function accentHsl(accent: string): [number, number, number] {
     const [h, s, l] = accent.slice(7).split(',').map(Number);
     return [(((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62];
   }
-  return ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.indigo!;
+  return ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.violet!;
 }
 
 /** Surfaces the accent text is measured against: a light card and a dark one. */
@@ -258,6 +260,7 @@ export interface UserThemeLike {
 export function applyUserTheme(
   settings: UserThemeLike,
   root: HTMLElement = document.documentElement,
+  recommended: ResolvedTheme | null = null,
 ): ResolvedTheme {
   const custom = settings.theme.accent.startsWith('custom:');
   applyTheme(
@@ -265,6 +268,7 @@ export function applyUserTheme(
       mode: settings.theme.mode,
       accent: custom ? 'custom' : settings.theme.accent,
       reducedMotion: settings.effects.reducedMotion,
+      recommended,
     },
     root,
   );
@@ -278,20 +282,16 @@ export function applyUserTheme(
     root.style.removeProperty('--accent-s');
     root.style.removeProperty('--accent-l');
   }
-  // Measured, not guessed: accent text that clears AA on light and dark surfaces, and the
-  // fill a white button label reads on.
+  // Measured, not guessed: accent text that clears AA on light and dark surfaces. Fills are
+  // the colour exactly as it is, the built-in pastels included (2026-10-20), with whichever
+  // label reads on it; deepening a pastel until white read on it would undo the pastel.
   const hsl = accentHsl(settings.theme.accent);
   root.style.setProperty('--accent-text-on-light', readableAccent(hsl, LIGHT_SURFACE));
   root.style.setProperty('--accent-text-on-dark', readableAccent(hsl, DARK_SURFACE));
-  if (custom) {
-    const own = ownAccentFill(hsl);
-    root.style.setProperty('--accent-fill', own.fill);
-    root.style.setProperty('--accent-fg', own.fg);
-  } else {
-    root.style.setProperty('--accent-fill', accentFill(hsl));
-    root.style.removeProperty('--accent-fg');
-  }
-  const resolved = resolveTheme(settings.theme.mode);
+  const own = ownAccentFill(hsl);
+  root.style.setProperty('--accent-fill', own.fill);
+  root.style.setProperty('--accent-fg', own.fg);
+  const resolved = resolveTheme(settings.theme.mode, undefined, recommended);
   const panelBehind = applyPanelStyle(
     {
       panel: settings.theme.panel,
