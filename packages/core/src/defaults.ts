@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   pace: { maxComfortableMinutesPerDay: 240 },
   sounds: {
     enabled: true,
-    volume: 0.8,
+    volume: 0.5,
     workStart: 'slow-ding',
     breakStart: 'slow-ding',
     sessionEnd: 'slow-ding',
