@@ -55,6 +55,9 @@ export async function buildServer(opts: BuildOptions) {
   await app.register(cors, {
     origin: opts.corsOrigins ?? true,
     credentials: true,
+    // @fastify/cors allows only GET, HEAD and POST by default, which blocks every PATCH and
+    // DELETE from a portal on another address (the hosted one; locally Vite proxies instead).
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   app.setErrorHandler((err, _req, reply) => {
