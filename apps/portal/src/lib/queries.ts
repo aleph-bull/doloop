@@ -46,7 +46,7 @@ export const keys = {
   routineList: ['routines', 'list'] as const,
   trackers: (weeks?: number) => ['trackers', weeks ?? 'default'] as const,
   grades: ['grades'] as const,
-  recap: (range: string) => ['analytics', 'recap', range] as const,
+  recap: (range: string, ago = 0) => ['analytics', 'recap', range, ago] as const,
   dashboardStats: ['analytics', 'dashboard'] as const,
   screens: ['equivalents', 'screens'] as const,
   history: ['sessions', 'history'] as const,
@@ -633,10 +633,10 @@ export function useDeleteComponent() {
 /* ---------- the recap ---------- */
 
 /** One range of the Analytics page. The previous range stays up, dimmed, while the next loads. */
-export function useRecap(range: RecapRangeParam) {
+export function useRecap(range: RecapRangeParam, ago = 0) {
   return useQuery({
-    queryKey: keys.recap(range),
-    queryFn: () => api.recap(range),
+    queryKey: keys.recap(range, ago),
+    queryFn: () => api.recap(range, ago),
     staleTime: 60_000,
     placeholderData: keepPreviousData,
   });

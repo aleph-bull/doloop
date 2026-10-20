@@ -12,7 +12,6 @@ credited here anyway, by the name or handle the file was downloaded under.
 | Alpenglow | John Towner | Unsplash |
 | Alpine Pass | Markus Spiske | Unsplash |
 | Kirkjufell | Luke Vodell | Unsplash |
-| Still Water | Unknown | Supplied by the user — licence not verified |
 | Milky Way | Benjamin Voros | Unsplash |
 | Ice Canyon | Jonatan Pie | Unsplash |
 | Vestrahorn | Luca Micheli | Unsplash |
@@ -56,3 +55,41 @@ credited here anyway, by the name or handle the file was downloaded under.
 | Prism | Codioful (Gradienta) | Pexels |
 | Sea Glass | Martin Péchy | Pexels |
 | Swell | Steve | Pexels |
+| Seawall | Ryan K | Pexels |
+| Slot Canyon | Hugo Guillemard | Pexels |
+| Golden Hour | Ian Panelo | Pexels |
+| Tide Pool | Kienvirak | Pexels |
+| Breakwater | Jishnu Lal | Pexels |
+| Ferryman | Kienvirak | Pexels |
+| Golden Willow | Mike Bird | Pexels |
+| Ripples | Xiao Bo | Pexels |
+| Valley Light | Vittorio Staffolani | Pexels |
+| Violet Hour | Siddharth Shrivastav | Pexels |
+| Morning Rays | eberhardgross | Pexels |
+| Ember Grass | rajeshx8 | Pexels |
+| Mist Lake | Quang Nguyen Vinh | Pexels |
+| Rolling Fields | Finn Semmer | Pexels |
+| Brushstroke | Robert Clark | Pexels |
+| Dusk | Robert Clark | Pexels |
+| Sea Mist | Sean Witter | Pexels |
+| Black Sand | Kienvirak | Pexels |
+| Green Hills | Denis Tuev | Pexels |
+| Antelope | kartatos | Pexels |
+| Blue Ridges | Suket Dedhia | Pexels |
+| Peyto | imagenesclau | Pexels |
+| Gilded Surf | David Kanigan | Pexels |
+| Valley Lake | Daniel J. Schwarz | Pexels |
+| Storm Ridge | Vittorio Staffolani | Pexels |
+| Agave | Atahan Demir | Pexels |
+| Feather Grass | Pok Rie | Pexels |
+| Dune Lagoon | Luciana Evrard | Pexels |
+| Shallows | Francesco Ungaro | Pexels |
+| Red Tide | Connor Scott McManus | Pexels |
+| Still Bay | Tommes Frites | Pexels |
+| Midnight Silk | Steve | Pexels |
+| Rosy Clouds | Hatice | Pexels |
+| Lilac Sky | Oktay Köseoğlu | Pexels |
+| Cotton Candy | frostroomhead | Pexels |
+| Rainfall | Matheus Natan | Pexels |
+| Wild Oats | Judith Donker | Pexels |
+| Afterglow | Steve | Pexels |

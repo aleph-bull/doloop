@@ -3,6 +3,8 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
   Download,
   Flame as FlameIcon,
   Sparkles,
@@ -21,7 +23,7 @@ import {
   Heatmap,
   Panel,
   ProgressBar,
-  DayDensity,
+  RadialClock,
   Ring,
   SkeletonBlock,
   StackedDays,
@@ -74,8 +76,24 @@ function clockLabel(c: ClockProfile): string | null {
   return 'Evening engine 🌆';
 }
 
-function ChangeChip({ p }: { p: RangeRecap }) {
-  const word = p.range === 'week' ? 'last week' : 'this point last month';
+/** "this week", "last week", "that week": how the page refers to the range showing. */
+function scopeWord(range: RecapRangeParam, ago: number): string {
+  if (range === 'all') return 'in total';
+  if (ago === 0) return `this ${range}`;
+  if (ago === 1) return `last ${range}`;
+  return `that ${range}`;
+}
+
+function ChangeChip({ p, ago }: { p: RangeRecap; ago: number }) {
+  // A finished month is held against the whole month before it, not "this point".
+  const word =
+    p.range === 'week'
+      ? ago === 0
+        ? 'last week'
+        : 'the week before'
+      : ago === 0
+        ? 'this point last month'
+        : 'the month before';
   if (p.minutes <= 0) return null;
   if (p.firstTime)
     return (
@@ -134,14 +152,73 @@ function Tile({
 
 /* ---------- the hero ---------- */
 
-function Hero({ data, range }: { data: RecapResponse; range: RecapRangeParam }) {
+/** Back and forward through weeks or months, the dates between the arrows. */
+function PeriodStepper({
+  p,
+  ago,
+  firstDate,
+  onAgo,
+}: {
+  p: RangeRecap;
+  ago: number;
+  firstDate: string | null;
+  onAgo: (n: number) => void;
+}) {
+  const word = p.range === 'week' ? 'week' : 'month';
+  // Nothing before the first session to look at.
+  const canBack = firstDate !== null && firstDate < p.from;
+  return (
+    <div className="rc-stepper">
+      <button
+        type="button"
+        className="rc-stepper-btn"
+        onClick={() => onAgo(ago + 1)}
+        disabled={!canBack}
+        aria-label={`Previous ${word}`}
+        title={`Previous ${word}`}
+      >
+        <ChevronLeft size={16} aria-hidden />
+      </button>
+      <p className="rc-hero-range" aria-live="polite">
+        {rangeLabel(p)}
+      </p>
+      <button
+        type="button"
+        className="rc-stepper-btn"
+        onClick={() => onAgo(ago - 1)}
+        disabled={ago === 0}
+        aria-label={`Next ${word}`}
+        title={`Next ${word}`}
+      >
+        <ChevronRight size={16} aria-hidden />
+      </button>
+      {ago > 0 && (
+        <button type="button" className="rc-stepper-now" onClick={() => onAgo(0)}>
+          Back to this {word}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Hero({
+  data,
+  range,
+  ago,
+  onAgo,
+}: {
+  data: RecapResponse;
+  range: RecapRangeParam;
+  ago: number;
+  onAgo: (n: number) => void;
+}) {
   const me = useMe();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const p = data.period;
   const minutes = p ? p.minutes : data.totals.minutes;
   const parts = heroParts(minutes);
-  const scope = range === 'week' ? 'this week' : range === 'month' ? 'this month' : 'in total';
+  const scope = scopeWord(range, ago);
   const summary = p
     ? p.summary
     : data.totals.sessions === 0
@@ -186,7 +263,7 @@ function Hero({ data, range }: { data: RecapResponse; range: RecapRangeParam }) 
   return (
     <Glass as="section" className="rc-hero rc-rise" aria-label="Headline">
       <div className="rc-hero-main">
-        {p && <p className="rc-hero-range">{rangeLabel(p)}</p>}
+        {p && <PeriodStepper p={p} ago={ago} firstDate={data.firstDate} onAgo={onAgo} />}
         <p className="rc-hero-figure">
           <CountUp value={parts.value} format={parts.fmt} className="rc-hero-number" />
           <span className="rc-hero-unit">
@@ -194,7 +271,7 @@ function Hero({ data, range }: { data: RecapResponse; range: RecapRangeParam }) 
           </span>
         </p>
         <div className="rc-hero-row">
-          {p && <ChangeChip p={p} />}
+          {p && <ChangeChip p={p} ago={ago} />}
           {data.personality && (
             <span className="rc-chip is-persona" title={data.personality.reason}>
               {data.personality.emoji} {data.personality.label}
@@ -342,7 +419,7 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
       <Tile
         key="days"
         size="wide"
-        title={range === 'week' ? 'Day by day' : 'Every day this month'}
+        title={range === 'week' ? 'Day by day' : data.ago === 0 ? 'Every day this month' : 'Every day of the month'}
         note={
           p.bestDay
             ? `${LONG_DAYS[dayOfWeek(p.bestDay.date)]} ${range === 'month' ? fmtDate(noon(p.bestDay.date)) : ''} led with ${fmtHours(p.bestDay.minutes)}.`.replace(
@@ -364,7 +441,7 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
             future: d.future,
           }))}
           fmt={fmtHours}
-          ghostName={range === 'week' ? 'last week' : 'last month'}
+          ghostName={`${data.ago === 0 ? 'last' : 'the'} ${range === 'week' ? 'week' : 'month'}${data.ago === 0 ? '' : ' before'}`}
           ariaLabel={`Study time per day, ${rangeLabel(p)}`}
         />
       </Tile>,
@@ -423,11 +500,21 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
       note={clockNote ?? undefined}
       empty={data.clock.totalMinutes === 0 ? 'Your hours of the day fill in as you study.' : null}
     >
-      <DayDensity
+      <RadialClock
         hours={data.clock.hours}
         fmt={fmtHours}
-        ariaLabel="Study time across the hours of the day"
-      />
+        ariaLabel="Study time by hour of the day"
+      >
+        {data.clock.peakHour !== null && (
+          <>
+            <span className="rc-ring-small">peak</span>
+            <span className="rc-ring-big">
+              {data.clock.peakHour % 12 === 0 ? 12 : data.clock.peakHour % 12}
+              {data.clock.peakHour < 12 ? ' am' : ' pm'}
+            </span>
+          </>
+        )}
+      </RadialClock>
     </Tile>,
   );
 
@@ -635,8 +722,16 @@ function RecapSkeleton() {
 /* ---------- the page ---------- */
 
 /** One range of the recap, top to bottom: hero, equivalents, charts, streaks, trophies, insights. */
-export function RecapView({ range }: { range: RecapRangeParam }) {
-  const q = useRecap(range);
+export function RecapView({
+  range,
+  ago = 0,
+  onAgo,
+}: {
+  range: RecapRangeParam;
+  ago?: number;
+  onAgo: (n: number) => void;
+}) {
+  const q = useRecap(range, ago);
   if (q.isError && !q.data)
     return (
       <ErrorPanel
@@ -649,11 +744,11 @@ export function RecapView({ range }: { range: RecapRangeParam }) {
   // A range switch keeps the last one up, dimmed, until the new one lands.
   const stale = q.isPlaceholderData;
   const minutes = data.period ? data.period.minutes : data.totals.minutes;
-  const scope = range === 'week' ? 'this week' : range === 'month' ? 'this month' : 'all-time';
+  const scope = range === 'all' ? 'all-time' : scopeWord(range, ago);
 
   return (
     <div className={`rc-page${stale ? ' is-stale' : ''}`} key={data.range}>
-      <Hero data={data} range={range} />
+      <Hero data={data} range={range} ago={ago} onAgo={onAgo} />
       {minutes > 0 && <EquivalentsStrip minutes={minutes} scope={scope} />}
       <Charts data={data} range={range} />
       <Streaks data={data} />

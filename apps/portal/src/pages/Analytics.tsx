@@ -219,6 +219,13 @@ export function Analytics() {
   // "overview" was the All time tab's old name; links to it still land there.
   const named = raw === 'overview' ? 'all' : raw;
   const tab: Tab = (TABS as readonly string[]).includes(named ?? '') ? (named as Tab) : 'week';
+  // How many weeks or months back, kept in the URL so a past week can be linked to.
+  const ago = tab === 'week' || tab === 'month' ? Math.max(0, Number(params.get('ago')) || 0) : 0;
+  const setAgo = (n: number) => {
+    const next: Record<string, string> = tab === 'week' ? {} : { tab };
+    if (n > 0) next.ago = String(n);
+    setParams(next);
+  };
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
@@ -228,14 +235,14 @@ export function Analytics() {
           value={tab}
           onChange={(v) => setParams(v === 'week' ? {} : { tab: v })}
           options={[
-            { value: 'week', label: 'This week' },
-            { value: 'month', label: 'This month' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
             { value: 'all', label: 'All time' },
             { value: 'advanced', label: 'By task' },
           ]}
         />
       </div>
-      {tab === 'advanced' ? <Advanced /> : <RecapView range={tab} />}
+      {tab === 'advanced' ? <Advanced /> : <RecapView range={tab} ago={ago} onAgo={setAgo} />}
     </div>
   );
 }

@@ -66,6 +66,10 @@ export type RecapRangeParam = 'week' | 'month' | 'all';
 export interface RecapResponse {
   now: string;
   range: RecapRangeParam;
+  /** How many weeks or months back this is; 0 is the current one. */
+  ago: number;
+  /** The earliest day with a session, or null before the first. */
+  firstDate: string | null;
   period: RangeRecap | null;
   subjects: Array<SubjectSlice & { colorIndex: number }>;
   dailySubjects: DaySubjects[] | null;
@@ -363,8 +367,8 @@ export const api = {
       { note },
     ),
   followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
-  recap: (range: RecapRangeParam) =>
-    request<RecapResponse>('GET', `/api/analytics/recap?range=${range}`),
+  recap: (range: RecapRangeParam, ago = 0) =>
+    request<RecapResponse>('GET', `/api/analytics/recap?range=${range}${ago ? `&ago=${ago}` : ''}`),
   dashboardStats: () =>
     request<DashboardStats & { now: string }>('GET', '/api/analytics/dashboard'),
   screens: () =>

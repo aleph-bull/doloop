@@ -201,6 +201,7 @@ export function rangeRecap(input: RangeRecapInput): RangeRecap {
       bestEver,
       bestDay: best,
       historyMinutes: [...totals.values()].reduce((a, t) => a + t.minutes, 0),
+      past: to < today,
     }),
     goalMinutes,
     goalRatio: goalMinutes ? Math.min(1, minutes / goalMinutes) : null,
@@ -217,6 +218,8 @@ export interface SummaryInput {
   bestDay: { date: ISODate; minutes: number } | null;
   /** Every minute on record, to tell a first week from a quiet one. */
   historyMinutes: number;
+  /** A range that has already ended, looked back on: "that week", not "this week". */
+  past?: boolean;
 }
 
 /** The hero's one sentence. Positive where it can be, plain where it cannot, never a nag. */
@@ -224,16 +227,19 @@ export function recapSummary(s: SummaryInput): string {
   const word = s.range === 'week' ? 'week' : 'month';
   const dayName = s.bestDay ? DAY_NAMES[dayOfWeek(s.bestDay.date)]! : null;
   const lifted = dayName ? `, and ${dayName} did the heavy lifting` : '';
-  if (s.minutes <= 0)
+  const before = s.past ? `the ${word} before` : `last ${word}`;
+  if (s.minutes <= 0) {
+    if (s.past) return `Nothing on the board that ${word}.`;
     return s.historyMinutes > 0
       ? `Nothing on the board yet this ${word}. The next session changes that.`
       : `Your first session puts this ${word} on the board.`;
+  }
   if (s.firstTime && s.historyMinutes - s.minutes < MIN_BASELINE_MINUTES)
     return `Your first ${word} is on the board. Here's where you started.`;
   if (s.bestEver && !s.firstTime) return `Your best ${word} so far${lifted}.`;
-  if (s.change !== null && s.change >= 0.1) return `Up on last ${word}${lifted}.`;
-  if (s.change !== null && s.change > -0.1) return `Right in step with last ${word}${lifted}.`;
-  return `Every session counts. You showed up ${s.sessions} ${s.sessions === 1 ? 'time' : 'times'} this ${word}.`;
+  if (s.change !== null && s.change >= 0.1) return `Up on ${before}${lifted}.`;
+  if (s.change !== null && s.change > -0.1) return `Right in step with ${before}${lifted}.`;
+  return `Every session counts. You showed up ${s.sessions} ${s.sessions === 1 ? 'time' : 'times'} ${s.past ? 'that' : 'this'} ${word}.`;
 }
 
 /* ---------- the clock ---------- */

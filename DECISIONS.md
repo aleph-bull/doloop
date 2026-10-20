@@ -182,7 +182,7 @@ Running log of defaults chosen without a spec answer, and kickoff decisions from
 - **`adaptGlassToBackdrop` in contrast.ts is the single place** the glass fill and text colour are derived from a backdrop colour — used live for a user's upload, ahead of time for shipped photos, and by the audit. Every photo clears 4.5:1 at the base 45% fill.
 - **Ids resolve through `resolveBackgroundId`.** Every existing user had a now-deleted id, so an unknown id reads as Graphite, in core and normalised server-side in `settingsOf`. Graphite is also the new default.
 - **The extension takes an `assetBase`** so photo paths resolve against the portal origin instead of `chrome-extension://`. Photos are not bundled into the extension.
-- **Licensing**: the Unsplash photographs are used under the Unsplash License and credited in `public/backgrounds/CREDITS.md`. `still-water` was supplied by the user from an unidentified source and its licence is not verified — flagged rather than assumed.
+- **Licensing**: the Unsplash photographs are used under the Unsplash License and credited in `public/backgrounds/CREDITS.md`. `still-water` (macOS Tahoe's "Tahoe Beach Night" wallpaper, Apple's copyright) was removed on 2026-10-19; anyone who had it picked falls back to the default through `resolveBackgroundId`.
 
 ### Weekly highlights
 

@@ -114,7 +114,18 @@ export const MAX_ACCENTS = ACCENT_PRESETS.length + MAX_SAVED_ACCENTS;
 export const CUSTOM_ACCENT = /^custom:\d{1,3},\d{1,3},\d{1,3}$/;
 
 export type BackgroundCategory =
-  'minimal' | 'abstract' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
+  | 'minimal'
+  | 'abstract'
+  | 'sky'
+  | 'mountains'
+  | 'lakes'
+  | 'night'
+  | 'coast'
+  | 'forest'
+  | 'country'
+  | 'desert'
+  | 'cities'
+  | 'lights';
 
 export interface BackgroundMeta {
   id: string;
@@ -142,14 +153,13 @@ export const BACKGROUNDS: BackgroundMeta[] = [
   { id: 'onyx', name: 'Onyx', category: 'minimal', minLevel: 0, costXp: null },
   { id: 'basalt', name: 'Basalt', category: 'minimal', minLevel: 0, costXp: null },
   { id: 'fog', name: 'Fog', category: 'minimal', minLevel: 0, costXp: null },
-  { id: 'lanterns', name: 'Lanterns', category: 'minimal', minLevel: 0, costXp: null },
+  { id: 'lanterns', name: 'Lanterns', category: 'lights', minLevel: 0, costXp: null },
   // --- mountains ---
   { id: 'fuji', name: 'Fuji', category: 'mountains', minLevel: 0, costXp: null },
   { id: 'alpine-pass', name: 'Alpine Pass', category: 'mountains', minLevel: 3, costXp: null },
   { id: 'alpenglow', name: 'Alpenglow', category: 'mountains', minLevel: 12, costXp: null },
   { id: 'kirkjufell', name: 'Kirkjufell', category: 'mountains', minLevel: 0, costXp: 400 },
   // --- night ---
-  { id: 'still-water', name: 'Still Water', category: 'night', minLevel: 0, costXp: null },
   { id: 'milky-way', name: 'Milky Way', category: 'night', minLevel: 5, costXp: null },
   { id: 'ice-canyon', name: 'Ice Canyon', category: 'night', minLevel: 8, costXp: null },
   // --- coast ---
@@ -197,18 +207,61 @@ export const BACKGROUNDS: BackgroundMeta[] = [
   { id: 'prism', name: 'Prism', category: 'abstract', minLevel: 10, costXp: null },
   { id: 'sea-glass', name: 'Sea Glass', category: 'abstract', minLevel: 0, costXp: null },
   { id: 'swell', name: 'Swell', category: 'abstract', minLevel: 0, costXp: null },
+  // --- added 2026-10-19, from Pexels ---
+  { id: 'seawall', name: 'Seawall', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'slot-canyon', name: 'Slot Canyon', category: 'desert', minLevel: 0, costXp: null },
+  { id: 'golden-hour', name: 'Golden Hour', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'tide-pool', name: 'Tide Pool', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'breakwater', name: 'Breakwater', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'ferryman', name: 'Ferryman', category: 'lakes', minLevel: 0, costXp: null },
+  { id: 'golden-willow', name: 'Golden Willow', category: 'lakes', minLevel: 0, costXp: null },
+  { id: 'ripples', name: 'Ripples', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'valley-light', name: 'Valley Light', category: 'country', minLevel: 0, costXp: null },
+  { id: 'violet-hour', name: 'Violet Hour', category: 'sky', minLevel: 3, costXp: null },
+  { id: 'morning-rays', name: 'Morning Rays', category: 'lakes', minLevel: 0, costXp: 600 },
+  { id: 'ember-grass', name: 'Ember Grass', category: 'country', minLevel: 0, costXp: null },
+  { id: 'mist-lake', name: 'Mist Lake', category: 'lakes', minLevel: 3, costXp: null },
+  { id: 'rolling-fields', name: 'Rolling Fields', category: 'country', minLevel: 0, costXp: null },
+  { id: 'brushstroke', name: 'Brushstroke', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'dusk', name: 'Dusk', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'sea-mist', name: 'Sea Mist', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'black-sand', name: 'Black Sand', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'green-hills', name: 'Green Hills', category: 'country', minLevel: 0, costXp: null },
+  { id: 'antelope', name: 'Antelope', category: 'desert', minLevel: 8, costXp: null },
+  { id: 'blue-ridges', name: 'Blue Ridges', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'peyto', name: 'Peyto', category: 'lakes', minLevel: 5, costXp: null },
+  { id: 'gilded-surf', name: 'Gilded Surf', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'valley-lake', name: 'Valley Lake', category: 'lakes', minLevel: 0, costXp: null },
+  { id: 'storm-ridge', name: 'Storm Ridge', category: 'mountains', minLevel: 0, costXp: null },
+  { id: 'agave', name: 'Agave', category: 'forest', minLevel: 0, costXp: null },
+  { id: 'feather-grass', name: 'Feather Grass', category: 'country', minLevel: 0, costXp: null },
+  { id: 'dune-lagoon', name: 'Dune Lagoon', category: 'desert', minLevel: 0, costXp: null },
+  { id: 'shallows', name: 'Shallows', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'red-tide', name: 'Red Tide', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'still-bay', name: 'Still Bay', category: 'coast', minLevel: 0, costXp: null },
+  { id: 'midnight-silk', name: 'Midnight Silk', category: 'abstract', minLevel: 0, costXp: 500 },
+  { id: 'rosy-clouds', name: 'Rosy Clouds', category: 'sky', minLevel: 0, costXp: null },
+  { id: 'lilac-sky', name: 'Lilac Sky', category: 'sky', minLevel: 0, costXp: null },
+  { id: 'cotton-candy', name: 'Cotton Candy', category: 'sky', minLevel: 0, costXp: null },
+  { id: 'rainfall', name: 'Rainfall', category: 'abstract', minLevel: 0, costXp: null },
+  { id: 'wild-oats', name: 'Wild Oats', category: 'country', minLevel: 0, costXp: null },
+  { id: 'afterglow', name: 'Afterglow', category: 'abstract', minLevel: 0, costXp: null },
 ];
 
 /** Display order and labels for the grouped pickers. */
 export const BACKGROUND_CATEGORY_LABELS: Array<{ id: BackgroundCategory; label: string }> = [
   { id: 'minimal', label: 'Minimal' },
   { id: 'abstract', label: 'Abstract' },
+  { id: 'sky', label: 'Sky' },
   { id: 'mountains', label: 'Mountains' },
+  { id: 'lakes', label: 'Lakes' },
   { id: 'night', label: 'Night' },
   { id: 'coast', label: 'Coast' },
   { id: 'forest', label: 'Forest' },
   { id: 'country', label: 'Open country' },
+  { id: 'desert', label: 'Desert' },
   { id: 'cities', label: 'Cities' },
+  { id: 'lights', label: 'Lights' },
 ];
 
 /**

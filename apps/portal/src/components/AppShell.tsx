@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
@@ -52,30 +52,37 @@ const links: Array<{
     feature: 'calendar',
   },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn },
-  { to: '/achievements', label: 'Achievements', short: 'Awards', icon: Trophy },
 ];
 
-/** The level as a small ring that fills toward the next one. */
-function LevelRing({ xp, level }: { xp: number; level: number }) {
-  const ratio = levelProgress(xp).ratio;
-  const r = 12;
-  const c = 2 * Math.PI * r;
+/**
+ * The level, with a short bar that fills toward the next one. It is also the way into
+ * Achievements, which is visited now and then rather than daily, so it has no tab:
+ * the trophy and the pill shape say it can be opened, the same way the streak beside it does.
+ */
+function LevelPill({ xp, level }: { xp: number; level: number }) {
+  const { ratio, toNext } = levelProgress(xp);
   return (
-    <span className="nav-level" title={`Level ${level}`}>
-      <svg viewBox="0 0 30 30" width={30} height={30} aria-hidden>
-        <circle cx={15} cy={15} r={r} className="nav-level-track" />
-        <circle
-          cx={15}
-          cy={15}
-          r={r}
-          className="nav-level-fill"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - ratio)}
-          transform="rotate(-90 15 15)"
-        />
-      </svg>
-      <span className="nav-level-num tabular">{level}</span>
-      <span className="sr-only">Level {level}</span>
+    <span className="nav-level-wrap">
+      <NavLink to="/achievements" className="nav-level">
+        <Trophy size={15} aria-hidden className="nav-level-icon" />
+        <span className="tabular">Level {level}</span>
+        <span className="nav-level-bar" aria-hidden>
+          <span style={{ width: `${Math.round(ratio * 100)}%` }} />
+        </span>
+        <span className="sr-only">, open achievements</span>
+      </NavLink>
+      {/* On hover, a small card says where the pill goes. Touch screens just follow the tap. */}
+      <span className="nav-level-drop" aria-hidden>
+        <span className="nav-level-drop-card">
+          <span className="nav-level-drop-line tabular">
+            {toNext} XP to level {level + 1}
+          </span>
+          <Link to="/achievements" className="nav-level-drop-link" tabIndex={-1}>
+            Go to achievements
+            <ChevronRight size={14} aria-hidden />
+          </Link>
+        </span>
+      </span>
     </span>
   );
 }
@@ -268,7 +275,7 @@ export function AppShell() {
                 <span className="tabular">{user.streak.current}</span>
                 <span className="sr-only">day streak</span>
               </NavLink>
-              <LevelRing xp={user.xp} level={user.level} />
+              <LevelPill xp={user.xp} level={user.level} />
             </div>
           )}
           <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">

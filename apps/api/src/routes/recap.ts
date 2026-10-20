@@ -14,6 +14,7 @@ import {
   planKept,
   rangeRecap,
   sessionHistogram,
+  startOfMonth,
   startOfWeekMonday,
   studyHeatmap,
   studyPersonality,
@@ -97,8 +98,12 @@ export function recapRoutes(
    */
   app.get('/api/analytics/recap', async (req) => {
     const now = clock();
-    const { range } = z
-      .object({ range: z.enum(['week', 'month', 'all']).default('week') })
+    // `ago` steps back from the current week or month: 1 is last week, 2 the one before.
+    const { range, ago } = z
+      .object({
+        range: z.enum(['week', 'month', 'all']).default('week'),
+        ago: z.coerce.number().int().min(0).max(520).default(0),
+      })
       .parse(req.query);
     const tz = req.user.timezone;
     const settings = settingsOf(req.user);
@@ -117,6 +122,12 @@ export function recapRoutes(
     const live = nodes.filter((n) => !n.archived);
     const roots = buildIndex(live).roots;
 
+    let start: string | undefined;
+    if (range === 'week') start = addDays(weekStart, -7 * ago);
+    if (range === 'month') {
+      start = startOfMonth(today);
+      for (let i = 0; i < ago; i++) start = startOfMonth(addDays(start, -1));
+    }
     const period =
       range === 'all'
         ? null
@@ -125,8 +136,14 @@ export function recapRoutes(
             timezone: tz,
             now,
             range,
+            start,
             goalMinutes: settings.goals.weeklyMinutes,
           });
+    // The earliest day on record, so the page knows how far back there is to go.
+    const firstDate = sessions.reduce<string | null>((min, s) => {
+      const d = toLocalDate(s.startedAt, tz);
+      return min === null || d < min ? d : min;
+    }, null);
     const from = period?.from;
     const to = period?.to;
     const inRange = from
@@ -174,6 +191,8 @@ export function recapRoutes(
     return {
       now,
       range,
+      ago: range === 'all' ? 0 : ago,
+      firstDate,
       period,
       subjects,
       dailySubjects:

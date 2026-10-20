@@ -13,18 +13,33 @@ import { PHOTO_BACKGROUNDS } from './photos.generated';
  */
 
 export type BackgroundCategory =
-  'minimal' | 'abstract' | 'mountains' | 'night' | 'coast' | 'forest' | 'country' | 'cities';
+  | 'minimal'
+  | 'abstract'
+  | 'sky'
+  | 'mountains'
+  | 'lakes'
+  | 'night'
+  | 'coast'
+  | 'forest'
+  | 'country'
+  | 'desert'
+  | 'cities'
+  | 'lights';
 
 /** Display order and labels for the grouped pickers. */
 export const BACKGROUND_CATEGORIES: Array<{ id: BackgroundCategory; label: string }> = [
   { id: 'minimal', label: 'Minimal' },
   { id: 'abstract', label: 'Abstract' },
+  { id: 'sky', label: 'Sky' },
   { id: 'mountains', label: 'Mountains' },
+  { id: 'lakes', label: 'Lakes' },
   { id: 'night', label: 'Night' },
   { id: 'coast', label: 'Coast' },
   { id: 'forest', label: 'Forest' },
   { id: 'country', label: 'Open country' },
+  { id: 'desert', label: 'Desert' },
   { id: 'cities', label: 'Cities' },
+  { id: 'lights', label: 'Lights' },
 ];
 
 export interface BackgroundVariant {

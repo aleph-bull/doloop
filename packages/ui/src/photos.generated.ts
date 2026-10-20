@@ -26,7 +26,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/fuji.webp',
     thumb: 'backgrounds/thumbs/fuji.webp',
     avg: [65, 71, 68],
-    lqip: 'data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoUAA0APt1cqE0opSQiMAgBEBuJZwAAXFjifoUS7vZQAAD7pEK05bxuWZ9LDShcKttL/k/zbl+G09YQgGRXqhscAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoUAA0APt1cqE0opSQiMAgBEBuJZwAAXFjifoUS7vZQAAD7pEK05bxuWZ9LDShcKttL/k/zbl+G09YQgGRXqhscAAA=',
   },
   {
     id: 'alpenglow',
@@ -35,7 +36,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/alpenglow.webp',
     thumb: 'backgrounds/thumbs/alpenglow.webp',
     avg: [33, 37, 51],
-    lqip: 'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADwAwCdASoUAA0APt1ep00opSOiMAgBEBuJYwCdACHgOaieIKW1lVcAAP7Q5ME823I5hDJmo5bhRC0Rxmf6IWWarX0sCNAHiwAvggAA',
+    lqip:
+      'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADwAwCdASoUAA0APt1ep00opSOiMAgBEBuJYwCdACHgOaieIKW1lVcAAP7Q5ME823I5hDJmo5bhRC0Rxmf6IWWarX0sCNAHiwAvggAA',
   },
   {
     id: 'alpine-pass',
@@ -44,7 +46,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/alpine-pass.webp',
     thumb: 'backgrounds/thumbs/alpine-pass.webp',
     avg: [125, 157, 155],
-    lqip: 'data:image/webp;base64,UklGRoAAAABXRUJQVlA4IHQAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZgCdMoADTZpuNvk+wAD+6vL0T+nUFdREX1n4ZTJdoA+AtypozLphIEJ6CpYMxWvCAsLwZSXkoOtynqYr7znv7ZAErAcOTrN+eVbhbzvnbv+hwJqXiH8GaFH8AA==',
+    lqip:
+      'data:image/webp;base64,UklGRoAAAABXRUJQVlA4IHQAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZgCdMoADTZpuNvk+wAD+6vL0T+nUFdREX1n4ZTJdoA+AtypozLphIEJ6CpYMxWvCAsLwZSXkoOtynqYr7znv7ZAErAcOTrN+eVbhbzvnbv+hwJqXiH8GaFH8AA==',
   },
   {
     id: 'kirkjufell',
@@ -53,16 +56,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/kirkjufell.webp',
     thumb: 'backgrounds/thumbs/kirkjufell.webp',
     avg: [115, 118, 97],
-    lqip: 'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdMoADgYsM1KTEpBMnwADh1EqBL/Jn85YFSRaJOVEfBch20m3649pcbA/MQQLjZ+H59atO8YOyYciH+Uzm6DxURjLr7ZD9I8/vMHdTgJAM1pcnwm1ijXpX8ypZbVeCbBZTQAA=',
-  },
-  {
-    id: 'still-water',
-    name: 'Still Water',
-    category: 'night',
-    src: 'backgrounds/still-water.webp',
-    thumb: 'backgrounds/thumbs/still-water.webp',
-    avg: [13, 17, 18],
-    lqip: 'data:image/webp;base64,UklGRkYAAABXRUJQVlA4IDoAAAAQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZwAAetEIGAAA/vDHNbz3w6qpi+k3LQQBzuMZD72HAAAA',
+    lqip:
+      'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdMoADgYsM1KTEpBMnwADh1EqBL/Jn85YFSRaJOVEfBch20m3649pcbA/MQQLjZ+H59atO8YOyYciH+Uzm6DxURjLr7ZD9I8/vMHdTgJAM1pcnwm1ijXpX8ypZbVeCbBZTQAA=',
   },
   {
     id: 'milky-way',
@@ -71,7 +66,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/milky-way.webp',
     thumb: 'backgrounds/thumbs/milky-way.webp',
     avg: [56, 71, 100],
-    lqip: 'data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJYgCdACHh4qKN/+f9rYIkwAD+2r7YBQXX7yJr55Kyo5BDT5h1PKoId/1wgie8Fj1Ym6GLpW1CBJUDHvQ1dgXoWxwi1VOXtgbFuD/SLI1V2uyvjZdlfFcAAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJYgCdACHh4qKN/+f9rYIkwAD+2r7YBQXX7yJr55Kyo5BDT5h1PKoId/1wgie8Fj1Ym6GLpW1CBJUDHvQ1dgXoWxwi1VOXtgbFuD/SLI1V2uyvjZdlfFcAAAA=',
   },
   {
     id: 'ice-canyon',
@@ -80,7 +76,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/ice-canyon.webp',
     thumb: 'backgrounds/thumbs/ice-canyon.webp',
     avg: [9, 43, 63],
-    lqip: 'data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAABwBACdASoUAA0APt1apkyopSOiMAgBEBuJZgCdMoRwJoADqy9jS9C/v7G5AAD+8YBuxN2erM2iytUgLLVD2Vm1+b27AULIODx88NYwZlQeoGM0kYYvhys5x9zvg+Qt77ygJvHfOirUfm5HZjmjgdAA',
+    lqip:
+      'data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAABwBACdASoUAA0APt1apkyopSOiMAgBEBuJZgCdMoRwJoADqy9jS9C/v7G5AAD+8YBuxN2erM2iytUgLLVD2Vm1+b27AULIODx88NYwZlQeoGM0kYYvhys5x9zvg+Qt77ygJvHfOirUfm5HZjmjgdAA',
   },
   {
     id: 'vestrahorn',
@@ -89,7 +86,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/vestrahorn.webp',
     thumb: 'backgrounds/thumbs/vestrahorn.webp',
     avg: [91, 88, 132],
-    lqip: 'data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdIMgByPCSazcUzAAA+oPAlVflzaDYMIHEKIXRUBx1BJjC7M49ZIB6lAAYjPQGHH3rEo+avYvazRNLjVUvS6kPNkCTiupKYxuESxld/tUgAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYgCdIMgByPCSazcUzAAA+oPAlVflzaDYMIHEKIXRUBx1BJjC7M49ZIB6lAAYjPQGHH3rEo+avYvazRNLjVUvS6kPNkCTiupKYxuESxld/tUgAAA=',
   },
   {
     id: 'stormlight',
@@ -98,7 +96,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/stormlight.webp',
     thumb: 'backgrounds/thumbs/stormlight.webp',
     avg: [71, 56, 59],
-    lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAABwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwAAP99O0hv3Q/QA/qw+7M5EF/r5L9T85VW7FTJZzlYzy1l8mRm42I9dE7nXBnx/uVNJLlTDd9xkne9uZw0rnWASf9AoWZGf/DP3haqQAA==',
+    lqip:
+      'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAABwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwAAP99O0hv3Q/QA/qw+7M5EF/r5L9T85VW7FTJZzlYzy1l8mRm42I9dE7nXBnx/uVNJLlTDd9xkne9uZw0rnWASf9AoWZGf/DP3haqQAA==',
   },
   {
     id: 'shipwreck',
@@ -107,7 +106,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/shipwreck.webp',
     thumb: 'backgrounds/thumbs/shipwreck.webp',
     avg: [30, 135, 153],
-    lqip: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADwAwCdASoUAAsAPt1cp0yopSOiMAgBEBuJagCdMoAC6CvmmutznWAAAP5w+hHjDdKr4hmdxB/wrxZbNaLoP/I22RFP9Wka8CNfhVukSG8BL2GDWVW1nGlgAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADwAwCdASoUAAsAPt1cp0yopSOiMAgBEBuJagCdMoAC6CvmmutznWAAAP5w+hHjDdKr4hmdxB/wrxZbNaLoP/I22RFP9Wka8CNfhVukSG8BL2GDWVW1nGlgAAA=',
   },
   {
     id: 'redwood',
@@ -116,7 +116,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/redwood.webp',
     thumb: 'backgrounds/thumbs/redwood.webp',
     avg: [26, 26, 16],
-    lqip: 'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZwAAW+xIpQp1z2f+gAD+9IiKkceaMKFaQxT1YJARJWnRiIYnL9G/6+F5KeVfynFCF9RjQEz1zAAA',
+    lqip:
+      'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZwAAW+xIpQp1z2f+gAD+9IiKkceaMKFaQxT1YJARJWnRiIYnL9G/6+F5KeVfynFCF9RjQEz1zAAA',
   },
   {
     id: 'frozen-lake',
@@ -125,7 +126,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/frozen-lake.webp',
     thumb: 'backgrounds/thumbs/frozen-lake.webp',
     avg: [95, 83, 76],
-    lqip: 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAADQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZQC7AywBNngKzS3qc0AA/unzKoxUfWW9KDdos9UlCBiQrs+8Pfp9EbvssOsTXFdGWDlC9dLyS7SF7ACawzHLNt5EU9y/iAAAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAADQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZQC7AywBNngKzS3qc0AA/unzKoxUfWW9KDdos9UlCBiQrs+8Pfp9EbvssOsTXFdGWDlC9dLyS7SF7ACawzHLNt5EU9y/iAAAAA==',
   },
   {
     id: 'cloud-valley',
@@ -134,7 +136,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/cloud-valley.webp',
     thumb: 'backgrounds/thumbs/cloud-valley.webp',
     avg: [98, 133, 135],
-    lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADwAwCdASoUAA4APt1apkyopSOiMAgBEBuJbACdMoADTg2w+48kCI94AP2cx48/HVRNnL2ek0jL4Lj6G4AWdlywho7AijzS0ssexCI72UZL1gVfUI5aSMQK73zShnlvyGDdkde5TuJgAA==',
+    lqip:
+      'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAADwAwCdASoUAA4APt1apkyopSOiMAgBEBuJbACdMoADTg2w+48kCI94AP2cx48/HVRNnL2ek0jL4Lj6G4AWdlywho7AijzS0ssexCI72UZL1gVfUI5aSMQK73zShnlvyGDdkde5TuJgAA==',
   },
   {
     id: 'ridgeline',
@@ -143,7 +146,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/ridgeline.webp',
     thumb: 'backgrounds/thumbs/ridgeline.webp',
     avg: [142, 144, 138],
-    lqip: 'data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBdgBDxCefr/pbr9SgD+7fnc9OhClakFo6lsI43H0Uu7799iA5hvvtYyYX84a6OXvGtR2LzLdYHmAIfpytVSTSjiaEVzUAA=',
+    lqip:
+      'data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBdgBDxCefr/pbr9SgD+7fnc9OhClakFo6lsI43H0Uu7799iA5hvvtYyYX84a6OXvGtR2LzLdYHmAIfpytVSTSjiaEVzUAA=',
   },
   {
     id: 'emberlight',
@@ -152,7 +156,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/emberlight.webp',
     thumb: 'backgrounds/thumbs/emberlight.webp',
     avg: [142, 69, 65],
-    lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoADKMHhTxbEArjmQAD+qEMHJwpJzjSEQsvEQnHAzyYvf7G7WctLnw+M3y7840gz5nRksKLxYHSPYa43EJE4UyFbPt5WYk050lgAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoADKMHhTxbEArjmQAD+qEMHJwpJzjSEQsvEQnHAzyYvf7G7WctLnw+M3y7840gz5nRksKLxYHSPYa43EJE4UyFbPt5WYk050lgAAA==',
   },
   {
     id: 'badlands',
@@ -161,7 +166,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/badlands.webp',
     thumb: 'backgrounds/thumbs/badlands.webp',
     avg: [121, 112, 102],
-    lqip: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAABwAwCdASoUAAwAPt1apkyopSOiMAgBEBuJZQCsAB40h3numAAA/tD8lSyz96ktZZmsOLYT7FVs+XwUxp5LEU2D105OrzBJdKpBDt6nvCYQX+V5tUh9pYYYAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAABwAwCdASoUAAwAPt1apkyopSOiMAgBEBuJZQCsAB40h3numAAA/tD8lSyz96ktZZmsOLYT7FVs+XwUxp5LEU2D105OrzBJdKpBDt6nvCYQX+V5tUh9pYYYAAA=',
   },
   {
     id: 'hallstatt',
@@ -170,7 +176,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/hallstatt.webp',
     thumb: 'backgrounds/thumbs/hallstatt.webp',
     avg: [33, 47, 46],
-    lqip: 'data:image/webp;base64,UklGRnoAAABXRUJQVlA4IG4AAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwCw7CHwf48NCXvr3F7wAP7qDcJqMoiA+IkSwhcMx4RUsILQThP5GM7k1bRy+YZeW16Xkb2dP2ZByrT7i3VnjQK4M+q3NZtNnbbf7b4vLxZfViMAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRnoAAABXRUJQVlA4IG4AAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwCw7CHwf48NCXvr3F7wAP7qDcJqMoiA+IkSwhcMx4RUsILQThP5GM7k1bRy+YZeW16Xkb2dP2ZByrT7i3VnjQK4M+q3NZtNnbbf7b4vLxZfViMAAA==',
   },
   {
     id: 'victoria-peak',
@@ -179,16 +186,18 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/victoria-peak.webp',
     thumb: 'backgrounds/thumbs/victoria-peak.webp',
     avg: [83, 82, 101],
-    lqip: 'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJZACdMoACgAusKXgLAQPyAAD+JXwD649B5u+PGiOYrR/1kTPY+1bp+cIOhcbzIXirP4emRS6Zwxz/eeyKAcO/0EiGkZOHHRzOWLBWastbkRLAxRv1APKrgRecO/x9vmMYQAAA',
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJZACdMoACgAusKXgLAQPyAAD+JXwD649B5u+PGiOYrR/1kTPY+1bp+cIOhcbzIXirP4emRS6Zwxz/eeyKAcO/0EiGkZOHHRzOWLBWastbkRLAxRv1APKrgRecO/x9vmMYQAAA',
   },
   {
     id: 'lanterns',
     name: 'Lanterns',
-    category: 'minimal',
+    category: 'lights',
     src: 'backgrounds/lanterns.webp',
     thumb: 'backgrounds/thumbs/lanterns.webp',
     avg: [175, 176, 166],
-    lqip: 'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZwDE2YwS7Nbyy6d8eh2HEAD+sOLjG8Gp0ISNcevAO1gKtlSbJ4eZ7XYkW4ZK/yuOHSt3g4QdtCyVpqI9jOHGn4DTACTzb7NbewWCi0VncjeLO3TrfxWGt56bSWXXhx1lBwAA',
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZwDE2YwS7Nbyy6d8eh2HEAD+sOLjG8Gp0ISNcevAO1gKtlSbJ4eZ7XYkW4ZK/yuOHSt3g4QdtCyVpqI9jOHGn4DTACTzb7NbewWCi0VncjeLO3TrfxWGt56bSWXXhx1lBwAA',
   },
   {
     id: 'summit-glow',
@@ -197,7 +206,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/summit-glow.webp',
     thumb: 'backgrounds/thumbs/summit-glow.webp',
     avg: [179, 177, 186],
-    lqip: 'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwCdMoADTlkpdu6fiAAA/rGDtv4hndbUK6qm2AgO7l7eGC2pTlOET/8XUjJLS8lL9+SqTfTLV/QxtmFlTDh5Dn0BpMikL4RRygAA',
+    lqip:
+      'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJYwCdMoADTlkpdu6fiAAA/rGDtv4hndbUK6qm2AgO7l7eGC2pTlOET/8XUjJLS8lL9+SqTfTLV/QxtmFlTDh5Dn0BpMikL4RRygAA',
   },
   {
     id: 'highland',
@@ -206,7 +216,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/highland.webp',
     thumb: 'backgrounds/thumbs/highland.webp',
     avg: [84, 83, 85],
-    lqip: 'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAADwAwCdASoUAA0APt1cp0yopSOiMAgBEBuJZwDG9CIcXi15+mkpy9gAAP6JzV+QI+/jBeHgjCY6AJXMoCUS3cWilhKrzAi5vK6ELVBZk8B5dtrkuB9IQAAA',
+    lqip:
+      'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAADwAwCdASoUAA0APt1cp0yopSOiMAgBEBuJZwDG9CIcXi15+mkpy9gAAP6JzV+QI+/jBeHgjCY6AJXMoCUS3cWilhKrzAi5vK6ELVBZk8B5dtrkuB9IQAAA',
   },
   {
     id: 'lookout',
@@ -215,7 +226,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/lookout.webp',
     thumb: 'backgrounds/thumbs/lookout.webp',
     avg: [110, 105, 81],
-    lqip: 'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAAAQBACdASoUAA0APt1cp0yopSOiMAgBEBuJQBOmUABMI7iYDiTWqdsJmAD+Og7kES8bbJJ5zTBsF2wk7ozsQfK9kz0Ue/DEoGcquB9xZmsPpwcYtODGMAAA',
+    lqip:
+      'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAAAQBACdASoUAA0APt1cp0yopSOiMAgBEBuJQBOmUABMI7iYDiTWqdsJmAD+Og7kES8bbJJ5zTBsF2wk7ozsQfK9kz0Ue/DEoGcquB9xZmsPpwcYtODGMAAA',
   },
   {
     id: 'polar-lights',
@@ -224,7 +236,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/polar-lights.webp',
     thumb: 'backgrounds/thumbs/polar-lights.webp',
     avg: [12, 51, 64],
-    lqip: 'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAADQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJYgCdABulEvlOgQjUYoAA/uy/Co871hMnPMFaIc3UUPZLk2xn7jXYn6NNejzJBy8Apesn/V5BkAAA',
+    lqip:
+      'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAADQAwCdASoUAAsAPt1apkyopSOiMAgBEBuJYgCdABulEvlOgQjUYoAA/uy/Co871hMnPMFaIc3UUPZLk2xn7jXYn6NNejzJBy8Apesn/V5BkAAA',
   },
   {
     id: 'star-field',
@@ -233,7 +246,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/star-field.webp',
     thumb: 'backgrounds/thumbs/star-field.webp',
     avg: [28, 41, 68],
-    lqip: 'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAABwAwCdASoUAAsAPt1cp0yopSOiMAgBEBuJYwCsAC0H4Mk97gAA/u/Jyw3n4Wd+Q6s/cQCozOo3Sm5wfFs+6seeyyg/gAAA',
+    lqip:
+      'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAABwAwCdASoUAAsAPt1cp0yopSOiMAgBEBuJYwCsAC0H4Mk97gAA/u/Jyw3n4Wd+Q6s/cQCozOo3Sm5wfFs+6seeyyg/gAAA',
   },
   {
     id: 'canyon-stars',
@@ -242,7 +256,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/canyon-stars.webp',
     thumb: 'backgrounds/thumbs/canyon-stars.webp',
     avg: [17, 19, 23],
-    lqip: 'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAABQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYwC7Ef/gPeP+g4hJzQ87rlAAAP7y9STpreGnyOyedQb+O/BOJ4zvgoyj0bLm/HiEH5zxonB8FupXWjJ1z7gRtRq3s/UguRoSAAAA',
+    lqip:
+      'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAABQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYwC7Ef/gPeP+g4hJzQ87rlAAAP7y9STpreGnyOyedQb+O/BOJ4zvgoyj0bLm/HiEH5zxonB8FupXWjJ1z7gRtRq3s/UguRoSAAAA',
   },
   {
     id: 'shoreline',
@@ -251,7 +266,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/shoreline.webp',
     thumb: 'backgrounds/thumbs/shoreline.webp',
     avg: [208, 215, 208],
-    lqip: 'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACQAwCdASoUAA8APt0+s1SooiWjmAEQG4lAGJsEO9pyXPcKllZAAP7qkRLfpu0rXB7n9V6b31qtCln+8s2sS/3VDgwMMMAA',
+    lqip:
+      'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACQAwCdASoUAA8APt0+s1SooiWjmAEQG4lAGJsEO9pyXPcKllZAAP7qkRLfpu0rXB7n9V6b31qtCln+8s2sS/3VDgwMMMAA',
   },
   {
     id: 'pier',
@@ -260,7 +276,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/pier.webp',
     thumb: 'backgrounds/thumbs/pier.webp',
     avg: [196, 156, 141],
-    lqip: 'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQBACdASoUAA0APt1cp0yopSOiMAgBEBuJYgCdMoMYPX++mfT/gN8XclrP6k2TAAD+xRRKE8i4DGZsRxTAi3BEQCYeAjmvZp6GQHcCK4n26N0ovECdRlKqBa3kVTe/vVYgBN6Bj40ugfROnc3NvznFP+PvUJleAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQBACdASoUAA0APt1cp0yopSOiMAgBEBuJYgCdMoMYPX++mfT/gN8XclrP6k2TAAD+xRRKE8i4DGZsRxTAi3BEQCYeAjmvZp6GQHcCK4n26N0ovECdRlKqBa3kVTe/vVYgBN6Bj40ugfROnc3NvznFP+PvUJleAAA=',
   },
   {
     id: 'kualoa',
@@ -269,7 +286,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/kualoa.webp',
     thumb: 'backgrounds/thumbs/kualoa.webp',
     avg: [97, 137, 137],
-    lqip: 'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAACQBACdASoUAA0APt1cpkyopSOiMAgBEBuJagCdMoMrinbAfEOJcRFqtQZkrQAA/shdzBTzyA69T5PilYYHJk5+qrpR3wdicfMxXEg8zZKsWD4epSuLMWRM31luTIYSO6Y/sVyK7dULwt3ahk+wjBXzOnqzfqAqKfl+o8wzENEwK5AAAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAACQBACdASoUAA0APt1cpkyopSOiMAgBEBuJagCdMoMrinbAfEOJcRFqtQZkrQAA/shdzBTzyA69T5PilYYHJk5+qrpR3wdicfMxXEg8zZKsWD4epSuLMWRM31luTIYSO6Y/sVyK7dULwt3ahk+wjBXzOnqzfqAqKfl+o8wzENEwK5AAAAA=',
   },
   {
     id: 'rain-front',
@@ -278,7 +296,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/rain-front.webp',
     thumb: 'backgrounds/thumbs/rain-front.webp',
     avg: [66, 73, 76],
-    lqip: 'data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZwDCgCIChvloUFNLAAD+yzzYge8KejqsRiIYevUiDf7Bsa9fhFAA',
+    lqip:
+      'data:image/webp;base64,UklGRkwAAABXRUJQVlA4IEAAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZwDCgCIChvloUFNLAAD+yzzYge8KejqsRiIYevUiDf7Bsa9fhFAA',
   },
   {
     id: 'autumn',
@@ -287,7 +306,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/autumn.webp',
     thumb: 'backgrounds/thumbs/autumn.webp',
     avg: [143, 100, 50],
-    lqip: 'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoMYACmgasAE9gAA/eIAAcNCt7aNWtWSDxuDvRy+Rg726lKu8V9IhEbunBrmaM+X9nfri5DY+6/ENUg0f9nhqDwcMCqbARqcdDsH2YAm+7Xohlip5vLkUSlbsev4qoDM+wh85h/bOgA=',
+    lqip:
+      'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoMYACmgasAE9gAA/eIAAcNCt7aNWtWSDxuDvRy+Rg726lKu8V9IhEbunBrmaM+X9nfri5DY+6/ENUg0f9nhqDwcMCqbARqcdDsH2YAm+7Xohlip5vLkUSlbsev4qoDM+wh85h/bOgA=',
   },
   {
     id: 'pine-ridge',
@@ -296,7 +316,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/pine-ridge.webp',
     thumb: 'backgrounds/thumbs/pine-ridge.webp',
     avg: [82, 95, 108],
-    lqip: 'data:image/webp;base64,UklGRmoAAABXRUJQVlA4IF4AAADQAwCdASoUAAwAPt1cp0yopSOiMAgBEBuJYwCdACHZrJwS0nLqtoAA/NifHlt5s78zvK8PCf7LF1QnIfYjWuTdL5st3H4RCWUZz9eSMPlq6rynw5v3YMcGgwv/4wAA',
+    lqip:
+      'data:image/webp;base64,UklGRmoAAABXRUJQVlA4IF4AAADQAwCdASoUAAwAPt1cp0yopSOiMAgBEBuJYwCdACHZrJwS0nLqtoAA/NifHlt5s78zvK8PCf7LF1QnIfYjWuTdL5st3H4RCWUZz9eSMPlq6rynw5v3YMcGgwv/4wAA',
   },
   {
     id: 'cloudbreak',
@@ -305,7 +326,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/cloudbreak.webp',
     thumb: 'backgrounds/thumbs/cloudbreak.webp',
     avg: [33, 32, 33],
-    lqip: 'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACQAwCdASoUAA0APt1cp00opSOiMAgBEBuJaQAAW+uEZzzQygeAAP70HdF2qsC7RoalMlYdHZxGC2UaI8UZnxMwDB8gAAAA',
+    lqip:
+      'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAACQAwCdASoUAA0APt1cp00opSOiMAgBEBuJaQAAW+uEZzzQygeAAP70HdF2qsC7RoalMlYdHZxGC2UaI8UZnxMwDB8gAAAA',
   },
   {
     id: 'tundra',
@@ -314,7 +336,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/tundra.webp',
     thumb: 'backgrounds/thumbs/tundra.webp',
     avg: [96, 96, 100],
-    lqip: 'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADQAwCdASoUAAsAPt1cpkyopSOiMAgBEBuJZwDCgB4Ist7hjonaW0AA37PUWUO1UQ0Z60qWDlUjEGoocietdYY8HMJvSBUaHBSyI2csp+5bBTCXNl1M1jwAAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADQAwCdASoUAAsAPt1cpkyopSOiMAgBEBuJZwDCgB4Ist7hjonaW0AA37PUWUO1UQ0Z60qWDlUjEGoocietdYY8HMJvSBUaHBSyI2csp+5bBTCXNl1M1jwAAAA=',
   },
   {
     id: 'wheatland',
@@ -323,7 +346,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/wheatland.webp',
     thumb: 'backgrounds/thumbs/wheatland.webp',
     avg: [146, 136, 130],
-    lqip: 'data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBdgA9jeY0y+d2j6duAA/tPk4LIMFYRrheIN2v8Hf6S7XaiXZuJdU28AScBNgWXwyyuAAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBdgA9jeY0y+d2j6duAA/tPk4LIMFYRrheIN2v8Hf6S7XaiXZuJdU28AScBNgWXwyyuAAAA=',
   },
   {
     id: 'harbour-lights',
@@ -332,7 +356,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/harbour-lights.webp',
     thumb: 'backgrounds/thumbs/harbour-lights.webp',
     avg: [10, 38, 53],
-    lqip: 'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAABQAwCdASoUAA4APt1cpkyopSOiMAgBEBuJYwCdAC0H6BOTYAD+8D7DKpi4QQM5qlqKbLZWRRMXCaaq0CoEcJ4QurTkAA==',
+    lqip:
+      'data:image/webp;base64,UklGRlAAAABXRUJQVlA4IEQAAABQAwCdASoUAA4APt1cpkyopSOiMAgBEBuJYwCdAC0H6BOTYAD+8D7DKpi4QQM5qlqKbLZWRRMXCaaq0CoEcJ4QurTkAA==',
   },
   {
     id: 'taipei',
@@ -341,7 +366,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/taipei.webp',
     thumb: 'backgrounds/thumbs/taipei.webp',
     avg: [58, 51, 51],
-    lqip: 'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYwCsO/7AwZuDrFRuaZXA5gD+8tfOCH4QGh8rXdm5HfmWza0nDacNRx7YbbU4RJzCJIXOHgJI/ZGyXqYV8rvudfnLV1Ou3ZTGPMmEPcgAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRnQAAABXRUJQVlA4IGgAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJYwCsO/7AwZuDrFRuaZXA5gD+8tfOCH4QGh8rXdm5HfmWza0nDacNRx7YbbU4RJzCJIXOHgJI/ZGyXqYV8rvudfnLV1Ou3ZTGPMmEPcgAAA==',
   },
   {
     id: 'rooftops',
@@ -350,7 +376,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/rooftops.webp',
     thumb: 'backgrounds/thumbs/rooftops.webp',
     avg: [94, 88, 106],
-    lqip: 'data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZQC7IDZB+u1uMKJE+tZzAADou1adNYx4VxOazkEA/YM3sEkltv5il/f/DVFRYwwl9eR+8ItoVcKU8AA=',
+    lqip:
+      'data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZQC7IDZB+u1uMKJE+tZzAADou1adNYx4VxOazkEA/YM3sEkltv5il/f/DVFRYwwl9eR+8ItoVcKU8AA=',
   },
   {
     id: 'tokyo-haze',
@@ -359,7 +386,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/tokyo-haze.webp',
     thumb: 'backgrounds/thumbs/tokyo-haze.webp',
     avg: [152, 165, 172],
-    lqip: 'data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoUAAsAPt1cpkyopSOiMAgBEBuJZwCo9CHWvyBDgHr7oAD+6ra3R3/vA0bNgdJPp5V+E0HVeBmRJa54eUd0JsigAAA=',
+    lqip:
+      'data:image/webp;base64,UklGRlQAAABXRUJQVlA4IEgAAACwAwCdASoUAAsAPt1cpkyopSOiMAgBEBuJZwCo9CHWvyBDgHr7oAD+6ra3R3/vA0bNgdJPp5V+E0HVeBmRJa54eUd0JsigAAA=',
   },
   {
     id: 'sherbet',
@@ -368,7 +396,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/sherbet.webp',
     thumb: 'backgrounds/thumbs/sherbet.webp',
     avg: [216, 128, 173],
-    lqip: 'data:image/webp;base64,UklGRnYAAABXRUJQVlA4IGoAAAAQBACdASoUAA0APt1eqU2opSQiMAgBEBuJbACdMoRwIsAAkxswhoXQ7gD9iPs36rMqOVMrcinQGpyNe1kZOv/jaYHoGuj3HyFNdwPhADghbLtc0b+/kQEyhIO+MqCyO23fAdsT5apt1RAA',
+    lqip:
+      'data:image/webp;base64,UklGRnYAAABXRUJQVlA4IGoAAAAQBACdASoUAA0APt1eqU2opSQiMAgBEBuJbACdMoRwIsAAkxswhoXQ7gD9iPs36rMqOVMrcinQGpyNe1kZOv/jaYHoGuj3HyFNdwPhADghbLtc0b+/kQEyhIO+MqCyO23fAdsT5apt1RAA',
   },
   {
     id: 'lagoon',
@@ -377,7 +406,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/lagoon.webp',
     thumb: 'backgrounds/thumbs/lagoon.webp',
     avg: [14, 79, 77],
-    lqip: 'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoR4GB4Z3WrZkBf0AP6ntbqVH067k7uF3ZKAeMABf95+vbujITy/zGAVY9PeWG8qDyQhbArANZfFAAAA',
+    lqip:
+      'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoR4GB4Z3WrZkBf0AP6ntbqVH067k7uF3ZKAeMABf95+vbujITy/zGAVY9PeWG8qDyQhbArANZfFAAAA',
   },
   {
     id: 'neon',
@@ -386,7 +416,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/neon.webp',
     thumb: 'backgrounds/thumbs/neon.webp',
     avg: [52, 15, 91],
-    lqip: 'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADwAwCdASoUAA0APt1epkyopSOiMAgBEBuJbACdLwAByzsxMR4UVgjgAP7r/CMyJ29ULKq2/yrw7+IkZy0+UAio6+/xm0C4wOcTXIxZaA3838G8V/5z6+z9u/+poIUMaPHBVIAA',
+    lqip:
+      'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADwAwCdASoUAA0APt1epkyopSOiMAgBEBuJbACdLwAByzsxMR4UVgjgAP7r/CMyJ29ULKq2/yrw7+IkZy0+UAio6+/xm0C4wOcTXIxZaA3838G8V/5z6+z9u/+poIUMaPHBVIAA',
   },
   {
     id: 'spectrum',
@@ -395,7 +426,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/spectrum.webp',
     thumb: 'backgrounds/thumbs/spectrum.webp',
     avg: [39, 81, 140],
-    lqip: 'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAABQBACdASoUAA0APt1cp00opSOiMAgBEBuJagCdMoR3N6SAVy+rR++WURGAAPyxrCBwgz7HKggxlhZyfbv2c95qv/IpxfypE6XzDaoeDbMkmfNsQ2yS/Xd4J/2IQihIYgAAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAABQBACdASoUAA0APt1cp00opSOiMAgBEBuJagCdMoR3N6SAVy+rR++WURGAAPyxrCBwgz7HKggxlhZyfbv2c95qv/IpxfypE6XzDaoeDbMkmfNsQ2yS/Xd4J/2IQihIYgAAAA==',
   },
   {
     id: 'opal',
@@ -404,7 +436,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/opal.webp',
     thumb: 'backgrounds/thumbs/opal.webp',
     avg: [215, 207, 225],
-    lqip: 'data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJaAC7H8AC4/8DOeuoAAD81AslMiY+qdSzEdMMJAXGqMgjnxVlqtbm5/otur5dHkAAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRlYAAABXRUJQVlA4IEoAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJaAC7H8AC4/8DOeuoAAD81AslMiY+qdSzEdMMJAXGqMgjnxVlqtbm5/otur5dHkAAAA==',
   },
   {
     id: 'nebula',
@@ -413,7 +446,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/nebula.webp',
     thumb: 'backgrounds/thumbs/nebula.webp',
     avg: [57, 47, 122],
-    lqip: 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJagCdMoR4GCm9COyaHpdsgAD+HMa79xox2KLwOlr10mFwINbVLLyfZy1fgQlTsCniCSkZeLZgAA==',
+    lqip:
+      'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJagCdMoR4GCm9COyaHpdsgAD+HMa79xox2KLwOlr10mFwINbVLLyfZy1fgQlTsCniCSkZeLZgAA==',
   },
   {
     id: 'velvet',
@@ -422,7 +456,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/velvet.webp',
     thumb: 'backgrounds/thumbs/velvet.webp',
     avg: [47, 0, 83],
-    lqip: 'data:image/webp;base64,UklGRoIAAABXRUJQVlA4IHYAAABwBACdASoUAA0APt1apkyopSOiMAgBEBuJbACsLwFqAAWbnyWm8btUSbic3AD+9XKgZcznhsm/kVmGGI8HpLNrsmbFB5v20+a+ZmNUU2XCs7CPtM7N8Vh/OFefx2PZ8Rjx+t//BYdU2boewzHWP1r7g+k3EwAA',
+    lqip:
+      'data:image/webp;base64,UklGRoIAAABXRUJQVlA4IHYAAABwBACdASoUAA0APt1apkyopSOiMAgBEBuJbACsLwFqAAWbnyWm8btUSbic3AD+9XKgZcznhsm/kVmGGI8HpLNrsmbFB5v20+a+ZmNUU2XCs7CPtM7N8Vh/OFefx2PZ8Rjx+t//BYdU2boewzHWP1r7g+k3EwAA',
   },
   {
     id: 'prism',
@@ -431,7 +466,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/prism.webp',
     thumb: 'backgrounds/thumbs/prism.webp',
     avg: [203, 162, 186],
-    lqip: 'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJaACdMoR3ACA9s9xZ6RJamAD+8DL1ejaPVxvpPs1BZF7dyVdNCLmj6FvDF6KdgOmHfARCwAAAAA==',
+    lqip:
+      'data:image/webp;base64,UklGRlwAAABXRUJQVlA4IFAAAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJaACdMoR3ACA9s9xZ6RJamAD+8DL1ejaPVxvpPs1BZF7dyVdNCLmj6FvDF6KdgOmHfARCwAAAAA==',
   },
   {
     id: 'sea-glass',
@@ -440,7 +476,8 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/sea-glass.webp',
     thumb: 'backgrounds/thumbs/sea-glass.webp',
     avg: [95, 116, 97],
-    lqip: 'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAACwAwCdASoUAA0APt1epkyopSOiMAgBEBuJZQCdAB3XUg5R1PqxYAD3LPuEfMNj5eLrzFWBa6DqyF8XnkQUALIGn2i170WL3WjwxAAA',
+    lqip:
+      'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAACwAwCdASoUAA0APt1epkyopSOiMAgBEBuJZQCdAB3XUg5R1PqxYAD3LPuEfMNj5eLrzFWBa6DqyF8XnkQUALIGn2i170WL3WjwxAAA',
   },
   {
     id: 'swell',
@@ -449,6 +486,387 @@ export const PHOTO_BACKGROUNDS: PhotoBackground[] = [
     src: 'backgrounds/swell.webp',
     thumb: 'backgrounds/thumbs/swell.webp',
     avg: [46, 91, 92],
-    lqip: 'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJQBOgBDtN0aWrn1SpeAAA/tksOwE2LKLyPGE1YFRvVURcLvZbV+06bpsjEgAA',
+    lqip:
+      'data:image/webp;base64,UklGRlIAAABXRUJQVlA4IEYAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJQBOgBDtN0aWrn1SpeAAA/tksOwE2LKLyPGE1YFRvVURcLvZbV+06bpsjEgAA',
+  },
+  {
+    id: 'seawall',
+    name: 'Seawall',
+    category: 'coast',
+    src: 'backgrounds/seawall.webp',
+    thumb: 'backgrounds/thumbs/seawall.webp',
+    avg: [66, 126, 125],
+    lqip:
+      'data:image/webp;base64,UklGRnwAAABXRUJQVlA4IHAAAABQBACdASoUAAsAPt1cp0yopSOiMAgBEBuJaACdMoR8eCUXvtDiBJYYGcAAAP7ZUqJXVKwKUuz8poX47Q7pEWhs9E11w3ymlP8f3rP0U8xdhFlBBuSWbbxg6vMy8GeB2sAq+cELLm8Ya4XO0gzjIAAA',
+  },
+  {
+    id: 'slot-canyon',
+    name: 'Slot Canyon',
+    category: 'desert',
+    src: 'backgrounds/slot-canyon.webp',
+    thumb: 'backgrounds/thumbs/slot-canyon.webp',
+    avg: [39, 36, 49],
+    lqip:
+      'data:image/webp;base64,UklGRoAAAABXRUJQVlA4IHQAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJYgC7ABoKD39BV4qqAAD+9XrJEvqaq3VIildOVsy9n2sbMvk4V7v5hzhlCw1Rjw1++z8Zyr13cXtFTHoRhZB8nN6zW262Di9U6K2nk0zCOEV3cAwJZiA9G0ogAA==',
+  },
+  {
+    id: 'golden-hour',
+    name: 'Golden Hour',
+    category: 'abstract',
+    src: 'backgrounds/golden-hour.webp',
+    thumb: 'backgrounds/thumbs/golden-hour.webp',
+    avg: [141, 98, 64],
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAAAQBQCdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoR3JoM4EbVt/8B42NbBmDL6KyR4AMyhS/PY5jMeIoirAGqnlfS/FKe3/W+f2f6RAxbL0T0iCM9cxq4f+SSPCRctYDBVMH2AUTTWN9dMIR0vS+nISk/ydNRHvgWRyhoA',
+  },
+  {
+    id: 'tide-pool',
+    name: 'Tide Pool',
+    category: 'coast',
+    src: 'backgrounds/tide-pool.webp',
+    thumb: 'backgrounds/thumbs/tide-pool.webp',
+    avg: [145, 94, 133],
+    lqip:
+      'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAABwBACdASoUAAsAPt1cpkyopSOiMAgBEBuJZgCdMoKBBb7YDCp9anSpdaWpaAD+2abedYBbqO4EZTSNhMkCf3KWA7Mce2nrzXbObQP6sFkMl/oGjB/dBwCIM+KLiPO8JIDLTT2Lx521eLFvDv4AROyh9A07TDBDAAA=',
+  },
+  {
+    id: 'breakwater',
+    name: 'Breakwater',
+    category: 'coast',
+    src: 'backgrounds/breakwater.webp',
+    thumb: 'backgrounds/thumbs/breakwater.webp',
+    avg: [94, 54, 97],
+    lqip:
+      'data:image/webp;base64,UklGRnoAAABXRUJQVlA4IG4AAADwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJQBOiP/wFmTg9UNvlHkogAP7AU3m8eOfbrDZzSZkkiERjecIR1X+0DuFbCTqQK4urpcf3OOUYqiLZ6908OnMQY2vLOpwYowpSoHdcNteyGCdvYPcgAA==',
+  },
+  {
+    id: 'ferryman',
+    name: 'Ferryman',
+    category: 'lakes',
+    src: 'backgrounds/ferryman.webp',
+    thumb: 'backgrounds/thumbs/ferryman.webp',
+    avg: [128, 46, 13],
+    lqip:
+      'data:image/webp;base64,UklGRpoAAABXRUJQVlA4II4AAADwBACdASoUAAsAPt1apkyopSOiMAgBEBuJbACdMoMYPYDeO8//dswE5dTTUGkEuyAA/tzkijLJyUI5JvRfj8ABJGq4u8HM2wiumwMTzDi66qgjjuGvnsC/Boqxof3dgBodxUESSlB+VOnewkDWAsvcpUDMuEchT97maW63J3ZolR6ysa2eed6J+ggeCAAA',
+  },
+  {
+    id: 'golden-willow',
+    name: 'Golden Willow',
+    category: 'lakes',
+    src: 'backgrounds/golden-willow.webp',
+    thumb: 'backgrounds/thumbs/golden-willow.webp',
+    avg: [160, 124, 68],
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAABQBACdASoUAA0APt1apkyopSOiMAgBEBuJZACdMoRwACf+0fglLZQUx3bgAP6rrxzoUq8p4HQGGJGJVWRgP7vHSy0Lp6c/c4J6N75flWh5uL4pDRcjG+zvghR7/I8KAD5nbT0x6mjNZ+NrTeIvpWuVHXWg8cMXzs95AAAA',
+  },
+  {
+    id: 'ripples',
+    name: 'Ripples',
+    category: 'abstract',
+    src: 'backgrounds/ripples.webp',
+    thumb: 'backgrounds/thumbs/ripples.webp',
+    avg: [60, 43, 38],
+    lqip:
+      'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAAAQBACdASoUAA0APt1cp0yopSOiMAgBEBuJZAC7ACFr8zumkhMbDJ23AAD+8zewh3jfUy07K/+08UZHLpQbjDE/fO5a/tQQ/F5xUeSdm0EYQEVxuLJeP5RAAAA=',
+  },
+  {
+    id: 'valley-light',
+    name: 'Valley Light',
+    category: 'country',
+    src: 'backgrounds/valley-light.webp',
+    thumb: 'backgrounds/thumbs/valley-light.webp',
+    avg: [131, 94, 86],
+    lqip:
+      'data:image/webp;base64,UklGRoIAAABXRUJQVlA4IHYAAACQBACdASoUAA8APt1cpkyopSOiMAgBEBuJZgCdMoMYPYABhJmbXgGXkYMsKsAA/rfHMKro9wUzzXxvU3SDXt3jnQGsiTkkgo3rphmgPYyYqK4UTolE1MCln7ITI1g/mJTC/l9akw4qKUtsfRIBOyFTB/Ag6gAA',
+  },
+  {
+    id: 'violet-hour',
+    name: 'Violet Hour',
+    category: 'sky',
+    src: 'backgrounds/violet-hour.webp',
+    thumb: 'backgrounds/thumbs/violet-hour.webp',
+    avg: [107, 60, 121],
+    lqip:
+      'data:image/webp;base64,UklGRqAAAABXRUJQVlA4IJQAAACwBACdASoUAA0APt1apkyopSOiMAgBEBuJbACdMoMYPYDF/wE+sGtWcMLt8O+gAP70MlWzrXtocX19+XebaDyIxUI68paK0ymhsnoLviNO6wjVjeja/HXOv2b3/gtLqpKR9hxTYQzxdYX1am9V9A2NzhxYEesLsHaZqe2YuUjxDCg/N7E904DOayCVAEDCzBlKl/AA',
+  },
+  {
+    id: 'morning-rays',
+    name: 'Morning Rays',
+    category: 'lakes',
+    src: 'backgrounds/morning-rays.webp',
+    thumb: 'backgrounds/thumbs/morning-rays.webp',
+    avg: [88, 94, 96],
+    lqip:
+      'data:image/webp;base64,UklGRoQAAABXRUJQVlA4IHgAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJZQC2yB0lp6mbyajD+wAA/CIrYOlhFIKVGDTm+e83p21qfZFMooUllC/fIvre10QmM8FRQbY0oIAmWEnb5lHwazbEgXxyjaf1Eie0KKyU4rgjHk8WgCskDGGQvwMgAAA=',
+  },
+  {
+    id: 'ember-grass',
+    name: 'Ember Grass',
+    category: 'country',
+    src: 'backgrounds/ember-grass.webp',
+    thumb: 'backgrounds/thumbs/ember-grass.webp',
+    avg: [68, 45, 33],
+    lqip:
+      'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAQBACdASoUAA0APt1cp0yopSOiMAgBEBuJZAC7ABojWhln7KdQ7JXkgAD+9DGU14HntFXgLVbGpE3w7MRuij17djTWd1gsdOYD8EkTuM6y+IgGba9KLoUL2hqlXhkjDC2o/zPrKQMYkNBZDY8daueLwnYYq/a5hIuKGm6tUAA=',
+  },
+  {
+    id: 'mist-lake',
+    name: 'Mist Lake',
+    category: 'lakes',
+    src: 'backgrounds/mist-lake.webp',
+    thumb: 'backgrounds/thumbs/mist-lake.webp',
+    avg: [104, 121, 147],
+    lqip:
+      'data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAAAwBACdASoUAA0APt1cpkyopSOiMAgBEBuJQBOmUFqB//gIyHsL4BnNEdAA/j8N90qhq1iKmP7gybQtRV71x+qSteX8Xxl60HZmgHYSif9FqiJYnOTWCE2Eyr4zow/LuQBET1a2Wz58BXiyOjLQDqSAAAA=',
+  },
+  {
+    id: 'rolling-fields',
+    name: 'Rolling Fields',
+    category: 'country',
+    src: 'backgrounds/rolling-fields.webp',
+    thumb: 'backgrounds/thumbs/rolling-fields.webp',
+    avg: [80, 87, 19],
+    lqip:
+      'data:image/webp;base64,UklGRmgAAABXRUJQVlA4IFwAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJZgCsABZTx4k6EF2YAAD+gHIJRl1qoTyxxGpHANvniXscQH/OHrpyt2+qu1WDqwRBjo/Ohn4gjAfEEZoHucI+2nAAAA==',
+  },
+  {
+    id: 'brushstroke',
+    name: 'Brushstroke',
+    category: 'abstract',
+    src: 'backgrounds/brushstroke.webp',
+    thumb: 'backgrounds/thumbs/brushstroke.webp',
+    avg: [76, 75, 85],
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAABQBACdASoUAA0APt1ap0yopSOiMAgBEBuJYgCdH8ADMpJVNS8TFe10y2AAAP7SXtWweKn7zUyvT7BfnmtJRAXjHkJTpItx9DBJafIpYaxmp4mLQRjof80q1+0EqRvYKS6gvNvNEz5w7K22WasrErpTu9wRiaisACc/gAAA',
+  },
+  {
+    id: 'dusk',
+    name: 'Dusk',
+    category: 'abstract',
+    src: 'backgrounds/dusk.webp',
+    thumb: 'backgrounds/thumbs/dusk.webp',
+    avg: [151, 103, 116],
+    lqip:
+      'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAADwAwCdASoUAA0APt1cp0yopSOiMAgBEBuJZgCdMoR4GCm9rQIGbo/wAP7te2LCcBHaSu/XIaSmKkT17zZlnCK5P8Eyv5VE455Y21a/Vm66cpLDzNTea2NtgJFRPhs2wcBy1AAA',
+  },
+  {
+    id: 'sea-mist',
+    name: 'Sea Mist',
+    category: 'coast',
+    src: 'backgrounds/sea-mist.webp',
+    thumb: 'backgrounds/thumbs/sea-mist.webp',
+    avg: [143, 114, 131],
+    lqip:
+      'data:image/webp;base64,UklGRmoAAABXRUJQVlA4IF4AAABwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJQBfnA07s2ebKEsAA996ErdkDOODUcO37q1hNnLpfYVlIlwOkmCNJRQTNvqZSiZ/QEHn6DB4fuU1SasYQCZmGsQgYAAAA',
+  },
+  {
+    id: 'black-sand',
+    name: 'Black Sand',
+    category: 'coast',
+    src: 'backgrounds/black-sand.webp',
+    thumb: 'backgrounds/thumbs/black-sand.webp',
+    avg: [90, 94, 144],
+    lqip:
+      'data:image/webp;base64,UklGRogAAABXRUJQVlA4IHwAAACwBACdASoUAAsAPt1apkyopSOiMAgBEBuJbACdMoMjpEBb/4DFG03kC33ngYMAAP7p0xbNt0zRJpCno+M5XNVn0mAkiwc4CKI6jkhGAi7kZrMK/feQSGSw1Guv/EGtfD8P1z/lkAhNNkP12TNg6RO0gY7jlDtmHFujaAAA',
+  },
+  {
+    id: 'green-hills',
+    name: 'Green Hills',
+    category: 'country',
+    src: 'backgrounds/green-hills.webp',
+    thumb: 'backgrounds/thumbs/green-hills.webp',
+    avg: [55, 55, 1],
+    lqip:
+      'data:image/webp;base64,UklGRl4AAABXRUJQVlA4IFIAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYgC7ACK56I2owerX8AD+2fiyPuYIFXTdosE0Bu+VUfxg+y5AgbKBNNLqP5gUeJwqxxQZaB/zIIAA',
+  },
+  {
+    id: 'antelope',
+    name: 'Antelope',
+    category: 'desert',
+    src: 'backgrounds/antelope.webp',
+    thumb: 'backgrounds/thumbs/antelope.webp',
+    avg: [61, 48, 41],
+    lqip:
+      'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAAAQBACdASoUAA0APt1apkyopSOiMAgBEBuJZgCsEf/gPNpnmzP6v7+eQAD+wdcrbb336fKzm0QPxoPiw3jGgRJx5X+FLp/3yDSL1DtnuH9Fp+rlCDPwo8NH0CzgH8ufkM9TvZu6uf0POEVqkPkSq1azeVq5rYisjEXSBi8AAAA=',
+  },
+  {
+    id: 'blue-ridges',
+    name: 'Blue Ridges',
+    category: 'mountains',
+    src: 'backgrounds/blue-ridges.webp',
+    thumb: 'backgrounds/thumbs/blue-ridges.webp',
+    avg: [107, 99, 141],
+    lqip:
+      'data:image/webp;base64,UklGRnIAAABXRUJQVlA4IGYAAADQBACdASoUAA0APt1gp00opaOiMAgBEBuJaACdMoLUD//pf8B7wW3m58Pka8YvQAD+lnmR207kR/v39DconsxOeecBllT1tjso3kR9OcUQeIQ/B+NO9EZjOil5q74QWPcnweiKYAA=',
+  },
+  {
+    id: 'peyto',
+    name: 'Peyto',
+    category: 'lakes',
+    src: 'backgrounds/peyto.webp',
+    thumb: 'backgrounds/thumbs/peyto.webp',
+    avg: [113, 136, 134],
+    lqip:
+      'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAADQAwCdASoUAA0APt1apkyopSOiMAgBEBuJbACsAB6uHuP1ppI4EgAA/tfmc8yrEjBUs2OFUWFQxr42SxjgeCJJLT2NmkxxC0urvt+SyaDzBDCy8SRuWF+Cuo3NtpV4LlZTDQEN6bHLl/Fp8grdnRviqxqAPAOfTPNTMHorSS1CmyzAAAA=',
+  },
+  {
+    id: 'gilded-surf',
+    name: 'Gilded Surf',
+    category: 'coast',
+    src: 'backgrounds/gilded-surf.webp',
+    thumb: 'backgrounds/thumbs/gilded-surf.webp',
+    avg: [112, 97, 87],
+    lqip:
+      'data:image/webp;base64,UklGRoYAAABXRUJQVlA4IHoAAAAQBACdASoUAA0APt1cpkyopSOiMAgBEBuJZAC1CExDCJtA36u8zT9J6AD+zbTHwgUljNy6p+oiRf3BZZ9ckW/2xRxLVxZfJ3YTqx82I0a61ZDJNq+dlUrxouOTzxsBziCjr0BeOC1k+Fvb3umJmLpjCMgIiO3UlwAAAA==',
+  },
+  {
+    id: 'valley-lake',
+    name: 'Valley Lake',
+    category: 'lakes',
+    src: 'backgrounds/valley-lake.webp',
+    thumb: 'backgrounds/thumbs/valley-lake.webp',
+    avg: [121, 122, 108],
+    lqip:
+      'data:image/webp;base64,UklGRooAAABXRUJQVlA4IH4AAADwAwCdASoUAA0APt1apkyopSOiMAgBEBuJQBfJBHpKMp2zWSBA9MIgAPzZNkzHorbnUt1EG6Fqg5RwmH8vFFOzmD+ghuHZ6OUjJIt9vql1zR3yfLq532BhU489hNVCypPcROsAWWhUnHwR/SGK3DYk6GNCV/QxDueCWLsAAAA=',
+  },
+  {
+    id: 'storm-ridge',
+    name: 'Storm Ridge',
+    category: 'mountains',
+    src: 'backgrounds/storm-ridge.webp',
+    thumb: 'backgrounds/thumbs/storm-ridge.webp',
+    avg: [43, 98, 124],
+    lqip:
+      'data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAABQBACdASoUAA0APt1apkyopSOiMAgBEBuJbACdLwJ6AAU3YOFA3Nrcn+csAP55NO6MJncn8Vw6xKT/obLw6UwtoEuQ0EITgpSnfPomr6QEcUql23CQkGPfmeJjPLWe8RSeQsf29tEaQAbqT0M2cXfoyhhYRRRxZeFmTln2tjw2evgAAAA=',
+  },
+  {
+    id: 'agave',
+    name: 'Agave',
+    category: 'forest',
+    src: 'backgrounds/agave.webp',
+    thumb: 'backgrounds/thumbs/agave.webp',
+    avg: [36, 40, 40],
+    lqip:
+      'data:image/webp;base64,UklGRm4AAABXRUJQVlA4IGIAAACwAwCdASoUAA0APt1apkyopSOiMAgBEBuJZwAAUcns0JUK9hWJkAD+7H0QewAoxHoLucygjs/bEQO8QpqJQT4E/18rVCEMfhR598zHmGheSqFixOugVxxpGB8blYAsnYAAAA==',
+  },
+  {
+    id: 'feather-grass',
+    name: 'Feather Grass',
+    category: 'country',
+    src: 'backgrounds/feather-grass.webp',
+    thumb: 'backgrounds/thumbs/feather-grass.webp',
+    avg: [152, 162, 156],
+    lqip:
+      'data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAADQAwCdASoUAA0APt1cp0yopSOiMAgBEBuJQBOgBEAu4BLEa6KjeRAA/rc4m/MBj1Uu68u4Hz0xN23WLRLAYcjW+zMi1rHQdpCDZg2LiSQy1e4830laYtzrQdXZWlhnBVuuA+Dzhw6HODgAAAA=',
+  },
+  {
+    id: 'dune-lagoon',
+    name: 'Dune Lagoon',
+    category: 'desert',
+    src: 'backgrounds/dune-lagoon.webp',
+    thumb: 'backgrounds/thumbs/dune-lagoon.webp',
+    avg: [110, 145, 116],
+    lqip:
+      'data:image/webp;base64,UklGRmwAAABXRUJQVlA4IGAAAAAwBACdASoUAA0APt1cp0yopSOiMAgBEBuJagCdMoRwACsimlFmBXii1wAA/u4Ljb+7dwDB1DcFi1h7yiJIa6m+dx0yIpP2ut+19UGgOvJpWbDUuCL3TJ9ZXJfVCo6gAAA=',
+  },
+  {
+    id: 'shallows',
+    name: 'Shallows',
+    category: 'coast',
+    src: 'backgrounds/shallows.webp',
+    thumb: 'backgrounds/thumbs/shallows.webp',
+    avg: [124, 128, 127],
+    lqip:
+      'data:image/webp;base64,UklGRmgAAABXRUJQVlA4IFwAAABQBACdASoUAA8APt1apkyopSOiMAgBEBuJYgCdMoGv/gNoEBZTm/TfF+yQAP5V4uMM8A6ABpGqGi3i79EOYeoW6fYTVSYIFOhOZBdnM8kEF7g/HJvwEZQTpwAAAA==',
+  },
+  {
+    id: 'red-tide',
+    name: 'Red Tide',
+    category: 'coast',
+    src: 'backgrounds/red-tide.webp',
+    thumb: 'backgrounds/thumbs/red-tide.webp',
+    avg: [62, 38, 31],
+    lqip:
+      'data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAADQAwCdASoUAA0APt1cp0yopSOiMAgBEBuJQBOgBFcFj02oBx1TtgAA/tuoEwH4e0Xl7aMoIDvAObuVfZy5Fd4Ps0P+F/e8jNUyz4SIAAA=',
+  },
+  {
+    id: 'still-bay',
+    name: 'Still Bay',
+    category: 'coast',
+    src: 'backgrounds/still-bay.webp',
+    thumb: 'backgrounds/thumbs/still-bay.webp',
+    avg: [147, 133, 148],
+    lqip:
+      'data:image/webp;base64,UklGRoIAAABXRUJQVlA4IHYAAAAwBACdASoUAA0APt1cpkyopSOiMAgBEBuJZACdH8ACcsS3oqDNyrcvzlgA6L+yRiv51lgTC8k5SaOz39xUQ9wiI4mM8kiW8G8W17FjUp4sJJb9+2d9xW6rvOpN2BjlWUx4bmABHCDBI7MNnpfHbrcP06jYAAAA',
+  },
+  {
+    id: 'midnight-silk',
+    name: 'Midnight Silk',
+    category: 'abstract',
+    src: 'backgrounds/midnight-silk.webp',
+    thumb: 'backgrounds/thumbs/midnight-silk.webp',
+    avg: [26, 41, 89],
+    lqip:
+      'data:image/webp;base64,UklGRloAAABXRUJQVlA4IE4AAACwAwCdASoUAAsAPt1apkyopSOiMAgBEBuJZACdACHP07y9CrdYAAD+6XKnsV54dei8z5G252fW/RlvuV3/L5FHkgUbGAwzgp5oAYXgAAA=',
+  },
+  {
+    id: 'rosy-clouds',
+    name: 'Rosy Clouds',
+    category: 'sky',
+    src: 'backgrounds/rosy-clouds.webp',
+    thumb: 'backgrounds/thumbs/rosy-clouds.webp',
+    avg: [152, 127, 142],
+    lqip:
+      'data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAADQAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYwC7ABlzZt+Ivr6YUgAA/H5vIb8ytjBAV1zSurjK85M9l+qRnmjV8Uena+ppXH0NAy676sbL3/+alJEMxL0dgAA=',
+  },
+  {
+    id: 'lilac-sky',
+    name: 'Lilac Sky',
+    category: 'sky',
+    src: 'backgrounds/lilac-sky.webp',
+    thumb: 'backgrounds/thumbs/lilac-sky.webp',
+    avg: [144, 118, 143],
+    lqip:
+      'data:image/webp;base64,UklGRmQAAABXRUJQVlA4IFgAAAAwBACdASoUAA0APt1apkyopSOiMAgBEBuJQBOmUGYWiEGTOkIbhNoz/YgA99F35ekz6lE7wZKAZ1ipmR6xIcKK8bLLrAhSZ5XBiGP111Xxpp3Uff7zeGAA',
+  },
+  {
+    id: 'cotton-candy',
+    name: 'Cotton Candy',
+    category: 'sky',
+    src: 'backgrounds/cotton-candy.webp',
+    thumb: 'backgrounds/thumbs/cotton-candy.webp',
+    avg: [163, 124, 140],
+    lqip:
+      'data:image/webp;base64,UklGRnAAAABXRUJQVlA4IGQAAACQAwCdASoUAA0APt1cp00opSOiMAgBEBuJQBOiP/wBeH4X5WogAP6DgL3MiFlasBC7bJoMvA+jt1dbcvwwCfyYjaBOaQiKbCcy3waUXQGTlr82vMh6R2Fx6PlvO2OioWiGwAAA',
+  },
+  {
+    id: 'rainfall',
+    name: 'Rainfall',
+    category: 'abstract',
+    src: 'backgrounds/rainfall.webp',
+    thumb: 'backgrounds/thumbs/rainfall.webp',
+    avg: [60, 128, 130],
+    lqip:
+      'data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAACwAwCdASoUAA0APt1cpkyopSOiMAgBEBuJYgCsACHceMpdlgNexAD+ns4bLjVn3ntz4JurT84d2ZsthAHKij0A8A+qjx4TfDrHdaAA',
+  },
+  {
+    id: 'wild-oats',
+    name: 'Wild Oats',
+    category: 'country',
+    src: 'backgrounds/wild-oats.webp',
+    thumb: 'backgrounds/thumbs/wild-oats.webp',
+    avg: [132, 90, 120],
+    lqip:
+      'data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAACQAwCdASoUAA0APt1apkyopSOiMAgBEBuJYgCdABq49ZKmiPuAAPsQM22Cm+2r5snftOkmClBke+iQFijOoaO1wzB2dk1Y8piV+wTTIKRgik7Dtyc+i/Y2M+MTolWsyG9jvgQF+Gxon0oDSAA=',
+  },
+  {
+    id: 'afterglow',
+    name: 'Afterglow',
+    category: 'abstract',
+    src: 'backgrounds/afterglow.webp',
+    thumb: 'backgrounds/thumbs/afterglow.webp',
+    avg: [74, 58, 97],
+    lqip:
+      'data:image/webp;base64,UklGRn4AAABXRUJQVlA4IHIAAADwBACdASoUAA0APt1apkyopSOiMAgBEBuJagCdMoMYJn/Ae+oK6JMZ44T+Sd2ezAAA/nkSaQbWL5GKj78tgWq1TQ3TM9EpX/s89NDYb/9FOKBgK61tVHrAIWlE2GTLAYloaGVrLUSEsSozW6O6tHEAAAA=',
   },
 ];

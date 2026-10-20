@@ -198,8 +198,8 @@ export function RewardShelf() {
             <Gift size={28} />
           </span>
           <p className="muted">
-            Nothing on the shelf yet. Add the thing you actually want — an hour of doomscrolling,
-            the hoodie, a night off.
+            Nothing on the shelf yet. Add anything you want: an hour of doom scrolling, that hoodie
+            you always wanted, a night out, etc.
           </p>
         </Panel>
       ) : (

@@ -12,7 +12,6 @@ import {
 } from '@komogon/core';
 import { useEffect, useState } from 'react';
 import { Volume2 } from 'lucide-react';
-import { useNavigate } from 'react-router';
 import {
   Button,
   Glass,
@@ -46,9 +45,9 @@ import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPick
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseSettings } from '../components/focus/Timelapse';
 import { SessionHistory } from '../components/SessionHistory';
+import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { clearQueryCache } from '../lib/persist';
 import { playSound } from '../lib/sounds';
 import { keys } from '../lib/queries';
 import { useAuth } from '../lib/auth';
@@ -187,7 +186,6 @@ export function Settings() {
   const me = useMe();
   const update = useUpdateSettings();
   const auth = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const restDays = useRestDays();
   const qc = useQueryClient();
@@ -306,50 +304,18 @@ export function Settings() {
                   </option>
                 ))}
               </Select>
-              <div className="flex gap-2 flex-wrap">
-                <Button
-                  onClick={async () => {
-                    const data = await api.exportData();
-                    const blob = new Blob([JSON.stringify(data, null, 2)], {
-                      type: 'application/json',
-                    });
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = 'komogon-export.json';
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                  }}
-                >
-                  Export my data (JSON)
-                </Button>
-                <Button
-                  variant="secondary"
-                  onClick={async () => {
-                    await clearQueryCache();
-                    qc.clear();
-                    toast('Offline copy cleared', { tone: 'ok' });
-                  }}
-                >
-                  Clear offline copy
-                </Button>
-                <Button
-                  variant="danger"
-                  onClick={async () => {
-                    if (!window.confirm('Delete your account and all data? This cannot be undone.'))
-                      return;
-                    await api.deleteAccount();
-                    await auth.signOut();
-                    navigate('/signin');
-                  }}
-                >
-                  Delete account
-                </Button>
-              </div>
               <p className="field-hint">
-                Signed in as {me.data!.user.email || auth.email}. Komogon keeps a copy of your data
-                in this browser so it opens quickly and works offline. That copy stays on this
-                device and is cleared when you sign out. Nothing about you is tracked.
+                Signed in as {me.data!.user.email || auth.email}. Exporting or deleting your data is
+                under{' '}
+                <button type="button" className="link-button" onClick={() => setActiveId('privacy')}>
+                  Data and privacy
+                </button>
+                .
               </p>
+            </Section>
+
+            <Section id="privacy" title="Data and privacy">
+              <DataPrivacySettings />
             </Section>
 
             <Section id="pages" title="Pages">

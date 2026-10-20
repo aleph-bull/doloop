@@ -256,33 +256,97 @@
   color: var(--flame);
   fill: color-mix(in srgb, var(--flame) 35%, transparent);
 }
+/* The level: the streak's twin in the accent colour, and the way into Achievements. */
 .nav-level {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   height: 32px;
+  padding: 0 11px 0 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--fg);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--dur-fast) var(--ease-out);
 }
-.nav-level svg {
+.nav-level:hover,
+.nav-level[aria-current='page'] {
+  text-decoration: none;
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+.nav-level-icon {
+  color: var(--accent-text);
+}
+.nav-level-wrap {
+  position: relative;
+  display: inline-flex;
+}
+/* The hover card: top padding bridges the gap so the pointer can travel down into it. */
+.nav-level-drop {
   position: absolute;
-  inset: 1px;
+  top: 100%;
+  right: 0;
+  z-index: 50;
+  padding-top: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    visibility 0s linear var(--dur-fast);
 }
-.nav-level-track,
-.nav-level-fill {
-  fill: none;
-  stroke-width: 2.5;
+@media (hover: hover) {
+  .nav-level-wrap:hover .nav-level-drop,
+  .nav-level-wrap:focus-within .nav-level-drop {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
 }
-.nav-level-track {
-  stroke: color-mix(in srgb, var(--fg) 14%, transparent);
+.nav-level-drop-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 190px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  background: var(--glass-solid);
+  white-space: nowrap;
 }
-.nav-level-fill {
-  stroke: var(--accent);
-  stroke-linecap: round;
-}
-.nav-level-num {
+.nav-level-drop-line {
   font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0;
+  color: var(--fg-muted);
+}
+.nav-level-drop-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.nav-level-drop-link:hover {
+  text-decoration: underline;
+}
+.nav-level-bar {
+  width: 22px;
+  height: 4px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
+}
+.nav-level-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent);
 }
 .nav-icon {
   display: grid;
@@ -1329,6 +1393,27 @@
 .settings-section h2 {
   font-size: var(--text-lg);
   font-weight: 600;
+}
+/* Data and privacy: what happens to your data, said plainly before any buttons. */
+.privacy-promise {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.privacy-lead {
+  font-weight: 600;
+}
+.privacy-points {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 18px;
+  list-style: disc;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
 }
 
 /* ---------- Settings: sidebar + search ---------- */
@@ -3331,6 +3416,47 @@
 .rc-hero-range {
   font-size: var(--text-sm);
   color: var(--fg-muted);
+}
+/* Back and forward through past weeks or months, the dates between the arrows. */
+.rc-stepper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-left: -6px;
+}
+.rc-stepper .rc-hero-range {
+  min-width: 96px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.rc-stepper-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.rc-stepper-btn:hover:not(:disabled) {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.rc-stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.rc-stepper-now {
+  margin-left: 6px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent-text);
+}
+.rc-stepper-now:hover {
+  text-decoration: underline;
 }
 .rc-hero-figure {
   display: flex;
