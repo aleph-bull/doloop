@@ -20,6 +20,7 @@ import {
   useToast,
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
+import { useMe } from '../../lib/queries';
 import {
   freeStorageBytes,
   measuredStillBytes,
@@ -163,6 +164,12 @@ export function TimelapseSettings({
         onChange={(v) => set({ showTimer: v })}
         label="Show time studied"
         description="A small clock in the corner of the video."
+      />
+      <Toggle
+        checked={value.showClockTime}
+        onChange={(v) => set({ showClockTime: v })}
+        label="Show the time of day"
+        description="The time each moment was filmed, like 2:14 PM EST, in the top corner."
       />
       <Toggle
         checked={value.recordBreaks}
@@ -370,6 +377,8 @@ export function TimelapseExport({
   onSaved,
 }: TimelapseExportProps) {
   const { toast } = useToast();
+  // The time of day in the video reads in the account's timezone, not the computer's.
+  const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
   const [video, setVideo] = useState<{ url: string; mime: string } | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -400,7 +409,7 @@ export function TimelapseExport({
       const { blob, mime } = await renderTimelapse(
         recorder.stills(),
         plan,
-        value,
+        { ...value, timeZone },
         setProgress,
         abort.current.signal,
       );

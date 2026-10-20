@@ -308,7 +308,7 @@ export function Focus() {
   // "Stop listening", the browser's own banner, or the tab closing.
 
   // From the setting, not the DOM: <html> is themed in an effect, after this has rendered.
-  const accent = accentHexFor(settings?.theme.accent ?? 'indigo');
+  const accent = accentHexFor(settings?.theme.accent ?? 'sky');
   const palette = useMemo(
     () =>
       visualizerPalette({

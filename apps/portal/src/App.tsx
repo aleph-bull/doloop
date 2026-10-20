@@ -32,6 +32,7 @@ const Achievements = lazy(() =>
 );
 const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
 const Extension = lazy(() => import('./pages/Extension').then((m) => ({ default: m.Extension })));
+const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
 
 function Centered({ children }: { children: ReactNode }) {
@@ -156,6 +157,7 @@ export function App() {
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/extension" element={<Extension />} />
+            <Route path="/admin" element={<Admin />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

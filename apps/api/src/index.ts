@@ -14,11 +14,14 @@ if (env.supabaseUrl) {
     supabaseUrl: env.supabaseUrl,
     jwtSecret: env.supabaseJwtSecret,
   });
+} else if (env.authSecret) {
+  verifier = createHsVerifier(env.authSecret);
+  console.warn('[api] Email-and-password accounts kept by the API (AUTH_SECRET).');
 } else if (env.devAuthSecret) {
   verifier = createHsVerifier(env.devAuthSecret);
   console.warn('[api] SUPABASE_URL not set; using DEV_AUTH_SECRET for HS256 tokens (dev only).');
 } else {
-  console.error('[api] Set SUPABASE_URL (+ SUPABASE_JWT_SECRET) or DEV_AUTH_SECRET.');
+  console.error('[api] Set SUPABASE_URL (+ SUPABASE_JWT_SECRET), AUTH_SECRET or DEV_AUTH_SECRET.');
   process.exit(1);
 }
 
@@ -62,6 +65,8 @@ const app = await buildServer({
   logger: true,
   corsOrigins: env.corsOrigins,
   allowedEmails: env.allowedEmails,
+  adminEmails: env.adminEmails,
+  passwordAuth: !env.supabaseUrl && env.authSecret ? { secret: env.authSecret } : null,
   calendar: {
     deps: calendarDeps,
     stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',

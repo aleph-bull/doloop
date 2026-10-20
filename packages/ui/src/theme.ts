@@ -169,7 +169,7 @@ function hslToHex(h: number, s: number, l: number): string {
 }
 
 /**
- * The accent setting ('violet', or 'custom:<h>,<s>,<l>') as a hex colour. Computed from
+ * The accent setting ('sky', or 'custom:<h>,<s>,<l>') as a hex colour. Computed from
  * the setting rather than read back from <html>, which may not have been themed yet.
  */
 export function accentHexFor(accent: string): string {
@@ -177,7 +177,7 @@ export function accentHexFor(accent: string): string {
     const [h, s, l] = accent.slice(7).split(',').map(Number);
     return hslToHex((((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62);
   }
-  const preset = ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.violet!;
+  const preset = ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.sky!;
   return hslToHex(preset[0], preset[1], preset[2]);
 }
 
@@ -187,7 +187,7 @@ function accentHsl(accent: string): [number, number, number] {
     const [h, s, l] = accent.slice(7).split(',').map(Number);
     return [(((h ?? 240) % 360) + 360) % 360, s ?? 84, l ?? 62];
   }
-  return ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.violet!;
+  return ACCENT_PRESET_HSL[accent] ?? ACCENT_PRESET_HSL.sky!;
 }
 
 /** Surfaces the accent text is measured against: a light card and a dark one. */

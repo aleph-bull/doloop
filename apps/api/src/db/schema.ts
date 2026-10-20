@@ -47,6 +47,20 @@ export const users = pgTable('users', {
   onboardedAt: ts('onboarded_at'),
 });
 
+/**
+ * Email-and-password accounts the API signs in itself (when Supabase is not used). One row per
+ * user; the password is stored only as a scrypt hash. Deleting the user deletes this too.
+ */
+export const passwordAccounts = pgTable('password_accounts', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  /** Lower-cased, so sign-in ignores case. */
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
 export const nodes = pgTable(
   'nodes',
   {
@@ -530,6 +544,7 @@ export const drillItems = pgTable(
 
 export const schema = {
   users,
+  passwordAccounts,
   nodes,
   sessions,
   plannedBlocks,

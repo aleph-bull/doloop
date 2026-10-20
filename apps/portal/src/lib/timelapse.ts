@@ -27,6 +27,8 @@ export interface Still {
   breakSeconds: number | null;
   /** The session's running time, focus and breaks together, when it was taken. */
   totalSeconds: number;
+  /** When it was taken (epoch ms), for the time of day drawn into the video. */
+  takenAt: number;
 }
 
 /** Where the session stood when a still was taken. */
@@ -188,7 +190,7 @@ export function useTimelapseRecorder({
       );
       if (!blob || cancelled) return;
       rememberStillBytes(blob.size);
-      const next = [...stillsRef.current, { blob, luma, ...stamp() }];
+      const next = [...stillsRef.current, { blob, luma, ...stamp(), takenAt: Date.now() }];
       const thinned = thinIfFull(next, stillCap(options));
       if (thinned) intervalRef.current *= 2;
       stillsRef.current = thinned ?? next;
@@ -265,6 +267,25 @@ export interface TimelapseLook {
   deflicker: boolean;
   /** During a recorded break: the break's own time, or the session's running time. */
   breakClock?: 'break' | 'running';
+  /** Draw the time of day each frame was filmed, top left. */
+  showClockTime?: boolean;
+  /** The account's timezone for that time; the browser's when absent. */
+  timeZone?: string;
+}
+
+/** "2:14 PM EST": the time a still was taken, in the account's timezone. */
+export function timeOfDayText(takenAt: number, timeZone?: string): string {
+  const opts: Intl.DateTimeFormatOptions = {
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  };
+  try {
+    return new Intl.DateTimeFormat('en-US', { ...opts, timeZone }).format(takenAt);
+  } catch {
+    // An unknown zone name: the browser's own zone is the next best thing.
+    return new Intl.DateTimeFormat('en-US', opts).format(takenAt);
+  }
 }
 
 /** What the corner clock says on a still. */
@@ -297,15 +318,24 @@ function pickMime(): string {
 
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, Math.max(0, ms)));
 
-/** The studied-time clock in the bottom corner: a soft pill, sized to the video. */
-function drawClock(ctx: CanvasRenderingContext2D, w: number, h: number, text: string) {
+/**
+ * A clock pill, sized to the video: the studied time in the bottom corner, or the time of
+ * day in the top one.
+ */
+function drawClock(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  text: string,
+  corner: 'bottom' | 'top' = 'bottom',
+) {
   const size = Math.round(h * 0.055);
   const pad = Math.round(size * 0.55);
   ctx.save();
   ctx.font = `600 ${size}px 'Inter Variable', Inter, system-ui, sans-serif`;
   const tw = ctx.measureText(text).width;
   const x = Math.round(h * 0.04);
-  const y = h - Math.round(h * 0.04) - size - pad;
+  const y = corner === 'top' ? Math.round(h * 0.04) : h - Math.round(h * 0.04) - size - pad;
   ctx.fillStyle = 'rgba(10, 12, 24, 0.55)';
   ctx.beginPath();
   ctx.roundRect(x, y, tw + pad * 2, size + pad, (size + pad) / 2);
@@ -444,6 +474,11 @@ function frameDrawer(
     ctx.globalAlpha = 1;
     ctx.filter = 'none';
     if (look.showTimer) drawClock(ctx, w, h, clockText(stills[to - 1]!, look));
+    if (look.showClockTime) {
+      const still = stills[to - 1]!;
+      // Stills kept from before the time was recorded have none to show.
+      if (still.takenAt) drawClock(ctx, w, h, timeOfDayText(still.takenAt, look.timeZone), 'top');
+    }
     drawWatermark(ctx, w, h, mark);
     previous = to - 1;
   };

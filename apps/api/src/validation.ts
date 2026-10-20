@@ -305,6 +305,7 @@ export const settingsSchema = z
         speed: z.number().int().min(10).max(10_000),
         fps: z.number().int().min(1).max(60),
         showTimer: z.boolean(),
+        showClockTime: z.boolean(),
         smooth: z.boolean(),
         deflicker: z.boolean(),
         recordBreaks: z.boolean(),

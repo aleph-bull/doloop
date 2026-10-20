@@ -54,7 +54,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   quote: { mode: 'quotes', appTips: true },
   theme: {
     mode: 'system',
-    accent: 'violet',
+    accent: 'sky',
     backgroundId: 'cotton-candy',
     customBackgroundUrl: null,
     panel: 'glass',
@@ -131,6 +131,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     speed: 300,
     fps: 30,
     showTimer: true,
+    showClockTime: true,
     smooth: true,
     deflicker: true,
     recordBreaks: false,

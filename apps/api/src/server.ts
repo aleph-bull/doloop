@@ -21,6 +21,8 @@ import { trackerRoutes } from './routes/trackers';
 import { gradeRoutes } from './routes/grades';
 import { planRoutes } from './routes/plans';
 import { recapRoutes } from './routes/recap';
+import { passwordAuthRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 
 export interface BuildOptions {
@@ -30,6 +32,10 @@ export interface BuildOptions {
   corsOrigins?: string[];
   /** Invite list for a closed test (`ALLOWED_EMAILS`); empty lets everyone in. */
   allowedEmails?: string[];
+  /** Email-and-password accounts kept by the API (`AUTH_SECRET`); null leaves them off. */
+  passwordAuth?: { secret: string } | null;
+  /** Who can see every account and its data (`ADMIN_EMAILS`). */
+  adminEmails?: string[];
   /** Injectable clock for tests. */
   clock?: () => string;
   /** Google Calendar integration; null disables the connect flow. */
@@ -72,6 +78,13 @@ export async function buildServer(opts: BuildOptions) {
     service: 'komogon-api',
   }));
 
+  if (opts.passwordAuth)
+    passwordAuthRoutes(app, opts.db, {
+      secret: opts.passwordAuth.secret,
+      allowedEmails: opts.allowedEmails,
+      adminEmails: opts.adminEmails ?? [],
+    });
+
   await app.register(authPlugin, {
     db: opts.db,
     verifier: opts.verifier,
@@ -84,6 +97,7 @@ export async function buildServer(opts: BuildOptions) {
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
   };
   meRoutes(app, opts.db, clock);
+  adminRoutes(app, opts.db, opts.adminEmails ?? []);
   nodeRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);

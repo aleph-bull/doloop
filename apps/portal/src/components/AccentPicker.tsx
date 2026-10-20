@@ -115,7 +115,7 @@ export function AccentPicker({ value, saved, onChange }: AccentPickerProps) {
   };
   const remove = (accent: string) => {
     const next = own.filter((a) => a !== accent);
-    onChange({ savedAccents: next, ...(value === accent ? { accent: 'violet' } : {}) });
+    onChange({ savedAccents: next, ...(value === accent ? { accent: 'sky' } : {}) });
   };
 
   return (

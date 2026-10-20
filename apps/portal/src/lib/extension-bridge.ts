@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { supabase, authMode } from './auth';
+import { EMAIL_KEY, TOKEN_KEY, supabase, authMode } from './auth';
 
 /**
  * Hands the signed-in session to the Chrome extension's content script (same window,
@@ -25,12 +25,13 @@ async function buildPayload(): Promise<Record<string, unknown> | null> {
       email: s.user.email ?? null,
     };
   }
-  if (authMode === 'dev') {
+  // Dev and server mode: the API's own token, from local storage.
+  {
     let token: string | null = null;
     let email: string | null = null;
     try {
-      token = localStorage.getItem('komogon.dev.token');
-      email = localStorage.getItem('komogon.dev.email');
+      token = localStorage.getItem(TOKEN_KEY);
+      email = localStorage.getItem(EMAIL_KEY);
     } catch {
       /* ignore */
     }

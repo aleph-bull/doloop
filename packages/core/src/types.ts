@@ -251,6 +251,8 @@ export interface UserSettings {
     fps: number;
     /** Draw the time studied in the corner of the video. */
     showTimer: boolean;
+    /** Draw the time of day each moment was filmed, in the account's timezone ("2:14 PM EST"). */
+    showClockTime: boolean;
     /** Blend the stills behind each frame together, for a softer motion. */
     smooth: boolean;
     /** Even out the brightness between stills, so the video does not flicker. */

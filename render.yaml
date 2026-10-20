@@ -1,5 +1,5 @@
 # Render blueprint for the Komogon API (closed alpha). The portal is on Vercel
-# (apps/portal/vercel.json); data and sign-in are on Supabase. Setup: docs/ALPHA.md.
+# (apps/portal/vercel.json); data is in a hosted Postgres (Neon). Setup: docs/ALPHA.md.
 #
 # Values marked `sync: false` are asked for when the blueprint is first applied, and live
 # only in Render's dashboard, never in the repo.
@@ -19,11 +19,10 @@ services:
         value: '24'
       - key: HOST
         value: 0.0.0.0
-      # Supabase: Project settings > Data API / JWT keys / Database (session pooler URI)
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_JWT_SECRET
-        sync: false
+      # Signs the API's own email-and-password sign-ins; changing it signs everyone out
+      - key: AUTH_SECRET
+        generateValue: true
+      # Postgres connection string (Neon, or any hosted Postgres)
       - key: DATABASE_URL
         sync: false
       # The Vercel address, e.g. https://komogon.vercel.app (no trailing slash)
@@ -31,6 +30,9 @@ services:
         sync: false
       - key: PORTAL_URL
         sync: false
-      # Invite list: tester emails or @domain, comma separated
+      # Optional invite list (emails or @domain, comma separated); empty lets anyone sign up
       - key: ALLOWED_EMAILS
         sync: false
+      # Admins: the Admin page (every account, its data, setting a new password)
+      - key: ADMIN_EMAILS
+        value: zachzhao2015@gmail.com

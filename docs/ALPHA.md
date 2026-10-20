@@ -34,35 +34,26 @@ app only runs on this computer with dev sign-in. Hosting setup is under "Hosting
 
 ## Hosting it (closed alpha)
 
-The portal goes on **Vercel**, the API on **Render**, data and sign-in on a new **Supabase**
-project. All three have free tiers that cover a handful of testers. The repo already holds
-the config: `apps/portal/vercel.json` and `render.yaml`. What is left needs your accounts.
+The portal goes on **Vercel** and the API on **Render**, with a free **Neon** Postgres
+database. Accounts are plain email and password, and the API keeps them itself: anyone with
+the link can create an account, and each person's data is saved under it. All three services
+have free tiers that cover a handful of testers. The repo already holds the config
+(`apps/portal/vercel.json`, `render.yaml`). What's left needs your accounts.
 
 **1. Push the code.** Commit, then push `main` to the GitHub remote (`origin`). Vercel and
 Render deploy from it, and every later push redeploys both.
 
-**2. Supabase** (a new project just for the alpha, so your own data stays on this computer;
-the IB plan and everything else in `~/.komogon` never leaves it)
-
-- New project, region close to you. Note the project URL and the anon key (Project
-  settings › API), the JWT secret (JWT keys), and the **Session pooler** connection string
-  (Connect › Session pooler; the direct one is IPv6-only and Render can't reach it).
-- Authentication › Sign In / Providers: turn **off "Allow new users to sign up"**. Only
-  people you invite can then sign in, by magic link or Google.
-- Authentication › URL configuration: Site URL = the Vercel address (step 4); add
-  `https://<vercel address>/auth/callback` to Redirect URLs. Fill these in after step 4.
-- Authentication › Users › **Invite user** for each tester. They get an email, and the link
-  signs them straight in.
-- Supabase's built-in email sends only a few messages an hour. That's fine for three
-  testers. For more, add your own SMTP (Resend's free tier works) under Authentication ›
-  Emails.
+**2. Database (Neon).** Sign up at neon.tech, create a project, and copy its connection
+string (`postgresql://…?sslmode=require`). It starts empty. Your own data and the IB plan in
+`~/.komogon` stay on this computer.
 
 **3. Render** (the API)
 
-- New › Blueprint › pick the repo. It reads `render.yaml` and asks for: `SUPABASE_URL`,
-  `SUPABASE_JWT_SECRET`, `DATABASE_URL` (the session pooler string), `CORS_ORIGINS` and
-  `PORTAL_URL` (both the Vercel address, no trailing slash) and `ALLOWED_EMAILS` (the
-  testers' emails, comma separated, as a second lock behind Supabase).
+- New › Blueprint › pick the repo. It reads `render.yaml` and asks for `DATABASE_URL` (the
+  Neon string), `CORS_ORIGINS` and `PORTAL_URL` (both the Vercel address, no trailing
+  slash; put a placeholder in now and fix it after step 4), and `ALLOWED_EMAILS` (leave it
+  empty so anyone with the link can sign up). `AUTH_SECRET`, which signs the sign-in
+  tokens, is generated for you. Changing it later signs everyone out.
 - The first start creates the tables. `https://<api>.onrender.com/api/health` should
   answer `{"ok":true}`.
 - The free plan sleeps after 15 idle minutes, and the next visit then waits about a minute.
@@ -73,14 +64,11 @@ the IB plan and everything else in `~/.komogon` never leaves it)
 
 - Add New › Project › import the repo. Set **Root Directory to `apps/portal`** and leave
   the build settings alone (`vercel.json` sets them).
-- Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_URL`
-  (the Render address), and optionally `VITE_FEEDBACK_URL` and `VITE_SENTRY_DSN` (step 5).
-  Never set `VITE_DEV_AUTH_SECRET` here.
-- Deploy, then go back and put the Vercel address into Render (`CORS_ORIGINS`,
-  `PORTAL_URL`) and Supabase (URL configuration).
-- Google sign-in (optional): the new Supabase project has its own callback URI, shown under
-  Authentication › Providers › Google. Add it to the OAuth client's redirect URIs in Google
-  Cloud, and paste the client ID and secret into that provider.
+- Environment variables: `VITE_API_URL` (the Render address), and optionally
+  `VITE_FEEDBACK_URL` and `VITE_SENTRY_DSN` (step 5). Leave the Supabase and
+  `VITE_DEV_AUTH_SECRET` variables unset: with none of them, the sign-in page uses the
+  API's email-and-password accounts.
+- Deploy, then put the Vercel address into Render's `CORS_ORIGINS` and `PORTAL_URL`.
 
 **5. Feedback and errors** (optional, both off until set)
 
@@ -89,7 +77,19 @@ the IB plan and everything else in `~/.komogon` never leaves it)
 - Make a **Sentry** project (platform: React) and put its DSN in `VITE_SENTRY_DSN`. Crashes
   and page errors are then reported. Errors only: no session replay, no tracing.
 
-**6. Check it.** Copy the hosted values into `apps/api/.env.alpha` and
+**6. The Chrome extension.** It is built for one portal and API address, so build it for
+the hosted ones:
+
+```
+VITE_PORTAL_URL=https://<vercel address> VITE_API_URL=https://<api>.onrender.com pnpm --filter @komogon/extension build
+```
+
+Then zip `apps/extension/dist`. Testers unzip it and add it at `chrome://extensions` ›
+Developer mode › Load unpacked. Then they open the portal once while signed in, and it
+connects itself. For a one-click install link instead, publish it as an **unlisted** Chrome
+Web Store item (one-time $5 developer fee, review takes a few days).
+
+**7. Check it.** Copy the hosted values into `apps/api/.env.alpha` and
 `apps/portal/.env.alpha` (git ignores them, and unlike `.env.production` the local build
 never reads them), then run `pnpm alpha:check`. Then do the manual pass below on the
 Vercel address.
@@ -104,6 +104,19 @@ hosted address only). Tell testers:
 It then opens in its own window with the Komogon icon, and it still opens without a
 connection, showing the last data it had.
 
+**Admin.** `ADMIN_EMAILS` on Render (already set to your email in `render.yaml`) turns
+on the Admin page: a shield icon in the top bar, then every account with its sign-up
+date and figures, a download of everything each account has saved, and a way to give
+someone a new password. Members are told so on the sign-in page, which also asks them not
+to use a password they use anywhere else. When an admin email creates an account and that
+email already has data with no password (for example, your own data moved over from this
+computer), the password goes on that account and the data carries on.
+
+**Sign-in, for later.** Accounts are deliberately basic: no password reset and no email
+check. If someone forgets a password, give them a new one from the Admin page. For magic links, Google and
+password reset, use a Supabase project instead (SETUP.md Phase 2): set the Supabase
+variables on both sides, and the same sign-in page switches over.
+
 ## 2. Manual pass (about 30 minutes, on the hosted build)
 
 Do this on the build testers will get, signed in as a brand-new account, in Chrome and once
@@ -111,7 +124,7 @@ on a phone. Tick each line; anything that fails goes on the known-issues list or
 
 **First run**
 
-- [ ] Sign in with the real sign-in (magic link or Google), not dev sign-in.
+- [ ] Create an account with email and password (not dev sign-in), sign out, sign back in.
 - [ ] Onboarding: name, a course, the first thing due. Lands on the dashboard.
 - [ ] Reload the page: still signed in, nothing lost.
 

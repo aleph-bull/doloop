@@ -211,8 +211,8 @@ export function Settings() {
   useEffect(() => {
     const fromHash = () => {
       const raw = window.location.hash.slice(1);
-      // Account and You were one tab apart before they merged; old links still land.
-      const id = raw === 'account' ? 'profile' : raw;
+      // Account, You, and Data and privacy were separate before they merged; old links still land.
+      const id = raw === 'account' || raw === 'privacy' ? 'profile' : raw;
       if (id && SETTINGS_SECTIONS.some((x) => x.id === id)) {
         setQuery('');
         setActiveId(id);
@@ -305,17 +305,8 @@ export function Settings() {
                   </option>
                 ))}
               </Select>
-              <p className="field-hint">
-                Signed in as {me.data!.user.email || auth.email}. Exporting or deleting your data is
-                under{' '}
-                <button type="button" className="link-button" onClick={() => setActiveId('privacy')}>
-                  Data and privacy
-                </button>
-                .
-              </p>
-            </Section>
-
-            <Section id="privacy" title="Data and privacy">
+              <p className="field-hint">Signed in as {me.data!.user.email || auth.email}.</p>
+              <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />
             </Section>
 

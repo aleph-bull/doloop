@@ -161,9 +161,9 @@
   --accent-l: 90%;
 }
 :root[data-accent='indigo'] {
-  --accent-h: 286;
-  --accent-s: 32%;
-  --accent-l: 85%;
+  --accent-h: 207;
+  --accent-s: 46%;
+  --accent-l: 80%;
 }
 
 /* ---------- Light theme ---------- */

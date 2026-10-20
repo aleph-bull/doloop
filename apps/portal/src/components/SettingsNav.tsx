@@ -32,12 +32,7 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'timezone',
       'sign out',
       'email',
-    ],
-  },
-  {
-    id: 'privacy',
-    title: 'Data and privacy',
-    keywords: [
+      // Data and privacy lives here too.
       'privacy',
       'data',
       'export data',

@@ -7,6 +7,7 @@ import {
   type BackgroundMeta,
 } from '@komogon/core';
 import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 
@@ -57,6 +58,40 @@ export interface BackgroundPickerProps {
   onChange: (id: string) => void;
   /** Rendered as the first tile of the first group, e.g. the uploaded image. */
   leading?: React.ReactNode;
+  /**
+   * Which picker this is, for remembering whether it was minimized: the page's background
+   * and the extension's own are folded away separately.
+   */
+  collapseKey?: string;
+}
+
+/** Whether a picker was left minimized, per picker, in this browser only. */
+function useMinimized(key: string): [boolean, (v: boolean) => void] {
+  const storageKey = `komogon.bgPicker.${key}.minimized`;
+  const [minimized, set] = useState(() => {
+    try {
+      return localStorage.getItem(storageKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const update = (v: boolean) => {
+    set(v);
+    try {
+      if (v) localStorage.setItem(storageKey, '1');
+      else localStorage.removeItem(storageKey);
+    } catch {
+      // Storage blocked: it stays as chosen until the page reloads.
+    }
+  };
+  return [minimized, update];
+}
+
+/** The name of what is chosen, for the minimized picker. */
+function chosenName(value: string): string {
+  if (solidColorOf(value)) return 'Solid colour';
+  if (value === '' || value === 'upload') return 'Your uploaded image';
+  return BACKGROUNDS.find((b) => b.id === value)?.name ?? 'Default';
 }
 
 /** What the tile says when it is not yet available. Prices live in the shop, not here. */
@@ -82,8 +117,10 @@ export function BackgroundPicker({
   theme,
   onChange,
   leading,
+  collapseKey = 'page',
 }: BackgroundPickerProps) {
   const navigate = useNavigate();
+  const [minimized, setMinimized] = useMinimized(collapseKey);
   /** A locked background offers the way to it: Achievements, scrolled to it and lit up. */
   const offerShop = (b: BackgroundMeta) => {
     const how = b.costXp !== null ? 'is in the shop' : `unlocks at level ${b.minLevel}`;
@@ -95,8 +132,31 @@ export function BackgroundPicker({
     items: BACKGROUNDS.filter((b) => b.category === c.id),
   })).filter((g) => g.items.length > 0);
 
+  const preset = BACKGROUNDS.some((b) => b.id === value);
+  if (minimized)
+    return (
+      <div className="bg-minimized">
+        {preset ? (
+          <BackgroundThumb id={value} theme={theme} label={chosenName(value)} selected />
+        ) : (
+          <span className="bg-minimized-name">{chosenName(value)}</span>
+        )}
+        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setMinimized(false)}>
+          <ChevronDown size={14} aria-hidden /> Show all backgrounds
+        </button>
+      </div>
+    );
+
   return (
     <div className="bg-groups">
+      <div className="bg-groups-head">
+        <span className="field-hint">
+          {chosenName(value)} is on now. {BACKGROUNDS.length} to choose from.
+        </span>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMinimized(true)}>
+          <ChevronUp size={14} aria-hidden /> Minimize
+        </button>
+      </div>
       {groups.map((group, gi) => (
         <div key={group.id} className="bg-group">
           <h4 className="bg-group-title">{group.label}</h4>

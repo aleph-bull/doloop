@@ -1,7 +1,7 @@
 import { fnv1a, pickIndex, type UserSettings } from '@komogon/core';
 
 /**
- * Small things about the app worth knowing, shown on the quote card about one time in
+ * Small things about the app worth knowing, shown on the dashboard about one quote period in
  * five. Each points at the place it talks about. A tip for a page someone has turned off
  * is never shown.
  */
@@ -121,12 +121,12 @@ export function subscribeTips(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** How often a card shows a tip instead of its quote: one in this many. */
+/** How often a quote period also brings a tip: one in this many. */
 export const TIP_ONE_IN = 5;
 
 /**
- * The tip a card shows in place of its quote, or null to show the quote. Seeded by the
- * quote itself, so a card keeps the same choice for as long as its quote stays up.
+ * The tip for this quote period, or null for none. Seeded by the quote, so the choice
+ * holds for as long as that quote stays up.
  */
 export function tipFor(seed: string, settings: UserSettings | undefined): AppTip | null {
   if (!settings?.quote.appTips) return null;

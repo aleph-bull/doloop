@@ -9,8 +9,8 @@ export interface TipOfTheMoment {
 }
 
 /**
- * The tip that takes the quote's place for this period, if any. Shared by the quote card,
- * which steps aside while it shows, and the tip card on the dashboard.
+ * The tip on the dashboard for this period, if any, shown alongside the quote. Seeded by
+ * the quote so it holds for that quote's six hours.
  */
 export function useTip(): TipOfTheMoment {
   const quote = useQuote();

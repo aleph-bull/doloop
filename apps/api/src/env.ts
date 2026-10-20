@@ -22,9 +22,13 @@ export interface Env {
   corsOrigins: string[];
   /** Invite list (`ALLOWED_EMAILS`): addresses or `@domain`, comma separated. Empty is open. */
   allowedEmails: string[];
+  /** Admins (`ADMIN_EMAILS`, comma separated): see every account and its data. */
+  adminEmails: string[];
   databaseUrl: string | undefined;
   supabaseUrl: string | undefined;
   supabaseJwtSecret: string | undefined;
+  /** Secret for the API's own email-and-password accounts, when Supabase sign-in is not used. */
+  authSecret: string | undefined;
   /** Dev-only HS256 secret for locally minted tokens when Supabase is not configured. */
   devAuthSecret: string | undefined;
   /** Where PGlite stores dev data when DATABASE_URL is unset. */
@@ -55,9 +59,14 @@ export function loadEnv(): Env {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    adminEmails: str('ADMIN_EMAILS', '')!
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
     databaseUrl: str('DATABASE_URL'),
     supabaseUrl: str('SUPABASE_URL'),
     supabaseJwtSecret: str('SUPABASE_JWT_SECRET'),
+    authSecret: str('AUTH_SECRET'),
     devAuthSecret: str('DEV_AUTH_SECRET'),
     pgliteDataDir: str('PGLITE_DATA_DIR', '.pglite')!,
     google: {

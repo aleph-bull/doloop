@@ -1394,6 +1394,14 @@
   font-size: var(--text-lg);
   font-weight: 600;
 }
+/* A part of a section with its own heading, set off by a rule: Data and privacy in Account. */
+.settings-group-head {
+  margin-top: 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
 /* Data and privacy: what happens to your data, said plainly before any buttons. */
 .privacy-promise {
   display: flex;
@@ -2040,6 +2048,28 @@
 
 /* ---------- background picker ---------- */
 
+/* The background picker folded away: the current one, and the way back to all of them. */
+.bg-minimized {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.bg-minimized > .bg-thumb,
+.bg-minimized > button.bg-thumb {
+  width: 132px;
+  flex: none;
+}
+.bg-minimized-name {
+  font-weight: 500;
+}
+.bg-groups-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 .bg-groups {
   display: flex;
   flex-direction: column;

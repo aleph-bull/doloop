@@ -92,6 +92,13 @@
       "when": 1792271462685,
       "tag": "0012_reward_unlock_task",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792468953574,
+      "tag": "0013_password_accounts",
+      "breakpoints": true
     }
   ]
 }

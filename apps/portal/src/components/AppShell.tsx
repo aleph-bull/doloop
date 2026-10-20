@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
@@ -10,8 +10,8 @@ import {
   GraduationCap,
   House,
   ListChecks,
-  LogOut,
   MessageSquareText,
+  ShieldCheck,
   Repeat,
   Settings as SettingsIcon,
   Trophy,
@@ -19,16 +19,17 @@ import {
   type LucideIcon,
   Route as RouteIcon,
 } from 'lucide-react';
-import { Backdrop, Button, Glass, LogoMark } from '@komogon/ui';
+import { Backdrop, Glass, LogoMark } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
-import { useAuth } from '../lib/auth';
 import { FEEDBACK_URL } from '../lib/monitoring';
+import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
+import { SignOutButton } from './SignOutButton';
 
 /**
  * `short` is the phone tab bar's label, where seven tabs share 390px. `feature` names the
@@ -91,8 +92,7 @@ function LevelPill({ xp, level }: { xp: number; level: number }) {
 
 export function AppShell() {
   const me = useMe();
-  const auth = useAuth();
-  const navigate = useNavigate();
+  const isAdmin = useIsAdmin();
   const settings = me.data?.user.settings;
   const online = useOnlineStatus();
   // Hands the session to the Chrome extension whenever the shell mounts.
@@ -280,6 +280,11 @@ export function AppShell() {
               <LevelPill xp={user.xp} level={user.level} />
             </div>
           )}
+          {isAdmin && (
+            <NavLink to="/admin" className="nav-icon" aria-label="Admin" title="Admin">
+              <ShieldCheck size={18} aria-hidden />
+            </NavLink>
+          )}
           {FEEDBACK_URL && (
             <a
               href={FEEDBACK_URL}
@@ -295,20 +300,7 @@ export function AppShell() {
           <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden />
           </NavLink>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon
-            className="nav-signout"
-            aria-label="Sign out"
-            title="Sign out"
-            onClick={async () => {
-              await auth.signOut();
-              navigate('/signin');
-            }}
-          >
-            <LogOut size={16} aria-hidden />
-          </Button>
+          <SignOutButton />
         </div>
       </header>
       <nav className="tabbar chrome" aria-label="Primary">

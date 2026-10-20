@@ -46,6 +46,7 @@ export function ExtensionBackgroundPicker({
             purchased={purchased}
             theme={theme}
             onChange={onChange}
+            collapseKey="extension"
             leading={
               hasUpload ? (
                 <BackgroundThumb

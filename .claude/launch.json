@@ -72,6 +72,43 @@
         "SANDBOX_DATA": ".pglite-sandbox-2"
       },
       "port": 5184
+    },
+    {
+      "name": "sandbox-password-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/local/sandbox-api.mjs"
+      ],
+      "port": 8799,
+      "env": {
+        "SANDBOX_API_PORT": "8799",
+        "SANDBOX_PORTAL_PORT": "5185",
+        "SANDBOX_DATA": ".pglite-sandbox-password",
+        "AUTH_SECRET": "sandbox-password-secret",
+        "VITE_DEV_AUTH_SECRET": "",
+        "ADMIN_EMAILS": "admin@komogon.test"
+      }
+    },
+    {
+      "name": "sandbox-password",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/portal",
+        "exec",
+        "vite",
+        "--config",
+        "vite.sandbox.config.ts"
+      ],
+      "port": 5185,
+      "env": {
+        "SANDBOX_API_PORT": "8799",
+        "SANDBOX_PORTAL_PORT": "5185",
+        "SANDBOX_DATA": ".pglite-sandbox-password",
+        "AUTH_SECRET": "sandbox-password-secret",
+        "VITE_DEV_AUTH_SECRET": "",
+        "ADMIN_EMAILS": "admin@komogon.test"
+      }
     }
   ]
 }

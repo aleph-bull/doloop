@@ -98,12 +98,12 @@ export interface AccentPreset {
 
 /**
  * The pastel row (2026-10-20). Ids are stored in settings, so the old ones are kept where a
- * pastel took their place; Indigo left the row and reads as Lilac (`resolveAccent`).
+ * pastel took their place; Indigo left the row and reads as the default, Powder blue (`resolveAccent`).
  * Every accent is free; levels only unlock backgrounds.
  */
 export const ACCENT_PRESETS: AccentPreset[] = [
-  { id: 'rose', name: 'Blush', minLevel: 0 },
   { id: 'sky', name: 'Powder', minLevel: 0 },
+  { id: 'rose', name: 'Blush', minLevel: 0 },
   { id: 'mint', name: 'Sage', minLevel: 0 },
   { id: 'violet', name: 'Lilac', minLevel: 0 },
   { id: 'amber', name: 'Peach', minLevel: 0 },
@@ -111,7 +111,7 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 ];
 
 /** The accent new accounts start on, and what a retired preset reads as. */
-export const DEFAULT_ACCENT = 'violet';
+export const DEFAULT_ACCENT = 'sky';
 
 /** A stored accent as one that still exists: a custom colour, a preset, or the default. */
 export function resolveAccent(accent: string | null | undefined): string {

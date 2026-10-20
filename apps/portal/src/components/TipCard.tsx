@@ -10,8 +10,8 @@ const CLOSE_MS = 320;
 
 /**
  * A tip about the app, on the dashboard between the start panel and the stats, in the
- * periods it takes the quote's place. Closing it pops the card, then folds its space away
- * so the stats slide up, and only then lets the quote come back.
+ * periods one is due; the quote stays where it is. Closing it pops the card, then folds
+ * its space away so the stats slide up.
  */
 export function TipCard() {
   const { tip, dismiss } = useTip();

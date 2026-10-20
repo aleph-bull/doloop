@@ -49,7 +49,12 @@ else {
   else pass(`${api.file}: dev sign-in is off.`);
   if (set(api.env, 'SUPABASE_URL') && set(api.env, 'SUPABASE_JWT_SECRET'))
     pass(`${api.file}: real sign-in (Supabase) is configured.`);
-  else block(`${api.file}: SUPABASE_URL and SUPABASE_JWT_SECRET are needed for real sign-in.`);
+  else if (set(api.env, 'AUTH_SECRET'))
+    pass(`${api.file}: email-and-password accounts kept by the API (AUTH_SECRET).`);
+  else
+    block(
+      `${api.file}: set AUTH_SECRET (the API's own accounts) or SUPABASE_URL and SUPABASE_JWT_SECRET for real sign-in.`,
+    );
   if (set(api.env, 'DATABASE_URL')) pass(`${api.file}: a hosted database is configured.`);
   else block(`${api.file}: DATABASE_URL is not set, so data would live in a local PGlite folder.`);
   // Unset, it defaults to the local portal only, which a hosted portal would be refused by.
@@ -59,10 +64,7 @@ else {
     );
   else pass(`${api.file}: the API accepts the hosted portal.`);
   if (set(api.env, 'ALLOWED_EMAILS')) pass(`${api.file}: only invited emails can use the API.`);
-  else
-    warn(
-      `${api.file}: ALLOWED_EMAILS is empty, so any account Supabase lets in can use the API. Turn off sign-ups in Supabase, or list the testers.`,
-    );
+  else pass(`${api.file}: open to anyone with the link (ALLOWED_EMAILS is empty).`);
 }
 
 // --- Portal configuration
@@ -76,9 +78,10 @@ else {
     );
   else pass(`${portal.file}: no dev sign-in secret in the site.`);
   if (set(portal.env, 'VITE_SUPABASE_URL') && set(portal.env, 'VITE_SUPABASE_ANON_KEY'))
-    pass(`${portal.file}: sign-in is configured.`);
-  else
-    block(`${portal.file}: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are needed for sign-in.`);
+    pass(`${portal.file}: sign-in goes through Supabase.`);
+  else if (set(portal.env, 'VITE_SUPABASE_URL') || set(portal.env, 'VITE_SUPABASE_ANON_KEY'))
+    block(`${portal.file}: only one of VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY is set.`);
+  else pass(`${portal.file}: sign-in uses the API's email-and-password accounts.`);
   if (!set(portal.env, 'VITE_API_URL') || isLocal(portal.env.VITE_API_URL))
     block(
       `${portal.file}: VITE_API_URL is missing or points at this computer; testers couldn't reach it.`,
