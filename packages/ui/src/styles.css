@@ -84,11 +84,20 @@ a:hover {
 
 /* ---------- Text contexts ---------- */
 /*
- * Anything over the backdrop or on glass reads the backdrop-adapted text set; opaque
- * content surfaces read the theme's own. Components only ever use --fg, --fg-muted,
- * --fg-subtle, --border and --accent-text, so they are right in either place.
+ * Text straight on the backdrop reads the backdrop set, which a photo turns black or white;
+ * glass, chrome and panels read the theme's own, whatever the photo. Components only ever
+ * use --fg, --fg-muted, --fg-subtle, --border and --accent-text, so they are right in
+ * either place. The glass rule comes second so a card inside the page resets them.
  */
-.on-backdrop,
+.on-backdrop {
+  --fg: var(--fg-on-backdrop);
+  --fg-muted: var(--fg-on-backdrop-muted);
+  --fg-subtle: var(--fg-on-backdrop-subtle);
+  --border: var(--line-on-backdrop);
+  --border-strong: var(--line-strong-on-backdrop);
+  --accent-text: var(--accent-text-backdrop);
+  color: var(--fg);
+}
 .glass,
 .chrome,
 :root[data-panel='glass'] .panel {
@@ -112,8 +121,8 @@ a:hover {
 :root[data-backdrop='photo'] .section-head,
 :root[data-backdrop='photo'] .on-backdrop > * > .section-title {
   text-shadow:
-    0 0 2px color-mix(in srgb, var(--glass-solid) 25%, transparent),
-    0 1px 18px color-mix(in srgb, var(--glass-solid) 35%, transparent);
+    0 0 2px color-mix(in srgb, var(--backdrop-halo) 25%, transparent),
+    0 1px 18px color-mix(in srgb, var(--backdrop-halo) 35%, transparent);
 }
 
 /* ---------- Chrome: floating controls (nav, tab bar, toolbars) ---------- */

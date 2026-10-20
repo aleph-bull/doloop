@@ -1,18 +1,44 @@
-import { contrastRatio, hslToRgb, relativeLuminance, type RGB } from './contrast';
+import type { ThemeMode } from '@komogon/core';
+import { backgroundById } from './backgrounds';
+import {
+  contrastRatio,
+  hslToRgb,
+  recommendedThemeFor,
+  relativeLuminance,
+  type RGB,
+} from './contrast';
 
 export type ResolvedTheme = 'light' | 'dark';
 
 /**
+ * The theme the Recommended mode picks for a background: from a photo's or a solid
+ * colour's own colour, or an uploaded image's sampled one. Null for the gradients, which
+ * come in both a light and a dark version, so Recommended follows the system there.
+ */
+export function recommendedTheme(
+  backgroundId: string,
+  uploadAvg: RGB | null = null,
+): ResolvedTheme | null {
+  if (uploadAvg) return recommendedThemeFor(uploadAvg);
+  const def = backgroundById(backgroundId);
+  const avg = def.photo?.avg ?? def.solid ?? null;
+  return avg ? recommendedThemeFor(avg as RGB) : null;
+}
+
+/**
  * Resolve the theme to apply. Kickoff decision: when the mode is 'system' and the
- * system preference cannot be read, default to dark.
+ * system preference cannot be read, default to dark. 'recommended' takes the background's
+ * pick (see `recommendedTheme`) and falls back to the system when there is none.
  */
 export function resolveTheme(
-  mode: 'system' | 'light' | 'dark',
+  mode: ThemeMode,
   matchMedia: ((q: string) => { matches: boolean }) | undefined = typeof window !== 'undefined'
     ? window.matchMedia?.bind(window)
     : undefined,
+  recommended: ResolvedTheme | null = null,
 ): ResolvedTheme {
   if (mode === 'light' || mode === 'dark') return mode;
+  if (mode === 'recommended' && recommended) return recommended;
   if (!matchMedia) return 'dark';
   try {
     if (matchMedia('(prefers-color-scheme: light)').matches) return 'light';
@@ -23,7 +49,7 @@ export function resolveTheme(
 }
 
 export interface ApplyThemeOptions {
-  mode: 'system' | 'light' | 'dark';
+  mode: ThemeMode;
   accent: string;
   reducedMotion: 'system' | 'on' | 'off';
 }
@@ -216,7 +242,7 @@ export function ownAccentFill([h, s, l]: [number, number, number]): { fill: stri
 
 export interface UserThemeLike {
   theme: {
-    mode: 'system' | 'light' | 'dark';
+    mode: ThemeMode;
     accent: string;
     panel: 'opaque' | 'glass' | 'custom' | 'matte';
     panelColor: string;

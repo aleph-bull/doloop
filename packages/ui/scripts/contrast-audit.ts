@@ -116,12 +116,12 @@ function auditPhoto(bg: (typeof BACKGROUND_DEFS)[number]): void {
     const a = adaptToPhoto(avg, t);
     const scrim = t === 'dark' ? ([6, 7, 10] as RGB) : ([255, 255, 255] as RGB);
     const shown = composite(scrim, t === 'dark' ? 0.42 : 0.24, avg);
-    const washed = composite(a.fill, a.pageScrim, shown);
+    const washed = composite(a.pageWash, a.pageScrim, shown);
     const glass = composite(a.fill, a.alpha, shown);
     check(bg.id, t, `glass @ ${Math.round(a.alpha * 100)}%`, a.fg, glass);
     check(bg.id, t, 'muted on glass', composite(a.fg, MUTED, glass), glass);
     check(bg.id, t, 'subtle on glass', composite(a.fg, SUBTLE, glass), glass);
-    check(bg.id, t, `page text, wash ${Math.round(a.pageScrim * 100)}%`, a.fg, washed);
+    check(bg.id, t, `page text, wash ${Math.round(a.pageScrim * 100)}%`, a.pageFg, washed);
   }
 
   // Panels are opaque enough that they do not adapt; check them against the photo directly.

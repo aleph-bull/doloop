@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { backgroundById, photoScrimCss } from '../backgrounds';
-import { adaptToPhoto, type RGB } from '../contrast';
+import { adaptToPhoto, THEME_GLASS, type RGB } from '../contrast';
 import type { ResolvedTheme } from '../theme';
 
 export interface BackdropProps {
@@ -21,9 +21,22 @@ interface PageWash {
   alpha: number;
 }
 
+/** Every token `applyGlass` may set inline, so a plain gradient can clear them all. */
+const ADAPTED_TOKENS = [
+  '--glass-fill',
+  '--glass-fill-strong',
+  '--chrome-fill',
+  '--fg-on-backdrop',
+  '--accent-text-backdrop',
+  '--backdrop-halo',
+];
+
 /**
- * Push the adapted glass tokens onto <html>, or clear them for a plain gradient. Returns
- * the page wash the photo needs, if any.
+ * Push the adapted tokens onto <html>, or clear them for a plain gradient. Returns the page
+ * wash the photo needs, if any.
+ *
+ * Panels keep the theme's own colours: a photo can only make their glass thicker. The text
+ * that sits straight on the photo is the one thing that switches, to black or white.
  */
 function applyGlass(
   avg: RGB | null,
@@ -32,15 +45,7 @@ function applyGlass(
 ): PageWash | null {
   const root = document.documentElement;
   if (!avg) {
-    for (const v of [
-      '--fg-on-glass',
-      '--glass-fill',
-      '--glass-fill-strong',
-      '--glass-solid',
-      '--chrome-fill',
-      '--accent-text-glass',
-    ])
-      root.style.removeProperty(v);
+    for (const v of ADAPTED_TOKENS) root.style.removeProperty(v);
     delete root.dataset.backdrop;
     return null;
   }
@@ -48,25 +53,19 @@ function applyGlass(
   // Lets text that sits straight on a photo pick up a soft halo (see styles.css). A flat
   // colour has no busy patches to cover, so it gets none.
   root.dataset.backdrop = kind;
-  const lightText = a.fg[0] > 128;
-  root.style.setProperty('--fg-on-glass', `rgb(${a.fg.join(' ')})`);
-  // The opaque stand-in under reduced transparency, and the accent text that reads on it.
-  root.style.setProperty('--glass-solid', lightText ? 'rgb(26 28 40)' : 'rgb(246 247 250)');
+  const glass = (alpha: number, rgb: RGB = a.fill) => `rgb(${rgb.join(' ')} / ${alpha.toFixed(2)})`;
+  root.style.setProperty('--glass-fill', glass(a.alpha));
+  root.style.setProperty('--glass-fill-strong', glass(a.strongAlpha));
+  root.style.setProperty('--chrome-fill', glass(a.chromeAlpha, THEME_GLASS[theme].chrome));
+
+  const lightPage = a.pageFg[0] > 128;
+  root.style.setProperty('--fg-on-backdrop', `rgb(${a.pageFg.join(' ')})`);
   root.style.setProperty(
-    '--accent-text-glass',
-    lightText ? 'var(--accent-text-on-dark)' : 'var(--accent-text-on-light)',
+    '--accent-text-backdrop',
+    lightPage ? 'var(--accent-text-on-dark)' : 'var(--accent-text-on-light)',
   );
-  // Chrome stays thinner than the cards, but never thinner than the photo allows.
-  root.style.setProperty(
-    '--chrome-fill',
-    `rgb(${a.fill.join(' ')} / ${Math.max(0.42, a.alpha - 0.05).toFixed(2)})`,
-  );
-  root.style.setProperty('--glass-fill', `rgb(${a.fill.join(' ')} / ${a.alpha.toFixed(2)})`);
-  root.style.setProperty(
-    '--glass-fill-strong',
-    `rgb(${a.fill.join(' ')} / ${a.strongAlpha.toFixed(2)})`,
-  );
-  return a.pageScrim > 0 ? { color: a.fill, alpha: a.pageScrim } : null;
+  root.style.setProperty('--backdrop-halo', lightPage ? 'rgb(26 28 40)' : 'rgb(246 247 250)');
+  return a.pageScrim > 0 ? { color: a.pageWash, alpha: a.pageScrim } : null;
 }
 
 /**

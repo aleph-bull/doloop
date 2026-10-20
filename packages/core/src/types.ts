@@ -42,7 +42,7 @@ export interface PomodoroConfig {
 export type ReviewMode = 'quick' | 'full' | 'off';
 export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
-export type ThemeMode = 'system' | 'light' | 'dark';
+export type ThemeMode = 'system' | 'light' | 'dark' | 'recommended';
 export type PanelStyle = 'opaque' | 'glass' | 'custom' | 'matte';
 /** 'accent' follows the app accent, 'custom' is one chosen colour, 'gradient' sweeps from the accent. */
 export type VisualizerColorMode = 'accent' | 'custom' | 'gradient';

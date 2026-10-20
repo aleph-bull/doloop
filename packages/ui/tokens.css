@@ -300,8 +300,19 @@
   --fg-on-glass-subtle: color-mix(in srgb, var(--fg-on-glass) 64%, transparent);
   --line-on-glass: color-mix(in srgb, var(--fg-on-glass) 11%, transparent);
   --line-strong-on-glass: color-mix(in srgb, var(--fg-on-glass) 20%, transparent);
-  /* The Backdrop swaps this to the dark- or light-surface value to match its glass. */
   --accent-text-glass: var(--accent-text);
+  /*
+   * Text straight on the backdrop. The theme's glass text by default; a photo's Backdrop
+   * sets --fg-on-backdrop (and its accent and halo) inline to black or white, whichever
+   * reads on it. Panels never follow it.
+   */
+  --fg-on-backdrop: var(--fg-on-glass);
+  --fg-on-backdrop-muted: color-mix(in srgb, var(--fg-on-backdrop) 76%, transparent);
+  --fg-on-backdrop-subtle: color-mix(in srgb, var(--fg-on-backdrop) 64%, transparent);
+  --line-on-backdrop: color-mix(in srgb, var(--fg-on-backdrop) 11%, transparent);
+  --line-strong-on-backdrop: color-mix(in srgb, var(--fg-on-backdrop) 20%, transparent);
+  --accent-text-backdrop: var(--accent-text-glass);
+  --backdrop-halo: var(--glass-solid);
   /* The text set components read. Contexts re-point these (see styles.css). */
   --fg: var(--ink);
   --fg-muted: var(--ink-muted);

@@ -200,7 +200,7 @@ export const settingsSchema = z
     quote: z.object({ mode: z.enum(['quotes', 'research-tips', 'both', 'off']) }).partial(),
     theme: z
       .object({
-        mode: z.enum(['system', 'light', 'dark']),
+        mode: z.enum(['system', 'light', 'dark', 'recommended']),
         accent: z.string().max(32),
         backgroundId: z.string().max(32),
         // Only the uploaded image (or none). Remote URLs are deliberately not accepted.

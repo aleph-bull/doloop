@@ -73,50 +73,106 @@ export const PHOTO_SCRIM: Record<'light' | 'dark', { color: RGB; alpha: number }
   dark: { color: [6, 7, 10], alpha: 0.42 },
 };
 
+/**
+ * Each theme's own glass, in step with tokens.css: the text on it, its tint, and the
+ * opacities it never goes below.
+ */
+export const THEME_GLASS: Record<
+  'light' | 'dark',
+  { fg: RGB; fill: RGB; alpha: number; strongAlpha: number; chrome: RGB; chromeAlpha: number }
+> = {
+  light: {
+    fg: [15, 18, 32],
+    fill: [255, 255, 255],
+    alpha: 0.6,
+    strongAlpha: 0.78,
+    chrome: [255, 255, 255],
+    chromeAlpha: 0.58,
+  },
+  dark: {
+    fg: [244, 245, 249],
+    fill: [22, 24, 36],
+    alpha: 0.5,
+    strongAlpha: 0.7,
+    chrome: [30, 32, 44],
+    chromeAlpha: 0.5,
+  },
+};
+
+const TEXT_LIGHT: RGB = [242, 243, 248];
+const TEXT_DARK: RGB = [15, 18, 32];
+
 export interface PhotoAdaptation extends GlassAdaptation {
+  /** Chrome (nav, tab bar) opacity: thinner than the cards, never below the theme's own. */
+  chromeAlpha: number;
   /**
-   * Extra wash, in the glass tint, laid over the whole photo so text that sits straight on
-   * the backdrop (page titles, section headings) clears 4.5:1 against its average too.
+   * Text that sits straight on the backdrop (page titles, headings): whichever of black or
+   * white reads better on this photo. The only thing a photo changes about the text.
    */
+  pageFg: RGB;
+  /** Tint of the page wash and the halo behind that text: the opposite of `pageFg`. */
+  pageWash: RGB;
+  /** How much of `pageWash` is laid over the whole photo so `pageFg` clears 4.5:1. */
   pageScrim: number;
 }
 
+/** Which text a backdrop colour wants straight on it, as it is shown under a theme's scrim. */
+function readsLight(shown: RGB): boolean {
+  return contrastRatio(TEXT_LIGHT, shown) >= contrastRatio(TEXT_DARK, shown);
+}
+
 /**
- * Text colour, glass and page wash for a photograph in a theme. Unlike
- * `adaptGlassToBackdrop`, the text colour is whichever reads better against the photo as it
- * is actually shown (under the theme's scrim), so a mid-tone image never gets the weaker one.
+ * Glass and page text for a photograph in a theme.
+ *
+ * Panels and everything on them keep the theme's own look: its text and its tint, so dark
+ * mode is dark panels on any photo. A busy photo can only make that glass thicker, until
+ * the quietest text on it clears 4.5:1. Text straight on the backdrop is the one thing that
+ * follows the photo: black on a light one, white on a dark one.
  */
 export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark'): PhotoAdaptation {
   const scrim = PHOTO_SCRIM[theme];
   const shown = composite(scrim.color, scrim.alpha, avg);
-  const light: RGB = [242, 243, 248];
-  const dark: RGB = [15, 18, 32];
-  const lightText = contrastRatio(light, shown) >= contrastRatio(dark, shown);
-  const fg = lightText ? light : dark;
-  const fill: RGB = lightText ? [20, 22, 36] : [255, 255, 255];
+  const own = THEME_GLASS[theme];
+  const fg = own.fg;
+  const fill = own.fill;
   // Thick enough that the quietest text on glass (the text colour at 64%, tokens.css
   // --fg-on-glass-subtle) still clears 4.5:1, not just the primary text.
   const subtleOn = (alpha: number) => {
     const glass = composite(fill, alpha, shown);
     return contrastRatio(composite(fg, 0.64, glass), glass);
   };
-  let alpha = 0.45;
+  let alpha = own.alpha;
   while (subtleOn(alpha) < 4.5 && alpha < MAX_ALPHA) {
     alpha = Math.round((alpha + 0.05) * 100) / 100;
   }
   const ratio = contrastRatio(fg, composite(fill, alpha, shown));
+
+  const lightText = readsLight(shown);
+  const pageFg = lightText ? TEXT_LIGHT : TEXT_DARK;
+  const pageWash: RGB = lightText ? [20, 22, 36] : [255, 255, 255];
   let pageScrim = 0;
-  while (contrastRatio(fg, composite(fill, pageScrim, shown)) < 4.5 && pageScrim < 0.6) {
+  while (contrastRatio(pageFg, composite(pageWash, pageScrim, shown)) < 4.5 && pageScrim < 0.6) {
     pageScrim = Math.round((pageScrim + 0.05) * 100) / 100;
   }
   return {
     fg,
     fill,
     alpha,
-    strongAlpha: Math.min(0.97, Math.round((alpha + 0.15) * 100) / 100),
+    strongAlpha: Math.min(0.97, Math.max(own.strongAlpha, Math.round((alpha + 0.15) * 100) / 100)),
+    chromeAlpha: Math.max(own.chromeAlpha, Math.round((alpha - 0.05) * 100) / 100),
     ratio,
+    pageFg,
+    pageWash,
     pageScrim,
   };
+}
+
+/**
+ * The theme a backdrop colour suits, for the Recommended mode: light mode on a light
+ * background (where black text reads better), dark mode on a dark one.
+ */
+export function recommendedThemeFor(avg: RGB): 'light' | 'dark' {
+  return readsLight(avg) ? 'dark' : 'light';
 }
 
 export function hexToRgb(hex: string): RGB {
