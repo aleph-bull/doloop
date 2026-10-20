@@ -175,6 +175,41 @@ export function Today() {
 
       <TipCard />
 
+      {/* One-time hints sit with the start panel, where they are seen. */}
+      <div className="hint-stack">
+        <Hint
+          id="rest-days"
+          when={sessionCount >= 3}
+          action={
+            <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
+              Set rest days
+            </Link>
+          }
+        >
+          Rest days never break your streak. Set the days you don't study and pace will plan around
+          them.
+        </Hint>
+        <Hint
+          id="freezes"
+          when={(me.data?.user.streak.current ?? 0) >= 3}
+          action={
+            <Link to="/achievements" className="btn btn-secondary btn-sm">
+              Open the shop
+            </Link>
+          }
+        >
+          Your streak is growing. A streak freeze from the shop covers one missed day automatically.
+        </Hint>
+        <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
+          Every session moves you toward the next level, and levels unlock new backgrounds.
+          Achievements has the details.
+        </Hint>
+        <Hint id="calendar" when={anyDue && sessionCount >= 2}>
+          Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
+          versus needed hours.
+        </Hint>
+      </div>
+
       {/* A first visit: the one thing to do comes before any numbers. */}
       {roots.length === 0 && (
         <Glass className="dash-first">
@@ -220,40 +255,6 @@ export function Today() {
       <FollowUpPrompt />
 
       <TrackerBoard />
-
-      <div className="hint-stack">
-        <Hint
-          id="rest-days"
-          when={sessionCount >= 3}
-          action={
-            <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
-              Set rest days
-            </Link>
-          }
-        >
-          Rest days never break your streak. Set the days you don't study and pace will plan around
-          them.
-        </Hint>
-        <Hint
-          id="freezes"
-          when={(me.data?.user.streak.current ?? 0) >= 3}
-          action={
-            <Link to="/achievements" className="btn btn-secondary btn-sm">
-              Open the shop
-            </Link>
-          }
-        >
-          Your streak is growing. A streak freeze from the shop covers one missed day automatically.
-        </Hint>
-        <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
-          Every session moves you toward the next level, and levels unlock new backgrounds.
-          Achievements has the details.
-        </Hint>
-        <Hint id="calendar" when={anyDue && sessionCount >= 2}>
-          Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
-          versus needed hours.
-        </Hint>
-      </div>
 
       <RewardOverlay
         summary={summary}
