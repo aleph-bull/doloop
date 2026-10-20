@@ -57,7 +57,9 @@ export function SignIn() {
           <div>
             <LogoMark size={40} className="mb-3" />
             <h1 className="text-2xl">Komogon</h1>
-            <p className="muted text-sm mt-1">Plan the work. Keep the pace.</p>
+            <p className="muted text-sm mt-1">
+              Productivity app with nifty features to keep you motivated.
+            </p>
           </div>
 
           {turnedAway && !sent && (
