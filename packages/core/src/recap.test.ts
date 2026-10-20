@@ -143,7 +143,7 @@ describe('rangeRecap', () => {
   it('has a kind word for a quiet week and for an empty one', () => {
     const ss = [session('2026-09-15T10:00', 300), session('2026-09-22T10:00', 40)];
     const r = rangeRecap({ sessions: ss, timezone: TZ, now: NOW, range: 'week' });
-    expect(r.summary).toBe('Every session counts. You showed up 1 time this week.');
+    expect(r.summary).toBe('You completed 1 session this week.');
     const empty = rangeRecap({
       sessions: [session('2026-09-15T10:00', 300)],
       timezone: TZ,
@@ -173,6 +173,31 @@ describe('recapSummary', () => {
     expect(recapSummary({ ...base, change: 0.02 })).toMatch(/^Right in step/);
     const low = recapSummary({ ...base, change: -0.7 });
     expect(low).not.toMatch(/less|down|fewer|%/i);
+  });
+
+  it('closes a quieter week on the goal, then on how close it came', () => {
+    const base = {
+      range: 'week' as const,
+      minutes: 200,
+      sessions: 4,
+      firstTime: false,
+      bestEver: false,
+      bestDay: null,
+      historyMinutes: 2000,
+    };
+    expect(recapSummary({ ...base, change: -0.5, goalMinutes: 180 })).toBe(
+      'You completed 4 sessions this week. You hit your goal!',
+    );
+    expect(recapSummary({ ...base, change: -0.5, goalMinutes: 240 })).toBe(
+      'You completed 4 sessions this week. Almost there!',
+    );
+    expect(recapSummary({ ...base, change: -0.5, goalMinutes: 240, past: true })).toBe(
+      'You completed 4 sessions that week.',
+    );
+    expect(recapSummary({ ...base, change: -0.2 })).toBe(
+      'You completed 4 sessions this week. Good work!',
+    );
+    expect(recapSummary({ ...base, change: -0.6 })).toBe('You completed 4 sessions this week.');
   });
 });
 

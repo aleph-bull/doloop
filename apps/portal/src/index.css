@@ -2066,7 +2066,7 @@
 .bg-groups-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   flex-wrap: wrap;
 }
@@ -5375,7 +5375,7 @@
   color: color-mix(in srgb, var(--status-warn) 70%, var(--fg));
 }
 
-/* Worth knowing and the Weekly review bar: text cards over the photo, so mostly solid. */
+/* Good to know and the Weekly review bar: text cards over the photo, so mostly solid. */
 .glass.rc-insight,
 .glass.rc-review {
   background: color-mix(in srgb, var(--glass-solid) 78%, transparent);

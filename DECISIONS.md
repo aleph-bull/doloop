@@ -1320,3 +1320,9 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Leaderboard**: top 10 by focused time (sum of `work_seconds` on finished sessions), shown by the name each person chose (`settings.profile.name`, "Someone" if none), never email. `GET /api/leaderboard`; a Leaderboard tab on Analytics, the viewer's own row tinted. The name hint now says it's shown on the leaderboard; placeholder "e.g. John".
 - **Onboarding can skip the first task**: "Skip, I'll add tasks later" on the due-date step makes only the course; Start then runs a free session.
 - Sign-in notice reads "I can see the accounts and study data saved here."
+
+## Copy pass and a reward minimum of your own, 2026-10-20 (user request)
+
+- **Explainer lines removed** across Achievements, Rewards, Settings and Analytics (the user's list). Kept but reworded where the UI needs a line: the Analytics hero on a quieter week, the review-mode hint, the export hint, the Pages hint, the presets hint, the session XP hint, and the Google Calendar "not configured" state. "Worth knowing" is now "Good to know".
+- **Quieter-week hero**: "You completed N sessions this week." plus, in order, "You hit your goal!" (weekly goal met), "Almost there!" (75% of the goal and the week still running), "Good work!" (less than 30% below last week), or nothing. The "!" is the user's own wording.
+- **The reward minimum is a setting** (`settings.rewards.minCostXp`, 10 to 5000, default 150), in Settings › Pace and streaks. Like the streak's day start, it may change once a day: the server stamps `minCostChangedAt` and refuses another change for 24 hours. A raised minimum applies to new prices only; a reward priced under it can still be renamed or archived. This puts an XP figure in Settings, which the "XP only on Achievements" rule otherwise keeps out; the user asked for it.

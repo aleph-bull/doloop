@@ -121,6 +121,12 @@ export interface UserSettings {
     /** Record each finished session on the calendar as the block of study it was. */
     logSessions: boolean;
   };
+  rewards: {
+    /** The least a reward bought with XP may cost. */
+    minCostXp: number;
+    /** When minCostXp last changed, set by the server; it may change once a day. */
+    minCostChangedAt: ISODateTime | null;
+  };
   routines: {
     /** "Clear missed": outstanding days on or before this date drop off the due list. */
     missedClearedThrough: ISODate | null;

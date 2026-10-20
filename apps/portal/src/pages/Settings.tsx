@@ -1,5 +1,7 @@
 import {
   dayStartUnlocksAt,
+  minCostUnlocksAt,
+  REWARDS,
   resolveBackgroundId,
   POMODORO_DURATION_KEYS,
   POMODORO_LIMITS,
@@ -182,6 +184,54 @@ function DayStartField({
   );
 }
 
+/** The least a reward may cost. Like the day start, it may change once a day. */
+function MinCostField({
+  value,
+  changedAt,
+  onChange,
+}: {
+  value: number;
+  changedAt: string | null;
+  onChange: (xp: number) => void;
+}) {
+  const unlocksAt = minCostUnlocksAt(changedAt, new Date().toISOString());
+  const [v, setV] = useState(String(value));
+  useEffect(() => setV(String(value)), [value]);
+  return (
+    <Input
+      label="Minimum reward price (XP)"
+      type="number"
+      min={REWARDS.LOWEST_MIN_COST_XP}
+      max={REWARDS.HIGHEST_MIN_COST_XP}
+      step={10}
+      value={v}
+      disabled={unlocksAt !== null}
+      hint={
+        unlocksAt
+          ? `Changed recently. You can change it again ${fmtDate(unlocksAt, { weekday: 'short' })} at ${fmtTime(unlocksAt)}.`
+          : '150 XP takes about an hour of focus. You can change this once a day.'
+      }
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        const n = Number(v);
+        const valid =
+          Number.isInteger(n) &&
+          n >= REWARDS.LOWEST_MIN_COST_XP &&
+          n <= REWARDS.HIGHEST_MIN_COST_XP &&
+          n !== value;
+        if (
+          valid &&
+          window.confirm(
+            `Set the minimum reward price to ${n} XP? You won't be able to change it again for 24 hours.`,
+          )
+        )
+          onChange(n);
+        else setV(String(value));
+      }}
+    />
+  );
+}
+
 export function Settings() {
   const me = useMe();
   const update = useUpdateSettings();
@@ -312,8 +362,7 @@ export function Settings() {
 
             <Section id="pages" title="Pages">
               <p className="field-hint">
-                Turn off the pages you don't use and they leave the nav. Anything already in them is
-                kept, so turning one back on brings it all back.
+                Turn off the pages you don't use.
               </p>
               <Toggle
                 checked={s.features.routines}
@@ -438,8 +487,8 @@ export function Settings() {
                 ))}
               </div>
               <p className="field-hint">
-                A session counts toward your level after ten focused minutes, or when you mark the
-                task done. The minutes are always saved.
+                A session gives you XP when you complete at least 10 minutes of work, or when you
+                mark a task done.
               </p>
               <Toggle
                 checked={s.pomodoro.autoStartBreaks}
@@ -473,9 +522,7 @@ export function Settings() {
                   ]}
                 />
                 <span className="field-hint">
-                  Quick asks how focused you were, and how ready you feel for an assessment. Full
-                  also asks how hard it felt, how much you got through, whether it needs more time,
-                  and for a note. You can always skip it.
+                  The assessment after a session. Gives more data for analytics and planning.
                 </span>
               </div>
               <Toggle
@@ -553,7 +600,6 @@ export function Settings() {
                       onMouseUp={() => playSound(s.sounds.workStart, s.sounds.volume)}
                       aria-label="Volume"
                     />
-                    <span className="field-hint">Releasing the slider plays the work tone.</span>
                   </div>
                   {SOUND_EVENT_LABELS.map((ev) => (
                     <div className="field" key={ev.id}>
@@ -623,6 +669,11 @@ export function Settings() {
                 hour={s.streak.dayStartHour}
                 changedAt={s.streak.dayStartChangedAt}
                 onChange={(h) => patch({ streak: { dayStartHour: h } })}
+              />
+              <MinCostField
+                value={s.rewards.minCostXp}
+                changedAt={s.rewards.minCostChangedAt}
+                onChange={(xp) => patch({ rewards: { minCostXp: xp } })}
               />
               <div className="field">
                 <span className="field-label">Daily card</span>

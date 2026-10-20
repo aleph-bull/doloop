@@ -42,6 +42,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   review: { mode: 'quick' },
   streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null },
   goals: { weeklyMinutes: 300 },
+  rewards: { minCostXp: 150, minCostChangedAt: null },
   pace: { maxComfortableMinutesPerDay: 240 },
   sounds: {
     enabled: true,

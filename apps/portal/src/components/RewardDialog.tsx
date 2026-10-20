@@ -169,7 +169,7 @@ export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDi
               step={10}
               value={cost}
               onChange={(e) => setCost(e.target.value)}
-              hint={`At least ${limits.minCostXp} XP, which is about an hour of focus.`}
+              hint={`At least ${limits.minCostXp} XP. 150 XP takes about an hour of focus.`}
             />
             <Input
               label="Cooldown (days)"

@@ -100,10 +100,7 @@ export function DataPrivacySettings() {
 
       <div className="flex flex-col gap-2">
         <h3 className="font-medium">Download a copy</h3>
-        <p className="field-hint">
-          Everything you have added, at any time. The CSV download is a .zip with one spreadsheet
-          per kind of record, which opens in Excel, Numbers or Google Sheets.
-        </p>
+        <p className="field-hint">The export is a .zip containing CSV files of your activity.</p>
         <div className="flex gap-2 flex-wrap">
           <Button onClick={() => exportAs('csv')} loading={busy === 'csv'}>
             Export as CSV

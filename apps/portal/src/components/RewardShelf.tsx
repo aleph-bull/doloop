@@ -1,6 +1,7 @@
 import type { CustomReward, RewardView } from '@komogon/core';
 import { Gift, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router';
 import { Button, Chip, Panel, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from './ErrorState';
 import { RewardDialog } from './RewardDialog';
@@ -188,8 +189,8 @@ export function RewardShelf() {
         </Button>
       </div>
       <p className="muted text-sm">
-        Decide what the XP is for, then buy it. The lowest price is {limits.minCostXp} XP, which is
-        about an hour of focus. Or tie a reward to a task or test, and it opens once that is done.
+        150 XP takes about an hour of focus. The current minimum is {limits.minCostXp} XP. You can
+        change this in <Link to="/settings#pace">Settings</Link>.
       </p>
 
       {rewards.length === 0 ? (

@@ -61,7 +61,7 @@ export function GoogleCalendarSettings() {
   const description = !s
     ? 'Checking…'
     : !s.available
-      ? 'Not configured on this server (see docs/SETUP.md).'
+      ? 'Not configured, so this does not work yet.'
       : !s.connected
         ? 'Add your planned blocks to a Study calendar in Google, and see when you are busy.'
         : s.revoked

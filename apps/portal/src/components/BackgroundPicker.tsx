@@ -150,9 +150,6 @@ export function BackgroundPicker({
   return (
     <div className="bg-groups">
       <div className="bg-groups-head">
-        <span className="field-hint">
-          {chosenName(value)} is on now. {BACKGROUNDS.length} to choose from.
-        </span>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMinimized(true)}>
           <ChevronUp size={14} aria-hidden /> Minimize
         </button>

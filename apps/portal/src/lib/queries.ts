@@ -414,7 +414,7 @@ export function useUpdateSettings() {
   type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
   return useMutation({
     mutationFn: (patch: DeepPartial<UserSettings>) => api.updateSettings(patch),
-    onSuccess: () => invalidate(keys.me, keys.quote, keys.pace, ['analytics']),
+    onSuccess: () => invalidate(keys.me, keys.quote, keys.pace, keys.rewards, ['analytics']),
   });
 }
 

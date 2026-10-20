@@ -105,8 +105,9 @@ export async function createReward(
   db: Db,
   userId: string,
   draft: RewardDraft,
+  minCostXp: number = REWARDS.MIN_COST_XP,
 ): Promise<CustomReward> {
-  const valid = validateRewardDraft(draft);
+  const valid = validateRewardDraft(draft, minCostXp);
   if (!valid.ok) throw badRequest(valid.reason);
   await assertOwnTask(db, userId, valid.value.unlockNodeId);
   if ((await countActiveRewards(db, userId)) >= REWARDS.MAX_ACTIVE)
@@ -123,6 +124,7 @@ export async function updateReward(
   userId: string,
   id: string,
   patch: Partial<RewardDraft> & { archived?: boolean },
+  minCostXp: number = REWARDS.MIN_COST_XP,
 ): Promise<CustomReward> {
   const current = await getRewardRow(db, userId, id);
   const merged: RewardDraft = {
@@ -134,7 +136,11 @@ export async function updateReward(
     unlock: patch.unlock ?? current.unlock,
     unlockNodeId: patch.unlockNodeId !== undefined ? patch.unlockNodeId : current.unlockNodeId,
   };
-  const valid = validateRewardDraft(merged);
+  // A raised minimum applies to new prices only, so a reward priced under it can still be
+  // renamed or archived without being repriced.
+  const repriced = patch.costXp !== undefined || patch.unlock !== undefined;
+  const floor = repriced ? minCostXp : Math.min(minCostXp, current.costXp);
+  const valid = validateRewardDraft(merged, floor);
   if (!valid.ok) throw badRequest(valid.reason);
   await assertOwnTask(db, userId, valid.value.unlockNodeId);
   if (patch.archived === false && current.archived) {

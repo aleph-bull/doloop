@@ -202,6 +202,7 @@ export function rangeRecap(input: RangeRecapInput): RangeRecap {
       bestDay: best,
       historyMinutes: [...totals.values()].reduce((a, t) => a + t.minutes, 0),
       past: to < today,
+      goalMinutes,
     }),
     goalMinutes,
     goalRatio: goalMinutes ? Math.min(1, minutes / goalMinutes) : null,
@@ -220,6 +221,16 @@ export interface SummaryInput {
   historyMinutes: number;
   /** A range that has already ended, looked back on: "that week", not "this week". */
   past?: boolean;
+  /** The weekly goal, to say how a quieter week went against it. Only on a week. */
+  goalMinutes?: number | null;
+}
+
+/** The closing word on a week below the last: the goal first, then how close it came. */
+function quietWeekWord(s: SummaryInput): string {
+  if (s.goalMinutes && s.minutes >= s.goalMinutes) return ' You hit your goal!';
+  if (s.goalMinutes && !s.past && s.minutes >= s.goalMinutes * 0.75) return ' Almost there!';
+  if (s.change !== null && s.change > -0.3) return ' Good work!';
+  return '';
 }
 
 /** The hero's one sentence. Positive where it can be, plain where it cannot, never a nag. */
@@ -239,7 +250,7 @@ export function recapSummary(s: SummaryInput): string {
   if (s.bestEver && !s.firstTime) return `Your best ${word} so far${lifted}.`;
   if (s.change !== null && s.change >= 0.1) return `Up on ${before}${lifted}.`;
   if (s.change !== null && s.change > -0.1) return `Right in step with ${before}${lifted}.`;
-  return `Every session counts. You showed up ${s.sessions} ${s.sessions === 1 ? 'time' : 'times'} ${s.past ? 'that' : 'this'} ${word}.`;
+  return `You completed ${s.sessions} ${s.sessions === 1 ? 'session' : 'sessions'} ${s.past ? 'that' : 'this'} ${word}.${quietWeekWord(s)}`;
 }
 
 /* ---------- the clock ---------- */

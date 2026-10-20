@@ -2,6 +2,7 @@ import { levelProgress } from '@komogon/core';
 import { Award, ChevronDown, Lock } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import {
   BackgroundThumb,
   Button,
@@ -97,11 +98,6 @@ export function Achievements() {
             <strong>{lp.toNext} XP</strong> to level {lp.level + 1}
           </span>
         </div>
-        <p className="ach-hero-note">
-          Each of levels 1 to 6 unlocks a background, and more open at 8, 10 and 12. Others can be
-          bought with XP, and every accent colour is free. XP is only ever earned by studying,
-          ticking off a routine or unlocking a badge, never by buying anything.
-        </p>
       </Glass>
 
       <RewardShelf />
@@ -110,9 +106,6 @@ export function Achievements() {
         <h2 id="shop-h" className="section-title">
           Shop
         </h2>
-        <p className="muted text-sm">
-          Cosmetics and safety nets only. Nothing here inflates XP or streaks.
-        </p>
         <div className="card-grid">
           <Panel className="p-4 flex flex-col gap-3">
             <div>
@@ -190,8 +183,7 @@ export function Achievements() {
 
         <h3 className="card-title mt-4">Backgrounds</h3>
         <p className="muted text-sm">
-          Most are free. These are the ones still to unlock — pick any of them in Settings once they
-          are yours.
+          Pick any of these backgrounds in <Link to="/settings#theme">Appearance</Link> to use them.
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {s.backgrounds

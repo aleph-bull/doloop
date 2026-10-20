@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import {
   dayStartUnlocksAt,
+  minCostUnlocksAt,
   isAccentUnlocked,
   isBackgroundAvailable,
   isValidTimezone,
@@ -84,6 +85,17 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
         const until = dayStartUnlocksAt(current.dayStartChangedAt, now);
         if (until) throw badRequest('When your day starts can change once a day. Try again later.');
         (patch.streak as Record<string, unknown>).dayStartChangedAt = now;
+      }
+    }
+    // So may the reward minimum.
+    const minCost = patch.rewards?.minCostXp;
+    if (minCost !== undefined) {
+      const now = clock();
+      const current = settingsOf(req.user).rewards;
+      if (minCost !== current.minCostXp) {
+        if (minCostUnlocksAt(current.minCostChangedAt, now))
+          throw badRequest('The reward minimum can change once a day. Try again later.');
+        (patch.rewards as Record<string, unknown>).minCostChangedAt = now;
       }
     }
     const row = await updateSettings(db, req.user, patch);

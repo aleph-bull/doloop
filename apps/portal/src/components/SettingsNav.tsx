@@ -164,6 +164,10 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'daily card',
       'tips',
       'app tips',
+      'rewards',
+      'reward price',
+      'minimum xp',
+      'xp',
     ],
   },
   {

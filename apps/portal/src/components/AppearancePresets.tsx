@@ -282,9 +282,7 @@ export function AppearancePresets({
           </Button>
         </div>
       )}
-      <span className="field-hint">
-        Your background, accent and panel style, under a name. Kept in this browser only.
-      </span>
+      <span className="field-hint">Your current appearance settings saved as a preset.</span>
     </div>
   );
 }

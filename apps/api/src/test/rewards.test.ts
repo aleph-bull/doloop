@@ -151,3 +151,18 @@ describe('custom rewards', () => {
     expect(res.statusCode).toBe(404);
   });
 });
+
+describe('the reward minimum', () => {
+  it('is the user’s to set, once a day, and prices are held to it', async () => {
+    const set = (minCostXp: number) =>
+      t.api({ method: 'PATCH', url: '/api/me/settings', payload: { rewards: { minCostXp } } });
+    expect((await set(300)).statusCode).toBe(200);
+    const res = await t.api({ method: 'GET', url: '/api/rewards' });
+    expect(res.json().limits.minCostXp).toBe(300);
+    const cheap = await create({ name: 'Under the new floor', costXp: 200 });
+    expect(cheap.statusCode).toBe(400);
+    expect(cheap.json().error).toContain('300 XP');
+    // Held for a day once changed.
+    expect((await set(100)).statusCode).toBe(400);
+  });
+});

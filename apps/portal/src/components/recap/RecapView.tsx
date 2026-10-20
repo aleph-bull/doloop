@@ -689,7 +689,7 @@ function Insights({ data }: { data: RecapResponse }) {
   return (
     <section className="rc-rise" aria-labelledby="insights-h">
       <h2 id="insights-h" className="card-title rc-section-title">
-        Worth knowing
+        Good to know
       </h2>
       <div className="rc-insights">
         {lines.map((l) => (
@@ -744,12 +744,11 @@ export function RecapView({
   // A range switch keeps the last one up, dimmed, until the new one lands.
   const stale = q.isPlaceholderData;
   const minutes = data.period ? data.period.minutes : data.totals.minutes;
-  const scope = range === 'all' ? 'all-time' : scopeWord(range, ago);
 
   return (
     <div className={`rc-page${stale ? ' is-stale' : ''}`} key={data.range}>
       <Hero data={data} range={range} ago={ago} onAgo={onAgo} />
-      {minutes > 0 && <EquivalentsStrip minutes={minutes} scope={scope} />}
+      {minutes > 0 && <EquivalentsStrip minutes={minutes} />}
       <Charts data={data} range={range} />
       <Streaks data={data} />
       <section className="rc-rise" aria-labelledby="trophies-h">

@@ -9,10 +9,14 @@ import type { ISODate, ISODateTime } from './types';
  */
 export const REWARDS = {
   /**
-   * The floor on what a reward may cost. Roughly an hour of focused work (2 XP/min plus
-   * bonuses), so a reward can never be cheaper than the effort it is supposed to represent.
+   * The default floor on what a reward may cost: roughly an hour of focused work (2 XP/min
+   * plus bonuses). Each user sets their own in Settings, between the two bounds below, and
+   * may change it once a day.
    */
   MIN_COST_XP: 150,
+  LOWEST_MIN_COST_XP: 10,
+  HIGHEST_MIN_COST_XP: 5000,
+  MIN_COST_LOCK_HOURS: 24,
   MAX_COST_XP: 100_000,
   /** How many rewards a user may keep on the shelf at once. */
   MAX_ACTIVE: 24,
@@ -77,7 +81,21 @@ export interface RewardView extends CustomReward {
 }
 
 /** Trim and bounds-check a draft. Returns the normalised draft, or why it was refused. */
-export function validateRewardDraft(draft: RewardDraft): Result<Required<RewardDraft>> {
+/** When the reward minimum may next change, or null if it may change now. */
+export function minCostUnlocksAt(
+  changedAt: ISODateTime | null,
+  now: ISODateTime,
+): ISODateTime | null {
+  if (!changedAt) return null;
+  const at = Date.parse(changedAt) + REWARDS.MIN_COST_LOCK_HOURS * 3_600_000;
+  return at > Date.parse(now) ? new Date(at).toISOString() : null;
+}
+
+/** `minCostXp` is the user's own floor; it defaults to REWARDS.MIN_COST_XP. */
+export function validateRewardDraft(
+  draft: RewardDraft,
+  minCostXp: number = REWARDS.MIN_COST_XP,
+): Result<Required<RewardDraft>> {
   const name = draft.name.trim();
   if (!name) return { ok: false, reason: 'Give the reward a name.' };
   if (name.length > REWARDS.NAME_MAX)
@@ -107,10 +125,10 @@ export function validateRewardDraft(draft: RewardDraft): Result<Required<RewardD
 
   if (!Number.isFinite(draft.costXp) || !Number.isInteger(draft.costXp))
     return { ok: false, reason: 'The price must be a whole number of XP.' };
-  if (draft.costXp < REWARDS.MIN_COST_XP)
+  if (draft.costXp < minCostXp)
     return {
       ok: false,
-      reason: `The lowest price is ${REWARDS.MIN_COST_XP} XP, which is about an hour of focus.`,
+      reason: `The current minimum is ${minCostXp} XP. You can change this in Settings.`,
     };
   if (draft.costXp > REWARDS.MAX_COST_XP)
     return { ok: false, reason: `The highest price is ${REWARDS.MAX_COST_XP} XP.` };

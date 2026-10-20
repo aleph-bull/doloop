@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { REWARDS } from '@komogon/core';
 import { z } from 'zod';
 import type { Db } from '../db/client';
+import { settingsOf } from '../services/users';
 import {
   createReward,
   deleteReward,
@@ -42,7 +43,7 @@ export function rewardRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       ),
       xp: req.user.xp,
       limits: {
-        minCostXp: REWARDS.MIN_COST_XP,
+        minCostXp: settingsOf(req.user).rewards.minCostXp,
         maxCostXp: REWARDS.MAX_COST_XP,
         maxActive: REWARDS.MAX_ACTIVE,
         maxCooldownDays: REWARDS.MAX_COOLDOWN_DAYS,
@@ -53,14 +54,20 @@ export function rewardRoutes(app: FastifyInstance, db: Db, clock: () => string) 
 
   app.post('/api/rewards', async (req, reply) => {
     const body = draft.parse(req.body);
-    const reward = await createReward(db, req.user.id, body);
+    const reward = await createReward(
+      db,
+      req.user.id,
+      body,
+      settingsOf(req.user).rewards.minCostXp,
+    );
     return reply.code(201).send({ reward });
   });
 
   app.patch('/api/rewards/:id', async (req) => {
     const { id } = z.object({ id: uuid }).parse(req.params);
     const body = patchSchema.parse(req.body);
-    return { reward: await updateReward(db, req.user.id, id, body) };
+    const minCostXp = settingsOf(req.user).rewards.minCostXp;
+    return { reward: await updateReward(db, req.user.id, id, body, minCostXp) };
   });
 
   app.delete('/api/rewards/:id', async (req, reply) => {

@@ -3,6 +3,7 @@ import {
   CUSTOM_ACCENT,
   CUSTOM_BACKGROUND_UPLOAD,
   POMODORO_LIMITS,
+  REWARDS,
   SOUND_PRESETS,
   STREAK_DAY_START,
 } from '@komogon/core';
@@ -179,6 +180,16 @@ export const settingsSchema = z
       })
       .partial(),
     goals: z.object({ weeklyMinutes: z.number().int().min(30).max(10_080) }).partial(),
+    // minCostChangedAt is the server's to set, like the streak's day start.
+    rewards: z
+      .object({
+        minCostXp: z
+          .number()
+          .int()
+          .min(REWARDS.LOWEST_MIN_COST_XP)
+          .max(REWARDS.HIGHEST_MIN_COST_XP),
+      })
+      .partial(),
     pace: z.object({ maxComfortableMinutesPerDay: z.number().int().min(15).max(1440) }).partial(),
     sounds: z
       .object({
