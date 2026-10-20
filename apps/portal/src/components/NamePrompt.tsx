@@ -33,12 +33,12 @@ export function NamePrompt() {
     <Glass className="p-5 flex flex-col gap-3 fade-in" role="region" aria-label="Your name">
       <div>
         <h2 className="card-title">What should we call you?</h2>
-        <p className="muted text-sm">Only used to say hello.</p>
+        <p className="muted text-sm">Used to say hello, and shown on the leaderboard.</p>
       </div>
       <form className="flex items-end gap-2 flex-wrap" onSubmit={save}>
         <Input
           label="Name"
-          placeholder="e.g. Zach"
+          placeholder="e.g. John"
           className="w-48"
           value={name}
           onChange={(e) => setName(e.target.value)}

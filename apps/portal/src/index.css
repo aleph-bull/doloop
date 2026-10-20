@@ -5525,3 +5525,8 @@
   fill: transparent;
   outline: none;
 }
+
+/* Leaderboard: the signed-in person's row is picked out with the accent tint. */
+.leaderboard-table tr[aria-current='true'] td {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}

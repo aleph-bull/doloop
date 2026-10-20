@@ -24,6 +24,8 @@ export function Onboarding() {
   const [task, setTask] = useState('');
   const [due, setDue] = useState(defaultDue);
   const [hours, setHours] = useState('3');
+  /** Skipped "What's the next thing due?": no first task is made. */
+  const [skipTask, setSkipTask] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const finish = async (startNow: boolean) => {
@@ -32,15 +34,18 @@ export function Onboarding() {
       const trimmedName = name.trim();
       if (trimmedName) await api.updateSettings({ profile: { name: trimmedName } });
       const c = await api.createNode({ title: course.trim() || 'My course', kind: 'course' });
-      const t = await api.createNode({
-        title: task.trim() || 'First assignment',
-        kind: 'task',
-        parentId: c.node.id,
-        estimatedMinutes: Math.max(0, Math.round(Number(hours || '0') * 60)) || null,
-        dueAt: due ? localToIso(due) : null,
-      });
+      const t = skipTask
+        ? null
+        : await api.createNode({
+            title: task.trim() || 'First assignment',
+            kind: 'task',
+            parentId: c.node.id,
+            estimatedMinutes: Math.max(0, Math.round(Number(hours || '0') * 60)) || null,
+            dueAt: due ? localToIso(due) : null,
+          });
       await api.updateMe({ onboarded: true });
-      if (startNow) await api.startSession({ nodeId: t.node.id, mode: 'pomodoro' });
+      // Without a task, Start runs a free session.
+      if (startNow) await api.startSession({ nodeId: t?.node.id, mode: 'pomodoro' });
       await qc.invalidateQueries({ queryKey: keys.me });
       await qc.invalidateQueries({ queryKey: keys.nodes });
       await qc.invalidateQueries({ queryKey: keys.active });
@@ -79,8 +84,8 @@ export function Onboarding() {
               <h1 className="text-2xl">What should we call you?</h1>
               <Input
                 label="Name"
-                hint="Only used to say hello."
-                placeholder="e.g. Zach"
+                hint="Used to say hello, and shown on the leaderboard."
+                placeholder="e.g. John"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 maxLength={60}
@@ -126,6 +131,7 @@ export function Onboarding() {
               className="flex flex-col gap-4"
               onSubmit={(e) => {
                 e.preventDefault();
+                setSkipTask(false);
                 setStep(3);
               }}
             >
@@ -163,6 +169,15 @@ export function Onboarding() {
                   Next
                 </Button>
               </div>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setSkipTask(true);
+                  setStep(3);
+                }}
+              >
+                Skip, I'll add tasks later
+              </Button>
             </form>
           )}
 
@@ -170,8 +185,10 @@ export function Onboarding() {
             <div className="flex flex-col gap-4">
               <h1 className="text-2xl">Ready{name.trim() ? `, ${name.trim()}` : ''}.</h1>
               <p className="muted">
-                {task || 'First assignment'} in {course || 'your course'}, due {due}, about{' '}
-                {hours || 0} h. Start a 25-minute focus block now, or set things up first.
+                {skipTask
+                  ? `${course || 'Your course'} is set up. You can add tasks and due dates any time in Tasks. `
+                  : `${task || 'First assignment'} in ${course || 'your course'}, due ${due}, about ${hours || 0} h. `}
+                Start a 25-minute focus block now, or set things up first.
               </p>
               <Button variant="primary" size="lg" loading={busy} onClick={() => finish(true)}>
                 Start

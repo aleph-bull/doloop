@@ -23,6 +23,7 @@ import { planRoutes } from './routes/plans';
 import { recapRoutes } from './routes/recap';
 import { passwordAuthRoutes } from './routes/auth';
 import { adminRoutes } from './routes/admin';
+import { leaderboardRoutes } from './routes/leaderboard';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 
 export interface BuildOptions {
@@ -98,6 +99,7 @@ export async function buildServer(opts: BuildOptions) {
   };
   meRoutes(app, opts.db, clock);
   adminRoutes(app, opts.db, opts.adminEmails ?? []);
+  leaderboardRoutes(app, opts.db);
   nodeRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);

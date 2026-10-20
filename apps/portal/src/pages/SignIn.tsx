@@ -101,8 +101,8 @@ export function SignIn() {
               />
               {auth.mode !== 'dev' && (
                 <p className="field-hint">
-                  This is an early test of Komogon. The person running it can see the accounts and
-                  study data saved here.
+                  This is an early test of Komogon. I can see the accounts and study data saved
+                  here.
                 </p>
               )}
               <Button type="submit" variant="primary" loading={busy} disabled={busy}>

@@ -12,6 +12,7 @@ import {
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RecapView } from '../components/recap/RecapView';
+import { Leaderboard } from '../components/Leaderboard';
 import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtHours, fmtMinutes, pct } from '../lib/format';
 import { useAdvancedAnalytics } from '../lib/queries';
@@ -210,7 +211,7 @@ function Advanced() {
   );
 }
 
-const TABS = ['week', 'month', 'all', 'advanced'] as const;
+const TABS = ['week', 'month', 'all', 'advanced', 'leaderboard'] as const;
 type Tab = (typeof TABS)[number];
 
 export function Analytics() {
@@ -239,10 +240,17 @@ export function Analytics() {
             { value: 'month', label: 'Month' },
             { value: 'all', label: 'All time' },
             { value: 'advanced', label: 'By task' },
+            { value: 'leaderboard', label: 'Leaderboard' },
           ]}
         />
       </div>
-      {tab === 'advanced' ? <Advanced /> : <RecapView range={tab} ago={ago} onAgo={setAgo} />}
+      {tab === 'advanced' ? (
+        <Advanced />
+      ) : tab === 'leaderboard' ? (
+        <Leaderboard />
+      ) : (
+        <RecapView range={tab} ago={ago} onAgo={setAgo} />
+      )}
     </div>
   );
 }

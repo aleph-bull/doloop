@@ -280,8 +280,8 @@ export function Settings() {
             <Section id="profile" title="Account">
               <Input
                 label="Name"
-                hint="Only used to say hello."
-                placeholder="e.g. Zach"
+                hint="Used to say hello, and shown on the leaderboard."
+                placeholder="e.g. John"
                 maxLength={60}
                 value={name ?? s.profile.name ?? ''}
                 onChange={(e) => setName(e.target.value)}
