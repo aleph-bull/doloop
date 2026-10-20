@@ -20,7 +20,6 @@ import type {
   NodeAnalytics,
   CourseAnalytics,
   EstimateAccuracy,
-  WeeklyReview,
   CustomReward,
   RewardView,
   Routine,
@@ -355,17 +354,6 @@ export const api = {
       weekday: RhythmProfile;
       insights: Insight[];
     }>('GET', `/api/analytics/overview${weeks ? `?weeks=${weeks}` : ''}`),
-  weeklyReview: (weekStart?: string) =>
-    request<{ review: WeeklyReview; note: string | null }>(
-      'GET',
-      `/api/analytics/weekly-review${weekStart ? `?weekStart=${weekStart}` : ''}`,
-    ),
-  saveWeeklyNote: (weekStart: string, note: string) =>
-    request<{ weekStart: string; note: string }>(
-      'PUT',
-      `/api/analytics/weekly-review/${weekStart}`,
-      { note },
-    ),
   followUps: () => request<{ followUps: StudyNode[] }>('GET', '/api/follow-ups'),
   recap: (range: RecapRangeParam, ago = 0) =>
     request<RecapResponse>('GET', `/api/analytics/recap?range=${range}${ago ? `&ago=${ago}` : ''}`),

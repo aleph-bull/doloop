@@ -362,7 +362,7 @@ export function Settings() {
 
             <Section id="pages" title="Pages">
               <p className="field-hint">
-                Turn off the pages you don't use.
+                Turn off the pages you don't use, and choose what each one shows.
               </p>
               <Toggle
                 checked={s.features.routines}
@@ -387,6 +387,31 @@ export function Settings() {
                 onChange={(v) => patch({ features: { calendar: v } })}
                 label="Calendar"
                 description="Your week laid out with deadlines and sessions."
+              />
+              {/*
+               * Pages holds every setting about what the screens show and how they are laid
+               * out, one sub-panel per page. New layout settings go here, not in other sections.
+               */}
+              <h3 className="settings-group-head">Dashboard</h3>
+              <div className="field">
+                <span className="field-label">Daily card</span>
+                <Segmented
+                  ariaLabel="Quote mode"
+                  value={s.quote.mode}
+                  onChange={(mode) => patch({ quote: { mode } })}
+                  options={[
+                    { value: 'quotes', label: 'Quotes' },
+                    { value: 'research-tips', label: 'Research tips' },
+                    { value: 'both', label: 'Both' },
+                    { value: 'off', label: 'Off' },
+                  ]}
+                />
+              </div>
+              <Toggle
+                checked={s.quote.appTips}
+                onChange={(v) => patch({ quote: { appTips: v } })}
+                label="Tips about the app"
+                description="Now and then a short tip about Komogon shows under the start panel, with a link to try it."
               />
             </Section>
 
@@ -674,26 +699,6 @@ export function Settings() {
                 value={s.rewards.minCostXp}
                 changedAt={s.rewards.minCostChangedAt}
                 onChange={(xp) => patch({ rewards: { minCostXp: xp } })}
-              />
-              <div className="field">
-                <span className="field-label">Daily card</span>
-                <Segmented
-                  ariaLabel="Quote mode"
-                  value={s.quote.mode}
-                  onChange={(mode) => patch({ quote: { mode } })}
-                  options={[
-                    { value: 'quotes', label: 'Quotes' },
-                    { value: 'research-tips', label: 'Research tips' },
-                    { value: 'both', label: 'Both' },
-                    { value: 'off', label: 'Off' },
-                  ]}
-                />
-              </div>
-              <Toggle
-                checked={s.quote.appTips}
-                onChange={(v) => patch({ quote: { appTips: v } })}
-                label="Tips about the app"
-                description="Now and then the daily card shows a tip about Komogon, with a link to it."
               />
             </Section>
 

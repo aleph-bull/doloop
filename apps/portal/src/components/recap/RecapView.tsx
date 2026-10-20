@@ -10,7 +10,6 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { cloneElement, useState, type ReactElement, type ReactNode } from 'react';
-import { Link } from 'react-router';
 import {
   accentHexFor,
   Button,
@@ -758,17 +757,6 @@ export function RecapView({
         <TrophyShelf records={data.records} />
       </section>
       <Insights data={data} />
-      <Glass as="section" className="rc-review rc-rise">
-        <div>
-          <h2 className="card-title">Weekly review</h2>
-          <p className="muted text-sm">
-            Planned against done, the days that went sideways, and a note to your future self.
-          </p>
-        </div>
-        <Link to="/analytics/review" className="btn btn-primary">
-          Open the weekly review <ArrowRight size={16} aria-hidden />
-        </Link>
-      </Glass>
     </div>
   );
 }

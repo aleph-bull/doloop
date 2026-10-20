@@ -1321,6 +1321,14 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Onboarding can skip the first task**: "Skip, I'll add tasks later" on the due-date step makes only the course; Start then runs a free session.
 - Sign-in notice reads "I can see the accounts and study data saved here."
 
+## Weekly review removed, backgrounds open minimized, agent notes, 2026-10-20 (user request)
+
+- **Weekly review page removed** from the portal: the page, its bar at the end of each recap, its app tip, and the portal's query helpers. `/analytics/review` redirects to `/analytics`. The API's `/api/analytics/weekly-review` routes and `weekly_reviews` table stay, unused by the portal, so no data is lost.
+- **Background pickers open minimized every time** Settings opens; the remembered minimized state (`komogon.bgPicker.*` in local storage) is no longer read.
+- **CLAUDE.md** (with an AGENTS.md pointer) holds notes for future AI agents: the app, where it runs, sign-in, the owner's working preferences, the design rules and known traps.
+- **Settings › Pages holds all layout settings**, one sub-panel per page. First: Dashboard, with the daily card and "Tips about the app" (moved out of Pace and streaks; the tips toggle now says tips show under the start panel). Future settings about what a page shows or how it's laid out go there too (user, 2026-10-20).
+- **Level pill hover card** opens on hover and keyboard focus only; `:focus-within` kept it open after a click on the pill.
+
 ## Copy pass and a reward minimum of your own, 2026-10-20 (user request)
 
 - **Explainer lines removed** across Achievements, Rewards, Settings and Analytics (the user's list). Kept but reworded where the UI needs a line: the Analytics hero on a quieter week, the review-mode hint, the export hint, the Pages hint, the presets hint, the session XP hint, and the Google Calendar "not configured" state. "Worth knowing" is now "Good to know".

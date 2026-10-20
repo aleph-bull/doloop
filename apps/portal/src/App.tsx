@@ -24,9 +24,6 @@ const Plans = lazy(() => import('./pages/Plans').then((m) => ({ default: m.Plans
 const Plan = lazy(() => import('./pages/Plan').then((m) => ({ default: m.Plan })));
 const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
 const Analytics = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
-const WeeklyReviewPage = lazy(() =>
-  import('./pages/WeeklyReviewPage').then((m) => ({ default: m.WeeklyReviewPage })),
-);
 const Achievements = lazy(() =>
   import('./pages/Achievements').then((m) => ({ default: m.Achievements })),
 );
@@ -153,7 +150,8 @@ export function App() {
             <Route path="/plans/:id" element={<Plan />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/analytics/review" element={<WeeklyReviewPage />} />
+            {/* The weekly review page was removed (2026-10-20); old links land on Analytics. */}
+            <Route path="/analytics/review" element={<Navigate to="/analytics" replace />} />
             <Route path="/achievements" element={<Achievements />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/extension" element={<Extension />} />

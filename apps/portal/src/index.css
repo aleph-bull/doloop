@@ -298,9 +298,13 @@
     transform var(--dur-fast) var(--ease-out),
     visibility 0s linear var(--dur-fast);
 }
+/*
+ * Open on hover, and on keyboard focus only: plain :focus-within kept it open after a click
+ * on the pill (the link keeps focus), so it hung around after the mouse had left.
+ */
 @media (hover: hover) {
   .nav-level-wrap:hover .nav-level-drop,
-  .nav-level-wrap:focus-within .nav-level-drop {
+  .nav-level-wrap:has(:focus-visible) .nav-level-drop {
     opacity: 1;
     visibility: visible;
     transform: none;
@@ -4212,14 +4216,6 @@
   border-radius: 4px;
   background: var(--accent);
 }
-.rc-review {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  padding: 20px 22px;
-}
 
 /* Loading. */
 .rc-skeleton {
@@ -5375,9 +5371,8 @@
   color: color-mix(in srgb, var(--status-warn) 70%, var(--fg));
 }
 
-/* Good to know and the Weekly review bar: text cards over the photo, so mostly solid. */
-.glass.rc-insight,
-.glass.rc-review {
+/* Good to know: text cards over the photo, so mostly solid. */
+.glass.rc-insight {
   background: color-mix(in srgb, var(--glass-solid) 78%, transparent);
 }
 

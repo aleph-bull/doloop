@@ -34,7 +34,6 @@ export const keys = {
   weekHighlights: (w?: string) => ['analytics', 'week', w ?? 'current'] as const,
   advanced: (w?: string) => ['analytics', 'advanced', w ?? 'current'] as const,
   overview: (weeks?: number) => ['analytics', 'overview', weeks ?? 'default'] as const,
-  weeklyReview: (w?: string) => ['analytics', 'review', w ?? 'current'] as const,
   followUps: ['follow-ups'] as const,
   busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
   commitments: ['calendar', 'commitments'] as const,
@@ -121,23 +120,6 @@ export function useOverviewAnalytics(weeks?: number) {
     queryKey: keys.overview(weeks),
     queryFn: () => api.overviewAnalytics(weeks),
     staleTime: 60_000,
-  });
-}
-
-export function useWeeklyReview(weekStart?: string) {
-  return useQuery({
-    queryKey: keys.weeklyReview(weekStart),
-    queryFn: () => api.weeklyReview(weekStart),
-    staleTime: 60_000,
-  });
-}
-
-export function useSaveWeeklyNote() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ weekStart, note }: { weekStart: string; note: string }) =>
-      api.saveWeeklyNote(weekStart, note),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['analytics', 'review'] }),
   });
 }
 

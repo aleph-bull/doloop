@@ -66,12 +66,6 @@ export const APP_TIPS: AppTip[] = [
     link: 'Open Analytics',
   },
   {
-    id: 'weekly-review',
-    text: 'The weekly review puts what you planned next to what you did, with a note for next week.',
-    to: '/analytics/review',
-    link: 'Open the weekly review',
-  },
-  {
     id: 'calendar',
     text: 'Planned blocks in the Calendar show the hours you have planned against the hours you need.',
     to: '/calendar',

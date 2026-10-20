@@ -59,32 +59,10 @@ export interface BackgroundPickerProps {
   /** Rendered as the first tile of the first group, e.g. the uploaded image. */
   leading?: React.ReactNode;
   /**
-   * Which picker this is, for remembering whether it was minimized: the page's background
-   * and the extension's own are folded away separately.
+   * No longer used: pickers always open minimized now (2026-10-20). Kept so callers that
+   * still pass it compile.
    */
   collapseKey?: string;
-}
-
-/** Whether a picker was left minimized, per picker, in this browser only. */
-function useMinimized(key: string): [boolean, (v: boolean) => void] {
-  const storageKey = `komogon.bgPicker.${key}.minimized`;
-  const [minimized, set] = useState(() => {
-    try {
-      return localStorage.getItem(storageKey) === '1';
-    } catch {
-      return false;
-    }
-  });
-  const update = (v: boolean) => {
-    set(v);
-    try {
-      if (v) localStorage.setItem(storageKey, '1');
-      else localStorage.removeItem(storageKey);
-    } catch {
-      // Storage blocked: it stays as chosen until the page reloads.
-    }
-  };
-  return [minimized, update];
 }
 
 /** The name of what is chosen, for the minimized picker. */
@@ -117,10 +95,11 @@ export function BackgroundPicker({
   theme,
   onChange,
   leading,
-  collapseKey = 'page',
 }: BackgroundPickerProps) {
   const navigate = useNavigate();
-  const [minimized, setMinimized] = useMinimized(collapseKey);
+  // Opens minimized every time: the full grid is long, and most visits to Settings are for
+  // something else. "Show all backgrounds" opens it for this visit.
+  const [minimized, setMinimized] = useState(true);
   /** A locked background offers the way to it: Achievements, scrolled to it and lit up. */
   const offerShop = (b: BackgroundMeta) => {
     const how = b.costXp !== null ? 'is in the shop' : `unlocks at level ${b.minLevel}`;

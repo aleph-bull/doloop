@@ -8,7 +8,7 @@ A study-planning product: a web portal, a Chrome extension remote, and an API. F
 - **Pace**: a calculator tells you what to work on today, how many minutes per day you need, and whether each task is on track, behind, critical, or overdue.
 - **Study**: pomodoro, unlimited, or until-a-time sessions, with or without a task, optional site blocking (extension), and a skippable end-of-session review. Starting one opens a focus screen in its own tab: a large clock, the task under it, and an optional audio-reactive visualizer.
 - **Motivate**: XP, levels, streaks with freezes and break days, badges, context-aware phrases, a quote or research tip every six hours, a weekly goal, and all-time hours on the dashboard.
-- **Analyse**: a recap for the week, the month and all time (charts, "that's enough time to…" comparisons, streaks, personal records, a shareable week card), a By task page with everything per task and course, a weekly review, and post-assessment follow-ups. Film and TV posters for the comparisons come from TMDB when `TMDB_READ_TOKEN` or `TMDB_API_KEY` is set in `apps/api/.env`.
+- **Analyse**: a recap for the week, the month and all time (charts, "that's enough time to…" comparisons, streaks, personal records, a shareable week card), a By task page with everything per task and course, a leaderboard, and post-assessment follow-ups. Film and TV posters for the comparisons come from TMDB when `TMDB_READ_TOKEN` or `TMDB_API_KEY` is set in `apps/api/.env`.
 - **Schedule**: a week view with drag-to-create blocks, free-slot suggestions, two-way Google Calendar sync into a dedicated "Study" calendar, and an .ics feed.
 
 ## Getting started
