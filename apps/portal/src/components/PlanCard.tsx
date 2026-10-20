@@ -69,7 +69,7 @@ export function PlanCard({
           <h2 className="start-panel-title">Ready when you are</h2>
           <p className="start-panel-sub">
             {todayLine ??
-              'Add an estimate and a due date to a task and Komogon will tell you what to do today.'}
+              'Add an estimate and a due date to a task and Komodon will tell you what to do today.'}
           </p>
         </div>
         <div className="start-panel-actions">

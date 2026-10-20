@@ -114,7 +114,7 @@ function RewardCard({
 }
 
 /**
- * The user's own shop. Komogon supplies the currency and the price floor; everything on the
+ * The user's own shop. Komodon supplies the currency and the price floor; everything on the
  * shelf is something the user decided was worth working for.
  */
 export function RewardShelf() {

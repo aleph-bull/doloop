@@ -1,4 +1,4 @@
-# Komogon
+# Komodon
 
 A study-planning product: a web portal, a Chrome extension remote, and an API. Frosted-glass UI, light and dark.
 

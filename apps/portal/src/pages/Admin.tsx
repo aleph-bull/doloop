@@ -34,7 +34,7 @@ export function Admin() {
       const url = URL.createObjectURL(await res.blob());
       const link = document.createElement('a');
       link.href = url;
-      link.download = `komogon-${a.email}.json`;
+      link.download = `komodon-${a.email}.json`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -65,7 +65,7 @@ export function Admin() {
         <Spinner />
       ) : accounts.isError ? (
         <Panel className="p-5">
-          <p>This page is only for the people running Komogon.</p>
+          <p>This page is only for the people running Komodon.</p>
         </Panel>
       ) : (
         <Panel className="p-5 flex flex-col gap-3">

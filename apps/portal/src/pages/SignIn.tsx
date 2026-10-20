@@ -56,7 +56,7 @@ export function SignIn() {
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
           <div>
             <LogoMark size={40} className="mb-3" />
-            <h1 className="text-2xl">Komogon</h1>
+            <h1 className="text-2xl">Komodon</h1>
             <p className="muted text-sm mt-1">
               Productivity app with nifty features to keep you motivated.
             </p>
@@ -101,7 +101,7 @@ export function SignIn() {
               />
               {auth.mode !== 'dev' && (
                 <p className="field-hint">
-                  This is an early test of Komogon. I can see the accounts and study data saved
+                  This is an early test of Komodon. I can see the accounts and study data saved
                   here.
                 </p>
               )}

@@ -226,7 +226,7 @@ describe('buildInsights', () => {
   it('always leads with the lifetime total', () => {
     const insights = build([session('2026-09-20', 9, 60)]);
     expect(insights[0]!.key).toBe('lifetime');
-    expect(insights[0]!.headline).toContain('since you started using Komogon');
+    expect(insights[0]!.headline).toContain('since you started using Komodon');
     expect(insights[0]!.evidence).toContain('1 session');
   });
 

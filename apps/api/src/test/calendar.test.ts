@@ -350,7 +350,7 @@ describe('.ics', () => {
     });
     expect(bad.statusCode).toBe(404);
     const exp = await api({ method: 'GET', url: '/api/calendar/export.ics?sessions=true' });
-    expect(exp.headers['content-disposition']).toMatch(/komogon\.ics/);
+    expect(exp.headers['content-disposition']).toMatch(/komodon\.ics/);
     // Rotating the token invalidates the old feed URL.
     const rotated = await api({ method: 'POST', url: '/api/me/ics-token' });
     expect(

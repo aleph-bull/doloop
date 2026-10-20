@@ -1334,3 +1334,9 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Explainer lines removed** across Achievements, Rewards, Settings and Analytics (the user's list). Kept but reworded where the UI needs a line: the Analytics hero on a quieter week, the review-mode hint, the export hint, the Pages hint, the presets hint, the session XP hint, and the Google Calendar "not configured" state. "Worth knowing" is now "Good to know".
 - **Quieter-week hero**: "You completed N sessions this week." plus, in order, "You hit your goal!" (weekly goal met), "Almost there!" (75% of the goal and the week still running), "Good work!" (less than 30% below last week), or nothing. The "!" is the user's own wording.
 - **The reward minimum is a setting** (`settings.rewards.minCostXp`, 10 to 5000, default 150), in Settings › Pace and streaks. Like the streak's day start, it may change once a day: the server stamps `minCostChangedAt` and refuses another change for 24 hours. A raised minimum applies to new prices only; a reward priced under it can still be renamed or archived. This puts an XP figure in Settings, which the "XP only on Achievements" rule otherwise keeps out; the user asked for it.
+
+## Renamed to Komodon, 2026-10-20 (user request)
+
+- **The app is now called Komodon** everywhere people see it: the portal and extension text, page titles, the installed-app name, the logo's label, calendar event descriptions, the .ics feed, and download file names (`komodon-export-…`, `komodon-week-…`, `komodon-timelapse-…`).
+- **Internal names stay komogon**: packages, storage keys, IndexedDB names, extension message types, the `~/.komogon` data folder, the local scripts and startup shortcut, and the komogon.app domain (the user said to leave the address for now). Changing them would drop saved browser state or break the always-on copy.
+- Earlier entries keep the name they were written under.

@@ -52,9 +52,9 @@ export function DataPrivacySettings() {
       if (kind === 'json')
         download(
           new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
-          `komogon-export-${stamp()}.json`,
+          `komodon-export-${stamp()}.json`,
         );
-      else download(zipFiles(exportToCsvFiles(data)), `komogon-export-${stamp()}.zip`);
+      else download(zipFiles(exportToCsvFiles(data)), `komodon-export-${stamp()}.zip`);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not export your data');
     } finally {
@@ -88,9 +88,9 @@ export function DataPrivacySettings() {
       <div className="privacy-promise">
         <p className="privacy-lead">Your data is yours.</p>
         <ul className="privacy-points">
-          <li>Komogon never sells your data, to advertisers or to anyone else.</li>
+          <li>Komodon never sells your data, to advertisers or to anyone else.</li>
           <li>
-            It is only used to run Komogon for you: your tasks, sessions and stats. Nothing else
+            It is only used to run Komodon for you: your tasks, sessions and stats. Nothing else
             is done with it unless you agree to it first.
           </li>
           <li>There are no ads and no tracking.</li>
@@ -114,7 +114,7 @@ export function DataPrivacySettings() {
       <div className="flex flex-col gap-2">
         <h3 className="font-medium">On this device</h3>
         <p className="field-hint">
-          Komogon keeps a copy of your data in this browser so it opens quickly and works offline.
+          Komodon keeps a copy of your data in this browser so it opens quickly and works offline.
           It stays on this device and is cleared when you sign out.
         </p>
         <div>

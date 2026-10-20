@@ -322,10 +322,10 @@ export function Popup() {
     return (
       <div className="popup">
         <Glass className="card stack">
-          <h1>Komogon</h1>
+          <h1>Komodon</h1>
           <p>Sign in to the portal once and this remote connects automatically.</p>
           <Button variant="primary" onClick={() => open('/extension')}>
-            Open Komogon <ExternalLink size={14} aria-hidden />
+            Open Komodon <ExternalLink size={14} aria-hidden />
           </Button>
         </Glass>
       </div>

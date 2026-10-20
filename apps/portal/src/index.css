@@ -1823,7 +1823,7 @@
 /*
  * A commitment is somebody else's claim on the time: drawn as a hatched, muted band that
  * reads as "taken" rather than as a study block, and not clickable, because there is
- * nothing in Komogon to edit about it.
+ * nothing in Komodon to edit about it.
  */
 .cal-block-commitment {
   background: repeating-linear-gradient(135deg, var(--border-strong) 0 5px, transparent 5px 11px);

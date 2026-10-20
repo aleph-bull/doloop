@@ -411,7 +411,7 @@ export function Settings() {
                 checked={s.quote.appTips}
                 onChange={(v) => patch({ quote: { appTips: v } })}
                 label="Tips about the app"
-                description="Now and then a short tip about Komogon shows under the start panel, with a link to try it."
+                description="Now and then a short tip about Komodon shows under the start panel, with a link to try it."
               />
             </Section>
 

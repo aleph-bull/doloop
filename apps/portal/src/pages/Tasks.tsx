@@ -469,7 +469,7 @@ export function Tasks() {
         {roots.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
-            body="Add a course, then its assignments, quizzes and readings. Estimates and due dates let Komogon plan your day."
+            body="Add a course, then its assignments, quizzes and readings. Estimates and due dates let Komodon plan your day."
             action={
               <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
                 Add a course

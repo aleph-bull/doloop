@@ -1,6 +1,6 @@
 # Architecture
 
-Komogon is a pnpm monorepo with three deployables and two shared packages.
+Komodon is a pnpm monorepo with three deployables and two shared packages.
 
 ```
 apps/portal      React + Vite + React Router. The full product UI.

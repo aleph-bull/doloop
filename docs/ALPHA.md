@@ -101,7 +101,7 @@ hosted address only). Tell testers:
 - Android: open it in Chrome › menu › Install app.
 - Computer: Chrome or Edge › the install icon at the right of the address bar.
 
-It then opens in its own window with the Komogon icon, and it still opens without a
+It then opens in its own window with the Komodon icon, and it still opens without a
 connection, showing the last data it had.
 
 **Admin.** `ADMIN_EMAILS` on Render (already set to your email in `render.yaml`) turns
@@ -140,7 +140,7 @@ on a phone. Tick each line; anything that fails goes on the known-issues list or
 **Timelapse** (needs a camera)
 
 - [ ] Record a short session with "Record breaks too" on; the video has the clock, the break
-      label and the Komogon watermark, and is the length it says.
+      label and the Komodon watermark, and is the length it says.
 - [ ] The camera picture is not dark.
 
 **Planning and progress**

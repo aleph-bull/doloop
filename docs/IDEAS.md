@@ -36,7 +36,7 @@ Built as a local-only first version on the focus screen; see DECISIONS.md. Shari
   - Users choose what to share (timelapses, study times, whatever they want). Nothing is shared automatically.
 - Things to work out before building:
   - Even friends-only, camera footage of students (many likely under 18) needs basic safety: friend requests that need approval, blocking, reporting, and an easy way to delete anything you've posted.
-  - Cold start: a feed is empty until your friends join. Exporting timelapses to TikTok/Instagram/Reels with a small Komogon watermark could bring in users before the in-app network exists.
+  - Cold start: a feed is empty until your friends join. Exporting timelapses to TikTok/Instagram/Reels with a small Komodon watermark could bring in users before the in-app network exists.
   - Keep it consistent with "compare against your own past" and the no-guilt tone: kudos and showing up.
   - Existing players to study: YPT (Yeolpumta) study groups, Forest, StudyStream / Study Together, Focusmate, and the "study with me" genre on YouTube and TikTok.
 
@@ -106,7 +106,7 @@ Built as a local-only first version on the focus screen; see DECISIONS.md. Shari
 
 ## Focus screen wordmark font (logged 2026-10-18, built 2026-10-18)
 
-- The "Komogon" wordmark in the focus screen's top-left corner is still in the old font. Change it to match the portal nav: Satoshi Variable, weight 600, stylistic sets ss01 + ss03 (see packages/ui/README.md, Typography).
+- The "Komodon" wordmark in the focus screen's top-left corner is still in the old font. Change it to match the portal nav: Satoshi Variable, weight 600, stylistic sets ss01 + ss03 (see packages/ui/README.md, Typography).
 
 ## Unrestricted accent and visualizer colours (logged 2026-10-18, built 2026-10-18)
 
@@ -137,9 +137,9 @@ Built as "Saved looks" in Settings → Appearance: list in localStorage, an uplo
 - Lower the limit on the user's own saved accent colours from 10 to 8 (14 in all with the six built-in ones).
 - When building: it is one constant, `MAX_SAVED_ACCENTS` in packages/core/src/economy.ts, which the API check, the picker and its counter all read. Anyone who already saved 9 or 10 keeps them; the server should only refuse adding more, not fail on a list that is already longer.
 
-## Komogon watermark on timelapse videos (logged 2026-10-18, built 2026-10-18)
+## Komodon watermark on timelapse videos (logged 2026-10-18, built 2026-10-18)
 
-- Draw a Komogon watermark into every timelapse video: the logo mark and the "Komogon" wordmark, as they appear in the portal nav (Satoshi 600 with ss01 + ss03).
+- Draw a Komodon watermark into every timelapse video: the logo mark and the "Komodon" wordmark, as they appear in the portal nav (Satoshi 600 with ss01 + ss03).
 - At 30% opacity (70% transparent).
 - Black or white, whichever reads better, chosen once from the 30th frame of the video. If the video has fewer than 30 frames, use the last one.
 - When building: it is drawn in `frameDrawer` in apps/portal/src/lib/timelapse.ts, alongside the time-studied clock. Pick black or white from the chosen frame's brightness under where the mark sits (the stills already carry an average brightness, `luma`). Keep it clear of the clock in the bottom-left corner, and load Satoshi before drawing so the canvas doesn't fall back to another font.

@@ -1,4 +1,4 @@
-# Notes for AI agents working on Komogon
+# Notes for AI agents working on Komodon
 
 Read this before changing anything. It holds what isn't obvious from the code: how the owner
 works, the rules the app keeps, and the traps that have already cost time. The longer record
@@ -6,7 +6,7 @@ of every product decision is [DECISIONS.md](DECISIONS.md); keep adding to it.
 
 ## About the app
 
-Komogon is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
+Komodon (renamed from Komogon on 2026-10-20) is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
 until a time), and see progress the way a running app shows runs: streaks, personal bests,
 weekly recaps, XP and levels. The design idea is that a runner's "beat last time" discipline
 carries over to studying. It is in a **closed alpha** with a handful of testers.
@@ -98,7 +98,7 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Charts use shades of the accent, not a rainbow. No emoji in the UI; use lucide icons.
 - No sparse full-width panels with two lonely values; fold small values into an existing
   row as pills.
-- Inter for everything; Satoshi only for the "Komogon" wordmark in the nav.
+- Inter for everything; Satoshi only for the "Komodon" wordmark in the nav.
 
 **Product.**
 
@@ -108,7 +108,11 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
 - The leaderboard (Analytics › Leaderboard, top 10 by focused time, by chosen name) is the
   one place people are compared; the owner asked for it. Don't add more comparison.
-- "Pomodoro" is the timer's name; never rename it in the Komogon renames.
+- "Pomodoro" is the timer's name; never rename it in the app renames.
+- **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
+  (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
+  local scripts, the startup shortcut and the komogon.app domain. Renaming them would drop
+  saved browser state or break the always-on copy. Only the name people see is Komodon.
 
 ## Checks and traps
 

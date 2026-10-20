@@ -391,7 +391,7 @@ const LOGO_SHAPE = typeof Path2D !== 'undefined' ? new Path2D(LOGO_PATH) : null;
 const [LOGO_X, LOGO_Y, LOGO_SIZE] = LOGO_VIEWBOX.split(' ').map(Number) as [number, number, number];
 
 /**
- * The Komogon watermark in the bottom-right corner: the mark and the wordmark, as in the
+ * The Komodon watermark in the bottom-right corner: the mark and the wordmark, as in the
  * portal nav, at 30% opacity, in the tone picked for this video.
  */
 function drawWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, tone: WatermarkTone) {
@@ -402,7 +402,7 @@ function drawWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, tone
   ctx.fillStyle = tone;
   ctx.font = `600 ${Math.round(size * 0.78)}px Satoshi, 'Inter Variable', system-ui, sans-serif`;
   ctx.textBaseline = 'middle';
-  const text = 'Komogon';
+  const text = 'Komodon';
   const tw = ctx.measureText(text).width;
   const gap = Math.round(size * 0.35);
   const right = w - margin;
@@ -641,5 +641,5 @@ async function recordFrames(
 /** A file name for the download, by the day it was made. */
 export function timelapseFileName(mime: string, now = new Date()): string {
   const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  return `komogon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
+  return `komodon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
 }

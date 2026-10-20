@@ -64,7 +64,7 @@ describe('buildIcs due dates', () => {
     });
     expect(ics).toContain('SUMMARY:Due: Problem set');
     expect(ics).toContain('UID:due-b@komogon');
-    expect(ics).toContain('DESCRIPTION:Done (Komogon)');
+    expect(ics).toContain('DESCRIPTION:Done (Komodon)');
     expect(ics).not.toContain('due-c@');
     expect(ics).not.toContain('due-d@');
   });

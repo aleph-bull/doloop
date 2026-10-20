@@ -109,7 +109,7 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
 
   app.get('/api/me/export', async (req, reply) => {
     const data = await exportUserData(db, req.user);
-    reply.header('content-disposition', 'attachment; filename="komogon-export.json"');
+    reply.header('content-disposition', 'attachment; filename="komodon-export.json"');
     return data;
   });
 

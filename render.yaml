@@ -1,4 +1,4 @@
-# Render blueprint for the Komogon API (closed alpha). The portal is on Vercel
+# Render blueprint for the Komodon API (closed alpha). The portal is on Vercel
 # (apps/portal/vercel.json); data is in a hosted Postgres (Neon). Setup: docs/ALPHA.md.
 #
 # Values marked `sync: false` are asked for when the blueprint is first applied, and live

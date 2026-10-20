@@ -28,7 +28,7 @@ export const supabase: SupabaseClient | null =
 
 /** Shown when someone not on the closed test's invite list tries to sign in. */
 export const NOT_INVITED_MESSAGE =
-  "Komogon is in a small private test at the moment, and this email isn't on the list. If you were invited, use the address the invite was sent to.";
+  "Komodon is in a small private test at the moment, and this email isn't on the list. If you were invited, use the address the invite was sent to.";
 
 /**
  * Sign-in errors in plain words. With sign-ups turned off in Supabase, a magic link or Google

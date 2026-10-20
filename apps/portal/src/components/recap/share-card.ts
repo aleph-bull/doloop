@@ -75,7 +75,7 @@ export function drawShareCard(input: ShareCardInput): HTMLCanvasElement {
   const pad = 84;
   ctx.fillStyle = 'rgba(255,255,255,0.62)';
   ctx.font = font(600, 30);
-  ctx.fillText('Komogon · my week', pad, pad + 20);
+  ctx.fillText('Komodon · my week', pad, pad + 20);
   ctx.textAlign = 'right';
   ctx.fillText(input.rangeLabel, SIZE - pad, pad + 20);
   ctx.textAlign = 'left';

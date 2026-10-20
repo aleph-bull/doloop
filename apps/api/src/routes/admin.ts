@@ -33,7 +33,7 @@ export function adminRoutes(app: FastifyInstance, db: Db, admins: string[]) {
     const data = await exportUserData(db, user);
     const name = user.email.replace(/[^a-z0-9@._-]/gi, '_');
     return reply
-      .header('content-disposition', `attachment; filename="komogon-${name}.json"`)
+      .header('content-disposition', `attachment; filename="komodon-${name}.json"`)
       .send(data);
   });
 

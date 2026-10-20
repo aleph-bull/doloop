@@ -207,11 +207,11 @@ export function AppShell() {
       </a>
       <header className="nav chrome">
         <div className="nav-inner">
-          <NavLink to="/" className="brand" aria-label="Komogon home">
+          <NavLink to="/" className="brand" aria-label="Komodon home">
             <span className="brand-logo" aria-hidden>
               <LogoMark size={22} />
             </span>
-            <span>Komogon</span>
+            <span>Komodon</span>
           </NavLink>
           <div
             className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${

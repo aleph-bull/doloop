@@ -122,14 +122,14 @@ async function eventFor(db: Db, block: PlannedBlockRow): Promise<EventInput> {
   const done = block.source === 'session';
   return {
     summary: node ? `Study: ${node.title}` : (block.title ?? 'Study'),
-    description: done ? 'Studied in Komogon' : 'Planned in Komogon',
+    description: done ? 'Studied in Komodon' : 'Planned in Komodon',
     start: block.startAt.toISOString(),
     end: block.endAt.toISOString(),
     komogonBlockId: block.id,
   };
 }
 
-/** Blocks Komogon owns and therefore writes out to the Study calendar. */
+/** Blocks Komodon owns and therefore writes out to the Study calendar. */
 function isOurs(block: Pick<PlannedBlockRow, 'source'>): boolean {
   return block.source === 'app' || block.source === 'session';
 }
@@ -234,7 +234,7 @@ export async function syncGoogle(
     where: eq(plannedBlocks.userId, user.id),
   });
   for (const b of blocks) {
-    // Imported commitments are the user's other calendar showing through; Komogon never
+    // Imported commitments are the user's other calendar showing through; Komodon never
     // writes them back out.
     if (!isOurs(b)) continue;
     if (!b.googleEventId && !b.cancelled) {
@@ -328,7 +328,7 @@ async function applyEvent(
   }
 
   if (cancelled || !start || !end) return 'none';
-  // An event that appeared in the calendar from outside Komogon. It is imported as a
+  // An event that appeared in the calendar from outside Komodon. It is imported as a
   // commitment - something the user has to work around - not as study time. Nothing here
   // schedules work or nags the user to study: only routines do that.
   await db

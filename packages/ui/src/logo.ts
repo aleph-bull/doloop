@@ -1,5 +1,5 @@
 /**
- * The Komogon mark: Komogon's face, front-on, with the eyes and nostrils cut out and the
+ * The Komodon mark: Komodon's face, front-on, with the eyes and nostrils cut out and the
  * jaw drawn as a band beneath.
  *
  * The path is the designer's `komo21.svg`, verbatim, in its own 1095 x 1095 coordinates.
@@ -38,8 +38,8 @@ export function logoSvg({ inset, radius = LOGO_TILE.radius }: LogoSvgOptions): s
   const t = LOGO_TILE;
   const k = (t.size - inset * 2) / LOGO_BOX.size;
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t.size} ${t.size}" role="img" aria-label="Komogon">`,
-    '<title>Komogon</title>',
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${t.size} ${t.size}" role="img" aria-label="Komodon">`,
+    '<title>Komodon</title>',
     '<defs>',
     `<linearGradient id="d" x1="0" y1="0" x2="${t.size}" y2="${t.size}" gradientUnits="userSpaceOnUse">`,
     `<stop offset="0" stop-color="${t.from}"/><stop offset="1" stop-color="${t.to}"/>`,

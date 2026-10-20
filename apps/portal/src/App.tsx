@@ -86,7 +86,7 @@ function Gate({ children }: { children: ReactNode }) {
     return (
       <Centered>
         <ErrorPanel
-          message="Could not reach the Komogon API. Check that it is running, then try again."
+          message="Could not reach the Komodon API. Check that it is running, then try again."
           onRetry={() => me.refetch()}
         />
       </Centered>
