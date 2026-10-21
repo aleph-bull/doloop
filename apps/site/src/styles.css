@@ -469,6 +469,53 @@ body {
   color: var(--site-ink);
 }
 
+/* ---------- Motion ---------- */
+
+/*
+ * Everything with .rise starts just below its place and lifts into it; .rise-pop also scales
+ * up a touch, so panels and devices land with a small settle. main.js adds .is-in on load
+ * for the hero (the devices a beat later) and as each section scrolls into view. Without
+ * the script, or with reduced motion, everything is simply there.
+ */
+:root {
+  --rise-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pop-ease: cubic-bezier(0.2, 1.15, 0.3, 1);
+}
+html.has-motion .rise {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 900ms var(--rise-ease) var(--d, 0ms),
+    transform 1000ms var(--rise-ease) var(--d, 0ms);
+  will-change: opacity, transform;
+}
+html.has-motion .rise-pop {
+  transform: translateY(36px) scale(0.955);
+  transition:
+    opacity 800ms var(--rise-ease) var(--d, 0ms),
+    transform 1100ms var(--pop-ease) var(--d, 0ms);
+}
+html.has-motion .rise.is-in {
+  opacity: 1;
+  transform: none;
+}
+/* The devices keep their 3D stage; the rise lands on the wrapper, so the tilt is untouched. */
+html.has-motion .devices.rise {
+  transform: translateY(60px) scale(0.94);
+}
+html.has-motion .devices.rise.is-in {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.has-motion .rise,
+  html.has-motion .rise-pop,
+  html.has-motion .devices.rise {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 /* ---------- Phones ---------- */
 
 @media (max-width: 900px) {

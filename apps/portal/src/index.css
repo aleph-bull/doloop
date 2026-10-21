@@ -22,6 +22,13 @@
 }
 
 /* Layout helpers specific to the portal. Visual values still come from tokens. */
+/* Card rows reach past the page's sides to keep their shadows whole; that must never add
+   a sideways scroll. On the app's root container: on html or body it would pass to the
+   window as hidden, which still lets scrollIntoView shift the page sideways. Clip makes no
+   scroll container, so sticky headers keep working. */
+#root {
+  overflow-x: clip;
+}
 .page {
   width: 100%;
   max-width: 1120px;
@@ -3061,7 +3068,8 @@
 
 /* A one-line row of cards. Cards keep a fixed width and snap as the row scrolls. */
 .rail {
-  --edge-fade: 64px;
+  /* The fade starts at the track's edge, 46px outside the cards, so 50px of it falls on them. */
+  --edge-fade: 96px;
 }
 .rail .scroll-arrow {
   width: 36px;
@@ -3079,12 +3087,17 @@
   flex: 1;
   scroll-snap-type: x proximity;
   scroll-behavior: smooth;
-  /* Room for card shadows, which a scroller would otherwise clip: the glass shadow reaches
-     about 12px out at the sides and 36px down. The scroll padding keeps snapping from
-     parking the first card inside that room. */
-  padding: 12px 14px 40px;
-  margin: -12px -14px -40px;
-  scroll-padding-inline: 14px;
+  /*
+   * Room for the cards' whole shadow, which a scroller would otherwise clip into a hard
+   * line. CSS blurs a shadow along a bell curve whose faint tail runs well past the blur
+   * value: the dark glass shadow is still about 8% black 40px below a card and only fades
+   * to 1% about 70px down and 46px out. Matching margins pull the box back so nothing
+   * moves; the page clips sideways overflow (#root, at the top), so the wider box never
+   * adds a sideways scroll on a phone.
+   */
+  padding: 12px 46px 72px;
+  margin: -12px -46px -72px;
+  scroll-padding-inline: 46px;
 }
 /* Reads like the links beside it ("Manage"), not like a button. */
 .rail-toggle {
@@ -4325,6 +4338,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  container: eq / inline-size;
 }
 /* A section heading above its panels: set here, since utility margins lose to heading resets. */
 .rc-section-title {
@@ -4336,14 +4350,25 @@
   justify-content: space-between;
   gap: 12px;
 }
+/*
+ * Every card at once, in a grid: four across with room, two on a narrower page, one on a
+ * phone. It used to scroll sideways, and a scroller clips its cards' shadows into hard
+ * lines; room for the whole shadow would have floated its scrollbar over the next section.
+ */
 .eq-row {
   display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(200px, 1fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 4px;
+}
+@container eq (min-width: 440px) {
+  .eq-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container eq (min-width: 860px) {
+  .eq-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 .eq-card {
   scroll-snap-align: start;
