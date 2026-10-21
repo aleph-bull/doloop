@@ -176,3 +176,23 @@ Built as "Saved looks" in Settings → Appearance: list in localStorage, an uplo
 - Add a **Custom** option after No / +30 min / +1 h / +2 h in the end-of-session review. Picking it shows a small field for any amount (minutes or hours, e.g. "45 min" or "3 h").
 - It is applied the same way as the fixed options, including the rule above for a task with no estimate or one already passed.
 - When building: the choices are in apps/portal/src/components/ReviewDialog.tsx; the API already takes any `extraMinutesAdded`, so check its upper limit in the review validation.
+
+## Import an iPhone time-lapse (logged 2026-10-21)
+
+- The question was whether Komodon on a phone could use the iPhone's own Time-Lapse camera instead of ours. A website can't: it reaches the camera only through a file picker, and iOS offers Photo and Video there, not Time-Lapse. Plain Video mode is no substitute: the camera covers the timer, and an hour of footage (3–4 GB) is too much for Safari to turn into a timelapse.
+- What would work: the user films with the Camera app's Time-Lapse (phone propped up, timer running on the laptop, since the Camera app has to stay open), then picks the finished video from Photos after the session. Komodon adds the watermark and keeps it with the session, ready to download or post like any other timelapse.
+- The clock can't match exactly. The Camera app can't pause for breaks and picks its own speed (the finished video lands around 20–40 s however long it ran). The session's total on the last frames is honest; a running clock would only be an estimate, so leave it out or say it's approximate.
+- When building: an iPhone time-lapse is short, so decoding it and drawing the watermark over each frame in the browser is cheap (the same drawing as `frameDrawer` in apps/portal/src/lib/timelapse.ts, fed from video frames instead of stills). iOS may hand the file over as HEVC in a .mov; check Safari and Chrome can decode it.
+
+## Timelapse: back camera on phones (logged 2026-10-21)
+
+- The recorder always asks for the front camera (`facingMode: 'user'` in apps/portal/src/lib/timelapse.ts, and again in the layout editor's preview in TimelapseLayoutEditor.tsx). On a phone propped up over a desk, the back camera is much sharper and can point at the work.
+- Add a front or back choice when the device has both, remembered for next time.
+- When building: the stills are kept unmirrored, and only the small live preview is flipped (`.timelapse-preview` in index.css). A back-camera preview shouldn't be flipped.
+
+## Timelapse: keep the phone awake while recording (logged 2026-10-21)
+
+- iOS stops the camera when the screen locks, and nothing keeps the screen on during a session today, so a phone left alone probably stops taking stills at auto-lock without saying anything.
+- While the timelapse is recording, hold a screen wake lock (`navigator.wakeLock.request('screen')`) and ask for it again when the page comes back into view, since the browser drops it whenever the page is hidden.
+- If the camera stops anyway, say so quietly on the focus screen rather than ending up with a short video and no explanation.
+- When building: the screen recording already listens for its track ending; the camera track doesn't (it should watch `ended` and `mute`). Check on a real iPhone, both in Safari and installed to the Home Screen, since older iOS versions had trouble with wake locks in installed web apps.
