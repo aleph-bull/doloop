@@ -77,6 +77,19 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - Another agent session may be editing the same files at the same time. Check
   `git status` / `git diff` before touching a file, make small targeted edits rather than
   rewriting whole files, and never revert changes you didn't make.
+- **Committing only your own work from a shared checkout.** When another session has
+  uncommitted edits in the same files, stage HEAD's copy plus only your edits: rebuild the
+  file in a Node script, `git hash-object -w` it, `git update-index --cacheinfo`. Then
+  format the staged copy (`git show :<file> | npx prettier --stdin-filepath <file>`, run
+  from `apps/portal` so it finds the repo's settings). If the checkout has also drifted
+  from `origin/main` (it often has), don't pull or rebase over the other session's work:
+  add a temporary worktree on `origin/main` in your scratchpad, `git apply --3way` your
+  commit's code diff, append your DECISIONS.md section by script, typecheck and build
+  there, push `HEAD:main`, then remove the worktree. Cherry-picking tends to conflict in
+  DECISIONS.md and drag the other session's lines along.
+- **Write your DECISIONS.md section into the file on disk too**, not only the staged copy.
+  Otherwise the working file silently lacks it, and the other session's next commit of
+  DECISIONS.md deletes it.
 - Don't run `prettier --write` on whole folders: some files are deliberately left
   unformatted, and it rewrites other sessions' work. Format only the files you changed.
 - Ideas they mention but don't ask to have built go in `docs/IDEAS.md`. Don't build them
@@ -141,7 +154,30 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   2026-10-21). Write the unprefixed property alone; the build adds the prefix for Safari.
 - The browser preview only paints during screenshots: animations and IntersectionObserver
   effects stall. Set `document.documentElement.dataset.motion = 'off'` to see the finished
-  state.
+  state. ResizeObserver and requestAnimationFrame callbacks wait for a screenshot too, so
+  take one before reading layout after a resize, or you read the old state.
+- In the preview, an emulated width wider than the pane is shrunk into a corner of the
+  screenshot and comes out unreadable. Emulate about 800px wide (still the computer layout)
+  to look closely, and measure wider layouts with JavaScript instead. The preview tool
+  starts at most five dev servers per folder; another chat may already hold the sandbox API
+  port, and this chat's sandbox portal will use it.
+- **Check edges, shadows and glass on a mid-tone photo** (Cotton Candy, dark theme, glass
+  panels), not the dark city photo: on a dark photo a clipped shadow or a lost blur is
+  invisible. To see whether glass is blurring, put sharp stripes behind the page with a
+  fixed element (`#main` above it) and look through the cards.
+- **A sideways scroller clips everything outside its padding box**, card shadows included.
+  CSS blurs a shadow along a bell curve whose faint tail runs about twice the blur value,
+  so the dark glass shadow is still visible 40px below a card. `.rail-track` keeps 12px
+  above, 46px at the sides and 72px below, pulled back with negative margins; give any new
+  scrolling row of cards the same, or make it a grid (the "That's enough time to" row on
+  Analytics is a grid for this reason).
+- **A mask, clip-path, filter or opacity below 1 on an ancestor turns off the glass blur
+  of everything inside it** (in Chrome that ancestor becomes the backdrop). So the
+  dashboard rail has no mask on its track; `CardRail` gives each card its own share of the
+  edge fade on scroll and resize. Don't fade a row of glass cards with a mask on the row.
+- Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
+  pass it to the window as hidden, which blocks the scroll wheel but still lets
+  `scrollIntoView` shift the whole page sideways with no way back.
 
 ## Recent changes (2026-10-20)
 
@@ -162,9 +198,19 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Navigation (2026-10-21): the top bar is the default; Settings › Appearance › Navigation
   can switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card
   row, not the nav). New pages go in the `links` list (`group: 'more'` puts them under the
-  sidebar's divider). The top bar always shows page names and scrolls when they don't fit;
-  the icons are for the sidebar and the phone bar, which names only the current page. The
-  sidebar has a Sign out row. There is no "More" menu on purpose.
+  sidebar's divider). The top bar always shows page names; when they don't fit, the tabs
+  scroll with an arrow on each side that hides one. With under 480px of room for tabs that
+  don't fit, the pages move to the bottom icon bar (`data-tabbar` on html, set in AppShell
+  for phones and for a crowded bar); the spacer that keeps the controls right counts as
+  zero width in that measurement, or the bottom bar never goes away. The bar's sliding pill
+  eases out with no spring. There is no "More" menu on purpose.
+- The sidebar (same day, owner's requests): the page stays centred in the window and never
+  moves when the sidebar is pinned or collapsed (`.page` margins in sidebar mode, clearing
+  the open sidebar on narrow windows). After Collapse is clicked with the pointer on it, the
+  sidebar rests shut (`is-resting`) until the pointer leaves. Its streak and level pills
+  are sized in `RailStats` from the measured icon and text, so both get the same padding
+  on every side (`--stat-streak`, `--stat-shift-a`, `--stat-shift-b`). The owner checks
+  this spacing to the pixel.
 - Removed the weekly review page. `/analytics/review` redirects to Analytics; the API route
   and the `weekly_reviews` table are still there, unused by the portal.
 - Background pickers in Settings open minimized every time ("Show all backgrounds" opens
