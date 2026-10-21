@@ -27,7 +27,7 @@ const P = (bucket: PhraseBucket, texts: string[]): Phrase[] =>
 export const PHRASES: Phrase[] = [
   ...P('assessment-ready', [
     "You're well prepared for this.",
-    'This is what being ready looks like.',
+    'Bring on the exam.',
     "You'd be in good shape if it were tomorrow.",
     'Prepared and on pace.',
     'You know this material well.',
@@ -35,14 +35,14 @@ export const PHRASES: Phrase[] = [
   ]),
   ...P('prepared-rising', [
     "You're feeling more prepared each session.",
-    'Your confidence is building.',
+    'Feeling better about this one.',
     'Rated higher than last time.',
-    'Steady improvement across your sessions.',
+    'Each one a bit better than the last.',
     'More ready than before.',
     'Your preparation is adding up.',
   ]),
   ...P('behind-but-studied', [
-    'Every session closes the gap.',
+    'Chipping away at it.',
     "You're catching up.",
     'A little closer to where you want to be.',
     'This one counted.',

@@ -42,18 +42,9 @@ export function AudioPermissionModal({
     >
       <div className="flex flex-col gap-3 text-sm">
         <p className="muted">
-          To react to your music, the visualizer needs audio from a screen, window or tab you choose
-          to share. The browser will ask you to pick one:
-        </p>
-        <ul className="list-disc pl-5 muted flex flex-col gap-1">
-          <li>this tab, or another browser tab</li>
-          <li>a window, such as a music player</li>
-          <li>your whole screen</li>
-        </ul>
-        <p className="muted">
-          Tick <strong>share audio</strong> in that picker. Your audio is analysed on this device
-          only, never recorded or sent anywhere, and you can stop sharing at any time. Without a
-          share the visualizer simply idles.
+          The visualizer needs to hear your music. Share a tab, window or your screen, and tick{' '}
+          <strong>share audio</strong> in the browser&rsquo;s picker. We don&rsquo;t record
+          anything, and it&rsquo;s optional.
         </p>
       </div>
     </Modal>

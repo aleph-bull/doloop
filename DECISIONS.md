@@ -1587,3 +1587,13 @@ The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked throug
 - **End early:** "Your time is saved, but it counts toward your level only after 10 minutes or when the task is done."
 - **"Done with {task}?"** has no body, in the app and the extension.
 - **Session summary streak line** (owner's words): "{n}-day streak. Keep it up!"
+
+## Copy audit, batch 3: after a session, and the voice rule, 2026-10-21 (user request)
+
+- **Voice:** a little quirky is fine if it sounds like a person, never corporate or AI-polished; fragments are fine. CLAUDE.md's voice rule now says so (it used to say "never quirky" and "full sentences").
+- **End-of-session lines swapped:** "Bring on the exam.", "Feeling better about this one.", "Each one a bit better than the last.", "Chipping away at it." replace four coach-speak lines. "You've started. That's often the hardest part." stays (the owner turned down "One down"), as do the milestone and late-night lines.
+- **Timelapse prompt** (owner's words): "We take stills from your computer's camera and give you a timelapse in the end." with a "Change what it looks like" link to Settings › Focus screen, opened in a new tab so the focus screen stays put.
+- **Timelapse:** the two toggle descriptions are gone (one was wrong when breaks are recorded); storage hints say "Needs about 1.2 GB while recording. The video ends up around 40 MB."; "Stop recording to include the whole session."
+- **Audio sharing:** one paragraph: "The visualizer needs to hear your music. Share a tab, window or your screen, and tick share audio in the browser's picker. We don't record anything, and it's optional."
+- **Delete time:** "You'd have stopped at 3:10 AM." / "That's 1 h of focus, 10 min of breaks gone, and 120 XP off (25 left)." The achievements note and the "Time comes off the end…" hint were removed at the owner's request.
+- **Session history:** "Finished sessions show up here." / "Left one running? Delete time trims the end, and the XP that came with it."

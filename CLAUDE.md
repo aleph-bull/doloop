@@ -104,8 +104,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 
 ## Rules the app keeps
 
-**Voice.** Calm and sincere, like the Opal app: plain, warm, full sentences. Never cheeky,
-quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep talks).
+**Voice.** Calm and sincere, like the Opal app: plain and warm. Fragments are fine; don't
+explain what the screen already shows. A little quirky is fine if it sounds like a person
+talking, never corporate or AI-polished (no narrator sentences, no "X lives here", no
+em-dash flourishes). Never flirty or salesy, and never pushy (no nagging about rest or gaps).
+Keep the owner's own wording verbatim, "!" included.
 `greetings.test.ts` and `phrases.test.ts` reject "!", emoji and nag words.
 
 **Look.**

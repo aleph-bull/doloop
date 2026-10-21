@@ -49,8 +49,7 @@ export function SessionHistory() {
     );
 
   const all = q.data?.pages.flatMap((p) => p.sessions) ?? [];
-  if (all.length === 0)
-    return <p className="muted text-sm">Finished sessions show up here, newest first.</p>;
+  if (all.length === 0) return <p className="muted text-sm">Finished sessions show up here.</p>;
 
   const days: Array<{ day: string; sessions: HistorySession[] }> = [];
   for (const s of all) {
@@ -63,7 +62,7 @@ export function SessionHistory() {
   return (
     <div className="flex flex-col gap-4">
       <p className="field-hint">
-        Left one running by accident? Delete time takes it off the end, with the XP it earned.
+        Left one running? Delete time trims the end, and the XP that came with it.
       </p>
       {days.map((d) => (
         <section key={d.day} className="history-day" aria-label={d.day}>
