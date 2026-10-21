@@ -30,6 +30,7 @@ import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
+import { SignOutButton } from '../components/SignOutButton';
 import {
   matchSections,
   NoSettingsMatch,
@@ -355,7 +356,10 @@ export function Settings() {
                   </option>
                 ))}
               </Select>
-              <p className="field-hint">Signed in as {me.data!.user.email || auth.email}.</p>
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <p className="field-hint">Signed in as {me.data!.user.email || auth.email}.</p>
+                <SignOutButton labelled />
+              </div>
               <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />
             </Section>
@@ -392,6 +396,20 @@ export function Settings() {
                * Pages holds every setting about what the screens show and how they are laid
                * out, one sub-panel per page. New layout settings go here, not in other sections.
                */}
+              <h3 className="settings-group-head">Navigation</h3>
+              <div className="field">
+                <span className="field-label">Pages sit in</span>
+                <Segmented
+                  ariaLabel="Navigation"
+                  value={s.nav?.style ?? 'top'}
+                  onChange={(style) => patch({ nav: { style } })}
+                  options={[
+                    { value: 'top', label: 'Top bar' },
+                    { value: 'sidebar', label: 'Sidebar' },
+                  ]}
+                />
+                <span className="field-hint">On a computer. Phones keep the bar along the bottom.</span>
+              </div>
               <h3 className="settings-group-head">Dashboard</h3>
               <div className="field">
                 <span className="field-label">Daily card</span>

@@ -161,6 +161,31 @@
 .nav-link[aria-current='page'] {
   color: var(--fg);
 }
+/* Icons wait for a crowded bar: then every page is an icon and the current one keeps its name. */
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.nav-link-icon {
+  display: none;
+  flex: none;
+}
+.nav-primary.is-compact .nav-link {
+  padding: 7px 11px;
+}
+.nav-primary.is-compact .nav-link-icon {
+  display: block;
+}
+.nav-primary.is-compact .nav-link:not([aria-current='page']) .nav-link-label {
+  display: none;
+}
+@media (min-width: 768px) {
+  /* The tabs take the room between the brand and the counters, so it can be measured. */
+  .nav-scroll {
+    flex: 1 1 0;
+  }
+}
 
 /* Primary tabs share one lens that slides between them; the links stay transparent. */
 .nav-primary {
@@ -403,26 +428,32 @@
     left: 8px;
     right: 8px;
     bottom: calc(8px + env(safe-area-inset-bottom));
-    display: grid;
-    /* One column per tab, however many there are. */
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
+    display: flex;
+    gap: 2px;
     padding: 5px;
     border-radius: 30px;
   }
+  /* Every page is an icon; the current one widens into a pill with its name beside it. */
   .tabbar-link {
     display: flex;
-    flex-direction: column;
+    flex: 1 1 0;
     align-items: center;
-    gap: 2px;
+    justify-content: center;
+    gap: 7px;
     min-width: 0;
-    padding: 7px 0 5px;
+    height: 46px;
+    padding: 0 6px;
     border-radius: 24px;
     color: var(--fg-muted);
     text-decoration: none;
     transition:
       background var(--dur-base) var(--ease-out),
       color var(--dur-fast) var(--ease-out);
+  }
+  /* The current page sizes to its name; the others share what is left. */
+  .tabbar-link[aria-current='page'] {
+    flex: 0 0 auto;
+    padding: 0 14px 0 12px;
   }
   .tabbar-link:hover {
     text-decoration: none;
@@ -440,18 +471,212 @@
     transition: transform var(--dur-base) var(--ease-spring);
   }
   .tabbar-label {
-    max-width: 100%;
+    display: none;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 10px;
+    font-size: var(--text-sm);
     font-weight: 600;
     letter-spacing: 0;
+  }
+  .tabbar-link[aria-current='page'] .tabbar-label {
+    display: block;
   }
 }
 @media (max-width: 400px) {
   .brand > span:last-child {
     display: none;
+  }
+}
+
+/*
+ * ---------- Sidebar (Settings › Pages › Navigation): a slim column of icons ----------
+ * Chosen instead of the top bar on a computer. It opens over the page to show labels on
+ * hover or keyboard focus, and can be kept open, which moves the page over instead.
+ * Phones keep the top bar and the tab bar either way.
+ */
+.sidenav {
+  display: none;
+}
+@media (min-width: 768px) {
+  :root {
+    --rail-slim: 60px;
+    --rail-open: 212px;
+  }
+  :root[data-nav='sidebar'] body {
+    padding-left: calc(var(--rail-slim) + 24px);
+  }
+  :root[data-nav='sidebar-pinned'] body {
+    padding-left: calc(var(--rail-open) + 24px);
+  }
+  :root[data-nav^='sidebar'] .nav {
+    display: none;
+  }
+  .sidenav {
+    position: fixed;
+    z-index: 40;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: var(--rail-slim);
+    padding: 10px 8px;
+    border-radius: 24px;
+    overflow: hidden;
+    transition: width var(--dur-base) var(--ease-out);
+  }
+  /* A short pause before opening, so passing the pointer across it does not flash it open. */
+  .sidenav:hover,
+  .sidenav:has(:focus-visible),
+  .sidenav.is-pinned {
+    width: var(--rail-open);
+  }
+  .sidenav:hover {
+    transition-delay: 120ms;
+  }
+  .sidenav.chrome::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-solid);
+    opacity: 0;
+    transition: opacity var(--dur-base) var(--ease-out);
+    pointer-events: none;
+  }
+  /* Opened over the page, it firms up so the text behind does not show through. */
+  .sidenav:not(.is-pinned):hover::after {
+    opacity: 0.82;
+  }
+  .sidenav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidenav-brand,
+  .sidenav-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: var(--fg-muted);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    text-align: left;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .sidenav-brand {
+    height: 44px;
+    margin-bottom: 8px;
+    color: var(--fg);
+  }
+  .sidenav-brand .sidenav-icon {
+    color: var(--accent);
+  }
+  .sidenav-link:hover,
+  .sidenav-brand:hover {
+    color: var(--fg);
+    text-decoration: none;
+    background: color-mix(in srgb, var(--fg) 8%, transparent);
+  }
+  .sidenav-brand:hover {
+    background: none;
+  }
+  .sidenav-link[aria-current='page'] {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 11%, transparent);
+  }
+  .sidenav-icon {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 40px;
+  }
+  .sidenav-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .sidenav:hover .sidenav-label,
+  .sidenav:has(:focus-visible) .sidenav-label,
+  .sidenav.is-pinned .sidenav-label {
+    opacity: 1;
+  }
+  .sidenav-wordmark {
+    font-family: var(--font-brand);
+    font-weight: 600;
+    font-feature-settings: 'ss01', 'ss03';
+    font-size: var(--text-base);
+    letter-spacing: var(--tracking-tight);
+  }
+  .sidenav-divider {
+    height: 1px;
+    margin: 8px 10px;
+    background: color-mix(in srgb, var(--fg) 12%, transparent);
+  }
+  /* The streak count and the level bar ride on their icons while the rail is slim. */
+  .sidenav-link {
+    position: relative;
+  }
+  .sidenav-badge {
+    position: absolute;
+    left: 26px;
+    top: 4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    color: var(--fg);
+  }
+  .sidenav-badge-flame {
+    background: color-mix(in srgb, var(--flame) 55%, transparent);
+  }
+  /* Once the labels show, they say the same thing, so the badges step aside. */
+  .sidenav-badge,
+  .sidenav-level-bar {
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .sidenav:hover .sidenav-badge,
+  .sidenav:has(:focus-visible) .sidenav-badge,
+  .sidenav.is-pinned .sidenav-badge {
+    opacity: 0;
+  }
+  .sidenav-level-bar {
+    position: absolute;
+    left: 12px;
+    bottom: 5px;
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    overflow: hidden;
+    background: color-mix(in srgb, var(--fg) 16%, transparent);
+  }
+  .sidenav-level-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
   }
 }
 
@@ -1447,8 +1672,13 @@
   flex-direction: column;
   gap: 10px;
   position: sticky;
-  /* Clears the sticky app header. */
+  /* Clears the sticky app header on a phone; on desktop the nav is the rail at the side. */
   top: 88px;
+}
+@media (min-width: 768px) {
+  :root[data-nav^='sidebar'] .settings-nav {
+    top: 24px;
+  }
 }
 .settings-search {
   display: flex;

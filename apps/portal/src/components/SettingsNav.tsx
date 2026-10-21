@@ -70,6 +70,12 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'calendar',
       // Layout of each page, starting with the dashboard.
       'layout',
+      'navigation',
+      'nav bar',
+      'top bar',
+      'sidebar',
+      'side bar',
+      'menu',
       'dashboard',
       'home',
       'quote',

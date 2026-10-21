@@ -5,10 +5,11 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/auth';
 
 /**
- * The nav's sign-out button. It asks first: the button sits beside Settings, so it is easy
- * to hit by mistake, and signing out also clears the offline copy in this browser.
+ * Sign out, as the phone bar's icon or as a labelled button in Settings. It asks first:
+ * the icon sits beside Settings, so it is easy to hit by mistake, and signing out also
+ * clears the offline copy in this browser.
  */
-export function SignOutButton() {
+export function SignOutButton({ labelled = false }: { labelled?: boolean }) {
   const auth = useAuth();
   const navigate = useNavigate();
   const [asking, setAsking] = useState(false);
@@ -27,17 +28,23 @@ export function SignOutButton() {
 
   return (
     <>
-      <Button
-        variant="ghost"
-        size="sm"
-        icon
-        className="nav-signout"
-        aria-label="Sign out"
-        title="Sign out"
-        onClick={() => setAsking(true)}
-      >
-        <LogOut size={16} aria-hidden />
-      </Button>
+      {labelled ? (
+        <Button variant="secondary" size="sm" onClick={() => setAsking(true)}>
+          <LogOut size={15} aria-hidden /> Sign out
+        </Button>
+      ) : (
+        <Button
+          variant="ghost"
+          size="sm"
+          icon
+          className="nav-signout"
+          aria-label="Sign out"
+          title="Sign out"
+          onClick={() => setAsking(true)}
+        >
+          <LogOut size={16} aria-hidden />
+        </Button>
+      )}
       <Modal
         open={asking}
         onClose={() => !leaving && setAsking(false)}

@@ -140,6 +140,10 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 
 ## Recent changes (2026-10-20)
 
+- Navigation (2026-10-21): the top bar is the default; Settings › Pages › Navigation can
+  switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card row, not the nav). New pages go in the `links` list
+  (`group: 'more'` puts them under the sidebar's divider). A crowded top bar and the phone
+  bar show icons, with only the current page named. There is no "More" menu on purpose.
 - Removed the weekly review page. `/analytics/review` redirects to Analytics; the API route
   and the `weekly_reviews` table are still there, unused by the portal.
 - Background pickers in Settings open minimized every time ("Show all backgrounds" opens
