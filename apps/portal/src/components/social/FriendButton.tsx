@@ -16,11 +16,14 @@ export function FriendButton({
   userId,
   friendship,
   remove = false,
+  acceptsRequests = true,
 }: {
   userId: string;
   friendship: FriendshipStatus;
   /** Show Remove once you are friends (on their profile). */
   remove?: boolean;
+  /** They take friend requests; when not, nothing is offered. */
+  acceptsRequests?: boolean;
 }) {
   const send = useSendFriendRequest();
   const accept = useAcceptFriendRequest();
@@ -88,6 +91,7 @@ export function FriendButton({
         </span>
       );
     default:
+      if (!acceptsRequests) return <span className="chip chip-neutral">Not taking requests</span>;
       return (
         <Button
           size="sm"

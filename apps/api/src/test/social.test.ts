@@ -236,7 +236,7 @@ describe('friends', () => {
     );
     const found = (await t.api({ method: 'GET', url: '/api/social/people?q=be' })).json();
     expect(found.results).toEqual([
-      { userId: USER_B.id, friendship: { status: 'friends', requestId } },
+      { userId: USER_B.id, friendship: { status: 'friends', requestId }, acceptsRequests: true },
     ]);
   });
 
@@ -290,5 +290,56 @@ describe('friends', () => {
     expect(a.statusCode).toBe(201);
     expect(b.statusCode).toBe(200);
     expect(b.json().friendship.status).toBe('friends');
+  });
+});
+
+describe('sharing settings', () => {
+  it('keeps the weeks, totals, posts, board place and requests to what the person allows', async () => {
+    // Ben turns everything off while still friends with Ada.
+    const saved = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      token: t.tokenB,
+      payload: {
+        social: {
+          posts: 'friends',
+          stats: false,
+          leaderboard: false,
+          compare: false,
+          requests: false,
+        },
+      },
+    });
+    expect(saved.statusCode).toBe(200);
+    const compare = (await t.api({ method: 'GET', url: '/api/social/compare' })).json();
+    expect(compare.friends).toEqual([]);
+    const board = (await t.api({ method: 'GET', url: '/api/leaderboard' })).json();
+    expect(board.entries.map((e: { userId: string }) => e.userId)).not.toContain(USER_B.id);
+    // A friend still sees friends-only posts and the totals are a separate choice.
+    let feed = (await t.api({ method: 'GET', url: '/api/social/feed' })).json();
+    expect(feed.posts.some((p: { userId: string }) => p.userId === USER_B.id)).toBe(true);
+    let profile = (await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` })).json();
+    expect(profile.stats).toBeNull();
+    expect(profile.heatmap).toBeNull();
+    expect(profile.posts.length).toBeGreaterThan(0);
+    expect(profile.profile.acceptsRequests).toBe(false);
+
+    // No longer friends: the posts go too, and asking again is refused.
+    await t.api({ method: 'DELETE', url: `/api/social/friends/${USER_A.id}`, token: t.tokenB });
+    feed = (await t.api({ method: 'GET', url: '/api/social/feed' })).json();
+    expect(feed.posts.some((p: { userId: string }) => p.userId === USER_B.id)).toBe(false);
+    profile = (await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` })).json();
+    expect(profile.posts).toEqual([]);
+    const ask = await t.api({
+      method: 'POST',
+      url: '/api/social/friends/requests',
+      payload: { userId: USER_B.id },
+    });
+    expect(ask.statusCode).toBe(403);
+    const found = (await t.api({ method: 'GET', url: '/api/social/people?q=ben' })).json();
+    expect(found.results[0]).toMatchObject({ userId: USER_B.id, acceptsRequests: false });
+    // Ben still sees his own numbers.
+    const own = (await t.api({ method: 'GET', url: '/api/profiles/me', token: t.tokenB })).json();
+    expect(own.stats).not.toBeNull();
   });
 });

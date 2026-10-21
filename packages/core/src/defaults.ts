@@ -124,6 +124,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstSpikeOpacity: 1,
   },
   features: { routines: true, plans: true, grades: false, calendar: true, social: true },
+  social: { posts: 'everyone', stats: true, leaderboard: true, compare: true, requests: true },
   dashboard: { focusOnly: false },
   nav: { style: 'top' },
   focusScreen: { openOnStart: 'ask' },

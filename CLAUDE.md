@@ -193,6 +193,10 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   subqueries there are written by hand with aliases. Seed a sandbox with people on it:
   `cd apps/api && npx tsx seed-social-demo.tmp.ts`, then the `social-sandbox-api` and
   `social-sandbox` launch configs (8802/5188; they run from the `social` worktree folder).
+  The feed is three columns (`.feed-layout`, container queries on `.feed-wrap`): your
+  card, the posts, a five-row leaderboard. Settings › Social (`settings.social`) is what a
+  person shares; the API enforces it in `routes/social.ts`, `profiles.ts` and
+  `leaderboard.ts`, so a new place that shows someone's numbers must check it too.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,

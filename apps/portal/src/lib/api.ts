@@ -237,6 +237,8 @@ export interface PublicProfile {
   friendCount: number;
   /** Where you stand with this person; 'none' on your own profile. */
   friendship: FriendshipStatus;
+  /** They take friend requests. */
+  acceptsRequests: boolean;
 }
 
 /** Someone as the feed, comments and friend lists name them. */
@@ -351,11 +353,12 @@ export interface UniversityStatus {
   pending: { email: string; university: { id: string; name: string }; expiresAt: string } | null;
 }
 
+/** The study numbers are null when the person keeps them to themselves. */
 export interface ProfileResponse {
   profile: PublicProfile;
-  stats: ProfileStats;
-  heatmap: StudyHeatmapData;
-  weekday: RhythmProfile;
+  stats: ProfileStats | null;
+  heatmap: StudyHeatmapData | null;
+  weekday: RhythmProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
 }
@@ -588,7 +591,7 @@ export const api = {
   friends: () => request<FriendsResponse>('GET', '/api/social/friends'),
   findPeople: (q: string) =>
     request<{
-      results: Array<{ userId: string; friendship: FriendshipStatus }>;
+      results: Array<{ userId: string; friendship: FriendshipStatus; acceptsRequests: boolean }>;
       people: Record<string, Person>;
     }>('GET', `/api/social/people?q=${encodeURIComponent(q)}`),
   sendFriendRequest: (userId: string) =>

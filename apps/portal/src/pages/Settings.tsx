@@ -440,6 +440,44 @@ export function Settings() {
               />
             </Section>
 
+            <Section id="social" title="Social">
+              <p className="field-hint">What other people get to see of you on Social.</p>
+              <div className="field">
+                <span className="field-label">Who sees your posts</span>
+                <Segmented
+                  ariaLabel="Who sees your posts"
+                  value={s.social.posts}
+                  onChange={(posts) => patch({ social: { posts } })}
+                  options={[
+                    { value: 'everyone', label: 'Everyone' },
+                    { value: 'friends', label: 'Friends only' },
+                  ]}
+                />
+              </div>
+              <Toggle
+                checked={s.social.stats}
+                onChange={(v) => patch({ social: { stats: v } })}
+                label="Study totals on your profile"
+                description="The days grid, strongest days and totals. Off, your profile shows who you are and your posts."
+              />
+              <Toggle
+                checked={s.social.leaderboard}
+                onChange={(v) => patch({ social: { leaderboard: v } })}
+                label="Appear on the leaderboard"
+              />
+              <Toggle
+                checked={s.social.compare}
+                onChange={(v) => patch({ social: { compare: v } })}
+                label="Let friends compare with you"
+                description="Your weeks beside theirs in Compare."
+              />
+              <Toggle
+                checked={s.social.requests}
+                onChange={(v) => patch({ social: { requests: v } })}
+                label="Take friend requests"
+              />
+            </Section>
+
             <Section id="theme" title="Appearance" glass>
               <AppearancePresets
                 theme={s.theme}

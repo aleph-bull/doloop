@@ -99,6 +99,24 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     ],
   },
   {
+    id: 'social',
+    title: 'Social',
+    keywords: [
+      'social',
+      'sharing',
+      'share',
+      'privacy',
+      'private',
+      'who sees',
+      'posts',
+      'friends only',
+      'leaderboard',
+      'compare',
+      'friend requests',
+      'profile stats',
+    ],
+  },
+  {
     id: 'theme',
     title: 'Appearance',
     keywords: [

@@ -46,6 +46,8 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[]
         and(
           isNotNull(sessions.endedAt),
           eq(users.isTestAccount, false),
+          // Settings › Social › "Appear on the leaderboard", on unless turned off.
+          sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'true') <> 'false'`,
           ...(admins.length
             ? [
                 notInArray(

@@ -251,6 +251,19 @@ export interface UserSettings {
     /** The Social page: your profile, and other people's. */
     social: boolean;
   };
+  /** What of yours other people get to see on Social. The API enforces each of these. */
+  social: {
+    /** Who sees your posts: everyone signed in, or your friends only. */
+    posts: 'everyone' | 'friends';
+    /** Your study totals, the days grid and strongest days on your profile. */
+    stats: boolean;
+    /** Appear on the leaderboard. */
+    leaderboard: boolean;
+    /** Let friends see your weeks beside theirs in Compare. */
+    compare: boolean;
+    /** Take friend requests. */
+    requests: boolean;
+  };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };
   /** The focus screen tab. */

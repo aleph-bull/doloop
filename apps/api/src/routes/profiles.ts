@@ -43,6 +43,8 @@ export interface PublicProfile {
   friendCount: number;
   /** Where the person asking stands with this profile; 'none' on your own. */
   friendship: FriendshipStatus;
+  /** They take friend requests (Settings › Social). */
+  acceptsRequests: boolean;
 }
 
 export interface ProfileStats {
@@ -58,11 +60,12 @@ export interface ProfileStats {
   level: number;
 }
 
+/** Study numbers are null when the person keeps them to themselves (Settings › Social). */
 export interface ProfileResponse {
   profile: PublicProfile;
-  stats: ProfileStats;
-  heatmap: Heatmap;
-  weekday: RhythmProfile;
+  stats: ProfileStats | null;
+  heatmap: Heatmap | null;
+  weekday: RhythmProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
 }
@@ -103,6 +106,10 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       joinedAt: row.createdAt.toISOString(),
     });
     const uni = universityById(settings.profile.university);
+    const you = row.id === req.user.id;
+    const showStats = you || settings.social.stats;
+    const showPosts =
+      you || friendship.status === 'friends' || settings.social.posts === 'everyone';
     const response: ProfileResponse = {
       profile: {
         id: row.id,
@@ -111,25 +118,30 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         bio: settings.profile.bio?.trim() || null,
         avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,
         joinedAt: row.createdAt.toISOString(),
-        you: row.id === req.user.id,
+        you,
         friendCount: friends.length,
         friendship,
+        acceptsRequests: settings.social.requests,
       },
-      stats: {
-        totalMinutes: lifetime.totalMinutes,
-        totalSessions: lifetime.totalSessions,
-        activeDays: lifetime.activeDays,
-        avgMinutesPerActiveDay: lifetime.avgMinutesPerActiveDay,
-        longestSessionMinutes: lifetime.longestSessionMinutes,
-        bestDay: lifetime.bestDay,
-        last28Minutes: lifetime.last28Minutes,
-        streak: { current: row.streak.current, longest: row.streak.longest },
-        level: row.level,
-      },
-      heatmap: studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS }),
-      weekday: weekdayProfile(sessions, tz),
-      posts: page.posts,
-      people: page.people,
+      stats: showStats
+        ? {
+            totalMinutes: lifetime.totalMinutes,
+            totalSessions: lifetime.totalSessions,
+            activeDays: lifetime.activeDays,
+            avgMinutesPerActiveDay: lifetime.avgMinutesPerActiveDay,
+            longestSessionMinutes: lifetime.longestSessionMinutes,
+            bestDay: lifetime.bestDay,
+            last28Minutes: lifetime.last28Minutes,
+            streak: { current: row.streak.current, longest: row.streak.longest },
+            level: row.level,
+          }
+        : null,
+      heatmap: showStats
+        ? studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS })
+        : null,
+      weekday: showStats ? weekdayProfile(sessions, tz) : null,
+      posts: showPosts ? page.posts : [],
+      people: showPosts ? page.people : {},
     };
     return response;
   });

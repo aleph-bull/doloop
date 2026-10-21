@@ -600,7 +600,16 @@ export function useUpdateSettings() {
   return useMutation({
     mutationFn: (patch: DeepPartial<UserSettings>) => api.updateSettings(patch),
     onSuccess: () =>
-      invalidate(keys.me, keys.quote, keys.pace, keys.rewards, ['analytics'], ['profiles']),
+      invalidate(
+        keys.me,
+        keys.quote,
+        keys.pace,
+        keys.rewards,
+        ['analytics'],
+        ['profiles'],
+        ['social'],
+        keys.leaderboard,
+      ),
   });
 }
 

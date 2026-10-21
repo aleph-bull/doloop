@@ -83,7 +83,13 @@ export function FriendsTab() {
                 <PersonRow
                   key={r.userId}
                   person={found.data.people[r.userId] ?? unknown(r.userId)}
-                  action={<FriendButton userId={r.userId} friendship={r.friendship} />}
+                  action={
+                    <FriendButton
+                      userId={r.userId}
+                      friendship={r.friendship}
+                      acceptsRequests={r.acceptsRequests}
+                    />
+                  }
                 />
               ))
             )}

@@ -74,7 +74,12 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
         </div>
       ) : (
         <div className="profile-actions">
-          <FriendButton userId={profile.id} friendship={profile.friendship} remove />
+          <FriendButton
+            userId={profile.id}
+            friendship={profile.friendship}
+            acceptsRequests={profile.acceptsRequests}
+            remove
+          />
           <Link to="/social" className="btn btn-ghost btn-sm profile-gear">
             <ArrowLeft size={15} aria-hidden />
             Social
@@ -112,12 +117,12 @@ export function Profile() {
 
   const { profile, stats, heatmap, weekday, posts, people } = q.data;
   const you = profile.you;
-  const days = heatmap.activeDays;
-  const studied = stats.totalMinutes > 0;
+  const days = heatmap?.activeDays ?? 0;
+  const studied = (stats?.totalMinutes ?? 0) > 0;
 
   // Only what is there to show: a quiet start is not a row of zeros.
   const totals: Array<{ label: string; value: number; unit: string; note?: string }> = [];
-  if (studied) {
+  if (stats && studied) {
     totals.push({ label: 'Studied, all time', ...figure(stats.totalMinutes) });
     totals.push({
       label: 'Sessions',
@@ -130,7 +135,7 @@ export function Profile() {
       unit: stats.activeDays === 1 ? 'day' : 'days',
     });
   }
-  if (stats.streak.current > 0)
+  if (stats && stats.streak.current > 0)
     totals.push({
       label: 'Streak',
       value: stats.streak.current,
@@ -138,97 +143,104 @@ export function Profile() {
       note:
         stats.streak.longest > stats.streak.current ? `Best ${stats.streak.longest}` : undefined,
     });
-  else if (stats.streak.longest > 0)
+  else if (stats && stats.streak.longest > 0)
     totals.push({
       label: 'Best streak',
       value: stats.streak.longest,
       unit: stats.streak.longest === 1 ? 'day' : 'days',
     });
-  if (stats.longestSessionMinutes > 0)
+  if (stats && stats.longestSessionMinutes > 0)
     totals.push({ label: 'Longest session', ...figure(stats.longestSessionMinutes) });
-  if (stats.last28Minutes > 0)
+  if (stats && stats.last28Minutes > 0)
     totals.push({ label: 'Last 28 days', ...figure(stats.last28Minutes) });
 
   return (
     <div className="flex flex-col gap-6">
       <Head profile={profile} onSettings={() => setSettingsOpen(true)} />
 
-      <Panel as="section" className="rc-tile" aria-label="Study">
-        <div className="profile-study">
-          <div className="profile-study-col">
-            <div className="rc-tile-head">
-              <h2 className="rc-tile-title">Days studied</h2>
-              <p className="rc-tile-note">
-                {days === 0
-                  ? 'The last six months. Each day with a session lights up a square.'
-                  : `${days} active ${days === 1 ? 'day' : 'days'} in the last six months${
-                      heatmap.longestRun >= 2
-                        ? `, with a longest streak of ${heatmap.longestRun}`
-                        : ''
-                    }.`}
-              </p>
-            </div>
-            <div className="profile-grid">
-              <Heatmap
-                weeks={heatmap.weeks}
-                monthLabels={spacedLabels(heatmap.monthLabels)}
-                thresholds={heatmap.thresholds}
-                ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
-              />
-            </div>
-          </div>
-          {weekday.totalMinutes > 0 && (
+      {/* Null when they keep their study time to themselves (Settings › Social). */}
+      {!stats || !heatmap || !weekday ? (
+        <Panel as="section" className="rc-tile" aria-label="Study">
+          <p className="muted text-sm">Keeps their study time to themselves.</p>
+        </Panel>
+      ) : (
+        <Panel as="section" className="rc-tile" aria-label="Study">
+          <div className="profile-study">
             <div className="profile-study-col">
               <div className="rc-tile-head">
-                <h2 className="rc-tile-title">Strongest days</h2>
-                {weekday.peak && (
-                  <p className="rc-tile-note">{weekday.peak.label} carries the most.</p>
-                )}
+                <h2 className="rc-tile-title">Days studied</h2>
+                <p className="rc-tile-note">
+                  {days === 0
+                    ? 'The last six months. Each day with a session lights up a square.'
+                    : `${days} active ${days === 1 ? 'day' : 'days'} in the last six months${
+                        heatmap.longestRun >= 2
+                          ? `, with a longest streak of ${heatmap.longestRun}`
+                          : ''
+                      }.`}
+                </p>
               </div>
-              <Columns
-                bars={weekday.buckets.map((b) => ({
-                  label: b.label.slice(0, 3),
-                  value: b.minutes,
-                  highlight: b.label === weekday.peak?.label,
-                }))}
-                fmt={fmtHours}
-                columnName="Day"
-                ariaLabel="Study time by day of the week"
-              />
+              <div className="profile-grid">
+                <Heatmap
+                  weeks={heatmap.weeks}
+                  monthLabels={spacedLabels(heatmap.monthLabels)}
+                  thresholds={heatmap.thresholds}
+                  ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
+                />
+              </div>
             </div>
-          )}
-        </div>
-
-        <div className="profile-totals">
-          <div className="rc-tile-head">
-            <h2 className="rc-tile-title">Totals</h2>
-            {stats.level > 0 && (
-              <p className="rc-tile-note profile-level">
-                <Trophy size={13} aria-hidden />
-                Level {stats.level}
-              </p>
+            {weekday.totalMinutes > 0 && (
+              <div className="profile-study-col">
+                <div className="rc-tile-head">
+                  <h2 className="rc-tile-title">Strongest days</h2>
+                  {weekday.peak && (
+                    <p className="rc-tile-note">{weekday.peak.label} carries the most.</p>
+                  )}
+                </div>
+                <Columns
+                  bars={weekday.buckets.map((b) => ({
+                    label: b.label.slice(0, 3),
+                    value: b.minutes,
+                    highlight: b.label === weekday.peak?.label,
+                  }))}
+                  fmt={fmtHours}
+                  columnName="Day"
+                  ariaLabel="Study time by day of the week"
+                />
+              </div>
             )}
           </div>
-          {totals.length === 0 ? (
-            <p className="muted text-sm">
-              {you ? 'Your first session will start the count.' : 'No sessions yet.'}
-            </p>
-          ) : (
-            <dl className="days-panel-stats">
-              {totals.map((t) => (
-                <div key={t.label}>
-                  <dt>{t.label}</dt>
-                  <dd className="tabular">
-                    {t.value}
-                    <small>{t.unit}</small>
-                  </dd>
-                  {t.note && <dd className="profile-stat-note">{t.note}</dd>}
-                </div>
-              ))}
-            </dl>
-          )}
-        </div>
-      </Panel>
+
+          <div className="profile-totals">
+            <div className="rc-tile-head">
+              <h2 className="rc-tile-title">Totals</h2>
+              {stats.level > 0 && (
+                <p className="rc-tile-note profile-level">
+                  <Trophy size={13} aria-hidden />
+                  Level {stats.level}
+                </p>
+              )}
+            </div>
+            {totals.length === 0 ? (
+              <p className="muted text-sm">
+                {you ? 'Your first session will start the count.' : 'No sessions yet.'}
+              </p>
+            ) : (
+              <dl className="days-panel-stats">
+                {totals.map((t) => (
+                  <div key={t.label}>
+                    <dt>{t.label}</dt>
+                    <dd className="tabular">
+                      {t.value}
+                      <small>{t.unit}</small>
+                    </dd>
+                    {t.note && <dd className="profile-stat-note">{t.note}</dd>}
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        </Panel>
+      )}
 
       {(posts.length > 0 || you) && (
         <section className="profile-posts-list" aria-label="Posts">
@@ -255,7 +267,7 @@ export function Profile() {
           profile={profile}
         />
       )}
-      {stats.bestDay && studied && (
+      {stats?.bestDay && studied && (
         <p className="sr-only">Best day {fmtDate(stats.bestDay.date)}.</p>
       )}
     </div>

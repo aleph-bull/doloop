@@ -317,6 +317,15 @@ export const settingsSchema = z
         social: z.boolean(),
       })
       .partial(),
+    social: z
+      .object({
+        posts: z.enum(['everyone', 'friends']),
+        stats: z.boolean(),
+        leaderboard: z.boolean(),
+        compare: z.boolean(),
+        requests: z.boolean(),
+      })
+      .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z

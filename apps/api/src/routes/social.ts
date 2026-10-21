@@ -1,5 +1,12 @@
 import type { FastifyInstance } from 'fastify';
-import { addDays, startOfWeekMonday, toLocalDate, type Session } from '@komogon/core';
+import {
+  addDays,
+  startOfWeekMonday,
+  toLocalDate,
+  withDefaults,
+  type Session,
+  type UserSettings,
+} from '@komogon/core';
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -95,6 +102,10 @@ function parseDataUrl(
     );
   return { mime, data: m[2]!, bytes };
 }
+
+/** Settings › Social, with the defaults filled in. */
+export const socialOf = (settings: Partial<UserSettings> | null | undefined) =>
+  withDefaults(settings).social;
 
 /** The ids of everyone you are friends with, either way round. */
 export async function friendIds(db: Db, userId: string): Promise<string[]> {
@@ -256,10 +267,15 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       .parse(req.query);
     const conds = [];
     if (q.before) conds.push(lt(posts.createdAt, dt(q.before)));
-    if (q.scope === 'friends') {
-      const ids = [req.user.id, ...(await friendIds(db, req.user.id))];
-      conds.push(inArray(posts.userId, ids));
-    }
+    const circle = [req.user.id, ...(await friendIds(db, req.user.id))];
+    // Posts someone keeps to friends (Settings › Social) show only to them and their friends.
+    conds.push(
+      or(
+        inArray(posts.userId, circle),
+        sql`(select coalesce(u.settings -> 'social' ->> 'posts', 'everyone') from users u where u.id = posts.user_id) <> 'friends'`,
+      )!,
+    );
+    if (q.scope === 'friends') conds.push(inArray(posts.userId, circle));
     const page = await loadPosts(
       db,
       req.user.id,
@@ -493,7 +509,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
     const { q } = z.object({ q: z.string().trim().min(1).max(60) }).parse(req.query);
     const name = sql`${users.settings} -> 'profile' ->> 'name'`;
     const rows = await db
-      .select({ id: users.id })
+      .select({ id: users.id, settings: users.settings })
       .from(users)
       .where(
         and(
@@ -512,6 +528,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       rows.map(async (r) => ({
         userId: r.id,
         friendship: await friendshipWith(db, req.user.id, r.id),
+        acceptsRequests: socialOf(r.settings).requests,
       })),
     );
     return { results, people };
@@ -523,9 +540,10 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
     if (userId === me) throw badRequest('That is you');
     const other = await db.query.users.findFirst({
       where: eq(users.id, userId),
-      columns: { id: true, onboardedAt: true },
+      columns: { id: true, onboardedAt: true, settings: true },
     });
     if (!other || other.onboardedAt === null) throw notFound('No such person');
+    if (!socialOf(other.settings).requests) throw forbidden('Not taking friend requests');
     const current = await friendshipWith(db, me, userId);
     if (current.status === 'friends') throw conflict('You are already friends');
     if (current.status === 'requested') throw conflict('Already asked');
@@ -587,11 +605,14 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
     const me = req.user;
     const now = clock();
     const tz = me.timezone;
-    const ids = await friendIds(db, me.id);
+    const all = await friendIds(db, me.id);
     const rows = await db.query.users.findMany({
-      where: inArray(users.id, [me.id, ...ids]),
-      columns: { id: true, streak: true },
+      where: inArray(users.id, [me.id, ...all]),
+      columns: { id: true, streak: true, settings: true },
     });
+    // Friends who keep their weeks to themselves (Settings › Social) are left out.
+    const sharing = new Set(rows.filter((r) => socialOf(r.settings).compare).map((r) => r.id));
+    const ids = all.filter((id) => sharing.has(id));
     const streaks = new Map(rows.map((r) => [r.id, r.streak.current]));
     const compute = async (id: string) =>
       compareRow(id, await loadCompletedSessions(db, id), streaks.get(id) ?? 0, now, tz);

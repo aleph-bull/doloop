@@ -31,13 +31,163 @@
 }
 
 /* ----- feed ----- */
+/* Three columns: you, the posts, the board. The sides stay put while the posts scroll. */
+.feed-wrap {
+  container-type: inline-size;
+}
+.feed-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 210px) minmax(0, 1fr) minmax(200px, 240px);
+  justify-content: center;
+  align-items: start;
+  gap: 16px;
+}
+.feed-side {
+  position: sticky;
+  top: 80px;
+  min-width: 0;
+}
 .feed {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 680px;
-  width: 100%;
-  margin-inline: auto;
+  min-width: 0;
+}
+/* On the page's own width, not the window's: the sidebar takes some of it. */
+@container (max-width: 880px) {
+  .feed-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
+  }
+  .feed-side.is-left {
+    display: none;
+  }
+}
+@container (max-width: 660px) {
+  .feed-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .feed-side.is-right {
+    display: none;
+  }
+}
+
+/* The cards beside the feed. */
+.side-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.side-title {
+  font-size: var(--text-md, 1rem);
+  font-weight: 600;
+}
+.side-me {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  color: inherit;
+}
+.side-me .profile-avatar {
+  margin-bottom: 6px;
+}
+.side-me:hover .side-name {
+  text-decoration: underline;
+}
+.side-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.side-uni {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.side-bio {
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.side-stats {
+  list-style: none;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-around;
+  gap: 6px;
+}
+.side-stats li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.side-stats li > svg {
+  color: var(--accent-text);
+}
+.side-stat-label {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+.side-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.side-link:hover {
+  color: var(--fg);
+  text-decoration: underline;
+}
+.side-board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.side-board-row {
+  display: grid;
+  grid-template-columns: 2ch minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.side-board-rank {
+  color: var(--fg-subtle);
+  text-align: right;
+}
+.side-board-who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: inherit;
+}
+.side-board-who:hover .side-board-name {
+  text-decoration: underline;
+}
+.side-board-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-board-row.is-you .side-board-name {
+  font-weight: 600;
+}
+.side-board-hours {
+  color: var(--fg-muted);
 }
 .feed-bar {
   display: flex;
