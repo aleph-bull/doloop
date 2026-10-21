@@ -82,14 +82,11 @@ export function FocusDashboard() {
       ) : (
         <Glass className="focus-start p-6" strong>
           <form onSubmit={(event) => void begin(event)} className="flex flex-col gap-6">
-            <div>
-              <h2 className="section-title">Your session</h2>
-              <p className="muted text-sm">Start now and stop whenever you like.</p>
-            </div>
+            <h2 className="section-title">Your session</h2>
             <Toggle
               checked={pomodoro}
               onChange={setPomodoro}
-              label="Enable Pomodoro"
+              label="Pomodoro"
               description="Alternate focus time with breaks."
               disabled={busy}
             />
@@ -120,7 +117,7 @@ export function FocusDashboard() {
             <Toggle
               checked={timelapse}
               onChange={setTimelapse}
-              label="Enable timelapse"
+              label="Timelapse"
               description="Record with your camera on the focus screen. The video stays on this device."
               disabled={busy}
             />

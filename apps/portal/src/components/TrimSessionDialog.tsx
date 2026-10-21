@@ -131,30 +131,21 @@ export function TrimSessionDialog({ session, onClose, onTrimmed }: TrimSessionDi
         {preview ? (
           <div className="trim-preview" role="status">
             <p className="trim-preview-end">
-              This means you ended at {clockWords(preview.endedAt)}.
+              You&rsquo;d have stopped at {clockWords(preview.endedAt)}.
             </p>
             <p className="text-sm">
-              That leaves {fmtMinutes(preview.workSeconds / 60)} focused
+              That&rsquo;s {fmtMinutes(preview.workSeconds / 60)} of focus
               {preview.removedBreakSeconds > 0
-                ? `, and ${fmtMinutes(preview.removedBreakSeconds / 60)} of the breaks go with it`
+                ? `, ${fmtMinutes(preview.removedBreakSeconds / 60)} of breaks gone`
                 : ''}
-              .{' '}
               {preview.xpRemoved > 0
-                ? `${preview.xpRemoved} XP comes off, leaving ${preview.xpAwarded} for this session.`
-                : 'The XP stays the same.'}
+                ? `, and ${preview.xpRemoved} XP off (${preview.xpAwarded} left)`
+                : ''}
+              .
             </p>
             {capped && <p className="text-sm muted">A session keeps at least its first minute.</p>}
-            {session.badgesAwarded.length > 0 && (
-              <p className="text-sm muted">
-                Achievements this session unlocked are taken back if they no longer hold.
-              </p>
-            )}
           </div>
-        ) : (
-          <p className="field-hint">
-            Time comes off the end of the session, with the breaks that ran alongside it.
-          </p>
-        )}
+        ) : null}
       </div>
     </Modal>
   );

@@ -20,12 +20,7 @@ export function FollowUpPrompt() {
       role="region"
       aria-label="Assessment follow-up"
     >
-      <div>
-        <h2 className="card-title">How did {node.title} go?</h2>
-        <p className="muted text-sm">
-          Your answer goes on the chart of how ready you felt as the due date came closer.
-        </p>
-      </div>
+      <h2 className="card-title">How did {node.title} go?</h2>
       <div
         className="flex gap-2 items-center flex-wrap"
         role="radiogroup"

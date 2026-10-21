@@ -41,7 +41,6 @@ export const GREETINGS: Greeting[] = [
   ...G('first-ever', [
     "Welcome. Start your first session whenever you're ready.",
     'Pick one thing to work on, then press start.',
-    "Brand new. Let's see what this button does.",
   ]),
   ...G('back-after-break', [
     'Welcome back.',
@@ -88,12 +87,7 @@ export const GREETINGS: Greeting[] = [
     '{hours} in today. Good progress.',
     '{hours} today and counting.',
   ]),
-  ...G('week-progress', [
-    '{hours} this week so far.',
-    '{hours} banked this week.',
-    'The week is at {hours}.',
-    '{hours} this week. Steady progress.',
-  ]),
+  ...G('week-progress', ['{hours} this week so far.', '{hours} this week. Steady progress.']),
   ...G('weekend', [
     'A weekend session. Nice.',
     'Getting some work in this weekend?',

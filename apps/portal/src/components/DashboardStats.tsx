@@ -75,11 +75,10 @@ export function DashboardStats() {
           <FlameIcon size={24} />
         </span>
         <div>
-          <span className="dash-empty-title">Your numbers live here.</span>
-          <span className="dash-empty-body">
-            Time studied, the week against your {fmtHours(d.goalMinutes)} goal, and your streak all
-            start counting with your first session.
+          <span className="dash-empty-title">
+            Your numbers are here after your first session. Run your first session!
           </span>
+          <span className="dash-empty-body">Time studied this week vs. your goal.</span>
         </div>
       </Glass>
     );

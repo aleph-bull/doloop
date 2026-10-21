@@ -8,6 +8,7 @@ import {
 } from '@komogon/core';
 import { Download, Share2, Square, Video } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import {
   Button,
   Input,
@@ -70,9 +71,10 @@ export function TimelapsePrompt({ open, onYes, onNo, onAlways, onNever }: Timela
       }
     >
       <p className="muted text-sm">
-        Your camera takes a still every so often while you focus, and they become a short video of
-        you studying. It all stays on this computer until you save the video. Change this any time
-        in the focus screen&rsquo;s controls.
+        We take stills from your computer&rsquo;s camera and give you a timelapse in the end.{' '}
+        <Link to="/settings#focus" className="link-button" target="_blank" rel="noreferrer">
+          Change what it looks like
+        </Link>
       </p>
     </Modal>
   );
@@ -138,12 +140,7 @@ export function TimelapseSettings({
   return (
     <div className="flex flex-col gap-3">
       {onRecordingChange && (
-        <Toggle
-          checked={!!recording}
-          onChange={onRecordingChange}
-          label="Record this session"
-          description="Stills are taken during focus, not breaks."
-        />
+        <Toggle checked={!!recording} onChange={onRecordingChange} label="Record this session" />
       )}
       <div className="field">
         <span className="field-label">When a session starts</span>
@@ -176,7 +173,6 @@ export function TimelapseSettings({
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
-        description="Keep taking stills while you rest, not only while you focus."
       />
       {value.recordBreaks && value.showTimer && (
         <div className="field">
@@ -221,9 +217,9 @@ export async function timelapseSpaceWarning(options: TimelapseOptions): Promise<
   const est = timelapseSizeEstimate(options, measuredStillBytes() ?? undefined);
   const free = await freeStorageBytes();
   if (free !== null && free < est.peakBytes * 2)
-    return `Space is short: this timelapse can hold about ${fmtBytes(est.peakBytes)} of stills and the browser has about ${fmtBytes(free)} left.`;
+    return `Space is short: this timelapse needs about ${fmtBytes(est.peakBytes)} while recording and the browser has about ${fmtBytes(free)} left.`;
   if (est.big)
-    return `This timelapse can hold about ${fmtBytes(est.peakBytes)} of stills. A shorter length or a faster speed takes less.`;
+    return `This timelapse needs about ${fmtBytes(est.peakBytes)} while recording. A shorter length or a faster speed takes less.`;
   return null;
 }
 
@@ -241,8 +237,7 @@ function SizeNote({ options }: { options: TimelapseOptions }) {
   const short = free !== null && free < est.peakBytes * 2;
   return (
     <p className="field-hint" role={short || est.big ? 'status' : undefined}>
-      Holds up to about {fmtBytes(est.peakBytes)} of stills while recording
-      {measured ? ', going by your camera' : ''}, and the video comes out around{' '}
+      Needs about {fmtBytes(est.peakBytes)} while recording. The video ends up around{' '}
       {fmtBytes(est.videoBytes)}.
       {short && (
         <span className="timelapse-size-warn">
@@ -529,7 +524,7 @@ export function TimelapseExport({
             </Button>
           </div>
           {recording && (
-            <span className="field-hint">Still recording; stop first for the whole session.</span>
+            <span className="field-hint">Stop recording to include the whole session.</span>
           )}
         </>
       )}

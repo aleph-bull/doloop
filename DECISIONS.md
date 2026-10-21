@@ -1613,3 +1613,39 @@ komogon.app domain and private server key before hosted password signup can send
 - **The leaderboard reads as analytics**: the first three are tiles with the all-time total big, an eight-week sparkline, this week, days of the last 28 and the streak; the rest are rows with the same sparkline small, this week, the streak and the total. The API's entries carry `weekly`, `thisWeek`, `streak` and `activeDays28` for it.
 - **Jams open**: a chevron on each card shows the running totals through the jam's days (same lines as groups) and, per person, sessions, time, when they joined and what they worked on. Members can leave. The code box fits six letters now.
 - **Your card** beside the feed shows days and level only; the friend count went.
+
+## Copy audit, batch 1: the dashboard, 2026-10-21 (user request)
+
+The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked through in batches. Fragments are fine; explanations of what the screen already shows are not.
+
+- **The after-task question has no subtitle.** "How did {task} go?" and the 1 to 5 buttons say enough.
+- **The empty stats card**, in the owner's words: "Your numbers are here after your first session. Run your first session!" over "Time studied this week vs. your goal."
+- **The streak banner has no dates**, in the owner's words: "A streak freeze covered your streak. Let's continue working!" and "Your streak ended. Don't worry, you can begin another one today!" The "!" is the owner's choice.
+- **The offline banner** reads "You're currently offline. Stats will update when you reconnect." (owner's wording).
+- **Start panel:** "Add estimates and due dates to see a plan for today." The Focus screen button lost its tooltip, which repeated the label.
+- **Hints and tips:** "pace" is gone from the rest-days line ("your daily plan works around them"); the level hint links to Achievements instead of saying "Achievements has the details"; the calendar hint is "Plan study blocks and sync Google Calendar in Calendar."; most tips no longer open with "You can", and "to see how far you have come" is cut.
+- **First visit:** "Add a course and what's due in it, and Today plans your day."
+- **Greetings cut:** "Brand new. Let's see what this button does.", "{hours} banked this week." and "The week is at {hours}." The other greetings flagged in the audit were kept on purpose.
+
+## Copy audit, batch 2: starting and running a session, 2026-10-21 (user request)
+
+- **Time to focus screen:** the "Your session" card lost "Start now and stop whenever you like."; its toggles read "Pomodoro" and "Timelapse" (no "Enable"). "A little space for what you want to do." was kept on purpose.
+- **Start dialog:** Pomodoro help ends "long break every 4 cycles."; the For hint is just the length ("1 h"); Until past today reads "Tomorrow, 4 h 59 min from now."; "Show the timer" has no description; the zero-length toast says "Pick a later time" or "Pick at least 1 minute" (also in the extension).
+- **Replacing a running session:** "End ECO220 and start a new one?", button "End and start", body "Its time so far is kept."
+- **Focus screen prompt** (owner's words): "Opens a new tab with a focus screen that just has the timer."
+- **Cutting a block short:** "This ends your work block 10 minutes early." ("Are you sure?" dropped).
+- **Focus screen:** no line under "Nothing running"; the shortcuts read "Esc to leave · Space to pause · H to hide the clock" under "Your session keeps running."; the hide button's tooltip matches its label.
+- **After sleep** (owner's words): "The session kept running while your computer slept."
+- **End early:** "Your time is saved, but it counts toward your level only after 10 minutes or when the task is done."
+- **"Done with {task}?"** has no body, in the app and the extension.
+- **Session summary streak line** (owner's words): "{n}-day streak. Keep it up!"
+
+## Copy audit, batch 3: after a session, and the voice rule, 2026-10-21 (user request)
+
+- **Voice:** a little quirky is fine if it sounds like a person, never corporate or AI-polished; fragments are fine. CLAUDE.md's voice rule now says so (it used to say "never quirky" and "full sentences").
+- **End-of-session lines swapped:** "Bring on the exam.", "Feeling better about this one.", "Each one a bit better than the last.", "Chipping away at it." replace four coach-speak lines. "You've started. That's often the hardest part." stays (the owner turned down "One down"), as do the milestone and late-night lines.
+- **Timelapse prompt** (owner's words): "We take stills from your computer's camera and give you a timelapse in the end." with a "Change what it looks like" link to Settings › Focus screen, opened in a new tab so the focus screen stays put.
+- **Timelapse:** the two toggle descriptions are gone (one was wrong when breaks are recorded); storage hints say "Needs about 1.2 GB while recording. The video ends up around 40 MB."; "Stop recording to include the whole session."
+- **Audio sharing:** one paragraph: "The visualizer needs to hear your music. Share a tab, window or your screen, and tick share audio in the browser's picker. We don't record anything, and it's optional."
+- **Delete time:** "You'd have stopped at 3:10 AM." / "That's 1 h of focus, 10 min of breaks gone, and 120 XP off (25 left)." The achievements note and the "Time comes off the end…" hint were removed at the owner's request.
+- **Session history:** "Finished sessions show up here." / "Left one running? Delete time trims the end, and the XP that came with it."

@@ -525,7 +525,6 @@ export function Focus() {
           </div>
           <div className="focus-context">
             <div className="focus-subject">Nothing running</div>
-            <div className="focus-child">Start a session and the clock takes over this screen.</div>
           </div>
           <div className="focus-actions">
             <Button variant="primary" onClick={() => setStartOpen(true)}>
@@ -586,8 +585,9 @@ export function Focus() {
               Exit focus
             </Button>
             <span className="field-hint">
-              Your session keeps running. Press Escape to leave, Space to pause or resume, and H to
-              hide the clock.
+              Your session keeps running.
+              <br />
+              Esc to leave · Space to pause · H to hide the clock
             </span>
           </section>
         </Glass>
@@ -775,7 +775,7 @@ function FocusSession({
             variant="ghost"
             icon
             aria-label={hidden ? 'Show the clock and task' : 'Hide the clock and task'}
-            title={hidden ? 'Show the clock and task' : 'Hide everything but the phase'}
+            title={hidden ? 'Show the clock and task' : 'Hide the clock and task'}
             onClick={ctl.toggleTimerVisibility}
           >
             {hidden ? <Eye size={16} aria-hidden /> : <EyeOff size={16} aria-hidden />}

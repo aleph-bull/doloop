@@ -201,16 +201,22 @@ function FullDashboard() {
               </Link>
             }
           >
-            Rest days never break your streak. Set the days you don't study and pace will plan
-            around them.
+            Rest days never break your streak, and your daily plan works around them.
           </Hint>,
-          <Hint key="xp" id="xp" when={sessionCount >= 1 && sessionCount < 3}>
+          <Hint
+            key="xp"
+            id="xp"
+            when={sessionCount >= 1 && sessionCount < 3}
+            action={
+              <Link to="/achievements" className="btn btn-secondary btn-sm">
+                Open Achievements
+              </Link>
+            }
+          >
             Every session moves you toward the next level, and levels unlock new backgrounds.
-            Achievements has the details.
           </Hint>,
           <Hint key="calendar" id="calendar" when={anyDue && sessionCount >= 2}>
-            Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see
-            planned versus needed hours.
+            Plan study blocks and sync Google Calendar in Calendar.
           </Hint>,
         ].find((h) => h.props.when && !isDismissed(h.props.id))}
 
@@ -218,7 +224,7 @@ function FullDashboard() {
       {roots.length === 0 && (
         <Glass className="dash-first">
           <h2 className="section-title">Nothing to study yet</h2>
-          <p className="muted">Add a course, then the things in it, and today fills itself in.</p>
+          <p className="muted">Add a course and what's due in it, and Today plans your day.</p>
           <Link to="/tasks" className="btn btn-primary btn-lg">
             Add your first course
           </Link>
