@@ -93,7 +93,7 @@ describe('evaluateStreak', () => {
     expect(r.state.current).toBe(1);
     expect(r.state.longest).toBe(1);
     expect(r.events.map((e) => e.type)).toEqual(['counted', 'reset', 'counted']);
-    expect(describeStreakEvents(r.events)).toMatch(/reset on 2026-09-18/);
+    expect(describeStreakEvents(r.events)).toMatch(/Your streak ended/);
   });
 
   it('skips rest days, vacations, and break days without breaking the streak', () => {
@@ -131,7 +131,7 @@ describe('evaluateStreak', () => {
     expect(r.state.current).toBe(2);
     expect(r.state.freezesHeld).toBe(1);
     expect(r.events.map((e) => e.type)).toEqual(['counted', 'freeze-used', 'counted']);
-    expect(describeStreakEvents(r.events)).toMatch(/freeze covered 2026-09-18/);
+    expect(describeStreakEvents(r.events)).toMatch(/freeze covered your streak/);
   });
 
   it('describes multiple freezes', () => {
@@ -139,7 +139,7 @@ describe('evaluateStreak', () => {
     const r = run({ state, sessions: [s(noon('2026-09-16'), 20), s(noon('2026-09-19'), 20)] });
     expect(r.state.current).toBe(2);
     expect(r.state.freezesHeld).toBe(0);
-    expect(describeStreakEvents(r.events)).toMatch(/2 missed days/);
+    expect(describeStreakEvents(r.events)).toMatch(/freezes covered your streak/);
   });
 
   it('does not spend a freeze when there is no streak to protect', () => {

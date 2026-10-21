@@ -150,10 +150,8 @@ export function isStreakMilestone(count: number): boolean {
 export function describeStreakEvents(events: StreakEvent[]): string | null {
   const freezes = events.filter((e) => e.type === 'freeze-used');
   const reset = events.find((e) => e.type === 'reset');
-  if (reset) return `Your streak reset on ${reset.date}. A new one starts with your next session.`;
-  if (freezes.length === 1)
-    return `A streak freeze covered ${freezes[0]!.date}. Your streak is intact.`;
-  if (freezes.length > 1)
-    return `Streak freezes covered ${freezes.length} missed days. Your streak is intact.`;
+  if (reset) return "Your streak ended. Don't worry, you can begin another one today!";
+  if (freezes.length === 1) return "A streak freeze covered your streak. Let's continue working!";
+  if (freezes.length > 1) return "Streak freezes covered your streak. Let's continue working!";
   return null;
 }

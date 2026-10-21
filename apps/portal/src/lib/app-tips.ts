@@ -17,19 +17,19 @@ export interface AppTip {
 export const APP_TIPS: AppTip[] = [
   {
     id: 'rewards',
-    text: 'You can set your own rewards in Achievements, then spend the XP you earn on them.',
+    text: 'Set your own rewards in Achievements, then spend the XP you earn on them.',
     to: '/achievements',
     link: 'Open Achievements',
   },
   {
     id: 'sounds',
-    text: 'You can change the sound for when work starts, when a break starts, and when a session ends.',
+    text: 'Pick the sounds for when work starts, when a break starts and when a session ends.',
     to: '/settings#sounds',
     link: 'Change sounds',
   },
   {
     id: 'plans',
-    text: 'You can make a study plan for anything, not just your courses: a language, a test, a skill.',
+    text: 'Study plans work for anything, not just courses: a language, a test, a skill.',
     to: '/plans',
     link: 'Make a study plan',
     feature: 'plans',
@@ -42,7 +42,7 @@ export const APP_TIPS: AppTip[] = [
   },
   {
     id: 'rest-days',
-    text: 'Rest days never break your streak. Set the days you do not study and pace plans around them.',
+    text: 'Rest days never break your streak, and your daily plan works around them.',
     to: '/settings#rest-days',
     link: 'Set rest days',
   },
@@ -61,19 +61,19 @@ export const APP_TIPS: AppTip[] = [
   },
   {
     id: 'backgrounds',
-    text: 'You can change the background, and some new ones unlock as you level up.',
+    text: 'Some backgrounds unlock as you level up.',
     to: '/settings#theme',
     link: 'Choose a background',
   },
   {
     id: 'past-weeks',
-    text: 'You can step back through past weeks in Analytics to see how far you have come.',
+    text: 'Step back through past weeks in Analytics.',
     to: '/analytics',
     link: 'Open Analytics',
   },
   {
     id: 'calendar',
-    text: 'Planned blocks in the Calendar show the hours you have planned against the hours you need.',
+    text: 'Plan study blocks in the Calendar and see whether they cover the hours you need.',
     to: '/calendar',
     link: 'Open the Calendar',
     feature: 'calendar',

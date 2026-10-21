@@ -716,10 +716,7 @@ export function AppShell() {
         {!online && (
           <Glass className="offline-bar" role="status">
             <WifiOff size={16} aria-hidden />
-            <span>
-              You are offline. This is your saved data — it will refresh once you reconnect, and
-              anything you change now will not be saved.
-            </span>
+            <span>You're currently offline. Stats will update when you reconnect.</span>
           </Glass>
         )}
         <ErrorBoundary>

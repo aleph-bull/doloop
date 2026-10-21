@@ -1561,3 +1561,16 @@ komogon.app domain and private server key before hosted password signup can send
 
 - **The dashboard's Tasks row keeps its cards' glass blur when it has more cards than fit.** Its edge fades were a mask on the row, and in Chrome a masked element becomes the backdrop for the blur inside it, so the glass cards showed the background sharp through them. The row no longer has a mask; CardRail gives each card its own share of the fade instead, worked out from where the card sits in the row on every scroll and resize (a card fully inside the row has no mask at all). The fades look as before and follow the scroll. Other sideways scrollers, such as the nav tabs, keep the row mask; they hold no glass.
 - **The after-task question no longer says "Asked once per task."** It now reads only "Your answer goes on the chart of how ready you felt as the due date came closer."
+
+## Copy audit, batch 1: the dashboard, 2026-10-21 (user request)
+
+The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked through in batches. Fragments are fine; explanations of what the screen already shows are not.
+
+- **The after-task question has no subtitle.** "How did {task} go?" and the 1 to 5 buttons say enough.
+- **The empty stats card**, in the owner's words: "Your numbers are here after your first session. Run your first session!" over "Time studied this week vs. your goal."
+- **The streak banner has no dates**, in the owner's words: "A streak freeze covered your streak. Let's continue working!" and "Your streak ended. Don't worry, you can begin another one today!" The "!" is the owner's choice.
+- **The offline banner** reads "You're currently offline. Stats will update when you reconnect." (owner's wording).
+- **Start panel:** "Add estimates and due dates to see a plan for today." The Focus screen button lost its tooltip, which repeated the label.
+- **Hints and tips:** "pace" is gone from the rest-days line ("your daily plan works around them"); the level hint links to Achievements instead of saying "Achievements has the details"; the calendar hint is "Plan study blocks and sync Google Calendar in Calendar."; most tips no longer open with "You can", and "to see how far you have come" is cut.
+- **First visit:** "Add a course and what's due in it, and Today plans your day."
+- **Greetings cut:** "Brand new. Let's see what this button does.", "{hours} banked this week." and "The week is at {hours}." The other greetings flagged in the audit were kept on purpose.

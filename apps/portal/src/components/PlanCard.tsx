@@ -68,17 +68,11 @@ export function PlanCard({
         <div className="min-w-0">
           <h2 className="start-panel-title">Ready when you are</h2>
           <p className="start-panel-sub">
-            {todayLine ??
-              'Add an estimate and a due date to a task and Komodon will tell you what to do today.'}
+            {todayLine ?? 'Add estimates and due dates to see a plan for today.'}
           </p>
         </div>
         <div className="start-panel-actions">
-          <Button
-            size="lg"
-            className="start-panel-focus"
-            onClick={onOpenFocus}
-            title="Open the focus screen"
-          >
+          <Button size="lg" className="start-panel-focus" onClick={onOpenFocus}>
             <Maximize2 size={16} aria-hidden /> Focus screen
           </Button>
           <Button variant="primary" size="lg" className="start-panel-go" onClick={onStart}>
