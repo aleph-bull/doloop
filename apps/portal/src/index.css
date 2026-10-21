@@ -503,6 +503,11 @@
   :root {
     --rail-slim: 60px;
     --rail-open: 212px;
+    --rail-ease: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  /* Pinning moves the page over with the rail instead of jumping. */
+  :root[data-nav^='sidebar'] body {
+    transition: padding-left var(--dur-slow) var(--rail-ease);
   }
   :root[data-nav='sidebar'] body {
     padding-left: calc(var(--rail-slim) + 24px);
@@ -526,16 +531,18 @@
     padding: 10px 8px;
     border-radius: 24px;
     overflow: hidden;
-    transition: width var(--dur-base) var(--ease-out);
+    /* A short pause before opening on hover, so passing the pointer across it does not
+       flash it open; everything that moves with the rail waits the same. */
+    --rail-delay: 0ms;
+    transition: width var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
-  /* A short pause before opening, so passing the pointer across it does not flash it open. */
   .sidenav:hover,
   .sidenav:has(:focus-visible),
   .sidenav.is-pinned {
     width: var(--rail-open);
   }
   .sidenav:hover {
-    transition-delay: 120ms;
+    --rail-delay: 120ms;
   }
   .sidenav.chrome::after {
     content: '';
@@ -545,7 +552,7 @@
     border-radius: inherit;
     background: var(--glass-solid);
     opacity: 0;
-    transition: opacity var(--dur-base) var(--ease-out);
+    transition: opacity var(--dur-slow) var(--rail-ease) var(--rail-delay);
     pointer-events: none;
   }
   /* Opened over the page, it firms up so the text behind does not show through. */
@@ -611,14 +618,20 @@
     flex: 1;
     min-width: 0;
     overflow: hidden;
-    text-overflow: ellipsis;
     opacity: 0;
-    transition: opacity var(--dur-fast) var(--ease-out);
+    transform: translateX(-6px);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
   }
   .sidenav:hover .sidenav-label,
   .sidenav:has(:focus-visible) .sidenav-label,
   .sidenav.is-pinned .sidenav-label {
     opacity: 1;
+    transform: none;
+    transition:
+      opacity var(--dur-base) var(--ease-out) calc(var(--rail-delay) + 90ms),
+      transform var(--dur-slow) var(--rail-ease) calc(var(--rail-delay) + 60ms);
   }
   .sidenav-wordmark {
     font-family: var(--font-brand);
@@ -656,17 +669,30 @@
   /* Streak and level: numbers, not sentences. Slim, they stack as icons; open, they sit
      side by side as two small stats and the flame's badge steps aside. */
   .sidenav-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
+    position: relative;
+    flex: none;
+    height: 82px;
+    transition: height var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
   .sidenav-stat {
+    position: absolute;
+    top: 0;
+    left: 0;
     display: flex;
     align-items: center;
-    min-width: 0;
+    width: 44px;
     height: 40px;
+    overflow: hidden;
     border-radius: 12px;
     color: var(--fg-muted);
+    transition:
+      transform var(--dur-slow) var(--rail-ease) var(--rail-delay),
+      width var(--dur-slow) var(--rail-ease) var(--rail-delay),
+      background var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .sidenav-stat + .sidenav-stat {
+    transform: translateY(42px);
   }
   .sidenav-stat:hover {
     color: var(--fg);
@@ -689,6 +715,9 @@
     opacity: 0;
     transition: opacity var(--dur-fast) var(--ease-out);
   }
+  .sidenav-stat .sidenav-icon {
+    flex: none;
+  }
   .sidenav-stat-value {
     font-size: var(--text-base);
     font-weight: 700;
@@ -705,17 +734,23 @@
   .sidenav:hover .sidenav-stats,
   .sidenav:has(:focus-visible) .sidenav-stats,
   .sidenav.is-pinned .sidenav-stats {
-    flex-direction: row;
+    height: 40px;
   }
   .sidenav:hover .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat,
   .sidenav.is-pinned .sidenav-stat {
-    flex: 1;
+    width: calc(50% - 1px);
+  }
+  .sidenav:hover .sidenav-stat + .sidenav-stat,
+  .sidenav:has(:focus-visible) .sidenav-stat + .sidenav-stat,
+  .sidenav.is-pinned .sidenav-stat + .sidenav-stat {
+    transform: translateX(calc(100% + 2px));
   }
   .sidenav:hover .sidenav-stat-text,
   .sidenav:has(:focus-visible) .sidenav-stat-text,
   .sidenav.is-pinned .sidenav-stat-text {
     opacity: 1;
+    transition: opacity var(--dur-base) var(--ease-out) calc(var(--rail-delay) + 90ms);
   }
   .sidenav:hover .sidenav-badge,
   .sidenav:has(:focus-visible) .sidenav-badge,
@@ -723,10 +758,11 @@
     opacity: 0;
   }
   /* The level ring: the track is the whole level, the fill what is done. */
+  /* Ring and trophy share one grid cell, so they are centred on each other at any zoom. */
+  .sidenav-stat .sidenav-icon > svg {
+    grid-area: 1 / 1;
+  }
   .sidenav-ring {
-    position: absolute;
-    left: 5px;
-    top: 3px;
     transform: rotate(-90deg);
   }
   .sidenav-ring circle {

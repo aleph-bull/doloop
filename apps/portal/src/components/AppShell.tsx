@@ -413,6 +413,7 @@ export function AppShell() {
               className="sidenav-link"
               onClick={() => setPinned(!pinned)}
               aria-pressed={pinned}
+              aria-label={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}
               title={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}
             >
               <span className="sidenav-icon" aria-hidden>
@@ -422,7 +423,12 @@ export function AppShell() {
                   <PanelLeftOpen size={19} strokeWidth={1.9} />
                 )}
               </span>
-              <span className="sidenav-label">{pinned ? 'Collapse' : 'Keep open'}</span>
+              {/* Unpinned it is just the icon; pinned, it says what it does. */}
+              {pinned && (
+                <span className="sidenav-label" aria-hidden>
+                  Collapse
+                </span>
+              )}
             </button>
           </div>
         </aside>
