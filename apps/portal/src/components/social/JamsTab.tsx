@@ -15,7 +15,12 @@ import {
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 
-const unknown = (id: string): Person => ({ id, name: 'Someone', avatarUrl: null, university: null });
+const unknown = (id: string): Person => ({
+  id,
+  name: 'Someone',
+  avatarUrl: null,
+  university: null,
+});
 
 /** "ends in 3 h", "ends in 2 d", "ended Oct 20". */
 function endsIn(jam: Jam, now = Date.now()): string {
@@ -130,7 +135,9 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
           someMinutes && (
             <span className="jam-winner">
               <Crown size={14} aria-hidden />
-              {leader.userId === me ? 'You won' : `${(people[leader.userId] ?? unknown(leader.userId)).name} won`}
+              {leader.userId === me
+                ? 'You won'
+                : `${(people[leader.userId] ?? unknown(leader.userId)).name} won`}
             </span>
           )
         ) : jam.you ? (
@@ -171,7 +178,9 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
               <span className="cmp-bar-track" aria-hidden>
                 <span className="cmp-bar-fill" style={{ width: `${(m.minutes / top) * 100}%` }} />
               </span>
-              <span className="jam-minutes tabular">{m.minutes > 0 ? fmtHours(m.minutes) : '–'}</span>
+              <span className="jam-minutes tabular">
+                {m.minutes > 0 ? fmtHours(m.minutes) : '–'}
+              </span>
             </li>
           );
         })}
@@ -183,7 +192,8 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
 /** Jams: start one, join a friend's or one by code, and see where everyone stands. */
 export function JamsTab() {
   const q = useJams();
-  if (q.isError) return <ErrorPanel message="Could not load the jams." onRetry={() => q.refetch()} />;
+  if (q.isError)
+    return <ErrorPanel message="Could not load the jams." onRetry={() => q.refetch()} />;
   if (!q.data)
     return (
       <div className="flex justify-center p-8">
@@ -196,8 +206,8 @@ export function JamsTab() {
       <Starter />
       {active.length === 0 && open.length === 0 && (
         <p className="muted text-sm jam-empty">
-          A jam is a small game. Start one, friends join, and whoever puts in the most focused
-          time before it ends takes it.
+          A jam is a small game. Start one, friends join, and whoever puts in the most focused time
+          before it ends takes it.
         </p>
       )}
       {active.map((j) => (

@@ -331,7 +331,44 @@ export interface JamsResponse {
   people: Record<string, Person>;
 }
 
+export interface CompareRow {
+  userId: string;
+  thisWeek: number;
+  lastWeek: number;
+  last28: number;
+  activeDays28: number;
+  sessionsThisWeek: number;
+  longest28: number;
+  streak: number;
+  /** Minutes per week, oldest first, ending with this week. */
+  weekly: number[];
+}
+
+export interface CompareResponse {
+  you: CompareRow;
+  friends: CompareRow[];
+  people: Record<string, Person>;
+  /** The Monday of each week in `weekly`, oldest first. */
+  weekStarts: string[];
+}
+
 export type LeaderboardScope = 'global' | 'friends';
+
+/** You beside everyone on the global board; see the API's GlobalStats. */
+export interface GlobalStats {
+  week: {
+    which: 'this' | 'last';
+    weekStart: string;
+    you: number;
+    average: number;
+    people: number;
+    aheadOf: number;
+  } | null;
+  days: { you: number; average: number } | null;
+  sessionLength: { you: number; average: number } | null;
+  streak: { you: number; average: number } | null;
+  rank: { position: number; of: number } | null;
+}
 
 export interface LeaderboardEntry {
   rank: number;
@@ -624,6 +661,8 @@ export const api = {
   leaveJam: (id: string) => request<void>('POST', `/api/social/jams/${id}/leave`),
   endJam: (id: string) =>
     request<{ jam: Jam; people: Record<string, Person> }>('POST', `/api/social/jams/${id}/end`),
+  leaderboardStats: () => request<GlobalStats>('GET', '/api/leaderboard/stats'),
+  compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(
       'GET',

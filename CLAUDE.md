@@ -120,6 +120,9 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Charts use shades of the accent, not a rainbow. No emoji in the UI; use lucide icons.
 - No sparse full-width panels with two lonely values; fold small values into an existing
   row as pills.
+- **Never a thin, sectioned page**: panels take the page's full width. A narrow centred
+  column of cards with empty sides on both reads as chopped (the owner's word, 2026-10-21,
+  on the first Jams page). Use the width: columns side by side, a bento, wider rows.
 - Inter for everything; Satoshi only for the "Komodon" wordmark in the nav.
 
 **Product.**
@@ -129,8 +132,8 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Analytics shows wins only: never a discouraging or zero-value card.
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
 - People are compared in two places, both asked for by the owner: the leaderboard (Social ›
-  Leaderboard, top 10 by focused time) and Social › Compare (your weeks beside your
-  friends'). Don't add comparison elsewhere.
+  Leaderboard, global or friends, top 10 by focused time) and jams (Social › Jams, a timed
+  game people choose to enter). Don't add comparison elsewhere.
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the

@@ -27,7 +27,12 @@ import {
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
 
-const unknown = (id: string): Person => ({ id, name: 'Someone', avatarUrl: null, university: null });
+const unknown = (id: string): Person => ({
+  id,
+  name: 'Someone',
+  avatarUrl: null,
+  university: null,
+});
 
 /** A small round button on a person's row: accept, decline, remove. */
 function RowButton({
@@ -140,10 +145,27 @@ export function FriendsCard() {
         <Spinner />
       ) : (
         <>
+          {data.friends.length === 0 ? (
+            !deferred && <p className="muted text-xs">No friends yet. Search above.</p>
+          ) : (
+            <ul className="side-people">
+              {data.friends.map((f) => (
+                <PersonRow key={f.userId} person={who(f.userId)}>
+                  <RowButton
+                    label="Remove friend"
+                    busy={remove.isPending}
+                    onClick={() => remove.mutate(f.userId, { onError: fail })}
+                  >
+                    <X size={13} aria-hidden />
+                  </RowButton>
+                </PersonRow>
+              ))}
+            </ul>
+          )}
           {data.incoming.length > 0 && (
             <>
-              <p className="side-label">Requests</p>
-              <ul className="side-people">
+              <p className="side-label">Requests to answer</p>
+              <ul className="side-people is-requests">
                 {data.incoming.map((r) => (
                   <PersonRow key={r.id} person={who(r.userId)}>
                     <RowButton
@@ -165,23 +187,6 @@ export function FriendsCard() {
                 ))}
               </ul>
             </>
-          )}
-          {data.friends.length === 0 ? (
-            !deferred && <p className="muted text-xs">No friends yet. Search above.</p>
-          ) : (
-            <ul className="side-people">
-              {data.friends.map((f) => (
-                <PersonRow key={f.userId} person={who(f.userId)}>
-                  <RowButton
-                    label="Remove friend"
-                    busy={remove.isPending}
-                    onClick={() => remove.mutate(f.userId, { onError: fail })}
-                  >
-                    <X size={13} aria-hidden />
-                  </RowButton>
-                </PersonRow>
-              ))}
-            </ul>
           )}
           {data.outgoing.length > 0 && (
             <>

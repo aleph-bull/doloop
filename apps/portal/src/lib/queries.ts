@@ -64,6 +64,7 @@ export const keys = {
   friends: ['social', 'friends'] as const,
   people: (q: string) => ['social', 'people', q] as const,
   jams: ['social', 'jams'] as const,
+  compare: ['social', 'compare'] as const,
   leaderboard: (scope: LeaderboardScope) => ['leaderboard', scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
@@ -613,6 +614,18 @@ export function useLeaveJam() {
 }
 export function useEndJam() {
   return useJamMutation((id: string) => api.endJam(id));
+}
+
+export function useCompare() {
+  return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
+}
+
+export function useLeaderboardStats() {
+  return useQuery({
+    queryKey: ['leaderboard', 'stats'],
+    queryFn: api.leaderboardStats,
+    staleTime: 60_000,
+  });
 }
 
 export function useLeaderboard(scope: LeaderboardScope) {

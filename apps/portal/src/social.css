@@ -42,16 +42,17 @@
   align-items: start;
   gap: 14px;
 }
+/* No scroll box on the sides: a scroller clips the glass shadows. The board is short and
+   stays in view; your card and friends scroll with the page. */
 .feed-side {
-  position: sticky;
-  top: 76px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: calc(100vh - 92px);
-  overflow-y: auto;
-  scrollbar-width: none;
+}
+.feed-side.is-right {
+  position: sticky;
+  top: 76px;
 }
 .feed {
   display: flex;
@@ -69,9 +70,6 @@
   .feed-side.is-left {
     grid-column: 1 / -1;
     order: 3;
-    position: static;
-    max-height: none;
-    overflow: visible;
   }
 }
 @container (max-width: 660px) {
@@ -551,9 +549,6 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  max-width: 680px;
-  width: 100%;
-  margin-inline: auto;
 }
 .friends-section {
   display: flex;
@@ -777,10 +772,7 @@
 .board {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  max-width: 680px;
-  width: 100%;
-  margin-inline: auto;
+  gap: 12px;
 }
 .board-top {
   display: flex;
@@ -951,8 +943,17 @@
   font-size: var(--text-xs);
 }
 .side-label {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
   font-size: var(--text-xs);
   color: var(--fg-subtle);
+}
+/* Requests sit on a faint tint, so they never read as friends. */
+.side-people.is-requests .side-person {
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 .side-people {
   list-style: none;
@@ -1039,9 +1040,6 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-width: 640px;
-  width: 100%;
-  margin-inline: auto;
 }
 /* Start one on the left, join with a code on the right; the two wrap on a narrow page. */
 .jam-starter {
@@ -1190,4 +1188,94 @@
   .jam-row .cmp-bar-track {
     display: none;
   }
+}
+
+/* ----- the board as one list, and you beside everyone under it ----- */
+.board-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+}
+.board-note {
+  margin-bottom: 2px;
+}
+.board-row {
+  padding: 7px 0;
+}
+.board-row .profile-avatar.is-xs {
+  width: 28px;
+  height: 28px;
+  font-size: 0.8rem;
+}
+.everyone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+}
+.everyone-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.everyone-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.everyone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 24px;
+}
+@media (max-width: 560px) {
+  .everyone-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.everyone-foot {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.vs {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.vs-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.vs-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.vs-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  text-align: right;
+}
+.vs-row {
+  display: grid;
+  grid-template-columns: 4.5em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-xs);
+}
+.vs-who {
+  color: var(--fg-muted);
+}
+.vs-value {
+  font-weight: 500;
+  min-width: 4.5ch;
+  text-align: right;
+}
+.cmp-bar-fill.is-you {
+  background: var(--accent);
 }
