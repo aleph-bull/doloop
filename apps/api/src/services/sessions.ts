@@ -47,7 +47,7 @@ import type {
   sleepSchema,
   startSessionSchema,
 } from '../validation';
-import { getNodeRow } from './nodes';
+import { cascadeCompletion, getNodeRow } from './nodes';
 import { routineForSession, tickFromSession } from './routines';
 import { loadCompletedSessions, paceContext, paceSnapshot } from './pace';
 import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
@@ -659,6 +659,7 @@ async function finishTask(
         .where(eq(nodes.id, node.id))
         .returning()
     )[0]!;
+    await cascadeCompletion(db, user.id, node.id, null, node.completedAt, now);
     nodeCompleted = true;
   }
 
