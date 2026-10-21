@@ -26,6 +26,8 @@ import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TimerCard } from '../components/TimerCard';
 import { TipCard } from '../components/TipCard';
+import { useHints } from '../lib/hints';
+import { useTip } from '../lib/use-tip';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
@@ -88,6 +90,8 @@ function FullDashboard() {
   );
   const settings = me.data?.user.settings;
   const sessionCount = sessions.data?.sessions.filter((s) => s.endedAt).length ?? 0;
+  const { tip } = useTip();
+  const { isDismissed } = useHints();
   const greeting = useGreeting({
     name: settings?.profile.name ?? null,
     streak: me.data?.user.streak.current ?? 0,
@@ -181,40 +185,32 @@ function FullDashboard() {
 
       <TipCard />
 
-      {/* One-time hints sit with the start panel, where they are seen. */}
-      <div className="hint-stack">
-        <Hint
-          id="rest-days"
-          when={sessionCount >= 3}
-          action={
-            <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
-              Set rest days
-            </Link>
-          }
-        >
-          Rest days never break your streak. Set the days you don't study and pace will plan around
-          them.
-        </Hint>
-        <Hint
-          id="freezes"
-          when={(me.data?.user.streak.current ?? 0) >= 3}
-          action={
-            <Link to="/achievements" className="btn btn-secondary btn-sm">
-              Open the shop
-            </Link>
-          }
-        >
-          Your streak is growing. A streak freeze from the shop covers one missed day automatically.
-        </Hint>
-        <Hint id="xp" when={sessionCount >= 1 && sessionCount < 3}>
-          Every session moves you toward the next level, and levels unlock new backgrounds.
-          Achievements has the details.
-        </Hint>
-        <Hint id="calendar" when={anyDue && sessionCount >= 2}>
-          Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see planned
-          versus needed hours.
-        </Hint>
-      </div>
+      {/* One-time hints sit with the start panel, where they are seen. Only one tip shows
+          at a time: none while the tip card is up, otherwise the first that is due. */}
+      {!tip &&
+        [
+          <Hint
+            key="rest-days"
+            id="rest-days"
+            when={sessionCount >= 3}
+            action={
+              <Link to="/settings#rest-days" className="btn btn-secondary btn-sm">
+                Set rest days
+              </Link>
+            }
+          >
+            Rest days never break your streak. Set the days you don't study and pace will plan
+            around them.
+          </Hint>,
+          <Hint key="xp" id="xp" when={sessionCount >= 1 && sessionCount < 3}>
+            Every session moves you toward the next level, and levels unlock new backgrounds.
+            Achievements has the details.
+          </Hint>,
+          <Hint key="calendar" id="calendar" when={anyDue && sessionCount >= 2}>
+            Planned blocks and Google Calendar sync arrive in the Calendar tab, so you can see
+            planned versus needed hours.
+          </Hint>,
+        ].find((h) => h.props.when && !isDismissed(h.props.id))}
 
       {/* A first visit: the one thing to do comes before any numbers. */}
       {roots.length === 0 && (

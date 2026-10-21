@@ -124,7 +124,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstSpikeOpacity: 1,
   },
   dashboard: { focusOnly: false },
-  features: { routines: true, plans: true, grades: true, calendar: true },
+  features: { routines: true, plans: true, grades: false, calendar: true },
+  nav: { style: 'top' },
   focusScreen: { openOnStart: 'ask' },
   timelapse: {
     record: 'ask',

@@ -4,13 +4,14 @@ import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
   ChartColumn,
-  ChevronLeft,
   ChevronRight,
   Flame,
   GraduationCap,
   House,
   ListChecks,
   MessageSquareText,
+  PanelLeftClose,
+  PanelLeftOpen,
   ShieldCheck,
   Repeat,
   Settings as SettingsIcon,
@@ -28,13 +29,13 @@ import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
-import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 import { SignOutButton } from './SignOutButton';
 
 /**
- * `short` is the phone tab bar's label, where seven tabs share 390px. `feature` names the
+ * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
+ * under a divider, where new features go. `short` is the phone label; `feature` names the
  * setting that can take a page out of the nav.
  */
 const links: Array<{
@@ -42,23 +43,69 @@ const links: Array<{
   label: string;
   short: string;
   icon: LucideIcon;
+  group: 'main' | 'more';
   feature?: keyof UserSettings['features'];
 }> = [
-  { to: '/', label: 'Dashboard', short: 'Home', icon: House },
-  { to: '/tasks', label: 'Tasks', short: 'Tasks', icon: ListChecks },
-  { to: '/routines', label: 'Routines', short: 'Routines', icon: Repeat, feature: 'routines' },
-  { to: '/plans', label: 'Plans', short: 'Plans', icon: RouteIcon, feature: 'plans' },
-  { to: '/grades', label: 'Grades', short: 'Grades', icon: GraduationCap, feature: 'grades' },
+  { to: '/', label: 'Dashboard', short: 'Home', icon: House, group: 'main' },
+  { to: '/tasks', label: 'Tasks', short: 'Tasks', icon: ListChecks, group: 'main' },
   {
     to: '/calendar',
     label: 'Calendar',
     short: 'Calendar',
     icon: CalendarDays,
+    group: 'main',
     feature: 'calendar',
   },
-  { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn },
-  { to: '/social', label: 'Social', short: 'Social', icon: Users },
+  { to: '/social', label: 'Social', short: 'Social', icon: Users, group: 'main' },
+  { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn, group: 'main' },
+  {
+    to: '/routines',
+    label: 'Routines',
+    short: 'Routines',
+    icon: Repeat,
+    group: 'more',
+    feature: 'routines',
+  },
+  {
+    to: '/plans',
+    label: 'Plans',
+    short: 'Plans',
+    icon: RouteIcon,
+    group: 'more',
+    feature: 'plans',
+  },
+  {
+    to: '/grades',
+    label: 'Grades',
+    short: 'Grades',
+    icon: GraduationCap,
+    group: 'more',
+    feature: 'grades',
+  },
 ];
+
+const PIN_KEY = 'komogon.rail.pinned';
+
+/** Whether the sidebar is pinned open, remembered in this browser only. */
+function usePinnedRail(): [boolean, (v: boolean) => void] {
+  const [pinned, set] = useState(() => {
+    try {
+      return localStorage.getItem(PIN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const update = (v: boolean) => {
+    set(v);
+    try {
+      if (v) localStorage.setItem(PIN_KEY, '1');
+      else localStorage.removeItem(PIN_KEY);
+    } catch {
+      // Storage blocked: it stays as chosen until the page reloads.
+    }
+  };
+  return [pinned, update];
+}
 
 /**
  * The level, with a short bar that fills toward the next one. It is also the way into
@@ -93,6 +140,91 @@ function LevelPill({ xp, level }: { xp: number; level: number }) {
   );
 }
 
+/** One row of the sidebar: the icon always, the label once it opens. */
+function RailLink({
+  to,
+  label,
+  icon: Icon,
+  end,
+  children,
+}: {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  end?: boolean;
+  children?: React.ReactNode;
+}) {
+  return (
+    <NavLink to={to} end={end} className="sidenav-link" title={label}>
+      <span className="sidenav-icon" aria-hidden>
+        <Icon size={19} strokeWidth={1.9} />
+      </span>
+      <span className="sidenav-label">{label}</span>
+      {children}
+    </NavLink>
+  );
+}
+
+/** The ring's circumference: r = 15 in a 34 box. */
+const RING = 2 * Math.PI * 15;
+
+/**
+ * Streak and level at the foot of the sidebar, as numbers rather than sentences. Slim,
+ * they stack as icons: the flame carries the day count, and a ring around the trophy fills
+ * toward the next level, so a full circle is a finished level. Open, they sit side by side
+ * as two small stats.
+ */
+function RailStats({
+  streak,
+  level,
+  ratio,
+  toNext,
+}: {
+  streak: number;
+  level: number;
+  ratio: number;
+  toNext: number;
+}) {
+  const days = `${streak} ${streak === 1 ? 'day' : 'days'} in a row`;
+  const lvl = `Level ${level}, ${toNext} XP to level ${level + 1}`;
+  return (
+    <div className="sidenav-stats">
+      <NavLink to="/analytics" className="sidenav-stat" title={days} aria-label={days}>
+        <span className="sidenav-icon" aria-hidden>
+          <Flame size={19} strokeWidth={1.9} />
+          {streak > 0 && (
+            <span className="sidenav-badge sidenav-badge-flame tabular">{streak}</span>
+          )}
+        </span>
+        <span className="sidenav-stat-text" aria-hidden>
+          <span className="sidenav-stat-value tabular">{streak}</span>
+          <span className="sidenav-stat-unit">{streak === 1 ? 'day' : 'days'}</span>
+        </span>
+      </NavLink>
+      <NavLink to="/achievements" className="sidenav-stat" title={lvl} aria-label={lvl}>
+        <span className="sidenav-icon" aria-hidden>
+          <svg className="sidenav-ring" viewBox="0 0 34 34" width="34" height="34">
+            <circle cx="17" cy="17" r="15" className="sidenav-ring-track" />
+            <circle
+              cx="17"
+              cy="17"
+              r="15"
+              className="sidenav-ring-fill"
+              strokeDasharray={RING}
+              strokeDashoffset={RING * (1 - Math.min(1, Math.max(0, ratio)))}
+            />
+          </svg>
+          <Trophy size={15} strokeWidth={1.9} />
+        </span>
+        <span className="sidenav-stat-text" aria-hidden>
+          <span className="sidenav-stat-value tabular">{level}</span>
+          <span className="sidenav-stat-unit">level</span>
+        </span>
+      </NavLink>
+    </div>
+  );
+}
+
 export function AppShell() {
   useCalendarImportRefresh();
   const me = useMe();
@@ -106,12 +238,43 @@ export function AppShell() {
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
+  const main = shown.filter((l) => l.group === 'main');
+  const more = shown.filter((l) => l.group === 'more');
+  const sidebar = settings?.nav?.style === 'sidebar';
+  const [pinned, setPinned] = usePinnedRail();
+  const location = useLocation();
+
+  // The page's left margin follows the sidebar, so the layout reads it from the root.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (sidebar) root.dataset.nav = pinned ? 'sidebar-pinned' : 'sidebar';
+    else delete root.dataset.nav;
+    return () => {
+      delete root.dataset.nav;
+    };
+  }, [sidebar, pinned]);
 
   // The active pill is one element that slides and resizes between links, so a tab
   // change reads as movement rather than a jump.
   const navRef = useRef<HTMLElement | null>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0, animate: false });
-  const location = useLocation();
+
+  // When every label no longer fits, the bar shows icons and names only the current page.
+  // The width the labels need is kept from the last time they showed, to know when they
+  // fit again.
+  const [compact, setCompact] = useState(false);
+  const labelledWidth = useRef(0);
+  const measureFit = useCallback(() => {
+    const nav = navRef.current;
+    const room = nav?.parentElement?.clientWidth ?? 0;
+    if (!nav || !room) return;
+    if (!compact) {
+      labelledWidth.current = nav.scrollWidth;
+      if (nav.scrollWidth > room + 1) setCompact(true);
+    } else if (labelledWidth.current && labelledWidth.current <= room) {
+      setCompact(false);
+    }
+  }, [compact]);
 
   const placeIndicator = useCallback((target: HTMLElement) => {
     const left = target.offsetLeft;
@@ -127,7 +290,7 @@ export function AppShell() {
   const measureIndicator = useCallback(() => {
     const active = navRef.current?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
     if (!active) {
-      // No primary tab is active (Settings, say) â€” fade the pill out where it stands.
+      // No primary tab is active (Settings, say): fade the pill out where it stands.
       setIndicator((prev) => (prev.width === 0 ? prev : { ...prev, width: 0, animate: true }));
       return;
     }
@@ -145,27 +308,10 @@ export function AppShell() {
     [placeIndicator],
   );
 
-  // When the bar is too narrow for every tab, the tabs scroll sideways, with an arrow
-  // on each side that hides one.
-  const {
-    edges: overflow,
-    measure: measureOverflow,
-    scrollByPage: scrollTabs,
-  } = useScrollEdges(navRef);
-
   useLayoutEffect(() => {
+    measureFit();
     measureIndicator();
-    // Arriving on a tab from elsewhere should never leave it scrolled out of sight.
-    const nav = navRef.current;
-    const active = nav?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
-    if (nav && active) {
-      const start = active.offsetLeft;
-      const end = start + active.offsetWidth;
-      if (start < nav.scrollLeft) nav.scrollLeft = start - 32;
-      else if (end > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = end - nav.clientWidth + 32;
-    }
-    measureOverflow();
-  }, [measureIndicator, measureOverflow, location.pathname]);
+  }, [measureFit, measureIndicator, location.pathname, compact, shown.length]);
 
   // The bars firm up as the page scrolls under them, so text passing behind stays legible;
   // at the top they keep their usual glass. 0 at the top, 1 after the first 80px.
@@ -186,18 +332,24 @@ export function AppShell() {
     const nav = navRef.current;
     if (!nav) return;
     // Window resizes, the nav's own reflow, and late web fonts all move the links.
-    const ro = new ResizeObserver(() => measureIndicator());
+    const onChange = () => {
+      measureFit();
+      measureIndicator();
+    };
+    const ro = new ResizeObserver(onChange);
     ro.observe(nav);
+    if (nav.parentElement) ro.observe(nav.parentElement);
     for (const child of Array.from(nav.children)) ro.observe(child);
-    window.addEventListener('resize', measureIndicator);
-    void document.fonts?.ready.then(() => measureIndicator());
+    window.addEventListener('resize', onChange);
+    void document.fonts?.ready.then(onChange);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', measureIndicator);
+      window.removeEventListener('resize', onChange);
     };
-  }, [measureIndicator]);
+  }, [measureFit, measureIndicator]);
 
   const user = me.data?.user;
+  const lp = user ? levelProgress(user.xp) : null;
 
   return (
     <>
@@ -209,6 +361,83 @@ export function AppShell() {
       <a href="#main" className="skip-link">
         Skip to content
       </a>
+
+      {/* Chosen in Settings › Pages: a slim sidebar that opens to show labels, or stays open. */}
+      {sidebar && (
+        <aside className={`sidenav chrome${pinned ? ' is-pinned' : ''}`} aria-label="Primary">
+          <NavLink to="/" className="sidenav-brand" aria-label="Komodon home" title="Komodon">
+            <span className="sidenav-icon" aria-hidden>
+              <LogoMark size={22} />
+            </span>
+            <span className="sidenav-label sidenav-wordmark">Komodon</span>
+          </NavLink>
+          <nav className="sidenav-group">
+            {main.map((l) => (
+              <RailLink key={l.to} to={l.to} label={l.label} icon={l.icon} end={l.to === '/'} />
+            ))}
+          </nav>
+          {more.length > 0 && (
+            <>
+              <div className="sidenav-divider" aria-hidden />
+              <nav className="sidenav-group" aria-label="More pages">
+                {more.map((l) => (
+                  <RailLink key={l.to} to={l.to} label={l.label} icon={l.icon} />
+                ))}
+              </nav>
+            </>
+          )}
+          <div className="flex-1" />
+          <div className="sidenav-group">
+            {user && (
+              <RailStats
+                streak={user.streak.current}
+                level={user.level}
+                ratio={lp?.ratio ?? 0}
+                toNext={lp?.toNext ?? 0}
+              />
+            )}
+            {isAdmin && <RailLink to="/admin" label="Admin" icon={ShieldCheck} />}
+            {FEEDBACK_URL && (
+              <a
+                href={FEEDBACK_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="sidenav-link"
+                title="Send feedback"
+              >
+                <span className="sidenav-icon" aria-hidden>
+                  <MessageSquareText size={19} strokeWidth={1.9} />
+                </span>
+                <span className="sidenav-label">Send feedback</span>
+              </a>
+            )}
+            <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
+            <button
+              type="button"
+              className="sidenav-link"
+              onClick={() => setPinned(!pinned)}
+              aria-pressed={pinned}
+              aria-label={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}
+              title={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}
+            >
+              <span className="sidenav-icon" aria-hidden>
+                {pinned ? (
+                  <PanelLeftClose size={19} strokeWidth={1.9} />
+                ) : (
+                  <PanelLeftOpen size={19} strokeWidth={1.9} />
+                )}
+              </span>
+              {/* Unpinned it is just the icon; pinned, it says what it does. */}
+              {pinned && (
+                <span className="sidenav-label" aria-hidden>
+                  Collapse
+                </span>
+              )}
+            </button>
+          </div>
+        </aside>
+      )}
+
       <header className="nav chrome">
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Komodon home">
@@ -217,26 +446,12 @@ export function AppShell() {
             </span>
             <span>Komodon</span>
           </NavLink>
-          <div
-            className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${
-              overflow.right ? ' can-right' : ''
-            }`}
-          >
-            {overflow.left && (
-              <button
-                type="button"
-                className="scroll-arrow scroll-arrow-left"
-                tabIndex={-1}
-                aria-hidden
-                title="More tabs"
-                onClick={() => scrollTabs(-1)}
-              >
-                <ChevronLeft size={16} aria-hidden />
-              </button>
-            )}
+          <div className="nav-scroll scroll-edges ml-2">
             <nav
               ref={navRef}
-              className="nav-primary scroll-edges-track flex items-center gap-1"
+              className={`nav-primary scroll-edges-track flex items-center gap-1${
+                compact ? ' is-compact' : ''
+              }`}
               aria-label="Primary"
             >
               <span
@@ -254,26 +469,16 @@ export function AppShell() {
                   to={l.to}
                   end={l.to === '/'}
                   className="nav-link"
+                  title={compact ? l.label : undefined}
+                  aria-label={l.label}
                   onClick={onNavClick}
                 >
-                  {l.label}
+                  <l.icon size={17} strokeWidth={1.9} className="nav-link-icon" aria-hidden />
+                  <span className="nav-link-label">{l.label}</span>
                 </NavLink>
               ))}
             </nav>
-            {overflow.right && (
-              <button
-                type="button"
-                className="scroll-arrow scroll-arrow-right"
-                tabIndex={-1}
-                aria-hidden
-                title="More tabs"
-                onClick={() => scrollTabs(1)}
-              >
-                <ChevronRight size={16} aria-hidden />
-              </button>
-            )}
           </div>
-          <div className="flex-1" />
           {user && (
             <div className="nav-stats">
               <NavLink to="/analytics" className="nav-streak" title="Current streak">
@@ -307,6 +512,8 @@ export function AppShell() {
           <SignOutButton />
         </div>
       </header>
+
+      {/* Phones: every page as an icon, and the one you are on widens to show its name. */}
       <nav className="tabbar chrome" aria-label="Primary">
         {shown.map((l) => (
           <NavLink
@@ -325,12 +532,13 @@ export function AppShell() {
           </NavLink>
         ))}
       </nav>
+
       <main id="main" className="page on-backdrop" tabIndex={-1}>
         {!online && (
           <Glass className="offline-bar" role="status">
             <WifiOff size={16} aria-hidden />
             <span>
-              You are offline. This is your saved data â€” it will refresh once you reconnect, and
+              You are offline. This is your saved data — it will refresh once you reconnect, and
               anything you change now will not be saved.
             </span>
           </Glass>

@@ -49,6 +49,14 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   (scrypt hashes), `POST /api/auth/signup|signin`, tokens signed with `AUTH_SECRET`. The
   portal uses them when no Supabase and no dev variables are set (`authMode` `'server'` in
   `apps/portal/src/lib/auth.tsx`). Supabase sign-in still works if both sides get its keys.
+- "Continue with Google" for those accounts: Google's own button (Identity Services) gives
+  the portal an ID token, `POST /api/auth/google` checks it against Google's keys and
+  `GOOGLE_SIGNIN_CLIENT_ID`, and joins the account with that email or starts one. The
+  portal shows the button only when `GET /api/auth/google` answers a client id. Try it in
+  the `sandbox-google` sandbox (8800/5186; placeholder id, so the popup itself fails).
+- Sign-in tries are limited in memory (`services/rate-limit.ts`): failed sign-ins per email
+  and per address, sign-ups per address, 429 with Retry-After. Addresses come from
+  `TRUST_PROXY_HOPS` (1 on Render); never set `trustProxy: true`, it trusts forged headers.
 - Dev sign-in (`DEV_AUTH_SECRET` / `VITE_DEV_AUTH_SECRET`) is local only and must never be
   set on Vercel or Render.
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
@@ -132,6 +140,10 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 
 ## Recent changes (2026-10-20)
 
+- Navigation (2026-10-21): the top bar is the default; Settings › Pages › Navigation can
+  switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card row, not the nav). New pages go in the `links` list
+  (`group: 'more'` puts them under the sidebar's divider). A crowded top bar and the phone
+  bar show icons, with only the current page named. There is no "More" menu on purpose.
 - Removed the weekly review page. `/analytics/review` redirects to Analytics; the API route
   and the `weekly_reviews` table are still there, unused by the portal.
 - Background pickers in Settings open minimized every time ("Show all backgrounds" opens

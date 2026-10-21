@@ -4,6 +4,7 @@ import { loadEnv } from './env';
 import { buildServer } from './server';
 import { backPayBadges } from './services/achievements';
 import { createGoogleClient } from './services/google';
+import { createGoogleTokenVerifier } from './services/google-signin';
 import type { CalendarDeps } from './services/calendar-sync';
 import { createOutlookClient } from './services/outlook';
 import { allowLocalTestAccounts } from './services/local-test-accounts';
@@ -81,9 +82,21 @@ const app = await buildServer({
   verifier,
   logger: true,
   corsOrigins: env.corsOrigins,
+  trustProxyHops: env.trustProxyHops,
   allowedEmails: env.allowedEmails,
   adminEmails: env.adminEmails,
-  passwordAuth: !env.supabaseUrl && env.authSecret ? { secret: env.authSecret } : null,
+  passwordAuth:
+    !env.supabaseUrl && env.authSecret
+      ? {
+          secret: env.authSecret,
+          google: env.googleSignInClientId
+            ? {
+                clientId: env.googleSignInClientId,
+                verify: createGoogleTokenVerifier(env.googleSignInClientId),
+              }
+            : null,
+        }
+      : null,
   calendar: {
     deps: calendarDeps,
     outlook:

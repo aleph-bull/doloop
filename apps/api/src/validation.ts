@@ -308,6 +308,7 @@ export const settingsSchema = z
         calendar: z.boolean(),
       })
       .partial(),
+    nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z
       .object({

@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komogon/ui';
-import { friendlyAuthError, useAuth } from '../lib/auth';
+import { friendlyAuthError, serverGoogleClientId, useAuth } from '../lib/auth';
 import { LocalTestAccounts } from '../components/LocalTestAccounts';
 import { LocalMailInbox } from '../components/LocalMailInbox';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 
 export function SignIn() {
   const auth = useAuth();
@@ -17,6 +18,18 @@ export function SignIn() {
   const [sent, setSent] = useState<'link' | 'confirm' | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+
+  /** Server mode: set when the API offers "Continue with Google". */
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (auth.mode !== 'server') return;
+    let cancelled = false;
+    void serverGoogleClientId().then((id) => !cancelled && setGoogleClientId(id));
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.mode]);
 
   if (auth.status === 'signed-in') return <Navigate to="/" replace />;
 
@@ -196,6 +209,20 @@ export function SignIn() {
               >
                 Continue with Google
               </Button>
+            </>
+          )}
+          {auth.mode === 'server' && googleClientId && !sent && (
+            <>
+              <div className="divider" style={{ margin: 0 }} />
+              <GoogleSignInButton
+                clientId={googleClientId}
+                onCredential={(credential) =>
+                  auth
+                    .signInWithGoogleCredential(credential)
+                    .catch((e) => toast(friendlyAuthError(e.message)))
+                }
+                onError={toast}
+              />
             </>
           )}
           {auth.mode === 'dev' && (

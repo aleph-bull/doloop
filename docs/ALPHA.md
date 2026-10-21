@@ -70,6 +70,18 @@ string (`postgresql://…?sslmode=require`). It starts empty. Your own data and 
   API's email-and-password accounts.
 - Deploy, then put the Vercel address into Render's `CORS_ORIGINS` and `PORTAL_URL`.
 
+**Optional: Continue with Google**
+
+- In Google Cloud Console › APIs & Services › Credentials, create an OAuth client ID of
+  type **Web application**. Under "Authorised JavaScript origins" add the portal's
+  addresses (`https://komogon.app`, the Vercel address, and `http://localhost:5173` to
+  try it locally). No redirect URI or client secret is needed. The OAuth consent screen
+  needs only the default email and profile scopes.
+- Put the client ID in Render's `GOOGLE_SIGNIN_CLIENT_ID`. The sign-in page asks the API
+  for it and shows the Google button only when it is set; nothing changes on Vercel.
+- A Google sign-in joins the account that already uses that email (password or not), so
+  existing testers can use either. `ALLOWED_EMAILS` applies to Google sign-ins too.
+
 **5. Feedback and errors** (optional, both off until set)
 
 - Make a short **Tally** form (the questions in section 4 below) and put its link in
@@ -112,10 +124,13 @@ to use a password they use anywhere else. When an admin email creates an account
 email already has data with no password (for example, your own data moved over from this
 computer), the password goes on that account and the data carries on.
 
-**Sign-in, for later.** Accounts are deliberately basic: no password reset and no email
-check. If someone forgets a password, give them a new one from the Admin page. For magic links, Google and
-password reset, use a Supabase project instead (SETUP.md Phase 2): set the Supabase
-variables on both sides, and the same sign-in page switches over.
+**Verification and password reset.** Password signup now requires an email code. Configure
+Resend on the API before enabling live signup: verify `komogon.app`, set `RESEND_API_KEY`
+privately on Render, and use `MAIL_FROM=Komodon <noreply@komogon.app>`. Forgot password uses
+the same mailer and revokes existing sessions after reset. Missing mail configuration
+leaves existing sign-in available and returns an unavailable message for code requests.
+See [SETUP.md](SETUP.md#verification-emails-and-password-reset-resend). Google sign-in
+continues to use Google's email proof; school/organization verification is separate.
 
 ## 2. Manual pass (about 30 minutes, on the hosted build)
 
@@ -125,7 +140,9 @@ on a phone. Tick each line; anything that fails goes on the known-issues list or
 **First run**
 
 - [ ] Create an account with email and password (not dev sign-in), sign out, sign back in.
-- [ ] Onboarding: name, a course, the first thing due. Lands on the dashboard.
+- [ ] Verify the signup email code, then enter the dashboard without course/task questions.
+- [ ] Start a session with inline options; navigation, including Social, stays available.
+- [ ] Forgot password sends a code, changes the password and signs out previous sessions.
 - [ ] Reload the page: still signed in, nothing lost.
 
 **Studying**

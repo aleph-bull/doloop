@@ -242,6 +242,8 @@ export interface UserSettings {
     grades: boolean;
     calendar: boolean;
   };
+  /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
+  nav: { style: 'top' | 'sidebar' };
   /** The focus screen tab. */
   focusScreen: {
     /** Open the focus screen when a session starts: ask each time, always, or never. */

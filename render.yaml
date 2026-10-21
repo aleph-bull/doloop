@@ -27,6 +27,15 @@ services:
         sync: false
       - key: MAIL_FROM
         value: Komodon <noreply@komogon.app>
+
+      # Render's proxy adds the caller's address to X-Forwarded-For; trust that one entry
+      # so the sign-in limits count each caller, not the proxy
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      # Optional "Continue with Google": a Web OAuth client id whose authorised JavaScript
+      # origins include the portal's address
+      - key: GOOGLE_SIGNIN_CLIENT_ID
+        sync: false
       # Postgres connection string (Neon, or any hosted Postgres)
       - key: DATABASE_URL
         sync: false

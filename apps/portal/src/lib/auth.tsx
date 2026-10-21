@@ -59,6 +59,8 @@ interface AuthApi extends AuthState {
   /** Resolves true when the account needs its email confirmed before it can sign in. */
   signUpWithPassword: (email: string, password: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
+  /** Server mode: sign in with the ID token from Google's sign-in button. */
+  signInWithGoogleCredential: (credential: string) => Promise<void>;
   signInDev: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -71,9 +73,8 @@ export const EMAIL_KEY = authMode === 'dev' ? 'komogon.dev.email' : 'komogon.ema
 
 /** POST to the API's own account routes; answers the token and email, or throws its error. */
 async function serverAuth(
-  path: 'signin' | 'signup',
-  email: string,
-  password: string,
+  path: 'signin' | 'signup' | 'google',
+  body: { email: string; password: string } | { credential: string },
 ): Promise<{
   token?: string;
   email: string;
@@ -86,7 +87,7 @@ async function serverAuth(
       'content-type': 'application/json',
       'x-timezone': Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify(body),
   });
   const data = (await res.json().catch(() => null)) as {
     token?: string;
@@ -103,10 +104,22 @@ async function serverAuth(
     throw new Error(data?.error ?? 'Sign-in failed');
   return {
     token: data.token,
-    email: data.email ?? email,
+    email: data.email ?? ('email' in body ? body.email : ''),
     verificationRequired: data.verificationRequired,
     challengeId: data.challengeId,
   };
+}
+
+/** Server mode: the Google client id when the API offers "Continue with Google", else null. */
+export async function serverGoogleClientId(): Promise<string | null> {
+  try {
+    const res = await fetch(`${apiBaseUrl(true)}/api/auth/google`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { clientId?: string | null };
+    return data.clientId ?? null;
+  } catch {
+    return null;
+  }
 }
 
 // Installed at import, before the first render: queries mounted outside the auth gate
@@ -199,7 +212,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithPassword = useCallback(
     async (email: string, password: string) => {
       if (!supabase) {
-        const r = await serverAuth('signin', email, password);
+        const r = await serverAuth('signin', { email, password });
         if (!r.token) throw new Error('Verify your email before signing in.');
         keepToken(r.token, r.email);
         return;
@@ -213,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signUpWithPassword = useCallback(
     async (email: string, password: string) => {
       if (!supabase) {
-        const r = await serverAuth('signup', email, password);
+        const r = await serverAuth('signup', { email, password });
         if (r.verificationRequired && r.challengeId) {
           setPendingVerification({ challengeId: r.challengeId, email: r.email });
           return true;
@@ -256,6 +269,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingVerification) return;
     setPendingVerification(await accountApi.resendEmailCode(pendingVerification.challengeId));
   }, [pendingVerification]);
+  const signInWithGoogleCredential = useCallback(
+    async (credential: string) => {
+      const r = await serverAuth('google', { credential });
+      if (!r.token) throw new Error('Google sign-in failed.');
+      keepToken(r.token, r.email);
+    },
+    [keepToken],
+  );
 
   const signInDev = useCallback(
     async (email: string) => {
@@ -286,6 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUpWithPassword,
       signInWithGoogle,
+      signInWithGoogleCredential,
       signInDev,
       signOut,
     }),
@@ -298,6 +320,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUpWithPassword,
       signInWithGoogle,
+      signInWithGoogleCredential,
       signInDev,
       signOut,
     ],

@@ -1417,3 +1417,45 @@ or calendar OAuth connection and makes no claim about an official role. Sharing 
 opt-in and limited to people with the exact same verified domain. Directory responses
 exclude private email addresses, study data, test accounts and configured admins.
 Removing or replacing the proof resets sharing. No product tour or modal is introduced.
+
+## Navigation: top bar by default, sidebar as a choice, 2026-10-21 (user request)
+
+- **Top bar stays the default.** Settings › Pages › Navigation offers **Top bar** or **Sidebar** (`settings.nav.style`, saved on the account). It only changes a computer; phones always use the bottom bar.
+- **The sidebar** is a slim icon rail down the left (60px) that opens over the page to 212px with labels on hover or keyboard focus, after a 120ms pause. "Keep open" pins it and moves the page over; that choice is kept in this browser (`komogon.rail.pinned`). Daily pages on top (Dashboard, Tasks, Calendar, Analytics), the rest under a divider (Routines, Plans, Grades), then streak, Level and Settings at the bottom.
+- **A crowded top bar turns into icons** instead of scrolling: when the labels no longer fit, every page shows as an icon and the current one keeps its name. It goes back to labels once there is room.
+- **The phone bar shows every page as an icon, and the current one widens into a pill with its name.** This replaced a "More" menu the user didn't like: nothing is hidden, and every page is one tap away. It holds about nine pages before it would need to scroll.
+- **Sign out** is also a labelled button in Settings › Account, beside "Signed in as" (the sidebar has no sign-out icon).
+- Considered and set aside: grouping pages into Today/Plan/Progress tabs, reaching pages only from dashboard cards (the dashboard would get too long), and a "More" menu.
+
+## Continue with Google, 2026-10-21 (user request)
+
+- **Google sign-in for the API's own accounts**, beside email and password. The portal shows Google's own button (Google Identity Services, popup); it hands back an ID token, and `POST /api/auth/google` checks the signature against Google's published keys, the issuer, and that the token was made for our client id (`GOOGLE_SIGNIN_CLIENT_ID`, a separate env var from the calendar's `GOOGLE_CLIENT_ID`). Only the client id is needed: no secret, no redirect.
+- **Accounts join by email.** A Google sign-in whose email Google has confirmed goes to the account that already uses that address (one with a password, or one moved over from a local copy), so testers can use either way in. Otherwise it starts a new account. The invite list applies the same as for sign-ups. No new table: the email is the link.
+- **The button appears only when the API offers it** (`GET /api/auth/google` answers the client id), so turning it on is one Render variable and nothing on Vercel.
+- **Google's button keeps Google's look** (dark fill, pill shape to match the Sign in button), since Google's terms ask for it; it sits under a divider below the password form.
+
+## Limits on sign-in tries, 2026-10-21 (user request)
+
+- **Passwords were already salted and hashed** (scrypt, a random 16-byte salt each, compared in constant time); nothing changed there. The gap was that nothing slowed down guessing.
+- **Wrong passwords are limited**: 10 per email in 15 minutes from anywhere (so one account can't be guessed from many addresses), and 30 per address in 15 minutes whatever the email. Only failed tries count, and a right password clears that email's count, so people signing in normally never meet it. Failed Google sign-ins count toward the per-address limit too.
+- **Sign-ups are limited to 20 per address an hour**, generous enough for a class signing up together on one school network.
+- Over a limit, the API answers 429 with a Retry-After header and "There have been too many tries. Please wait a few minutes and try again."
+- **Kept in memory, no new dependency** (`services/rate-limit.ts`). A restart forgets the counts, which is fine for slowing guessing on one Render instance.
+- **The caller's address comes from the nearest proxy** (`TRUST_PROXY_HOPS`, 1 on Render), not `trustProxy: true`, which would take the leftmost X-Forwarded-For entry that callers can write themselves.
+- **An unknown email takes as long as a wrong password**: sign-in checks against a stand-in hash when there is no account, so timing doesn't show which emails have accounts.
+
+## One tip at a time on the dashboard, 2026-10-21 (user request)
+
+- **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then XP, then the calendar), and the next one takes its place after it is closed.
+- **The streak freeze hint became a regular tip** (user request, same day): it now rotates with the other tips, linking to the shop, instead of being its own card.
+
+## 2026-10-21: Merge onboarding, calendar and Social with the latest main
+
+The user requested a safe merge and push. Incoming Google sign-in, login rate limits,
+top-bar/sidebar navigation, default-hidden Grades and single dashboard tips are retained.
+Social is part of the main navigation in either layout. Google sign-in records Google's
+email proof separately from organization verification and uses the same session version
+as password sign-in, so password reset revokes sessions from both methods. Reserved local
+test identities remain blocked from hosted signup and Google sign-in. Migrations 0014–0016
+are additive; existing study records are preserved. Resend still requires a verified
+komogon.app domain and private server key before hosted password signup can send codes.
