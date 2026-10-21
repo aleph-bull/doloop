@@ -1400,3 +1400,7 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **After Collapse, the sidebar rests shut until the pointer leaves.** The pointer is still over the sidebar when Collapse is clicked, so hover kept it open as an overlay while the page slid under it, hiding the left of the page. An is-resting class turns hover-opening off until mouseleave.
 - **The sidebar trophy is 16px, not 15px**, so it lands on whole pixels inside the 44px cell and the ring; at 15px its half-pixel left edge read as a shift to the right.
 - **The same fields in Settings › Account** (user request, same day): picture, name, university and the line about you are one component, `components/ProfileFields.tsx`, used by the gear dialog (name and bio save on Save) and by Settings › Account (each saves as you leave it). Account search also answers "picture", "university", "verify" and "bio".
+
+## The page stays put when the sidebar is pinned or collapsed, 2026-10-21 (user request)
+
+- **Pinning and collapsing no longer move the page.** Pinning used to widen the page's left margin from the slim rail to the open one, sliding everything over. The page now always keeps room for the open rail, so the two only change the rail itself, and the rail opening on hover never covers the page either. The collapsed rail sits beside a wider margin as a result.

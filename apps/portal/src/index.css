@@ -508,14 +508,9 @@
     --rail-open: 212px;
     --rail-ease: cubic-bezier(0.32, 0.72, 0, 1);
   }
-  /* Pinning moves the page over with the rail instead of jumping. */
+  /* The page keeps room for the open rail whether it is pinned or not, so collapsing or
+     pinning only changes the rail: the page never moves, and the rail never covers it. */
   :root[data-nav^='sidebar'] body {
-    transition: padding-left var(--dur-slow) var(--rail-ease);
-  }
-  :root[data-nav='sidebar'] body {
-    padding-left: calc(var(--rail-slim) + 24px);
-  }
-  :root[data-nav='sidebar-pinned'] body {
     padding-left: calc(var(--rail-open) + 24px);
   }
   :root[data-nav^='sidebar'] .nav {
