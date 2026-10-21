@@ -1365,3 +1365,7 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Kept in memory, no new dependency** (`services/rate-limit.ts`). A restart forgets the counts, which is fine for slowing guessing on one Render instance.
 - **The caller's address comes from the nearest proxy** (`TRUST_PROXY_HOPS`, 1 on Render), not `trustProxy: true`, which would take the leftmost X-Forwarded-For entry that callers can write themselves.
 - **An unknown email takes as long as a wrong password**: sign-in checks against a stand-in hash when there is no account, so timing doesn't show which emails have accounts.
+
+## One tip at a time on the dashboard, 2026-10-21 (user request)
+
+- **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then streak freezes, then XP, then the calendar), and the next one takes its place after it is closed.
