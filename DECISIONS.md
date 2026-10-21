@@ -1679,6 +1679,10 @@ The owner (zachzhao2015@gmail.com, the only `ADMIN_EMAILS` entry on Render) wasn
 
 Marking a task done (the Tasks checkbox, or ending a session with "mark done") marks every unfinished item under it done at the same moment, at every depth. A subtask unticked afterwards stays open and the parent stays done. Unticking the parent reopens only the items finished with it (same timestamp), so subtasks finished earlier keep their own dates and Ctrl+Z puts everything back as it was. It lives in the API (`cascadeCompletion` in `services/nodes.ts`), so every client gets it.
 
+## Closing a tip asks "Disable tips?", 2026-10-21 (user request)
+
+Closing a tip on the dashboard raises a toast from the bottom: "Disable tips?" with a check and an X. The check turns off Settings › Pages › Dashboard › "Tips about the app" (the same `quote.appTips` switch); the X, or no answer within 8 seconds, keeps tips on. It asks every time a tip is closed. To make it, `toast()` in `@komogon/ui` now returns a function that takes that toast away early.
+
 ## Weekly streaks, and rest days out of the streaks, 2026-10-21 (user request)
 
 - **A weekly streak sits beside the daily one.** A Monday-to-Sunday week counts once it has enough streak days, judged exactly as the daily streak judges a day (the minimum minutes, the day start hour). "Days a week for the weekly streak" in Settings › Pace and streaks sets how many, 1 to 7, default 1, the way running apps count a week with one run. This week counts as soon as it has its days and otherwise stays open until Sunday ends; a week short of its days ends the run. Freezes stay the daily streak's.

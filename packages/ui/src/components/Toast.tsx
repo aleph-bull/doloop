@@ -10,7 +10,11 @@ export interface ToastItem {
 }
 
 interface ToastApi {
-  toast: (message: ReactNode, opts?: { tone?: ToastItem['tone']; durationMs?: number }) => void;
+  /** Shows a toast. The function it returns takes it away early, for toasts with buttons. */
+  toast: (
+    message: ReactNode,
+    opts?: { tone?: ToastItem['tone']; durationMs?: number },
+  ) => () => void;
 }
 
 /** How long the exit animation is given before the toast is taken out of the list. */
@@ -22,18 +26,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const seq = useRef(0);
 
-  const toast = useCallback<ToastApi['toast']>((message, opts) => {
-    const id = ++seq.current;
-    setItems((list) => [...list, { id, message, tone: opts?.tone ?? 'neutral' }]);
-    const shownFor = Math.max(LEAVE_MS, opts?.durationMs ?? 3500);
-    // It fades for the last moment of its time, then goes.
-    window.setTimeout(() => {
-      setItems((list) => list.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
-    }, shownFor - LEAVE_MS);
+  // It fades for a moment, then goes. Leaving twice (closed early, then timed out) is harmless.
+  const leave = useCallback((id: number) => {
+    setItems((list) => list.map((t) => (t.id === id ? { ...t, leaving: true } : t)));
     window.setTimeout(() => {
       setItems((list) => list.filter((t) => t.id !== id));
-    }, shownFor);
+    }, LEAVE_MS);
   }, []);
+
+  const toast = useCallback<ToastApi['toast']>(
+    (message, opts) => {
+      const id = ++seq.current;
+      setItems((list) => [...list, { id, message, tone: opts?.tone ?? 'neutral' }]);
+      const shownFor = Math.max(LEAVE_MS, opts?.durationMs ?? 3500);
+      window.setTimeout(() => leave(id), shownFor - LEAVE_MS);
+      return () => leave(id);
+    },
+    [leave],
+  );
 
   const api = useMemo(() => ({ toast }), [toast]);
 

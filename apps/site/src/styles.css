@@ -32,6 +32,8 @@ html {
   background: var(--site-page);
   scroll-behavior: smooth;
   overflow-x: hidden;
+  /* A phone's own tap highlight comes out as an oval on a pill; the buttons press in instead. */
+  -webkit-tap-highlight-color: transparent;
 }
 body {
   margin: 0;
