@@ -1481,3 +1481,12 @@ komogon.app domain and private server key before hosted password signup can send
 - **The top bar's tabs scroll again when they do not fit**, with the faded edge and an arrow on each side that hides a tab, as before the sidebar arrived. The current tab is kept in view, also when the streak and level counters load and take some of the room.
 - **A top bar too small for a scrolling row hands the pages to the bottom bar.** When the tabs do not fit and have under 480px of room, the pages move to the phone-style icon bar along the bottom (centred, no wider than 560px) and the top bar keeps only the brand, counters and controls. The width the tabs need is remembered so the bar knows when there is room again. The bottom bar's rules key off a data-tabbar attribute set by AppShell (phones, or a crowded bar) instead of a media query alone.
 - **Fix (same day):** once the bottom bar had shown, it stayed for good. The spacer that keeps the controls to the right fills the bar while the tabs are hidden, and the room measurement counted its width as a control, so the tabs never seemed to fit again. The spacer now counts as zero width.
+
+## The page stays put when the sidebar is pinned or collapsed, 2026-10-21 (user request)
+
+- **Pinning and collapsing no longer move the page.** Pinning used to widen the page's left margin from the slim rail to the open one, sliding everything over. The page now always keeps room for the open rail, so the two only change the rail itself, and the rail opening on hover never covers the page either. The collapsed rail sits beside a wider margin as a result.
+
+## Even spacing in the sidebar stats, 2026-10-21 (user request)
+
+- **The streak and level numbers sit the same distance from their icons.** The flame is narrower than the level ring but both sit in the same 44px cell, so the streak number floated far from its flame while the level number crowded its ring. The numbers now shift (5px in for the streak, 2px out for the level) so each is about 7px from its icon; the icons, the slim rail and the open and close animations are unchanged.
+- **Fix:** collapsing with the pointer away from the sidebar (from the keyboard, say) left hover-opening off until the pointer had gone in and out once. The sidebar now rests shut only when Collapse is clicked with the pointer on it.

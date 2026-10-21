@@ -247,9 +247,11 @@ export function AppShell() {
   // After Collapse is clicked the pointer is still over the sidebar, which would hold it
   // open over the page that has just moved under it. It rests shut until the pointer leaves.
   const [resting, setResting] = useState(false);
-  const togglePinned = () => {
+  const togglePinned = (event: React.MouseEvent<HTMLButtonElement>) => {
     setPinned(!pinned);
-    if (pinned) setResting(true);
+    // Only when the pointer is on the sidebar: collapsed from the keyboard, it would never
+    // leave, and hover would stay off until it had gone in and out once.
+    if (pinned && event.currentTarget.closest('.sidenav')?.matches(':hover')) setResting(true);
   };
   const location = useLocation();
 
