@@ -25,7 +25,7 @@ if (!still && 'IntersectionObserver' in window) {
       shown = true;
       devices.classList.add('is-in');
     };
-    const timer = window.setTimeout(show, 2200);
+    const timer = window.setTimeout(show, 1300);
     const early = () => {
       window.clearTimeout(timer);
       devices.style.setProperty('--d', '0ms');
