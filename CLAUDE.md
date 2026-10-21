@@ -357,6 +357,43 @@ of sessions, friendships, posts, a group, jams, a nudge and two live sessions; p
 launch configs (8802/5188) and sign in as jerry@komodon.demo. The configs run from the
 `social` worktree folder; point them at the checkout you are working in.
 
+## The timelapse, and why it can't use the iPhone's camera
+
+- **How it works.** On the focus screen, `useTimelapseRecorder` (`apps/portal/src/lib/timelapse.ts`)
+  takes JPEG stills from the camera, plus a shared screen if the person picks one
+  (`getDisplayMedia`, asked each session). It takes them during focus only, unless breaks
+  are recorded too. The stills stay in the tab's memory: nothing is uploaded, and closing
+  the tab loses them. Pacing works like a phone timelapse (`packages/core/src/timelapse.ts`).
+  Auto mode starts at one still every 0.5 s. Each time the stills reach twice the target
+  (600), every other one is dropped and the interval doubles, so a session of any length
+  ends up as a video of about 20-40 s.
+- **Making the video.** `renderTimelapse` draws every frame with `composeFrame`
+  (`lib/timelapse-compose.ts`). The camera fills the frame, and the screen box, clocks, task
+  name, progress bar and mark sit on top wherever the layout editor put them (the layout
+  maths is in `packages/core/src/timelapse-layout.ts`). Where the browser has WebCodecs, the
+  frames are encoded to an H.264 MP4 with `mp4-muxer`. Elsewhere, MediaRecorder records the
+  canvas in real time. The person can then download the video or share it in a post
+  (`lib/post-media.ts`).
+- **The iPhone camera (owner's question, 2026-10-21).** On a phone, can the site use the
+  iPhone's own camera and Time-Lapse mode instead of ours? No:
+  - A web page reaches the iPhone camera only through a file input with `capture`. iOS offers
+    Photo and Video there, never Time-Lapse, and no link opens the Camera app in Time-Lapse.
+  - Plain Video mode is no substitute. The camera covers the timer, and an hour of footage
+    (3-4 GB) is too much for Safari to turn into a timelapse.
+  - What would work is an import: the person films with the Camera app's Time-Lapse, then
+    picks the video from Photos after the session, and Komodon adds the mark. A running clock
+    can't line up with the study time, because the Camera app can't pause for breaks and
+    chooses its own speed.
+- **Our recorder on phones today.**
+  - It always uses the front camera (`facingMode: 'user'`, in `lib/timelapse.ts` and again in
+    `TimelapseLayoutEditor.tsx`).
+  - Nothing keeps the screen awake, and iOS stops the camera when the screen locks. The camera
+    track isn't watched for `ended` or `mute` (the screen's track is), so a phone left alone
+    probably stops recording at auto-lock without saying anything.
+  - iPhones have no `getDisplayMedia`, so screen recording reports itself unavailable there.
+- **Not built.** The import, a back-camera choice and a wake lock are logged in
+  `docs/IDEAS.md` (2026-10-21).
+
 ## The homepage (`apps/site`, 2026-10-21)
 
 - `apps/site` is the marketing site (`@komogon/site`): plain HTML, CSS and a small script on
