@@ -663,20 +663,37 @@
   .sidenav.is-pinned .sidenav-badge {
     opacity: 0;
   }
+  /* Slim: a short bar under the trophy, with room between them. The track is strong
+     enough that its far end, where the level is done, is easy to see. */
   .sidenav-level-bar {
     position: absolute;
-    left: 12px;
-    bottom: 5px;
-    width: 20px;
+    left: 10px;
+    bottom: 2px;
+    width: 24px;
     height: 3px;
     border-radius: 2px;
     overflow: hidden;
-    background: color-mix(in srgb, var(--fg) 16%, transparent);
+    background: color-mix(in srgb, var(--fg) 26%, transparent);
   }
   .sidenav-level-bar > span {
     display: block;
     height: 100%;
+    border-radius: inherit;
     background: var(--accent);
+  }
+  /* Open: the bar moves beside "Level N" and fills the rest of the row. */
+  .sidenav-link:has(.sidenav-level-bar) .sidenav-label {
+    flex: none;
+  }
+  .sidenav:hover .sidenav-level-bar,
+  .sidenav:has(:focus-visible) .sidenav-level-bar,
+  .sidenav.is-pinned .sidenav-level-bar {
+    position: static;
+    flex: 1;
+    width: auto;
+    height: 5px;
+    margin: 0 14px 0 2px;
+    border-radius: 3px;
   }
 }
 
