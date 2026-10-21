@@ -4868,6 +4868,39 @@
     opacity: 0;
   }
 }
+/* "Disable tips?" in a toast after a tip is closed: the question, then yes and no. */
+.tips-off-ask {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -10px -4px 0;
+}
+.tips-off-ask .tips-off-btn:first-of-type {
+  margin-left: 6px;
+}
+.tips-off-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tips-off-btn:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.tips-off-btn.is-yes {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.tips-off-btn.is-yes:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
 @media (min-width: 768px) {
   .dash {
     gap: 24px;
