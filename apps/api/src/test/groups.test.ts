@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { TimerState } from '@komogon/core';
-import { nodes, sessions } from '../db/schema';
+import { groups, nodes, sessions } from '../db/schema';
 import { createTestApp, USER_A, USER_B, type TestApp } from './helpers';
 
 let t: TestApp;
@@ -61,22 +61,39 @@ describe('groups', () => {
     const { group } = res.json();
     groupId = group.id;
     code = group.code;
+    // A group made today starts today: the earlier sessions sit before its first day.
     expect(group).toMatchObject({
       name: 'Study group',
       you: true,
-      weekStart: '2026-09-21',
-      today: 2,
-      totalMinutes: 90,
+      days: ['2026-09-23'],
+      totalMinutes: 30,
     });
     expect(group.members[0]).toMatchObject({
       userId: USER_A.id,
-      minutes: 90,
-      byDay: [60, 60, 90, null, null, null, null],
-      subjects: [
-        { title: 'IMMUN 201', minutes: 60 },
-        { title: 'Free', minutes: 30 },
-      ],
+      minutes: 30,
+      byDay: [30],
+      subjects: [{ title: 'Free', minutes: 30 }],
       nudgeable: false,
+    });
+    // Older groups show the last seven days, ending today.
+    await t.db.update(groups).set({ createdAt: new Date('2026-09-01T00:00:00Z') });
+    const older = (await t.api({ method: 'GET', url: '/api/social/groups' })).json().groups[0];
+    expect(older.days).toEqual([
+      '2026-09-17',
+      '2026-09-18',
+      '2026-09-19',
+      '2026-09-20',
+      '2026-09-21',
+      '2026-09-22',
+      '2026-09-23',
+    ]);
+    expect(older.members[0]).toMatchObject({
+      minutes: 210,
+      byDay: [0, 120, 120, 120, 180, 180, 210],
+      subjects: [
+        { title: 'Free', minutes: 150 },
+        { title: 'IMMUN 201', minutes: 60 },
+      ],
     });
   });
 

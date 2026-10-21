@@ -46,7 +46,8 @@ export function Composer() {
     setVideo(file);
   };
 
-  const canPost = (text.trim() || sessionId || video) && !busy && !create.isPending;
+  // Every post is about a session; the line and the file go with it.
+  const canPost = Boolean(sessionId) && !busy && !create.isPending;
 
   const submit = async () => {
     if (!canPost) return;
@@ -55,12 +56,7 @@ export function Composer() {
       const media = video ? await blobToDataUrl(video) : undefined;
       const poster =
         video && isVideo(video) ? ((await posterFromVideo(video)) ?? undefined) : undefined;
-      await create.mutateAsync({
-        body: text.trim() || undefined,
-        sessionId: sessionId || undefined,
-        media,
-        poster,
-      });
+      await create.mutateAsync({ body: text.trim() || undefined, sessionId, media, poster });
       setText('');
       setSessionId('');
       setVideo(null);
@@ -80,7 +76,7 @@ export function Composer() {
           className="textarea composer-text"
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, MAX))}
-          placeholder="How did it go?"
+          placeholder={recent.length ? 'How did it go?' : 'Finish a session first, then share it.'}
           rows={2}
           aria-label="Your post"
           onKeyDown={(e) => {
@@ -99,7 +95,7 @@ export function Composer() {
                 onChange={(e) => setSessionId(e.target.value)}
                 aria-label="Share a session"
               >
-                <option value="">Share a session</option>
+                <option value="">Which session?</option>
                 {recent.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.label}

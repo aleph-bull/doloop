@@ -36,6 +36,7 @@ const JPEG = 'data:image/jpeg;base64,/9j/4AAQ';
 
 describe('posts on the feed', () => {
   let sessionId: string;
+  let sessionB: string;
   let postId: string;
 
   it('shares a session with its minutes and subject, plus a video', async () => {
@@ -48,9 +49,18 @@ describe('posts on the feed', () => {
       .values(finished(USER_A.id, '2026-09-23T10:00:00Z', 5400, course!.id))
       .returning();
     sessionId = s!.id;
-    await t.db.insert(sessions).values(finished(USER_B.id, '2026-09-22T10:00:00Z', 1800));
+    const [sb] = await t.db
+      .insert(sessions)
+      .values(finished(USER_B.id, '2026-09-22T10:00:00Z', 1800))
+      .returning();
+    sessionB = sb!.id;
 
-    const nothing = await t.api({ method: 'POST', url: '/api/social/posts', payload: {} });
+    // Every post is about a session: without one it is refused.
+    const nothing = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { body: 'Hi' },
+    });
     expect(nothing.statusCode).toBe(400);
 
     const res = await t.api({
@@ -86,13 +96,13 @@ describe('posts on the feed', () => {
     const gif = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { media: 'data:image/gif;base64,AAAA' },
+      payload: { sessionId, media: 'data:image/gif;base64,AAAA' },
     });
     expect(gif.statusCode).toBe(400);
     const poster = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { body: 'Hi', poster: JPEG },
+      payload: { sessionId, body: 'Hi', poster: JPEG },
     });
     expect(poster.statusCode).toBe(400);
   });
@@ -101,14 +111,14 @@ describe('posts on the feed', () => {
     const pic = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { media: 'data:image/png;base64,iVBORw0KGgo=' },
+      payload: { sessionId, media: 'data:image/png;base64,iVBORw0KGgo=' },
     });
     expect(pic.statusCode).toBe(201);
     expect(pic.json().post.media).toEqual({ mime: 'image/png', bytes: 8, poster: null });
     const withPoster = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { media: 'data:image/png;base64,iVBORw0KGgo=', poster: JPEG },
+      payload: { sessionId, media: 'data:image/png;base64,iVBORw0KGgo=', poster: JPEG },
     });
     expect(withPoster.statusCode).toBe(400);
     await t.api({ method: 'DELETE', url: `/api/posts/${pic.json().post.id}` });
@@ -127,7 +137,7 @@ describe('posts on the feed', () => {
       method: 'POST',
       url: '/api/social/posts',
       token: t.tokenB,
-      payload: { body: 'Afternoon.' },
+      payload: { body: 'Afternoon.', sessionId: sessionB },
     });
     const page = (await t.api({ method: 'GET', url: '/api/social/feed?limit=1' })).json();
     expect(page.posts.map((p: { body: string }) => p.body)).toEqual(['Afternoon.']);

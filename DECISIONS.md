@@ -1604,3 +1604,12 @@ komogon.app domain and private server key before hosted password signup can send
 - **Live now**: friends in a session right now (a session not ended whose timer reported in within ten minutes), each with a running clock since they started and what they are on, as a strip at the top of Groups; each group card also says who in it is studying now.
 - **Nudges**: a friend, or someone in one of your groups, can be nudged to study, **once every two hours** per person (`nudges` table; a second one inside the window is a 409 that says when). From the bell on a friend's row beside the feed, and from "Nudge" on a group member who is under half the group's average this week. The nudged person sees them on the **dashboard** above the daily card, with a "Got it" that waves them away; a day later they go on their own.
 - **Kudos, not likes**: the button on a post is a thumbs-up labelled "Kudos", as a runner gives on a run; the API still calls them likes underneath.
+
+## A round of fixes on Social, 2026-10-21 (user request)
+
+- **Group chart = the last seven days**, ending today, not a Monday-to-Sunday week with a fixed start and end. A group younger than a week starts on its first day. The lines begin on the first day's value (no climb from zero at the left edge, which drew a vertical stroke) and end on today with a dot. Under each member's segmented bar, the tasks are **named** with their time, one swatch each.
+- **Friend requests** sit under the friends list as their own block: "Inbound · N" (the first three, the rest fading behind "Show all") and "Outgoing · N", folded away until opened.
+- **Posts need a session**: the composer's Post button waits for one ("Which session?"), and the API refuses a post without `sessionId`. Posts got roomier (16 × 18 px) and the session figure lighter (600, 1.1 rem); the group and jam figures are 600 too.
+- **The leaderboard reads as analytics**: the first three are tiles with the all-time total big, an eight-week sparkline, this week, days of the last 28 and the streak; the rest are rows with the same sparkline small, this week, the streak and the total. The API's entries carry `weekly`, `thisWeek`, `streak` and `activeDays28` for it.
+- **Jams open**: a chevron on each card shows the running totals through the jam's days (same lines as groups) and, per person, sessions, time, when they joined and what they worked on. Members can leave. The code box fits six letters now.
+- **Your card** beside the feed shows days and level only; the friend count went.

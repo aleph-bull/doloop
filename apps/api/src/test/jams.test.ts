@@ -53,8 +53,16 @@ describe('jams', () => {
       you: true,
     });
     expect(jam.members).toEqual([
-      { userId: USER_A.id, joinedAt: '2026-09-23T14:00:00.000Z', minutes: 0, sessions: 0 },
+      {
+        userId: USER_A.id,
+        joinedAt: '2026-09-23T14:00:00.000Z',
+        minutes: 0,
+        sessions: 0,
+        byDay: [0],
+        subjects: [],
+      },
     ]);
+    expect(jam.days).toEqual(['2026-09-23']);
     expect(code).toHaveLength(6);
   });
 
@@ -103,8 +111,22 @@ describe('jams', () => {
     const { active, people } = (await t.api({ method: 'GET', url: '/api/social/jams' })).json();
     expect(active).toHaveLength(1);
     expect(active[0].members).toEqual([
-      { userId: USER_B.id, joinedAt: '2026-09-23T15:00:00.000Z', minutes: 45, sessions: 1 },
-      { userId: USER_A.id, joinedAt: '2026-09-23T14:00:00.000Z', minutes: 30, sessions: 1 },
+      {
+        userId: USER_B.id,
+        joinedAt: '2026-09-23T15:00:00.000Z',
+        minutes: 45,
+        sessions: 1,
+        byDay: [45],
+        subjects: [{ title: 'Free', minutes: 45 }],
+      },
+      {
+        userId: USER_A.id,
+        joinedAt: '2026-09-23T14:00:00.000Z',
+        minutes: 30,
+        sessions: 1,
+        byDay: [30],
+        subjects: [{ title: 'Free', minutes: 30 }],
+      },
     ]);
     expect(people[USER_A.id].name).toBe('Ada');
   });

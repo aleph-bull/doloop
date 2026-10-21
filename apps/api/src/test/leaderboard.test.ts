@@ -33,7 +33,13 @@ describe('leaderboard', () => {
     const res = await t.api({ method: 'GET', url: '/api/leaderboard' });
     expect(res.statusCode).toBe(200);
     const { entries } = res.json();
-    expect(entries).toEqual([
+    expect(entries[0].weekly).toHaveLength(8);
+    expect(
+      entries.map((e: Record<string, unknown>) => {
+        const { weekly: _w, thisWeek: _t, streak: _s, activeDays28: _a, ...rest } = e;
+        return rest;
+      }),
+    ).toEqual([
       {
         rank: 1,
         userId: USER_B.id,

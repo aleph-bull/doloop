@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import { Crown, Hash, Plus } from 'lucide-react';
+import { ChevronDown, Crown, Hash, Plus } from 'lucide-react';
 import { Button, Panel, Segmented, Spinner, useToast } from '@komogon/ui';
 import type { Jam, Person } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
@@ -10,10 +10,13 @@ import {
   useJams,
   useJoinJam,
   useJoinJamByCode,
+  useLeaveJam,
   useMe,
 } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
+import { DayLines, hm } from './DayLines';
+import { Subjects } from './GroupsTab';
 
 const unknown = (id: string): Person => ({
   id,
@@ -103,12 +106,17 @@ function Starter() {
   );
 }
 
-/** One jam: who is in it, ranked by minutes since they joined, the leader with a crown. */
+/**
+ * One jam: who is in it, ranked by minutes since they joined, the leader with a crown.
+ * Opened, it shows the lines through the jam's days and what each person worked on.
+ */
 function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) {
   const me = useMe().data?.user.id;
   const join = useJoinJam();
+  const leave = useLeaveJam();
   const end = useEndJam();
   const { toast } = useToast();
+  const [open, setOpen] = useState(false);
   const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
   const top = Math.max(1, ...jam.members.map((m) => m.minutes));
   const leader = jam.members[0];
@@ -118,6 +126,15 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
   return (
     <Panel as="section" className={`jam${jam.ended ? ' is-ended' : ''}`} aria-label={jam.title}>
       <header className="jam-head">
+        <button
+          type="button"
+          className="jam-open"
+          aria-expanded={open}
+          aria-label={open ? 'Hide details' : 'Show details'}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <ChevronDown size={16} aria-hidden className={open ? 'is-open' : undefined} />
+        </button>
         <div className="jam-title-wrap">
           <h2 className="jam-title">{jam.title}</h2>
           <p className="jam-meta">
@@ -150,7 +167,16 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
             >
               End now
             </Button>
-          ) : null
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={leave.isPending}
+              onClick={() => leave.mutate(jam.id, { onError: fail })}
+            >
+              Leave
+            </Button>
+          )
         ) : (
           <Button
             size="sm"
@@ -185,6 +211,36 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
           );
         })}
       </ol>
+      {open && (
+        <div className="jam-details">
+          <DayLines
+            days={jam.days ?? []}
+            series={jam.members.map((m) => ({ id: m.userId, values: m.byDay ?? [] }))}
+            youId={me ?? ''}
+            label="Running totals through the jam, one line per person"
+          />
+          <ul className="jam-people">
+            {jam.members.map((m) => {
+              const p = people[m.userId] ?? unknown(m.userId);
+              const you = m.userId === me;
+              return (
+                <li key={m.userId} className="jam-person">
+                  <span className="group-name-line">
+                    <Avatar name={p.name} url={p.avatarUrl} size="xs" />
+                    <span className="jam-name">{you ? 'You' : p.name}</span>
+                    <span className="jam-person-meta">
+                      {m.sessions} {m.sessions === 1 ? 'session' : 'sessions'} · {hm(m.minutes)}
+                      {' · joined '}
+                      {fmtDate(m.joinedAt)}
+                    </span>
+                  </span>
+                  <Subjects subjects={m.subjects ?? []} top={top} />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </Panel>
   );
 }

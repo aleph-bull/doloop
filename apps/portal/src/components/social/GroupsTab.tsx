@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { BellRing, Hash, LogOut, Plus } from 'lucide-react';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
-import type { Group, GroupMemberWeek, LiveMember, Person } from '../../lib/api';
+import type { Group, LiveMember, Person } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
 import {
   useCreateGroup,
@@ -15,6 +15,7 @@ import {
 } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
+import { DayLines, hm } from './DayLines';
 
 const unknown = (id: string): Person => ({
   id,
@@ -22,14 +23,6 @@ const unknown = (id: string): Person => ({
   avatarUrl: null,
   university: null,
 });
-const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-/** "1h 23m" / "45m", the way the group totals read. */
-function hm(minutes: number): string {
-  const m = Math.round(minutes);
-  const h = Math.floor(m / 60);
-  return h === 0 ? `${m}m` : `${h}h ${String(m % 60).padStart(2, '0')}m`;
-}
 
 /** A clock running since the session began, ticking every second. */
 function Elapsed({ since }: { since: string }) {
@@ -88,76 +81,39 @@ function LiveNow({ live, people }: { live: LiveMember[]; people: Record<string, 
   );
 }
 
-/** Everyone's running total through the week, one line each; yours in the accent. */
-function WeekLines({
-  members,
-  today,
-  youId,
+/** What someone put the time into: a segment per task, and the names under it. */
+export function Subjects({
+  subjects,
+  top,
 }: {
-  members: GroupMemberWeek[];
-  today: number;
-  youId: string;
+  subjects: Array<{ title: string; minutes: number }>;
+  top: number;
 }) {
-  const W = 320;
-  const H = 150;
-  const padL = 6;
-  const padR = 14;
-  const top = 10;
-  const base = H - 22;
-  const max = Math.max(30, ...members.flatMap((m) => m.byDay.map((v) => v ?? 0)));
-  const x = (i: number) => padL + ((W - padL - padR) * i) / 6;
-  const y = (v: number) => base - ((base - top) * v) / max;
-  const path = (m: GroupMemberWeek) => {
-    const pts = [
-      [x(0), y(0)],
-      ...m.byDay
-        .map((v, i) => (v === null ? null : [x(i + 1 > 6 ? 6 : i), y(v)]))
-        .filter((p): p is number[] => !!p),
-    ];
-    return pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]!.toFixed(1)},${p[1]!.toFixed(1)}`).join('');
-  };
-  // Days run Monday to Sunday across the width; today's point gets the dot.
+  if (subjects.length === 0) return null;
   return (
-    <svg
-      className="group-lines"
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label="Running totals through the week, one line per person"
-    >
-      {[0.25, 0.5, 0.75, 1].map((f) => (
-        <line
-          key={f}
-          x1={padL}
-          x2={W - padR}
-          y1={y(max * f)}
-          y2={y(max * f)}
-          className="group-grid"
-        />
-      ))}
-      {members.map((m, i) => {
-        const you = m.userId === youId;
-        const last = m.byDay[Math.min(today, 6)] ?? 0;
-        return (
-          <g
-            key={m.userId}
-            className={`group-line${you ? ' is-you' : ''}`}
-            style={{ opacity: you ? 1 : Math.max(0.35, 0.85 - i * 0.12) }}
-          >
-            <path d={path(m)} />
-            <circle cx={x(Math.min(today, 6))} cy={y(last)} r={3.5} />
-          </g>
-        );
-      })}
-      {DAYS.map((d, i) => (
-        <text key={i} x={x(i)} y={H - 6} className="group-axis" textAnchor="middle">
-          {d}
-        </text>
-      ))}
-    </svg>
+    <span className="group-subjects">
+      <span className="group-segments" aria-hidden>
+        {subjects.map((s, j) => (
+          <span
+            key={s.title}
+            className={`group-seg is-${j}`}
+            style={{ width: `${(s.minutes / Math.max(1, top)) * 100}%` }}
+          />
+        ))}
+      </span>
+      <span className="group-legend">
+        {subjects.map((s, j) => (
+          <span key={s.title} className="group-legend-item">
+            <span className={`group-swatch is-${j}`} aria-hidden />
+            {s.title} <span className="tabular">{fmtHours(s.minutes)}</span>
+          </span>
+        ))}
+      </span>
+    </span>
   );
 }
 
-/** One group's week: the total together, the lines, and everyone ranked with their subjects. */
+/** One group's last seven days: the total together, the lines, and everyone ranked. */
 function GroupCard({ group, people }: { group: Group; people: Record<string, Person> }) {
   const me = useMe().data?.user.id ?? '';
   const join = useJoinGroup();
@@ -165,19 +121,23 @@ function GroupCard({ group, people }: { group: Group; people: Record<string, Per
   const nudge = useNudge();
   const { toast } = useToast();
   const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
-  const weekEnd = new Date(Date.parse(group.weekStart) + 6 * 86_400_000).toISOString();
+  const days = group.days ?? [];
+  const first = days[0];
+  const last = days[days.length - 1];
   const top = Math.max(1, ...group.members.map((m) => m.minutes));
   const average = group.members.length ? group.totalMinutes / group.members.length : 0;
+  const span =
+    days.length === 7 ? 'last 7 days' : first === last ? 'since today' : `since ${fmtDate(first)}`;
 
   return (
     <Panel as="section" className="group" aria-label={group.name}>
       <header className="group-head">
         <div className="group-title-wrap">
           <h2 className="group-title">
-            {group.name} <span className="group-title-sub">· this week</span>
+            {group.name} <span className="group-title-sub">· {span}</span>
           </h2>
           <p className="group-meta">
-            {fmtDate(group.weekStart)} – {fmtDate(weekEnd)}
+            {group.members.length} {group.members.length === 1 ? 'person' : 'people'}
             {group.code && (
               <>
                 {' '}
@@ -221,7 +181,11 @@ function GroupCard({ group, people }: { group: Group; people: Record<string, Per
         </p>
       )}
       <div className="group-body">
-        <WeekLines members={group.members} today={group.today} youId={me} />
+        <DayLines
+          days={days}
+          series={group.members.map((m) => ({ id: m.userId, values: m.byDay ?? [] }))}
+          youId={me}
+        />
         <ol className="group-rows">
           {group.members.map((m, i) => {
             const p = people[m.userId] ?? unknown(m.userId);
@@ -254,21 +218,7 @@ function GroupCard({ group, people }: { group: Group; people: Record<string, Per
                       </button>
                     )}
                   </span>
-                  <span className="group-segments" aria-hidden>
-                    {m.subjects.map((s, j) => (
-                      <span
-                        key={s.title}
-                        className={`group-seg is-${j}`}
-                        style={{ width: `${(s.minutes / top) * 100}%` }}
-                        title={`${s.title}: ${fmtHours(s.minutes)}`}
-                      />
-                    ))}
-                  </span>
-                  {m.subjects.length > 0 && (
-                    <span className="sr-only">
-                      {m.subjects.map((s) => `${s.title} ${fmtHours(s.minutes)}`).join(', ')}
-                    </span>
-                  )}
+                  <Subjects subjects={m.subjects} top={top} />
                 </span>
                 <span className="group-minutes tabular">{m.minutes > 0 ? hm(m.minutes) : '–'}</span>
               </li>
@@ -343,7 +293,7 @@ function Starter() {
   );
 }
 
-/** Study groups: who is live, and each group's week with everyone ranked. */
+/** Study groups: who is live, and each group's last seven days with everyone ranked. */
 export function GroupsTab() {
   const q = useGroups();
   if (q.isError)

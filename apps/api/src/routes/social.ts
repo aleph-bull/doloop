@@ -219,7 +219,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
     const input = z
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
-        sessionId: uuid.optional(),
+        sessionId: uuid,
         media: z
           .string()
           .max(POST_VIDEO_MAX_BYTES * 1.4)
@@ -230,8 +230,6 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
           .optional(),
       })
       .parse(req.body);
-    if (!input.body && !input.sessionId && !input.media)
-      throw badRequest('Say something, or share a session or a video');
 
     let minutes: number | null = null;
     let subject: string | null = null;

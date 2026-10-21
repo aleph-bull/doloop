@@ -4,6 +4,8 @@ import { and, desc, eq, gte, inArray, isNotNull, notInArray, sql } from 'drizzle
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { sessions, userAssets, users } from '../db/schema';
+import { compareRow } from './compare';
+import { loadCompletedSessions } from '../services/pace';
 import { friendIds } from './social';
 
 /** Under this much in a week, a person is left out of the week's average. */
@@ -52,6 +54,12 @@ export interface LeaderboardEntry {
   /** This row is the person asking. */
   you: boolean;
   friend: boolean;
+  /** Minutes per week over the last eight, oldest first, in the viewer's weeks. */
+  weekly: number[];
+  thisWeek: number;
+  streak: number;
+  /** Days with a session in the last 28. */
+  activeDays28: number;
 }
 
 /**
@@ -113,15 +121,42 @@ export function leaderboardRoutes(
       .orderBy(desc(focusSeconds))
       .limit(LEADERBOARD_SIZE);
     const friendSet = new Set(friends);
-    const entries: LeaderboardEntry[] = rows.map((r, i) => ({
-      rank: i + 1,
-      userId: r.userId,
-      name: r.name?.trim() || 'Someone',
-      avatarUrl: r.mime && r.data ? `data:${r.mime};base64,${r.data}` : null,
-      focusMinutes: Math.round(Number(r.focusSeconds) / 60),
-      you: r.userId === req.user.id,
-      friend: friendSet.has(r.userId),
-    }));
+    const now = clock();
+    const streaks = new Map(
+      (
+        await db.query.users.findMany({
+          where: inArray(
+            users.id,
+            rows.map((r) => r.userId),
+          ),
+          columns: { id: true, streak: true },
+        })
+      ).map((u) => [u.id, u.streak.current]),
+    );
+    const entries: LeaderboardEntry[] = await Promise.all(
+      rows.map(async (r, i) => {
+        const week = compareRow(
+          r.userId,
+          await loadCompletedSessions(db, r.userId),
+          streaks.get(r.userId) ?? 0,
+          now,
+          req.user.timezone,
+        );
+        return {
+          rank: i + 1,
+          userId: r.userId,
+          name: r.name?.trim() || 'Someone',
+          avatarUrl: r.mime && r.data ? `data:${r.mime};base64,${r.data}` : null,
+          focusMinutes: Math.round(Number(r.focusSeconds) / 60),
+          you: r.userId === req.user.id,
+          friend: friendSet.has(r.userId),
+          weekly: week.weekly,
+          thisWeek: week.thisWeek,
+          streak: week.streak,
+          activeDays28: week.activeDays28,
+        };
+      }),
+    );
     return { scope, entries };
   });
 

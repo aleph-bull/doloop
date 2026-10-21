@@ -308,6 +308,9 @@ export interface JamMember {
   joinedAt: string;
   minutes: number;
   sessions: number;
+  /** Running total over the jam's days so far. */
+  byDay: number[];
+  subjects: Array<{ title: string; minutes: number }>;
 }
 
 export interface Jam {
@@ -322,6 +325,8 @@ export interface Jam {
   you: boolean;
   /** Ranked, most minutes first. */
   members: JamMember[];
+  /** The jam's days so far, oldest first. */
+  days: string[];
 }
 
 export interface JamsResponse {
@@ -361,7 +366,8 @@ export interface LiveMember {
 export interface GroupMemberWeek {
   userId: string;
   minutes: number;
-  byDay: Array<number | null>;
+  /** Running total over the group's `days`. */
+  byDay: number[];
   subjects: Array<{ title: string; minutes: number }>;
   nudgeable: boolean;
 }
@@ -371,8 +377,8 @@ export interface Group {
   name: string;
   code: string | null;
   you: boolean;
-  weekStart: string;
-  today: number;
+  /** The last seven days ending today, or fewer for a group younger than that. */
+  days: string[];
   totalMinutes: number;
   members: GroupMemberWeek[];
   live: LiveMember[];
@@ -414,6 +420,11 @@ export interface LeaderboardEntry {
   focusMinutes: number;
   you: boolean;
   friend: boolean;
+  /** Minutes per week over the last eight, oldest first. */
+  weekly: number[];
+  thisWeek: number;
+  streak: number;
+  activeDays28: number;
 }
 
 export interface ProfileStats {

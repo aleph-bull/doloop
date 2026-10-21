@@ -63,11 +63,12 @@ export const keys = {
   comments: (postId: string) => ['social', 'comments', postId] as const,
   friends: ['social', 'friends'] as const,
   people: (q: string) => ['social', 'people', q] as const,
-  jams: ['social', 'jams'] as const,
+  jams: ['social', 'jams', 2] as const,
   compare: ['social', 'compare'] as const,
-  groups: ['social', 'groups'] as const,
+  groups: ['social', 'groups', 2] as const,
   nudges: ['social', 'nudges'] as const,
-  leaderboard: (scope: LeaderboardScope) => ['leaderboard', scope] as const,
+  // Versioned: the persisted cache held older shapes of these without the per-row lines.
+  leaderboard: (scope: LeaderboardScope) => ['leaderboard', 2, scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
   avatar: ['avatar', 'me'] as const,

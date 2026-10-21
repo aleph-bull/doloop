@@ -1,6 +1,6 @@
 import { Link, useSearchParams } from 'react-router';
-import { Crown } from 'lucide-react';
-import { Panel, Segmented, Spinner } from '@komogon/ui';
+import { Crown, Flame } from 'lucide-react';
+import { Panel, Segmented, Sparkline, Spinner } from '@komogon/ui';
 import type { GlobalStats, LeaderboardEntry, LeaderboardScope } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
 import { useLeaderboard, useLeaderboardStats } from '../../lib/queries';
@@ -15,6 +15,70 @@ function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd'];
   const v = n % 100;
   return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
+
+/** Minutes as a big number with a small unit. */
+function Figure({ minutes }: { minutes: number }) {
+  const [value, unit] =
+    minutes < 60
+      ? [String(Math.round(minutes)), 'min']
+      : [
+          String(minutes / 60 >= 100 ? Math.round(minutes / 60) : Math.round(minutes / 6) / 10),
+          'h',
+        ];
+  return (
+    <span className="lb-figure tabular">
+      {value}
+      <small>{unit}</small>
+    </span>
+  );
+}
+
+/** The first three as tiles: the all-time total big, the last eight weeks as a line. */
+function TopTile({ e }: { e: LeaderboardEntry }) {
+  return (
+    <Panel as="li" className={`lb-tile${e.you ? ' is-you' : ''}`}>
+      <div className="lb-tile-head">
+        <span className="lb-rank-badge tabular">{e.rank}</span>
+        <Link to={to(e)} className="lb-who">
+          <Avatar name={e.name} url={e.avatarUrl} size="sm" />
+          <span className="lb-name-wrap">
+            <span className="lb-name">{e.you ? 'You' : e.name}</span>
+            <span className="lb-sub">
+              {e.rank === 1 && <Crown size={12} aria-hidden className="jam-crown" />}
+              {e.friend && !e.you ? 'Friend' : e.you ? 'Your place' : ordinal(e.rank)}
+            </span>
+          </span>
+        </Link>
+      </div>
+      <div className="lb-tile-body">
+        <div className="lb-tile-figure">
+          <Figure minutes={e.focusMinutes} />
+          <span className="lb-tile-label">all time</span>
+        </div>
+        <Sparkline
+          values={e.weekly ?? []}
+          label={`${e.name}'s minutes per week over the last eight weeks`}
+          width={150}
+          height={40}
+        />
+      </div>
+      <div className="lb-tile-foot">
+        <span>
+          <span className="tabular">{fmtHours(e.thisWeek)}</span> this week
+        </span>
+        <span>
+          <span className="tabular">{e.activeDays28}</span> of 28 days
+        </span>
+        {e.streak > 0 && (
+          <span className="lb-streak">
+            <Flame size={12} aria-hidden />
+            <span className="tabular">{e.streak}</span>
+          </span>
+        )}
+      </div>
+    </Panel>
+  );
 }
 
 /** Two short bars, yours and the average, on one scale. */
@@ -128,7 +192,10 @@ function Everyone({ stats }: { stats: GlobalStats }) {
   );
 }
 
-/** The ten people with the most focused time, by the name each chose: everyone, or your friends. */
+/**
+ * The ten people with the most focused time: the first three as tiles with their last eight
+ * weeks, the rest as rows with the same line small, this week and the all-time total.
+ */
 export function LeaderboardTab() {
   const [params, setParams] = useSearchParams();
   const scope: LeaderboardScope = params.get('scope') === 'friends' ? 'friends' : 'global';
@@ -142,6 +209,11 @@ export function LeaderboardTab() {
   const stats = useLeaderboardStats();
   const picker = (
     <div className="board-scope">
+      <p className="rc-tile-note">
+        {scope === 'friends'
+          ? 'Most focused time among you and your friends, all time.'
+          : 'Most focused time, all time. Top ten.'}
+      </p>
       <Segmented
         ariaLabel="Which board"
         value={scope}
@@ -162,48 +234,68 @@ export function LeaderboardTab() {
       </div>
     );
   const entries = board.data.entries;
-  const top = entries[0]?.focusMinutes ?? 1;
+  const top3 = entries.slice(0, 3);
+  const rest = entries.slice(3);
 
   return (
     <div className="board">
       {picker}
-      <Panel as="section" className="board-list" aria-label="Leaderboard">
-        <p className="rc-tile-note board-note">
-          {scope === 'friends'
-            ? 'Most focused time among you and your friends, all time.'
-            : 'Most focused time, all time. Top ten.'}
-        </p>
-        {entries.length === 0 ? (
+      {entries.length === 0 ? (
+        <Panel className="p-5">
           <p className="text-sm">
             {scope === 'friends'
               ? 'No friends on the board yet. Add a few beside the feed.'
               : 'No finished sessions yet. Yours could be the first.'}
           </p>
-        ) : (
-          <ol className="board-rows">
-            {entries.map((e) => (
-              <li key={e.userId} className={`board-row${e.you ? ' is-you' : ''}`}>
-                <span className="board-rank tabular">{e.rank}</span>
-                <Link to={to(e)} className="board-who">
-                  <Avatar name={e.name} url={e.avatarUrl} size="xs" />
-                  <span className="board-name">{e.you ? 'You' : e.name}</span>
-                  {e.rank === 1 && <Crown size={13} aria-hidden className="jam-crown" />}
-                  {e.friend && scope === 'global' && (
-                    <span className="chip chip-neutral">Friend</span>
-                  )}
-                </Link>
-                <span className="cmp-bar-track" aria-hidden>
-                  <span
-                    className="cmp-bar-fill"
-                    style={{ width: `${(e.focusMinutes / Math.max(1, top)) * 100}%` }}
-                  />
-                </span>
-                <span className="board-hours tabular">{fmtHours(e.focusMinutes)}</span>
-              </li>
+        </Panel>
+      ) : (
+        <>
+          <ol className="lb-top">
+            {top3.map((e) => (
+              <TopTile key={e.userId} e={e} />
             ))}
           </ol>
-        )}
-      </Panel>
+          {rest.length > 0 && (
+            <Panel as="section" className="board-list" aria-label="Fourth onwards">
+              <ol className="lb-rows" start={4}>
+                {rest.map((e) => (
+                  <li key={e.userId} className={`lb-row${e.you ? ' is-you' : ''}`}>
+                    <span className="board-rank tabular">{e.rank}</span>
+                    <Link to={to(e)} className="board-who">
+                      <Avatar name={e.name} url={e.avatarUrl} size="xs" />
+                      <span className="board-name">{e.you ? 'You' : e.name}</span>
+                      {e.friend && scope === 'global' && (
+                        <span className="chip chip-neutral">Friend</span>
+                      )}
+                    </Link>
+                    <span className="lb-row-spark">
+                      <Sparkline
+                        values={e.weekly ?? []}
+                        label={`${e.name}'s minutes per week over the last eight weeks`}
+                        width={110}
+                        height={26}
+                      />
+                    </span>
+                    <span className="lb-row-week">
+                      <span className="tabular">{fmtHours(e.thisWeek)}</span>
+                      <span className="lb-row-label">this week</span>
+                    </span>
+                    <span className="lb-row-streak">
+                      {e.streak > 0 && (
+                        <>
+                          <Flame size={12} aria-hidden />
+                          <span className="tabular">{e.streak}</span>
+                        </>
+                      )}
+                    </span>
+                    <span className="board-hours tabular">{fmtHours(e.focusMinutes)}</span>
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          )}
+        </>
+      )}
       {scope === 'global' ? stats.data && <Everyone stats={stats.data} /> : <CompareBento />}
     </div>
   );

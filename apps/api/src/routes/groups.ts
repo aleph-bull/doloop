@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { startOfWeekMonday, toLocalDate } from '@komogon/core';
+import { addDays, toLocalDate } from '@komogon/core';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -29,9 +29,9 @@ export interface LiveMember {
 export interface GroupMemberWeek {
   userId: string;
   minutes: number;
-  /** Focused minutes so far by weekday, Monday first, running total; null past today. */
-  byDay: Array<number | null>;
-  /** The biggest subjects this week, most first, plus "Other" when there are more. */
+  /** Running total of focused minutes over `days`, one entry per day, ending today. */
+  byDay: number[];
+  /** The biggest subjects in the window, most first, plus "Other" when there are more. */
   subjects: Array<{ title: string; minutes: number }>;
   /** You may nudge them now (not you, and not nudged in the last two hours). */
   nudgeable: boolean;
@@ -44,9 +44,8 @@ export interface Group {
   /** Members see the code; others get null. */
   code: string | null;
   you: boolean;
-  weekStart: string;
-  /** Monday-first index of today. */
-  today: number;
+  /** The days shown, oldest first, ending today: the last seven, or fewer for a young group. */
+  days: string[];
   totalMinutes: number;
   /** Ranked, most minutes first. */
   members: GroupMemberWeek[];
@@ -117,15 +116,19 @@ export async function loadGroup(db: Db, row: GroupRow, viewerId: string, now: Da
     where: eq(groupMembers.groupId, row.id),
   });
   const ids = memberRows.map((m) => m.userId);
+  // The last seven days, ending today; a group younger than that starts on its first day.
   const today = toLocalDate(now, tz);
-  const weekStart = startOfWeekMonday(today);
-  const todayIndex = Math.round((Date.parse(today) - Date.parse(weekStart)) / 86_400_000);
+  const born = toLocalDate(row.createdAt, tz);
+  const earliest = addDays(today, -6);
+  const from = born > earliest ? born : earliest;
+  const days: string[] = [];
+  for (let d = from; d <= today; d = addDays(d, 1)) days.push(d);
   const weekSessions = ids.length
     ? await db.query.sessions.findMany({
         where: and(
           inArray(sessions.userId, ids),
           isNotNull(sessions.endedAt),
-          gte(sessions.startedAt, new Date(Date.parse(weekStart) - 2 * 86_400_000)),
+          gte(sessions.startedAt, new Date(Date.parse(from) - 2 * 86_400_000)),
           lte(sessions.startedAt, now),
         ),
       })
@@ -145,27 +148,24 @@ export async function loadGroup(db: Db, row: GroupRow, viewerId: string, now: Da
   });
   const nudged = new Set(recent.map((n) => n.toId));
   const members: GroupMemberWeek[] = ids.map((userId) => {
-    const days = new Array<number>(7).fill(0);
+    const perDay = new Array<number>(days.length).fill(0);
     const subjects = new Map<string, number>();
     for (const s of weekSessions) {
       if (s.userId !== userId) continue;
       const d = toLocalDate(s.startedAt, tz);
-      if (d < weekStart) continue;
-      const i = Math.min(
-        6,
-        Math.max(0, Math.round((Date.parse(d) - Date.parse(weekStart)) / 86_400_000)),
-      );
+      const i = days.indexOf(d);
+      if (i < 0) continue;
       const minutes = s.workSeconds / 60;
-      days[i] = (days[i] ?? 0) + minutes;
+      perDay[i] = (perDay[i] ?? 0) + minutes;
       const title =
         (s.nodeId && titles.get(s.nodeId)) || (s.routineId && titles.get(s.routineId)) || 'Free';
       subjects.set(title, (subjects.get(title) ?? 0) + minutes);
     }
-    const byDay: Array<number | null> = [];
+    const byDay: number[] = [];
     let run = 0;
-    for (let i = 0; i < 7; i++) {
-      run += days[i] ?? 0;
-      byDay.push(i <= todayIndex ? Math.round(run) : null);
+    for (const m of perDay) {
+      run += m;
+      byDay.push(Math.round(run));
     }
     const sorted = [...subjects.entries()].sort((a, b) => b[1] - a[1]);
     const top = sorted
@@ -189,8 +189,7 @@ export async function loadGroup(db: Db, row: GroupRow, viewerId: string, now: Da
     name: row.name,
     code: you ? row.code : null,
     you,
-    weekStart,
-    today: todayIndex,
+    days,
     totalMinutes: members.reduce((a, m) => a + m.minutes, 0),
     members,
     live: you ? await liveAmong(db, ids, now) : [],

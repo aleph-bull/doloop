@@ -9,7 +9,6 @@ import {
   Search,
   SlidersHorizontal,
   Trophy,
-  Users,
   X,
 } from 'lucide-react';
 import { Panel, Spinner, useToast } from '@komogon/ui';
@@ -76,7 +75,13 @@ function PersonRow({ person, children }: { person: Person; children?: ReactNode 
   );
 }
 
-/** Friends, under your card: requests to answer, the list, and a box to find more. */
+/** How many inbound requests show before the rest fade behind "Show all". */
+const REQUESTS_SHOWN = 3;
+
+/**
+ * Friends, under your card: the list, then friend requests split into inbound (answer
+ * them) and outgoing (folded away), and a box to find more people.
+ */
 export function FriendsCard() {
   const q = useFriends();
   const [query, setQuery] = useState('');
@@ -88,9 +93,13 @@ export function FriendsCard() {
   const send = useSendFriendRequest();
   const nudge = useNudge();
   const { toast } = useToast();
+  const [allInbound, setAllInbound] = useState(false);
+  const [showOutgoing, setShowOutgoing] = useState(false);
   const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
   const data = q.data;
   const who = (id: string) => data?.people[id] ?? found.data?.people[id] ?? unknown(id);
+  const inbound = data?.incoming ?? [];
+  const shownInbound = allInbound ? inbound : inbound.slice(0, REQUESTS_SHOWN);
 
   return (
     <Panel as="aside" className="side-card" aria-label="Friends">
@@ -180,49 +189,82 @@ export function FriendsCard() {
               ))}
             </ul>
           )}
-          {data.incoming.length > 0 && (
-            <>
-              <p className="side-label">Requests to answer</p>
-              <ul className="side-people is-requests">
-                {data.incoming.map((r) => (
-                  <PersonRow key={r.id} person={who(r.userId)}>
-                    <RowButton
-                      label="Accept"
-                      tone="yes"
-                      busy={accept.isPending}
-                      onClick={() => accept.mutate(r.id, { onError: fail })}
+
+          {(inbound.length > 0 || data.outgoing.length > 0) && (
+            <div className="side-requests">
+              <p className="side-label is-head">Friend requests</p>
+              {inbound.length > 0 && (
+                <>
+                  <p className="side-sublabel">
+                    Inbound <span className="tabular">{inbound.length}</span>
+                  </p>
+                  <ul
+                    className={`side-people is-requests${!allInbound && inbound.length > REQUESTS_SHOWN ? ' is-faded' : ''}`}
+                  >
+                    {shownInbound.map((r) => (
+                      <PersonRow key={r.id} person={who(r.userId)}>
+                        <RowButton
+                          label="Accept"
+                          tone="yes"
+                          busy={accept.isPending}
+                          onClick={() => accept.mutate(r.id, { onError: fail })}
+                        >
+                          <Check size={13} aria-hidden />
+                        </RowButton>
+                        <RowButton
+                          label="Decline"
+                          busy={decline.isPending}
+                          onClick={() => decline.mutate(r.id, { onError: fail })}
+                        >
+                          <X size={13} aria-hidden />
+                        </RowButton>
+                      </PersonRow>
+                    ))}
+                  </ul>
+                  {inbound.length > REQUESTS_SHOWN && (
+                    <button
+                      type="button"
+                      className="side-more"
+                      onClick={() => setAllInbound((v) => !v)}
                     >
-                      <Check size={13} aria-hidden />
-                    </RowButton>
-                    <RowButton
-                      label="Decline"
-                      busy={decline.isPending}
-                      onClick={() => decline.mutate(r.id, { onError: fail })}
-                    >
-                      <X size={13} aria-hidden />
-                    </RowButton>
-                  </PersonRow>
-                ))}
-              </ul>
-            </>
-          )}
-          {data.outgoing.length > 0 && (
-            <>
-              <p className="side-label">Asked</p>
-              <ul className="side-people">
-                {data.outgoing.map((r) => (
-                  <PersonRow key={r.id} person={who(r.userId)}>
-                    <RowButton
-                      label="Take the request back"
-                      busy={decline.isPending}
-                      onClick={() => decline.mutate(r.id, { onError: fail })}
-                    >
-                      <X size={13} aria-hidden />
-                    </RowButton>
-                  </PersonRow>
-                ))}
-              </ul>
-            </>
+                      {allInbound ? 'Show fewer' : `Show all ${inbound.length}`}
+                    </button>
+                  )}
+                </>
+              )}
+              {data.outgoing.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    className="side-sublabel is-toggle"
+                    aria-expanded={showOutgoing}
+                    onClick={() => setShowOutgoing((v) => !v)}
+                  >
+                    Outgoing <span className="tabular">{data.outgoing.length}</span>
+                    <ChevronRight
+                      size={12}
+                      aria-hidden
+                      className={showOutgoing ? 'is-open' : undefined}
+                    />
+                  </button>
+                  {showOutgoing && (
+                    <ul className="side-people">
+                      {data.outgoing.map((r) => (
+                        <PersonRow key={r.id} person={who(r.userId)}>
+                          <RowButton
+                            label="Take the request back"
+                            busy={decline.isPending}
+                            onClick={() => decline.mutate(r.id, { onError: fail })}
+                          >
+                            <X size={13} aria-hidden />
+                          </RowButton>
+                        </PersonRow>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
+            </div>
           )}
         </>
       )}
@@ -237,7 +279,6 @@ const MINI_ROWS = 5;
 export function ProfileCard() {
   const user = useMe().data?.user;
   const avatar = useAvatar().data?.dataUrl ?? null;
-  const friends = useFriends().data?.friends.length ?? 0;
   if (!user) return null;
   const name = user.settings.profile.name?.trim() || 'Someone';
   const uni = universityById(user.settings.profile.university);
@@ -258,11 +299,6 @@ export function ProfileCard() {
           <Trophy size={14} aria-hidden />
           <span className="tabular">{user.level}</span>
           <span className="side-stat-label">level</span>
-        </li>
-        <li>
-          <Users size={14} aria-hidden />
-          <span className="tabular">{friends}</span>
-          <span className="side-stat-label">{friends === 1 ? 'friend' : 'friends'}</span>
         </li>
       </ul>
       <Link to="/settings#social" className="side-link">
