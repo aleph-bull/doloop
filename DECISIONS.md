@@ -1404,3 +1404,8 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 ## The page stays put when the sidebar is pinned or collapsed, 2026-10-21 (user request)
 
 - **Pinning and collapsing no longer move the page.** Pinning used to widen the page's left margin from the slim rail to the open one, sliding everything over. The page now always keeps room for the open rail, so the two only change the rail itself, and the rail opening on hover never covers the page either. The collapsed rail sits beside a wider margin as a result.
+
+## Even spacing in the sidebar stats, 2026-10-21 (user request)
+
+- **The streak and level numbers sit the same distance from their icons.** The flame is narrower than the level ring but both sit in the same 44px cell, so the streak number floated far from its flame while the level number crowded its ring. The numbers now shift (5px in for the streak, 2px out for the level) so each is about 7px from its icon; the icons, the slim rail and the open and close animations are unchanged.
+- **Fix:** collapsing with the pointer away from the sidebar (from the keyboard, say) left hover-opening off until the pointer had gone in and out once. The sidebar now rests shut only when Collapse is clicked with the pointer on it.

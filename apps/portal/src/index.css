@@ -716,6 +716,15 @@
   .sidenav-stat .sidenav-icon {
     flex: none;
   }
+  /* The icons keep their cells so the slim rail stays lined up; the numbers move instead,
+     so each sits the same 7px from its icon: the 19px flame leaves 12px of its cell empty,
+     the 34px ring only 5px. */
+  .sidenav-stat:first-child .sidenav-stat-text {
+    margin-left: -5px;
+  }
+  .sidenav-stat + .sidenav-stat .sidenav-stat-text {
+    margin-left: 2px;
+  }
   .sidenav-stat-value {
     font-size: var(--text-base);
     font-weight: 700;
