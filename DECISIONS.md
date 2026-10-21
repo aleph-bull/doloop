@@ -1556,3 +1556,8 @@ komogon.app domain and private server key before hosted password signup can send
   owner's own reference screenshots, in dark mode. See CLAUDE.md for how to retake them.
 - **Motion.** Headline in on load, devices about 1.3 s later or on the first scroll, sections
   pop up as they arrive. Off under reduced motion.
+
+## Glass blur kept in the scrolling Tasks row, and a shorter follow-up note, 2026-10-21 (user request)
+
+- **The dashboard's Tasks row keeps its cards' glass blur when it has more cards than fit.** Its edge fades were a mask on the row, and in Chrome a masked element becomes the backdrop for the blur inside it, so the glass cards showed the background sharp through them. The row no longer has a mask; CardRail gives each card its own share of the fade instead, worked out from where the card sits in the row on every scroll and resize (a card fully inside the row has no mask at all). The fades look as before and follow the scroll. Other sideways scrollers, such as the nav tabs, keep the row mask; they hold no glass.
+- **The after-task question no longer says "Asked once per task."** It now reads only "Your answer goes on the chart of how ready you felt as the due date came closer."

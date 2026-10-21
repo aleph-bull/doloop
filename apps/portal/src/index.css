@@ -3099,6 +3099,12 @@
   margin: -12px -46px -72px;
   scroll-padding-inline: 46px;
 }
+/* No mask on the row itself, unlike other sideways scrollers: a masked element becomes the
+   backdrop for the blur inside it, so the glass cards would lose theirs. CardRail fades
+   each card instead. */
+.rail.scroll-edges > .rail-track.scroll-edges-track {
+  mask-image: none;
+}
 /* Reads like the links beside it ("Manage"), not like a button. */
 .rail-toggle {
   background: none;
