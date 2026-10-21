@@ -1340,3 +1340,20 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The app is now called Komodon** everywhere people see it: the portal and extension text, page titles, the installed-app name, the logo's label, calendar event descriptions, the .ics feed, and download file names (`komodon-export-…`, `komodon-week-…`, `komodon-timelapse-…`).
 - **Internal names stay komogon**: packages, storage keys, IndexedDB names, extension message types, the `~/.komogon` data folder, the local scripts and startup shortcut, and the komogon.app domain (the user said to leave the address for now). Changing them would drop saved browser state or break the always-on copy.
 - Earlier entries keep the name they were written under.
+
+## Continue with Google, 2026-10-21 (user request)
+
+- **Google sign-in for the API's own accounts**, beside email and password. The portal shows Google's own button (Google Identity Services, popup); it hands back an ID token, and `POST /api/auth/google` checks the signature against Google's published keys, the issuer, and that the token was made for our client id (`GOOGLE_SIGNIN_CLIENT_ID`, a separate env var from the calendar's `GOOGLE_CLIENT_ID`). Only the client id is needed: no secret, no redirect.
+- **Accounts join by email.** A Google sign-in whose email Google has confirmed goes to the account that already uses that address (one with a password, or one moved over from a local copy), so testers can use either way in. Otherwise it starts a new account. The invite list applies the same as for sign-ups. No new table: the email is the link.
+- **The button appears only when the API offers it** (`GET /api/auth/google` answers the client id), so turning it on is one Render variable and nothing on Vercel.
+- **Google's button keeps Google's look** (dark fill, pill shape to match the Sign in button), since Google's terms ask for it; it sits under a divider below the password form.
+
+## Limits on sign-in tries, 2026-10-21 (user request)
+
+- **Passwords were already salted and hashed** (scrypt, a random 16-byte salt each, compared in constant time); nothing changed there. The gap was that nothing slowed down guessing.
+- **Wrong passwords are limited**: 10 per email in 15 minutes from anywhere (so one account can't be guessed from many addresses), and 30 per address in 15 minutes whatever the email. Only failed tries count, and a right password clears that email's count, so people signing in normally never meet it. Failed Google sign-ins count toward the per-address limit too.
+- **Sign-ups are limited to 20 per address an hour**, generous enough for a class signing up together on one school network.
+- Over a limit, the API answers 429 with a Retry-After header and "There have been too many tries. Please wait a few minutes and try again."
+- **Kept in memory, no new dependency** (`services/rate-limit.ts`). A restart forgets the counts, which is fine for slowing guessing on one Render instance.
+- **The caller's address comes from the nearest proxy** (`TRUST_PROXY_HOPS`, 1 on Render), not `trustProxy: true`, which would take the leftmost X-Forwarded-For entry that callers can write themselves.
+- **An unknown email takes as long as a wrong password**: sign-in checks against a stand-in hash when there is no account, so timing doesn't show which emails have accounts.

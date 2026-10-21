@@ -29,6 +29,13 @@ export interface Env {
   supabaseJwtSecret: string | undefined;
   /** Secret for the API's own email-and-password accounts, when Supabase sign-in is not used. */
   authSecret: string | undefined;
+  /** Proxies in front of the API whose X-Forwarded-For entry to trust (`TRUST_PROXY_HOPS`). */
+  trustProxyHops: number;
+  /**
+   * OAuth client id for "Continue with Google" on the API's own accounts. Only the id is
+   * needed; the portal's address must be an authorised JavaScript origin on the client.
+   */
+  googleSignInClientId: string | undefined;
   /** Dev-only HS256 secret for locally minted tokens when Supabase is not configured. */
   devAuthSecret: string | undefined;
   /** Where PGlite stores dev data when DATABASE_URL is unset. */
@@ -67,6 +74,8 @@ export function loadEnv(): Env {
     supabaseUrl: str('SUPABASE_URL'),
     supabaseJwtSecret: str('SUPABASE_JWT_SECRET'),
     authSecret: str('AUTH_SECRET'),
+    trustProxyHops: Number(str('TRUST_PROXY_HOPS', '0')) || 0,
+    googleSignInClientId: str('GOOGLE_SIGNIN_CLIENT_ID'),
     devAuthSecret: str('DEV_AUTH_SECRET'),
     pgliteDataDir: str('PGLITE_DATA_DIR', '.pglite')!,
     google: {

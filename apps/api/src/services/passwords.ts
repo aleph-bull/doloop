@@ -65,7 +65,13 @@ export async function signIn(
   const account = await db.query.passwordAccounts.findFirst({
     where: eq(passwordAccounts.email, e),
   });
-  if (!account || !(await checkPassword(password, account.passwordHash)))
+  // With no account, still check against a stand-in hash, so the answer takes as long and
+  // its timing doesn't show whether the email has an account.
+  const stored = account?.passwordHash ?? (await dummyHash());
+  if (!(await checkPassword(password, stored)) || !account)
     throw new HttpError(401, "That email and password don't match.");
   return { id: account.userId, email: e };
 }
+
+let dummy: Promise<string> | undefined;
+const dummyHash = () => (dummy ??= hashPassword(randomUUID()));

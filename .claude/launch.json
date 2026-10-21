@@ -109,6 +109,40 @@
         "VITE_DEV_AUTH_SECRET": "",
         "ADMIN_EMAILS": "admin@komogon.test"
       }
+    },
+    {
+      "name": "sandbox-google-api",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "scripts/local/sandbox-api.mjs"
+      ],
+      "port": 8800,
+      "env": {
+        "SANDBOX_API_PORT": "8800",
+        "SANDBOX_PORTAL_PORT": "5186",
+        "SANDBOX_DATA": ".pglite-sandbox-google",
+        "AUTH_SECRET": "sandbox-google-secret",
+        "GOOGLE_SIGNIN_CLIENT_ID": "sandbox-placeholder.apps.googleusercontent.com",
+        "VITE_DEV_AUTH_SECRET": ""
+      }
+    },
+    {
+      "name": "sandbox-google",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@komogon/portal",
+        "exec",
+        "vite",
+        "--config",
+        "vite.sandbox.config.ts"
+      ],
+      "port": 5186,
+      "env": {
+        "SANDBOX_API_PORT": "8800",
+        "SANDBOX_PORTAL_PORT": "5186",
+        "VITE_DEV_AUTH_SECRET": ""
+      }
     }
   ]
 }

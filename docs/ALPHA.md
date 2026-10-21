@@ -70,6 +70,18 @@ string (`postgresql://…?sslmode=require`). It starts empty. Your own data and 
   API's email-and-password accounts.
 - Deploy, then put the Vercel address into Render's `CORS_ORIGINS` and `PORTAL_URL`.
 
+**Optional: Continue with Google**
+
+- In Google Cloud Console › APIs & Services › Credentials, create an OAuth client ID of
+  type **Web application**. Under "Authorised JavaScript origins" add the portal's
+  addresses (`https://komogon.app`, the Vercel address, and `http://localhost:5173` to
+  try it locally). No redirect URI or client secret is needed. The OAuth consent screen
+  needs only the default email and profile scopes.
+- Put the client ID in Render's `GOOGLE_SIGNIN_CLIENT_ID`. The sign-in page asks the API
+  for it and shows the Google button only when it is set; nothing changes on Vercel.
+- A Google sign-in joins the account that already uses that email (password or not), so
+  existing testers can use either. `ALLOWED_EMAILS` applies to Google sign-ins too.
+
 **5. Feedback and errors** (optional, both off until set)
 
 - Make a short **Tally** form (the questions in section 4 below) and put its link in

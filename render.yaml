@@ -22,6 +22,14 @@ services:
       # Signs the API's own email-and-password sign-ins; changing it signs everyone out
       - key: AUTH_SECRET
         generateValue: true
+      # Render's proxy adds the caller's address to X-Forwarded-For; trust that one entry
+      # so the sign-in limits count each caller, not the proxy
+      - key: TRUST_PROXY_HOPS
+        value: '1'
+      # Optional "Continue with Google": a Web OAuth client id whose authorised JavaScript
+      # origins include the portal's address
+      - key: GOOGLE_SIGNIN_CLIENT_ID
+        sync: false
       # Postgres connection string (Neon, or any hosted Postgres)
       - key: DATABASE_URL
         sync: false

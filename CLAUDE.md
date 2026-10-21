@@ -49,6 +49,14 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   (scrypt hashes), `POST /api/auth/signup|signin`, tokens signed with `AUTH_SECRET`. The
   portal uses them when no Supabase and no dev variables are set (`authMode` `'server'` in
   `apps/portal/src/lib/auth.tsx`). Supabase sign-in still works if both sides get its keys.
+- "Continue with Google" for those accounts: Google's own button (Identity Services) gives
+  the portal an ID token, `POST /api/auth/google` checks it against Google's keys and
+  `GOOGLE_SIGNIN_CLIENT_ID`, and joins the account with that email or starts one. The
+  portal shows the button only when `GET /api/auth/google` answers a client id. Try it in
+  the `sandbox-google` sandbox (8800/5186; placeholder id, so the popup itself fails).
+- Sign-in tries are limited in memory (`services/rate-limit.ts`): failed sign-ins per email
+  and per address, sign-ups per address, 429 with Retry-After. Addresses come from
+  `TRUST_PROXY_HOPS` (1 on Render); never set `trustProxy: true`, it trusts forged headers.
 - Dev sign-in (`DEV_AUTH_SECRET` / `VITE_DEV_AUTH_SECRET`) is local only and must never be
   set on Vercel or Render.
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's

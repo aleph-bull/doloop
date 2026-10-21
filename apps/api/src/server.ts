@@ -5,6 +5,7 @@ import { authPlugin } from './auth/plugin';
 import type { Verifier } from './auth/verify';
 import type { Db } from './db/client';
 import { HttpError } from './errors';
+import { TooManyTries } from './services/rate-limit';
 import { meRoutes } from './routes/me';
 import { nodeRoutes } from './routes/nodes';
 import { plannedBlockRoutes } from './routes/planned-blocks';
@@ -21,7 +22,7 @@ import { trackerRoutes } from './routes/trackers';
 import { gradeRoutes } from './routes/grades';
 import { planRoutes } from './routes/plans';
 import { recapRoutes } from './routes/recap';
-import { passwordAuthRoutes } from './routes/auth';
+import { passwordAuthRoutes, type PasswordAuthOptions } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { leaderboardRoutes } from './routes/leaderboard';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
@@ -34,7 +35,16 @@ export interface BuildOptions {
   /** Invite list for a closed test (`ALLOWED_EMAILS`); empty lets everyone in. */
   allowedEmails?: string[];
   /** Email-and-password accounts kept by the API (`AUTH_SECRET`); null leaves them off. */
-  passwordAuth?: { secret: string } | null;
+  passwordAuth?: {
+    secret: string;
+    google?: PasswordAuthOptions['google'];
+    limits?: PasswordAuthOptions['limits'];
+  } | null;
+  /**
+   * How many proxies in front of the API to trust for the caller's address
+   * (`TRUST_PROXY_HOPS`), so sign-in limits count real callers. 0 trusts none.
+   */
+  trustProxyHops?: number;
   /** Who can see every account and its data (`ADMIN_EMAILS`). */
   adminEmails?: string[];
   /** Injectable clock for tests. */
@@ -49,7 +59,13 @@ export interface BuildOptions {
 
 /** Build the Fastify app without listening, so tests can inject requests. */
 export async function buildServer(opts: BuildOptions) {
-  const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 8 * 1024 * 1024 });
+  const app = Fastify({
+    logger: opts.logger ?? false,
+    bodyLimit: 8 * 1024 * 1024,
+    // Trust only the nearest hops, not `true`: `true` takes the leftmost X-Forwarded-For
+    // entry, which the caller can write themselves.
+    trustProxy: (_address: string, hop: number) => hop < (opts.trustProxyHops ?? 0),
+  });
   const clock = opts.clock ?? (() => new Date().toISOString());
 
   await app.register(cors, {
@@ -64,6 +80,7 @@ export async function buildServer(opts: BuildOptions) {
     if (err instanceof ZodError) {
       return reply.code(400).send({ error: 'Validation failed', issues: err.issues });
     }
+    if (err instanceof TooManyTries) reply.header('retry-after', String(err.retryAfterSeconds));
     if (err instanceof HttpError) {
       return reply.code(err.status).send({ error: err.message, details: err.details });
     }
@@ -85,8 +102,10 @@ export async function buildServer(opts: BuildOptions) {
   if (opts.passwordAuth)
     passwordAuthRoutes(app, opts.db, {
       secret: opts.passwordAuth.secret,
+      limits: opts.passwordAuth.limits,
       allowedEmails: opts.allowedEmails,
       adminEmails: opts.adminEmails ?? [],
+      google: opts.passwordAuth.google,
     });
 
   await app.register(authPlugin, {

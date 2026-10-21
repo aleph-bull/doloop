@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komogon/ui';
-import { friendlyAuthError, useAuth } from '../lib/auth';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { friendlyAuthError, serverGoogleClientId, useAuth } from '../lib/auth';
 
 export function SignIn() {
   const auth = useAuth();
@@ -14,6 +15,17 @@ export function SignIn() {
   /** What the email we just sent is for, when one was sent. */
   const [sent, setSent] = useState<'link' | 'confirm' | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Server mode: set when the API offers "Continue with Google". */
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (auth.mode !== 'server') return;
+    let cancelled = false;
+    void serverGoogleClientId().then((id) => !cancelled && setGoogleClientId(id));
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.mode]);
 
   if (auth.status === 'signed-in') return <Navigate to="/" replace />;
 
@@ -137,6 +149,20 @@ export function SignIn() {
               >
                 Continue with Google
               </Button>
+            </>
+          )}
+          {auth.mode === 'server' && googleClientId && !sent && (
+            <>
+              <div className="divider" style={{ margin: 0 }} />
+              <GoogleSignInButton
+                clientId={googleClientId}
+                onCredential={(credential) =>
+                  auth
+                    .signInWithGoogleCredential(credential)
+                    .catch((e) => toast(friendlyAuthError(e.message)))
+                }
+                onError={toast}
+              />
             </>
           )}
           {auth.mode === 'dev' && (
