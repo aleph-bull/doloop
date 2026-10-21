@@ -364,9 +364,6 @@ export function Popup() {
         {backdrop}
         <Glass className="card stack">
           <h1>Done with {active?.nodeTitle ?? 'it'}?</h1>
-          <p className="hint">
-            The minutes are saved either way. Choose Not yet to keep it on your list.
-          </p>
           <div className="row end">
             <Button variant="ghost" onClick={() => finish(null, false)} disabled={busy}>
               Not yet
@@ -526,7 +523,7 @@ export function Popup() {
   const startSession = async () => {
     if (!selected) return;
     if (plannedMinutes !== null && plannedMinutes <= 0) {
-      setError('Pick a length in the future');
+      setError(duration === 'until' ? 'Pick a later time' : 'Pick at least 1 minute');
       return;
     }
     const end = plannedEndAt();

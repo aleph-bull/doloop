@@ -28,6 +28,8 @@ const finished = (userId: string, workSeconds: number) => ({
 const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
+let sessionId: string;
+
 describe('profiles', () => {
   it('keeps the profile fields; the university only comes from verification', async () => {
     const ok = await t.api({
@@ -55,7 +57,8 @@ describe('profiles', () => {
   });
 
   it('shows your own profile at /me with totals and the grid, never the email', async () => {
-    await t.db.insert(sessions).values(finished(USER_A.id, 5400));
+    const [made] = await t.db.insert(sessions).values(finished(USER_A.id, 5400)).returning();
+    sessionId = made!.id;
     const res = await t.api({ method: 'GET', url: '/api/profiles/me' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -128,22 +131,29 @@ describe('profiles', () => {
   it('posts belong to their author: newest first, only the author can delete', async () => {
     const empty = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
+      url: '/api/social/posts',
       payload: { body: '  ' },
     });
     expect(empty.statusCode).toBe(400);
+    // Every post says which session it is about.
+    const noSession = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { body: 'Finished the first problem set.' },
+    });
+    expect(noSession.statusCode).toBe(400);
 
     const first = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
-      payload: { body: 'Finished the first problem set.' },
+      url: '/api/social/posts',
+      payload: { body: 'Finished the first problem set.', sessionId },
     });
     expect(first.statusCode).toBe(201);
     t.clock.now = '2026-09-21T15:00:00.000Z';
     const second = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
-      payload: { body: 'Two hours on linear algebra today.' },
+      url: '/api/social/posts',
+      payload: { body: 'Two hours on linear algebra today.', sessionId },
     });
     const prof = (
       await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })

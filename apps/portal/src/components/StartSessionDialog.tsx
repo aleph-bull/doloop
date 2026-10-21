@@ -190,16 +190,6 @@ export function StartSessionDialog({
   const today = routines.data?.today;
   const running = activeSession.data?.active ?? null;
 
-  /** What the new session would be on, for the "still running" question. */
-  const newTitle = (() => {
-    if (subject.startsWith('node:')) {
-      const id = subject.slice(5);
-      return (node?.id === id ? node : nodes.find((n) => n.id === id))?.title ?? 'this task';
-    }
-    if (subject.startsWith('routine:'))
-      return routineOptions.find((o) => routineKey(o) === subject)?.title ?? 'this routine';
-    return 'a free session';
-  })();
   const lockedPath = useMemo(
     () => (lockSubject && node ? pathLabel(buildIndex(nodes).byId, node.id) : ''),
     [lockSubject, node, nodes],
@@ -228,7 +218,8 @@ export function StartSessionDialog({
 
   const submit = async () => {
     if (!subject) return toast('Pick something to study');
-    if (plannedMinutes !== null && plannedMinutes <= 0) return toast('Pick a length in the future');
+    if (plannedMinutes !== null && plannedMinutes <= 0)
+      return toast(duration === 'until' ? 'Pick a later time' : 'Pick at least 1 minute');
     const [kind, id, date] = subject.split(':');
     try {
       await start.mutateAsync({
@@ -324,7 +315,7 @@ export function StartSessionDialog({
   const styleHelp =
     style === 'pomodoro'
       ? settings
-        ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break, long break every ${settings.pomodoro.cyclesBeforeLong}.`
+        ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break, long break every ${settings.pomodoro.cyclesBeforeLong} cycles.`
         : ''
       : 'Straight through, no breaks. Stop whenever you like.';
 
@@ -351,10 +342,7 @@ export function StartSessionDialog({
           </>
         }
       >
-        <p className="muted">
-          A tab of its own with just the clock and your task. Always and Never remember the answer;
-          change it any time in Settings under Focus screen.
-        </p>
+        <p className="muted">Opens a new tab with a focus screen that just has the timer.</p>
       </Modal>
       <Modal
         open={open}
@@ -455,7 +443,7 @@ export function StartSessionDialog({
                 setMinutes(e.target.value);
                 setConfirmCut(null);
               }}
-              hint={plannedMinutes ? `That is ${fmtLength(plannedMinutes)}` : undefined}
+              hint={plannedMinutes ? fmtLength(plannedMinutes) : undefined}
             />
           )}
 
@@ -471,7 +459,7 @@ export function StartSessionDialog({
               hint={
                 plannedMinutes && plannedMinutes > 0
                   ? isTomorrow(endTime)
-                    ? `That time has passed today, so this runs until tomorrow, ${fmtLength(plannedMinutes)} from now.`
+                    ? `Tomorrow, ${fmtLength(plannedMinutes)} from now.`
                     : `${fmtLength(plannedMinutes)} from now`
                   : undefined
               }
@@ -501,18 +489,13 @@ export function StartSessionDialog({
             </p>
           )}
 
-          <Toggle
-            checked={showTimer}
-            onChange={setShowTimer}
-            label="Show the timer"
-            description="You can hide the numbers and just study."
-          />
+          <Toggle checked={showTimer} onChange={setShowTimer} label="Show the timer" />
         </div>
       </Modal>
       <Modal
         open={open && askReplace}
         onClose={() => setAskReplace(false)}
-        title={`${running?.nodeTitle ?? 'Another session'} is still running. Cancel to start ${newTitle}?`}
+        title={`End ${running?.nodeTitle ?? 'the running session'} and start a new one?`}
         actions={
           <>
             <Button variant="ghost" onClick={() => setAskReplace(false)} disabled={replacing}>
@@ -523,12 +506,12 @@ export function StartSessionDialog({
               onClick={() => void replace()}
               loading={replacing || start.isPending}
             >
-              Cancel and start
+              End and start
             </Button>
           </>
         }
       >
-        <p className="muted">The minutes it has so far are saved.</p>
+        <p className="muted">Its time so far is kept.</p>
       </Modal>
     </>
   );

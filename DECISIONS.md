@@ -1562,6 +1562,58 @@ komogon.app domain and private server key before hosted password signup can send
 - **The dashboard's Tasks row keeps its cards' glass blur when it has more cards than fit.** Its edge fades were a mask on the row, and in Chrome a masked element becomes the backdrop for the blur inside it, so the glass cards showed the background sharp through them. The row no longer has a mask; CardRail gives each card its own share of the fade instead, worked out from where the card sits in the row on every scroll and resize (a card fully inside the row has no mask at all). The fades look as before and follow the scroll. Other sideways scrollers, such as the nav tabs, keep the row mask; they hold no glass.
 - **The after-task question no longer says "Asked once per task."** It now reads only "Your answer goes on the chart of how ready you felt as the due date came closer."
 
+## Social: a feed, friends, a comparison and the leaderboard, 2026-10-21 (user request)
+
+- **Social is a page tab again** (after Analytics; Settings › Pages › Social hides it and the profile link together), with four views in the URL (`?tab=`): **Feed**, **Friends**, **Compare** and **Leaderboard**. Profiles moved to `/profile` (yours) and `/profile/<id>`; `/social/<id>` still redirects. The leaderboard left Analytics (`?tab=leaderboard` there redirects to Social) and gained a podium for the first three, pictures, a "Friend" chip and bars against the leader.
+- **A post** is any of: a line (up to 500 characters), one of your finished sessions shared as progress (the post keeps the minutes and the task's title as they were, so it reads the same if the session is edited or gone), and a video (MP4 or WebM, under 5 MB, stored in `post_media` as base64 with a small JPEG poster on the post; the portal fetches the bytes with the token and plays an object URL, so a feed never downloads a video until it is played). The focus screen's timelapse export has a **Share to Social** button that posts the video with the session attached and a still as the poster. Anyone signed in sees every post on the feed ("Everyone"; "Friends" narrows it) and on the author's profile; only the author can delete. This supersedes "no feed" from the same day: the owner asked for sharing timelapes and progress.
+- **Likes and comments** (`post_likes`, `post_comments`): one like per person; a comment up to 500 characters, deletable by its author or the post's author. Counts come with every post; the portal patches its caches on like rather than refetching.
+- **Friends** (`friendships`, one row per pair): Add friend sends a request, the other side accepts or declines (declining deletes the row, so a later request is possible), either side can take a request back or remove a friend later, and asking someone who already asked you is the same as accepting. Found by name in the Friends tab, or from any profile, feed post or leaderboard row. The Social tab shows how many requests are waiting.
+- **Compare** puts your weeks beside your friends', all in your timezone and Monday-start weeks: this week and the last 28 days with your place among them and the friends' average, streaks, a bar per person for this week, days studied out of 28 and the longest session, and an eight-week sparkline each. It is only shown once you have a friend. This is a second place people are compared, which the owner asked for; the rule "the leaderboard is the one place" is retired.
+- **Copy is short** on these pages, on the owner's instruction: fragments are fine, nothing explains itself twice.
+- Data stays as before: names, pictures, university and finished-session totals are the only things shared; never the email. The seed for a look at it with people on it is `apps/api/seed-social-demo.tmp.ts` (sandbox `.pglite-sandbox-social`, launch configs `social-sandbox-api` / `social-sandbox` on 8802/5188). Migration `0018_social_feed`.
+
+## Social feed in three columns, and sharing settings, 2026-10-21 (user request)
+
+- **The feed is laid out like LinkedIn's home**: you on the left (picture, name, university, a line, streak, level and friend count, and a link to what you share), the composer and posts in the middle, and a **thinner leaderboard on the right** (the first five, with the way to the whole board). The columns go by the page's own width, not the window's (the sidebar takes some of it): under 880px the left card goes, under 660px the board too, and the posts have the page. The owner said the left column could hold anything; the right had to be the leaderboard.
+- **Settings › Social says what other people get to see**, and the API holds to it (`settings.social`, strict in the settings schema): who sees your posts (everyone signed in, or friends only; the feed and the profile both filter), study totals on your profile (off, the profile answers null for the stats, grid and weekdays and the page says they keep their study time to themselves), appearing on the leaderboard, letting friends compare with you (left out of their Compare), and taking friend requests (a request to someone who turned it off is a 403, and the button says "Not taking requests"). Everything is on by default, as before; nothing is shared that was not already.
+
+## Two leaderboards, pictures on posts, and no bio on the feed card, 2026-10-21 (user request)
+
+- **A global board and a friends board.** `GET /api/leaderboard?scope=global|friends`; the Leaderboard tab and the small board beside the feed both switch between them. Settings › Social › Leaderboards is three-way: **Global and friends** (the default), **Friends only** (off the global board, still on your friends' boards) or **Neither** (your time counts nowhere). Stored as `settings.social.leaderboard` = 'global' | 'friends' | 'off'; the day-old true/false rows read as 'global' and 'off' in `withDefaults`.
+- **Posts take a picture as well as a video** (JPEG, PNG or WebP under 2 MB, stored like a video in `post_media` and fetched with the token; shown at its own shape, no taller than sixty percent of the screen). The composer button is "Add a photo or video".
+- **The card beside the feed shows no bio**: picture, name, university and the three numbers only; the line about you stays on the profile.
+- The sandbox seed takes `SEED_MEDIA_DIR` with sample videos (made with a static ffmpeg: test patterns, 6 s, 640x360) and pictures, so media posts can be looked at.
+
+## Jams instead of Compare, friends beside the feed, a tighter feed, 2026-10-21 (user request)
+
+- **Compare is gone; in its place, jams**: a small game people enter, the way a Spotify jam is joined. Someone starts one (a name, and a day, three days or a week), friends see it under "Friends are in" and join, anyone with its six-letter code can join from outside the friend list, and from the moment each person joins their focused minutes count. The card ranks the members with bars, a crown on the leader, and names the winner once it has ended. The host can end it early; members can leave. Tables `jams` and `jam_members` (migration 0019), routes in `routes/jams.ts` (`GET /api/social/jams` gives active, open and the last five finished). Joining is the only way in, so the "Let friends compare with you" setting went with Compare.
+- **The Friends tab is gone too**: friends live beside the feed, under your card (search, requests with accept and decline, the list with a remove, the ones you asked). On a narrow page the left column moves under the posts rather than disappearing, so requests stay reachable.
+- **The feed is tighter**, after the owner found it massive: 40px pictures in the composer and on posts, smaller padding, 14px text, a smaller session strip, 26px pictures in the side lists, and the three numbers on your card in three equal columns so the icons sit symmetric. Everything beside the feed scrolls with the page in its own column.
+
+## Full-width panels, one leaderboard list, you against everyone, Compare back under the board, 2026-10-21 (user request)
+
+- **No thin, sectioned pages.** The Jams and Leaderboard panels take the page's full width; the centred 640px column read as chopped. Now a rule in CLAUDE.md.
+- **The leaderboard is one list**, ranks one to ten alike, a crown on the first; the podium with its three heights was cut off at the card's edge and went.
+- **Under the global board, "You and everyone"**: your focused time this week against the average, days studied, session length (last 28 days) and streak, each as two bars, plus your all-time place among everyone on the board and the share of people you are ahead of. The average leaves out anyone under **15 minutes** that week; when nobody else reaches that this week, **last week's** numbers are used and the card says so. Session length and streak averages are over the same people. `GET /api/leaderboard/stats`.
+- **Compare's analytics are back, under the friends board** (the owner liked the page): the bento of tiles, side-by-side bars, streaks, eight-week sparklines, days studied and longest session, now `CompareBento` with `GET /api/social/compare` restored in `routes/compare.ts`. There is no sharing toggle for it: being friends is the consent.
+- **Friends card**: the list comes first, then "Requests to answer" on a faint tint, then the ones you asked; before, requests sat on top and looked like friends. The side columns are no longer scroll boxes (a scroller clipped the glass shadows); the board stays sticky, your card and friends scroll with the page.
+
+## Groups, live now, nudges and kudos, 2026-10-21 (user request)
+
+- **Study groups** (Social › Groups): a lasting group of friends, unlike a jam. Start one with a name, pass on its six-letter code, or join a friend's from the list. A group's card is this week: the total "together" at the top right, a line per person of their running total through the week (yours in the accent, the others in greys), and everyone ranked with their minutes and a short segmented bar of their biggest subjects (the top three, then "Other"). Tables `groups` and `group_members`, routes in `routes/groups.ts`; the last person out closes the group.
+- **Live now**: friends in a session right now (a session not ended whose timer reported in within ten minutes), each with a running clock since they started and what they are on, as a strip at the top of Groups; each group card also says who in it is studying now.
+- **Nudges**: a friend, or someone in one of your groups, can be nudged to study, **once every two hours** per person (`nudges` table; a second one inside the window is a 409 that says when). From the bell on a friend's row beside the feed, and from "Nudge" on a group member who is under half the group's average this week. The nudged person sees them on the **dashboard** above the daily card, with a "Got it" that waves them away; a day later they go on their own.
+- **Kudos, not likes**: the button on a post is a thumbs-up labelled "Kudos", as a runner gives on a run; the API still calls them likes underneath.
+
+## A round of fixes on Social, 2026-10-21 (user request)
+
+- **Group chart = the last seven days**, ending today, not a Monday-to-Sunday week with a fixed start and end. A group younger than a week starts on its first day. The lines begin on the first day's value (no climb from zero at the left edge, which drew a vertical stroke) and end on today with a dot. Under each member's segmented bar, the tasks are **named** with their time, one swatch each.
+- **Friend requests** sit under the friends list as their own block: "Inbound · N" (the first three, the rest fading behind "Show all") and "Outgoing · N", folded away until opened.
+- **Posts need a session**: the composer's Post button waits for one ("Which session?"), and the API refuses a post without `sessionId`. Posts got roomier (16 × 18 px) and the session figure lighter (600, 1.1 rem); the group and jam figures are 600 too.
+- **The leaderboard reads as analytics**: the first three are tiles with the all-time total big, an eight-week sparkline, this week, days of the last 28 and the streak; the rest are rows with the same sparkline small, this week, the streak and the total. The API's entries carry `weekly`, `thisWeek`, `streak` and `activeDays28` for it.
+- **Jams open**: a chevron on each card shows the running totals through the jam's days (same lines as groups) and, per person, sessions, time, when they joined and what they worked on. Members can leave. The code box fits six letters now.
+- **Your card** beside the feed shows days and level only; the friend count went.
+
 ## Copy audit, batch 1: the dashboard, 2026-10-21 (user request)
 
 The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked through in batches. Fragments are fine; explanations of what the screen already shows are not.
@@ -1595,3 +1647,26 @@ The owner sent a sketch of the video: the time of day top left, the screen top r
 - **"Match camera" is the default shape.**
 - **The screen starts under "Add back".** Recording it is asked every time a recording starts in a session ("Record your screen this time?": Record my screen / Just the camera). The persistent "Record my screen too" switch is gone. Saying no leaves the whole camera picture: no space is drawn for the screen. Saying yes with the screen not in the layout adds it where it was last placed. The recording pill offers Share screen whenever the screen isn't being shared.
 - **Trim.** The "Your timelapse" card has Start and End sliders over the recorded session, with the first and last kept still shown above them and "Keep it all" to undo. The trim is held in session seconds, so it survives the stills thinning while recording; an end never moved follows the recording as it grows.
+
+## Copy audit, batch 2: starting and running a session, 2026-10-21 (user request)
+
+- **Time to focus screen:** the "Your session" card lost "Start now and stop whenever you like."; its toggles read "Pomodoro" and "Timelapse" (no "Enable"). "A little space for what you want to do." was kept on purpose.
+- **Start dialog:** Pomodoro help ends "long break every 4 cycles."; the For hint is just the length ("1 h"); Until past today reads "Tomorrow, 4 h 59 min from now."; "Show the timer" has no description; the zero-length toast says "Pick a later time" or "Pick at least 1 minute" (also in the extension).
+- **Replacing a running session:** "End ECO220 and start a new one?", button "End and start", body "Its time so far is kept."
+- **Focus screen prompt** (owner's words): "Opens a new tab with a focus screen that just has the timer."
+- **Cutting a block short:** "This ends your work block 10 minutes early." ("Are you sure?" dropped).
+- **Focus screen:** no line under "Nothing running"; the shortcuts read "Esc to leave · Space to pause · H to hide the clock" under "Your session keeps running."; the hide button's tooltip matches its label.
+- **After sleep** (owner's words): "The session kept running while your computer slept."
+- **End early:** "Your time is saved, but it counts toward your level only after 10 minutes or when the task is done."
+- **"Done with {task}?"** has no body, in the app and the extension.
+- **Session summary streak line** (owner's words): "{n}-day streak. Keep it up!"
+
+## Copy audit, batch 3: after a session, and the voice rule, 2026-10-21 (user request)
+
+- **Voice:** a little quirky is fine if it sounds like a person, never corporate or AI-polished; fragments are fine. CLAUDE.md's voice rule now says so (it used to say "never quirky" and "full sentences").
+- **End-of-session lines swapped:** "Bring on the exam.", "Feeling better about this one.", "Each one a bit better than the last.", "Chipping away at it." replace four coach-speak lines. "You've started. That's often the hardest part." stays (the owner turned down "One down"), as do the milestone and late-night lines.
+- **Timelapse prompt** (owner's words): "We take stills from your computer's camera and give you a timelapse in the end." with a "Change what it looks like" link to Settings › Focus screen, opened in a new tab so the focus screen stays put.
+- **Timelapse:** the two toggle descriptions are gone (one was wrong when breaks are recorded); storage hints say "Needs about 1.2 GB while recording. The video ends up around 40 MB."; "Stop recording to include the whole session."
+- **Audio sharing:** one paragraph: "The visualizer needs to hear your music. Share a tab, window or your screen, and tick share audio in the browser's picker. We don't record anything, and it's optional."
+- **Delete time:** "You'd have stopped at 3:10 AM." / "That's 1 h of focus, 10 min of breaks gone, and 120 XP off (25 left)." The achievements note and the "Time comes off the end…" hint were removed at the owner's request.
+- **Session history:** "Finished sessions show up here." / "Left one running? Delete time trims the end, and the XP that came with it."

@@ -125,6 +125,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstSpikeOpacity: 1,
   },
   features: { routines: true, plans: true, grades: false, calendar: true, social: true },
+  social: {
+    posts: 'everyone',
+    stats: true,
+    leaderboard: 'global',
+    requests: true,
+  },
   dashboard: { focusOnly: false },
   nav: { style: 'top' },
   focusScreen: { openOnStart: 'ask' },
@@ -175,6 +181,10 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
 
   // Idle detection is gone; a row saved while it existed still carries its group.
   delete out.idle;
+  // The leaderboard choice was a yes or no for a day; those rows read as the two ends.
+  const social = out.social as { leaderboard: unknown };
+  if (social.leaderboard === true) social.leaderboard = 'global';
+  else if (social.leaderboard === false) social.leaderboard = 'off';
 
   const settings = out as unknown as UserSettings;
   settings.dismissed = asList<string>(settings.dismissed, []);

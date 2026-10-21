@@ -94,6 +94,9 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   unformatted, and it rewrites other sessions' work. Format only the files you changed.
 - Ideas they mention but don't ask to have built go in `docs/IDEAS.md`. Don't build them
   unasked.
+- **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
+  to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
+  numbered batches. Work on it only when they ask, and tick items off there as they ship.
 - Verify UI changes in a sandbox and show a screenshot; the owner expects it checked, not
   described.
 - Record each change of direction in DECISIONS.md, with the date.
@@ -104,8 +107,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 
 ## Rules the app keeps
 
-**Voice.** Calm and sincere, like the Opal app: plain, warm, full sentences. Never cheeky,
-quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep talks).
+**Voice.** Calm and sincere, like the Opal app: plain and warm. Fragments are fine; don't
+explain what the screen already shows. A little quirky is fine if it sounds like a person
+talking, never corporate or AI-polished (no narrator sentences, no "X lives here", no
+em-dash flourishes). Never flirty or salesy, and never pushy (no nagging about rest or gaps).
+Keep the owner's own wording verbatim, "!" included.
 `greetings.test.ts` and `phrases.test.ts` reject "!", emoji and nag words.
 
 **Look.**
@@ -120,6 +126,9 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - Charts use shades of the accent, not a rainbow. No emoji in the UI; use lucide icons.
 - No sparse full-width panels with two lonely values; fold small values into an existing
   row as pills.
+- **Never a thin, sectioned page**: panels take the page's full width. A narrow centred
+  column of cards with empty sides on both reads as chopped (the owner's word, 2026-10-21,
+  on the first Jams page). Use the width: columns side by side, a bento, wider rows.
 - Inter for everything; Satoshi only for the "Komodon" wordmark in the nav.
 
 **Product.**
@@ -128,8 +137,9 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   Today, Routines, Settings, Analytics or the session overlay.
 - Analytics shows wins only: never a discouraging or zero-value card.
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
-- The leaderboard (Analytics › Leaderboard, top 10 by focused time, by chosen name) is the
-  one place people are compared; the owner asked for it. Don't add more comparison.
+- People are compared in two places, both asked for by the owner: the leaderboard (Social ›
+  Leaderboard, global or friends, top 10 by focused time) and jams (Social › Jams, a timed
+  game people choose to enter). Don't add comparison elsewhere.
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
@@ -181,11 +191,41 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 
 ## Recent changes (2026-10-20)
 
-- Your profile (2026-10-21): `/social` is your own profile (`pages/Profile.tsx`), `/social/:id`
-  someone else's. It is not a page tab: the link sits where Sign out was (end of the top bar,
+- Social (2026-10-21, later the same day): `/social` is a page tab with `?tab=` views: Feed
+  (`components/social/Feed.tsx`, posts with a shared session, a video and likes and
+  comments), Friends (requests, friends, search by name), Compare (you beside your friends,
+  `GET /api/social/compare`) and Leaderboard (moved from Analytics, with a podium). The API
+  is `routes/social.ts`; profiles are `/profile` and `/profile/:id` and list the person's
+  posts. Videos: `post_media` holds base64, `GET /api/posts/:id/media` serves bytes, and
+  the portal plays them from an object URL after fetching with the token (a video tag cannot
+  send the header). Drizzle drops the table from `posts.id` in a select list, so the count
+  subqueries there are written by hand with aliases. Seed a sandbox with people on it:
+  `cd apps/api && npx tsx seed-social-demo.tmp.ts`, then the `social-sandbox-api` and
+  `social-sandbox` launch configs (8802/5188; they run from the `social` worktree folder).
+  The feed is three columns (`.feed-layout`, container queries on `.feed-wrap`): your
+  card, the posts, a five-row leaderboard. Settings › Social (`settings.social`) is what a
+  person shares; the API enforces it in `routes/social.ts`, `profiles.ts` and
+  `leaderboard.ts`, so a new place that shows someone's numbers must check it too.
+  The leaderboard has a global and a friends scope (`?scope=`); the setting is three-way
+  ('global' | 'friends' | 'off', older true/false normalised in `withDefaults`). Posts
+  carry a video or a picture; sample media for the seed is made with a scratch
+  `ffmpeg-static` and passed as `SEED_MEDIA_DIR` (there is no ffmpeg on this PC).
+  Jams (`routes/jams.ts`, `components/social/JamsTab.tsx`) replaced Compare: a timed game
+  people join by friendship or by code; minutes count from each person's joining time.
+  Friends have no tab: they are the `FriendsCard` beside the feed. The owner wants these
+  cards dense (40px pictures on posts, 26px in lists, 12-14px padding); don't let them grow.
+  Groups (`routes/groups.ts`, `GroupsTab.tsx`): lasting groups with this week's lines and
+  ranks, "Live now" (sessions with `last_seen_at` in the last ten minutes) and nudges
+  (`nudges` table, one per pair per two hours; `NudgesCard` shows them on the dashboard).
+  Posts have kudos (the like routes, relabelled). The leaderboard tab also carries
+  `GET /api/leaderboard/stats` (you against everyone, people under 15 min a week left out,
+  last week when this week is empty) and, on the friends scope, the Compare bento.
+
+- Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
+  someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,
   last sidebar row), and Sign out is a button on the profile itself and in Settings › Account. Picture, name, Ontario university (`settings.profile.university`, ids in
-  `packages/core/src/universities.ts`), bio, the study-days grid and totals in one card. Posts (`posts` table and routes) exist
-  in the API but are not shown yet. The gear on your own profile opens `ProfileSettingsDialog`; its fields are
+  `packages/core/src/universities.ts`), bio, the study-days grid and totals in one card, then the person's posts (see Social
+  above). The gear on your own profile opens `ProfileSettingsDialog`; its fields are
   `ProfileFields`, shared with Settings › Account. Profiles are visible
   to anyone signed in; the API route (`routes/profiles.ts`) shares only chosen fields and
   finished-session totals, never the email.

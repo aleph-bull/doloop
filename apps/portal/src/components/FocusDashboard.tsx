@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Button, Glass, Input, Spinner, Toggle } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
 import { useActiveSession, useMe, useStartSession, useUpdateSettings } from '../lib/queries';
+import { NudgesCard } from './NudgesCard';
 import { TimerCard } from './TimerCard';
 import { RewardOverlay } from './RewardOverlay';
 
@@ -63,6 +64,7 @@ export function FocusDashboard() {
           <p className="greeting-line">A little space for what you want to do.</p>
         </div>
       </div>
+      <NudgesCard />
       {active.isPending ? (
         <Spinner />
       ) : active.isError ? (
@@ -80,14 +82,11 @@ export function FocusDashboard() {
       ) : (
         <Glass className="focus-start p-6" strong>
           <form onSubmit={(event) => void begin(event)} className="flex flex-col gap-6">
-            <div>
-              <h2 className="section-title">Your session</h2>
-              <p className="muted text-sm">Start now and stop whenever you like.</p>
-            </div>
+            <h2 className="section-title">Your session</h2>
             <Toggle
               checked={pomodoro}
               onChange={setPomodoro}
-              label="Enable Pomodoro"
+              label="Pomodoro"
               description="Alternate focus time with breaks."
               disabled={busy}
             />
@@ -118,7 +117,7 @@ export function FocusDashboard() {
             <Toggle
               checked={timelapse}
               onChange={setTimelapse}
-              label="Enable timelapse"
+              label="Timelapse"
               description="Record with your camera on the focus screen. The video stays on this device."
               disabled={busy}
             />

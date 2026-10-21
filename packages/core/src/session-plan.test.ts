@@ -94,15 +94,9 @@ describe('pomodoroCut', () => {
 
 describe('describeCut', () => {
   it('names the block and how much is lost', () => {
-    expect(describeCut(pomodoroCut(20, CFG))).toBe(
-      'Are you sure? This will end your work block 5 minutes early.',
-    );
-    expect(describeCut(pomodoroCut(27, CFG))).toBe(
-      'Are you sure? This will end your short break 3 minutes early.',
-    );
-    expect(describeCut(pomodoroCut(120, CFG))).toBe(
-      'Are you sure? This will end your long break 10 minutes early.',
-    );
+    expect(describeCut(pomodoroCut(20, CFG))).toBe('This ends your work block 5 minutes early.');
+    expect(describeCut(pomodoroCut(27, CFG))).toBe('This ends your short break 3 minutes early.');
+    expect(describeCut(pomodoroCut(120, CFG))).toBe('This ends your long break 10 minutes early.');
   });
 
   it('uses the singular for one minute', () => {

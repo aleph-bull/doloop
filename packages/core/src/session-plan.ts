@@ -110,9 +110,7 @@ export function pomodoroCut(minutes: number, cfg: PomodoroConfig): BlockCut | nu
 export function describeCut(cut: BlockCut | null): string | null {
   if (!cut || cut.minutesEarly <= 0) return null;
   const m = cut.minutesEarly;
-  return `Are you sure? This will end your ${PHASE_WORDS[cut.phase]} ${m} minute${
-    m === 1 ? '' : 's'
-  } early.`;
+  return `This ends your ${PHASE_WORDS[cut.phase]} ${m} minute${m === 1 ? '' : 's'} early.`;
 }
 
 /** The nearest clean lengths either side, for a "use 90 min instead" affordance. */

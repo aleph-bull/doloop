@@ -9,7 +9,7 @@ import {
   type TimelapseOptions,
   type UserSettings,
 } from '@komogon/core';
-import { Download, MonitorUp, Square, Video } from 'lucide-react';
+import { Download, MonitorUp, Share2, Square, Video } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -24,7 +24,8 @@ import {
   useToast,
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
-import { useMe } from '../../lib/queries';
+import { blobToDataUrl, POST_VIDEO_MAX_BYTES, posterFromImage } from '../../lib/post-media';
+import { useCreatePost, useMe } from '../../lib/queries';
 import {
   DEFAULT_SCREEN_BYTES,
   freeStorageBytes,
@@ -105,13 +106,10 @@ export function TimelapsePrompt({ open, onYes, onNo, onAlways, onNever }: Timela
       }
     >
       <p className="muted text-sm">
-        Your camera takes a still every so often while you focus, and the stills become a short
-        video of you studying. It all stays on this computer until you save the video.
-        {screenSupported() && ' Next, you can choose whether to record your screen too.'}
-      </p>
-      <p className="muted text-sm" style={{ marginTop: 8 }}>
-        Choose what it records and how the video is laid out in{' '}
-        <TimelapseSettingsLink newTab>timelapse settings</TimelapseSettingsLink>.
+        We take stills from your computer&rsquo;s camera and give you a timelapse in the end.{' '}
+        <Link to={TIMELAPSE_SETTINGS_PATH} className="link-button" target="_blank" rel="noreferrer">
+          Change what it looks like
+        </Link>
       </p>
     </Modal>
   );
@@ -250,12 +248,7 @@ export function TimelapseSettings({
   return (
     <div className="flex flex-col gap-3">
       {onRecordingChange && (
-        <Toggle
-          checked={!!recording}
-          onChange={onRecordingChange}
-          label="Record this session"
-          description="Stills are taken during focus, not breaks."
-        />
+        <Toggle checked={!!recording} onChange={onRecordingChange} label="Record this session" />
       )}
       <div className="field">
         <span className="field-label">When a session starts</span>
@@ -288,7 +281,6 @@ export function TimelapseSettings({
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
-        description="Keep taking stills while you rest, not only while you focus."
       />
       {value.recordBreaks && value.layout.elapsed.visible && (
         <div className="field">
@@ -336,9 +328,9 @@ export async function timelapseSpaceWarning(
   const est = timelapseSizeEstimate(options, stillBytesFor(sources));
   const free = await freeStorageBytes();
   if (free !== null && free < est.peakBytes * 2)
-    return `Space is short: this timelapse can hold about ${fmtBytes(est.peakBytes)} of stills and the browser has about ${fmtBytes(free)} left.`;
+    return `Space is short: this timelapse needs about ${fmtBytes(est.peakBytes)} while recording and the browser has about ${fmtBytes(free)} left.`;
   if (est.big)
-    return `This timelapse can hold about ${fmtBytes(est.peakBytes)} of stills. A shorter length or a faster speed takes less.`;
+    return `This timelapse needs about ${fmtBytes(est.peakBytes)} while recording. A shorter length or a faster speed takes less.`;
   return null;
 }
 
@@ -352,7 +344,6 @@ function stillBytesFor(sources: TimelapseSources): number | undefined {
 function SizeNote({ options }: { options: TimelapseSettingsValue }) {
   // The screen is asked about each session; count it when it has a place in the layout.
   const sources = { camera: true, screen: options.layout.screen.visible };
-  const measured = sources.screen ? measuredScreenBytes() : measuredStillBytes();
   const est = timelapseSizeEstimate(options, stillBytesFor(sources));
   const [free, setFree] = useState<number | null>(null);
   useEffect(() => {
@@ -365,9 +356,7 @@ function SizeNote({ options }: { options: TimelapseSettingsValue }) {
   const short = free !== null && free < est.peakBytes * 2;
   return (
     <p className="field-hint" role={short || est.big ? 'status' : undefined}>
-      Holds up to about {fmtBytes(est.peakBytes)} of stills while recording
-      {measured ? `, going by your ${sources.screen ? 'recordings' : 'camera'}` : ''}
-      {sources.screen ? ' with the screen' : ''}, and the video comes out around{' '}
+      Needs about {fmtBytes(est.peakBytes)} while recording. The video ends up around{' '}
       {fmtBytes(est.videoBytes)}.
       {short && (
         <span className="timelapse-size-warn">
@@ -492,6 +481,8 @@ export interface TimelapseExportProps {
   recording: boolean;
   /** The video was saved, so the stills behind it are safe to lose. */
   onSaved?: () => void;
+  /** The session the stills came from, so sharing can attach it to the post. */
+  sessionId?: string | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -501,12 +492,15 @@ export function TimelapseExport({
   onChange,
   recording,
   onSaved,
+  sessionId,
 }: TimelapseExportProps) {
   const { toast } = useToast();
+  const share = useCreatePost();
+  const [sharing, setSharing] = useState(false);
   // The time of day in the video reads in the account's timezone, not the computer's.
   const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
-  const [video, setVideo] = useState<{ url: string; mime: string } | null>(null);
+  const [video, setVideo] = useState<{ url: string; mime: string; blob: Blob } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
   // The trim, in seconds into the session; null keeps that end where the recording is.
@@ -553,7 +547,7 @@ export function TimelapseExport({
         setProgress,
         abort.current.signal,
       );
-      setVideo({ url: URL.createObjectURL(blob), mime });
+      setVideo({ url: URL.createObjectURL(blob), mime, blob });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
         toast(err instanceof Error ? err.message : 'Could not make the video');
@@ -569,6 +563,32 @@ export function TimelapseExport({
     a.download = timelapseFileName(video.mime);
     a.click();
     onSaved?.();
+  };
+
+  /** The video goes up as a post with the session's minutes, and a still as its poster. */
+  const shareToSocial = async () => {
+    if (!video) return;
+    if (video.blob.size > POST_VIDEO_MAX_BYTES)
+      return toast('Up to 5 MB can be shared. Pick a shorter length and make it again.');
+    setSharing(true);
+    try {
+      // The poster comes from the middle of what the video kept, after any trim.
+      const stills = recorder.stills().slice(startAt, endAt);
+      const middle = stills[Math.floor(stills.length / 2)];
+      const picture = middle?.blob ?? middle?.screen ?? null;
+      const poster = picture ? await posterFromImage(picture) : null;
+      await share.mutateAsync({
+        sessionId: sessionId ?? undefined,
+        media: await blobToDataUrl(video.blob),
+        poster: poster ?? undefined,
+      });
+      toast('Shared to Social.');
+      onSaved?.();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not share it');
+    } finally {
+      setSharing(false);
+    }
   };
 
   const discard = () => {
@@ -602,6 +622,9 @@ export function TimelapseExport({
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={download}>
               <Download size={14} aria-hidden /> Save the video
+            </Button>
+            <Button variant="secondary" onClick={() => void shareToSocial()} loading={sharing}>
+              <Share2 size={14} aria-hidden /> Share to Social
             </Button>
             <Button
               variant="ghost"
@@ -657,7 +680,7 @@ export function TimelapseExport({
             </Button>
           </div>
           {recording && (
-            <span className="field-hint">Still recording; stop first for the whole session.</span>
+            <span className="field-hint">Stop recording to include the whole session.</span>
           )}
         </>
       )}
