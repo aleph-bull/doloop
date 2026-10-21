@@ -1465,3 +1465,9 @@ komogon.app domain and private server key before hosted password signup can send
 - **The top bar always shows page names.** The icons-when-crowded mode is gone: when the names do not fit, the tabs scroll sideways with faded edges, as they did before the sidebar arrived. Icons stay on the sidebar and the phone bar.
 - **Top bar or sidebar is chosen in Settings › Appearance › Navigation**, moved out of Pages. It is the one layout setting outside Pages, because the owner sees it as part of the look.
 - **The hosted site had no backdrop blur at all.** The source wrote -webkit-backdrop-filter beside backdrop-filter; the production CSS pass (Lightning CSS, through Tailwind's Vite plugin) kept only the prefixed one, and Chrome no longer understands the prefix. So glass bars and cards were flat translucent fills, and switching Panels to Matte barely changed the top bar or sidebar. The prefixed lines are gone from the source; the build adds the prefix for Safari itself. The dev server never minified, so sandboxes always looked right.
+
+## Nav pill without the spring, sidebar rests shut after Collapse, trophy on whole pixels, 2026-10-21 (user request)
+
+- **The top bar's sliding pill no longer springs.** A long jump (Plans to Dashboard) overshot past the first tab and poked out of the bar. It now uses the plain ease-out over the same 320ms.
+- **After Collapse, the sidebar rests shut until the pointer leaves.** The pointer is still over the sidebar when Collapse is clicked, so hover kept it open as an overlay while the page slid under it, hiding the left of the page. An is-resting class turns hover-opening off until mouseleave.
+- **The sidebar trophy is 16px, not 15px**, so it lands on whole pixels inside the 44px cell and the ring; at 15px its half-pixel left edge read as a shift to the right.
