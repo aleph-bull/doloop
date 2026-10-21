@@ -1535,3 +1535,24 @@ komogon.app domain and private server key before hosted password signup can send
 - **"That's enough time to" is a grid now, not a scrolling row**: four cards across when there is room, two on a narrower page (a container query on the section), one on a phone. It had 4px of room, so its shadows were cut too, and giving it the same room would have floated its scrollbar 72px below the cards, over the next section, and let a cut-off fourth card show past the column. With no scroller nothing clips the cards, and every comparison shows at once; Shuffle still deals a new hand.
 - **The page clips sideways overflow** (`#root { overflow-x: clip }`), so the wider rows never add a sideways scroll on a phone. It is on the app's root container rather than html or body: those pass it to the window as hidden, which blocks the scroll wheel but still lets scrollIntoView shift the page sideways (the dashboard centres the most pressing card with it). Checked: the page cannot be scrolled sideways, even from script.
 - **Not a mask.** Fading the rows' edges with a mask would have hidden the line, but in Chrome a masked element becomes the backdrop for blur inside it, so the glass cards lost their blur (checked with stripes behind the page). The existing left and right fades on the dashboard rail are masks too, so its cards lose their blur while the rail has more cards than fit; that is left as it is for now.
+
+## The homepage, 2026-10-21 (user request)
+
+- **A marketing site in the repo, not a separate one.** `apps/site`, a static Vite page,
+  deployed on Vercel from that folder. It started as a sibling folder and its own git repo;
+  the owner asked for it to live here instead.
+- **Cluely-style hero.** The app's default photograph (Cotton Candy) edge to edge behind the
+  headline, fading out at the bottom only, then a light gradient page. Feathering the photo
+  on every side, and putting photo stages behind every section, were both rejected.
+- **Screenshots, on a CSS laptop and phone.** The dashboard sits on a laptop and a phone drawn
+  in CSS (the first version; the owner liked it and asked for it back, minus the phone's
+  island). The sections show plain screenshots. Hand-built UI mockups, the portal's real
+  components rendered into the page, and device renders from mockup PSDs were all rejected.
+- **Copy.** "Productive, every time." / Track your focus sessions / Stay accountable and
+  focused / Share your wins with friends / "Better than last time." with "Free to use.
+  Currently in alpha." and two buttons: Start for free (komogon.app) and a placeholder Get
+  the extension. Satoshi headings, Inter text, no small eyebrow labels, no quotes.
+- **Demo data.** The screenshots show a seeded account, Jerry, with numbers matched to the
+  owner's own reference screenshots, in dark mode. See CLAUDE.md for how to retake them.
+- **Motion.** Headline in on load, devices about 1.3 s later or on the first scroll, sections
+  pop up as they arrive. Off under reduced motion.

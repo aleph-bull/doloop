@@ -174,3 +174,33 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   (they used to sit in Pace and streaks).
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
+
+## The homepage (`apps/site`, 2026-10-21)
+
+- `apps/site` is the marketing site (`@komogon/site`): plain HTML, CSS and a small script on
+  Vite, port 5190 (launch config `site` in the parent folder's `.claude/launch.json`, which is
+  the one the preview tool reads). It deploys on Vercel as its own project with Root
+  Directory `apps/site`, the same way the portal does from `apps/portal`.
+- **The look the owner settled on, after rejecting a lot:** like cluely.com. The Cotton Candy
+  photograph runs edge to edge behind the hero and fades out at the bottom only, into a
+  light gradient page. The dashboard screenshot sits on a CSS-drawn laptop with the phone
+  view in front (no island on the phone); the Track, Focus and Share sections show plain
+  screenshots of the portal. Satoshi for headings, Inter for everything else; no eyebrow
+  labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
+  the devices about 1.3 s later or on the first scroll, each section as it arrives.
+- **Rejected, in order:** hand-built UI mockups ("fake"), the photo feathered on every side,
+  photo stages behind every section, rendering the portal's real React components into the
+  page ("go back to using screenshots"), device renders from the mockup PSDs, a flat dark
+  page. Change exactly what is asked and nothing beside it; the owner says so sharply.
+- **Screenshots** come from a seeded sandbox account, jerry@komodon.demo, in dark mode.
+  `apps/api/seed-site-demo.tmp.ts` wipes and rebuilds `apps/api/.pglite-sandbox-site` with
+  numbers tuned to the owner's reference shots (4.6 h this week over 6 sessions, 9.8 h last
+  week, 192 h all time, a 7-day streak with a best of 17, the STATS203 midterm due in 7 days,
+  six other people for the leaderboard). `apps/site/scripts/capture.mjs` drives the installed
+  Chrome through `playwright-core` (install it and `jose` in a scratch folder) against the
+  sandbox on 8801/5187 (`site-sandbox-api` / `site-sandbox` launch configs; the preview tool
+  allows five servers per folder, so they may have to run from a shell). It hides the tip and
+  hint cards with injected CSS and declines the focus screen's two prompts (visualizer, then
+  timelapse); both must go or the shot shows a dialog. Convert the PNGs to webp with sharp.
+- Images pasted into the chat never reach the disk. Ask the owner to save files into the
+  folder (the PSD mockups and reference shots live in `apps/site/design`, gitignored).
