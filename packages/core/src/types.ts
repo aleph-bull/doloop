@@ -3,6 +3,8 @@
  * Clients render in the user's timezone (stored on the user).
  */
 
+import type { TimelapseAspect, TimelapseLayout } from './timelapse-layout';
+
 export type ISODateTime = string; // e.g. "2026-09-20T15:04:05.000Z"
 export type ISODate = string; // e.g. "2026-09-20" (calendar day in the user's timezone)
 
@@ -285,6 +287,14 @@ export interface UserSettings {
      * ('break'), or the session's running time, counting on through it ('running').
      */
     breakClock: 'break' | 'running';
+    /** The video's shape; 'camera' follows the camera's own. */
+    aspect: TimelapseAspect;
+    /**
+     * Where each piece sits in the video and whether it is shown. The camera's and the
+     * screen's visibility also decide what is recorded. Replaces showTimer and
+     * showClockTime, which only seed it for a row saved before it existed.
+     */
+    layout: TimelapseLayout;
   };
   dismissed: string[];
 }

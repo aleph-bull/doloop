@@ -1,24 +1,38 @@
 import {
+  aspectRatio,
   deflickerGains,
   startIntervalMs,
   stillCap,
   thinIfFull,
   timelapseClock,
+  videoSize,
+  type TimelapseAspect,
+  type TimelapseLayout,
   type TimelapseOptions,
   type TimelapsePlan,
 } from '@komogon/core';
-import { LOGO_PATH, LOGO_VIEWBOX } from '@komogon/ui';
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  composeFrame,
+  rectLuma,
+  sourceSize,
+  type DrawnRects,
+  type WatermarkTone,
+} from './timelapse-compose';
 
 /**
- * The camera timelapse: stills taken while the user focuses, kept in this tab's memory, and
- * made into a video on request. Nothing is uploaded; closing the tab discards the stills.
+ * The timelapse: stills from the camera, and from a shared screen when asked, taken while
+ * the user focuses, kept in this tab's memory, and made into a video on request. Nothing
+ * is uploaded; closing the tab discards the stills.
  */
 
-/** One still from the camera. */
+/** One moment of the recording: the camera's still, the screen's, or both. */
 export interface Still {
-  blob: Blob;
+  /** The camera's still, or null when the camera is not recorded. */
+  blob: Blob | null;
+  /** The shared screen's still, or null when no screen was being shared. */
+  screen: Blob | null;
   /** Average brightness, 0..1, for the deflicker. */
   luma: number;
   /** Focused seconds of the session when it was taken, for the clock drawn into the video. */
@@ -29,40 +43,93 @@ export interface Still {
   totalSeconds: number;
   /** When it was taken (epoch ms), for the time of day drawn into the video. */
   takenAt: number;
+  /** What was being worked on, for the task name drawn into the video. */
+  title: string | null;
 }
 
 /** Where the session stood when a still was taken. */
-export type StillStamp = Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds'>;
+export type StillStamp = Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds' | 'title'>;
 
 export type RecorderStatus = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
+/**
+ * The screen share. 'needs-click' means the browser wants a click before it shows its
+ * picker (a session that started recording on its own); 'ended' means it was stopped from
+ * the browser's sharing bar.
+ */
+export type ScreenStatus = RecorderStatus | 'needs-click' | 'ended';
 
-/** Width stills are kept at: sharp enough for a 1080p-ish video, small enough to hold 2400. */
+/** Width camera stills are kept at: sharp enough for the video, small enough to hold 2400. */
 const STILL_WIDTH = 960;
 const STILL_QUALITY = 0.82;
+/** Screen stills are kept wider, so text on them stays readable. */
+const SCREEN_WIDTH = 1280;
+const SCREEN_QUALITY = 0.8;
 const STILL_BYTES_KEY = 'komogon.timelapse.stillBytes';
+const SCREEN_BYTES_KEY = 'komogon.timelapse.screenBytes';
+const CAMERA_RATIO_KEY = 'komogon.timelapse.cameraRatio';
+const SCREEN_RATIO_KEY = 'komogon.timelapse.screenRatio';
+/** A screen still before any has been measured: a 1280 px wide JPEG of a busy desktop. */
+export const DEFAULT_SCREEN_BYTES = 160_000;
 
-/**
- * The average size of a still from this webcam, measured while recording and kept in this
- * browser, so the size estimates follow the real camera. Null until something was measured.
- */
-export function measuredStillBytes(): number | null {
+function readNumber(key: string): number | null {
   try {
-    const n = Number(localStorage.getItem(STILL_BYTES_KEY));
+    const n = Number(localStorage.getItem(key));
     return Number.isFinite(n) && n > 0 ? n : null;
   } catch {
     return null;
   }
 }
 
-function rememberStillBytes(bytes: number) {
+function writeNumber(key: string, n: number) {
   try {
-    const prev = measuredStillBytes();
-    // A slow running average: one odd frame (a hand over the lens) barely moves it.
-    const next = prev === null ? bytes : prev * 0.95 + bytes * 0.05;
-    localStorage.setItem(STILL_BYTES_KEY, String(Math.round(next)));
+    localStorage.setItem(key, String(n));
   } catch {
-    /* storage off: the default size is used */
+    /* storage off: the default is used */
   }
+}
+
+/**
+ * The average size of a still from this webcam, measured while recording and kept in this
+ * browser, so the size estimates follow the real camera. Null until something was measured.
+ */
+export function measuredStillBytes(): number | null {
+  return readNumber(STILL_BYTES_KEY);
+}
+
+/** The same for screen stills. */
+export function measuredScreenBytes(): number | null {
+  return readNumber(SCREEN_BYTES_KEY);
+}
+
+function rememberBytes(key: string, bytes: number) {
+  const prev = readNumber(key);
+  // A slow running average: one odd frame (a hand over the lens) barely moves it.
+  writeNumber(key, Math.round(prev === null ? bytes : prev * 0.95 + bytes * 0.05));
+}
+
+/** The camera's width over height, once it has been seen in this browser. */
+export function knownCameraRatio(): number | null {
+  return readNumber(CAMERA_RATIO_KEY);
+}
+
+export function rememberCameraRatio(w: number, h: number) {
+  if (w > 0 && h > 0) writeNumber(CAMERA_RATIO_KEY, Math.round((w / h) * 10_000) / 10_000);
+}
+
+/**
+ * The screen's width over height: what was last shared in this browser, or else the
+ * monitor's own shape, which the browser tells without asking.
+ */
+export function knownScreenRatio(): number {
+  const shared = readNumber(SCREEN_RATIO_KEY);
+  if (shared) return shared;
+  if (typeof window !== 'undefined' && window.screen?.width && window.screen.height)
+    return window.screen.width / window.screen.height;
+  return 16 / 9;
+}
+
+function rememberScreenRatio(w: number, h: number) {
+  if (w > 0 && h > 0) writeNumber(SCREEN_RATIO_KEY, Math.round((w / h) * 10_000) / 10_000);
 }
 
 /** Free space the browser says it may still use, in bytes, or null when it won't say. */
@@ -78,6 +145,15 @@ export async function freeStorageBytes(): Promise<number | null> {
 
 export const cameraSupported = (): boolean =>
   typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
+
+export const screenSupported = (): boolean =>
+  typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
+
+/** What the timelapse records: the camera, the screen, or both. */
+export interface TimelapseSources {
+  camera: boolean;
+  screen: boolean;
+}
 
 /**
  * Put exposure and white balance back on auto. Locking them looked steadier on paper, but on
@@ -109,22 +185,58 @@ function lumaOf(ctx: CanvasRenderingContext2D, source: CanvasImageSource): numbe
   return sum / (d.length / 4) / 255;
 }
 
+/** A hidden, muted player for a live stream, which stills are drawn from. */
+function streamPlayer(stream: MediaStream): HTMLVideoElement {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  return video;
+}
+
+/** One frame of a player as a JPEG, no wider than `maxWidth`. */
+async function snapshot(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  video: HTMLVideoElement,
+  maxWidth: number,
+  quality: number,
+): Promise<Blob | null> {
+  const w = video.videoWidth || 1280;
+  const h = video.videoHeight || 720;
+  canvas.width = Math.min(maxWidth, w);
+  canvas.height = Math.round((canvas.width * h) / w);
+  // Kept the way others see it, so notes and book pages read the right way round; only
+  // the little live preview is a mirror.
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return new Promise<Blob | null>((r) => canvas.toBlob(r, 'image/jpeg', quality));
+}
+
 export interface TimelapseRecorderArgs {
-  /** Camera on while true. */
+  /** Recording while true. */
   recording: boolean;
   /** Stills are taken only while true: during focus, not breaks or a pause. */
   capturing: boolean;
+  /** What to record. */
+  sources: TimelapseSources;
   options: TimelapseOptions;
-  /** Where the session stands right now: focused time, break time, running time. */
+  /** Where the session stands right now: focused time, break time, running time, task. */
   stamp: () => StillStamp;
 }
 
 export interface TimelapseRecorder {
+  /** The camera. */
   status: RecorderStatus;
+  /** The screen share. */
+  screenStatus: ScreenStatus;
+  /** True while at least one source is giving pictures. */
+  live: boolean;
   /** How many stills are held. */
   count: number;
   /** The live camera, for a small preview, while recording. */
   stream: MediaStream | null;
+  /** Ask for the screen again; call it from a click, which the browser's picker needs. */
+  requestScreen: () => void;
   /** The stills taken so far, oldest first. */
   stills: () => Still[];
   /** Focused seconds the stills cover, first to last. */
@@ -136,18 +248,26 @@ export interface TimelapseRecorder {
 export function useTimelapseRecorder({
   recording,
   capturing,
+  sources,
   options,
   stamp,
 }: TimelapseRecorderArgs): TimelapseRecorder {
   const [status, setStatus] = useState<RecorderStatus>('off');
+  const [screenStatus, setScreenStatus] = useState<ScreenStatus>('off');
   const [count, setCount] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const stillsRef = useRef<Still[]>([]);
   const intervalRef = useRef(startIntervalMs(options));
+  const cameraVideo = useRef<HTMLVideoElement | null>(null);
+  const screenVideo = useRef<HTMLVideoElement | null>(null);
+  const screenStream = useRef<MediaStream | null>(null);
+  const screenAsking = useRef(false);
+  const wantCamera = recording && sources.camera;
+  const wantScreen = recording && sources.screen;
   // The loop reads the latest of these without restarting.
-  const live = useRef({ capturing, options, stamp });
+  const live = useRef({ capturing, options, stamp, wantCamera, wantScreen, status, screenStatus });
   useEffect(() => {
-    live.current = { capturing, options, stamp };
+    live.current = { capturing, options, stamp, wantCamera, wantScreen, status, screenStatus };
   });
 
   // A change of mode before anything is captured starts at that mode's pace.
@@ -155,18 +275,133 @@ export function useTimelapseRecorder({
     if (stillsRef.current.length === 0) intervalRef.current = startIntervalMs(options);
   }, [options]);
 
+  /* ----- the camera ----- */
   useEffect(() => {
-    if (!recording) return;
+    if (!wantCamera) return;
     if (!cameraSupported()) {
       setStatus('unavailable');
       return;
     }
     let cancelled = false;
-    let timer = 0;
     let media: MediaStream | null = null;
-    const video = document.createElement('video');
-    video.muted = true;
-    video.playsInline = true;
+    setStatus('starting');
+    navigator.mediaDevices
+      .getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        audio: false,
+      })
+      .then(async (s) => {
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        media = s;
+        const video = streamPlayer(s);
+        await video.play().catch(() => undefined);
+        if (cancelled) return;
+        cameraVideo.current = video;
+        rememberCameraRatio(video.videoWidth, video.videoHeight);
+        setStream(s);
+        setStatus('on');
+        const track = s.getVideoTracks()[0];
+        if (track) void restoreAutoExposure(track);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const name = err instanceof DOMException ? err.name : '';
+        setStatus(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'error');
+      });
+    return () => {
+      cancelled = true;
+      media?.getTracks().forEach((t) => t.stop());
+      if (cameraVideo.current) cameraVideo.current.srcObject = null;
+      cameraVideo.current = null;
+      setStream(null);
+      setStatus((s) => (s === 'on' || s === 'starting' ? 'off' : s));
+    };
+  }, [wantCamera]);
+
+  /* ----- the screen ----- */
+  const releaseScreen = useCallback(() => {
+    screenStream.current?.getTracks().forEach((t) => t.stop());
+    screenStream.current = null;
+    if (screenVideo.current) screenVideo.current.srcObject = null;
+    screenVideo.current = null;
+  }, []);
+
+  const requestScreen = useCallback(() => {
+    if (screenStream.current || screenAsking.current) return;
+    if (!screenSupported()) {
+      setScreenStatus('unavailable');
+      return;
+    }
+    // The picker only opens from a click. A session that began recording on its own has
+    // none, so it waits for one rather than failing.
+    const activation = (navigator as Navigator & { userActivation?: { isActive: boolean } })
+      .userActivation;
+    if (activation && !activation.isActive) {
+      setScreenStatus('needs-click');
+      return;
+    }
+    screenAsking.current = true;
+    setScreenStatus('starting');
+    navigator.mediaDevices
+      .getDisplayMedia({
+        video: { frameRate: { ideal: 5, max: 15 } },
+        audio: false,
+        // Recording this tab would only film the focus screen filming itself.
+        selfBrowserSurface: 'exclude',
+        monitorTypeSurfaces: 'include',
+      } as DisplayMediaStreamOptions)
+      .then(async (s) => {
+        if (!live.current.wantScreen) {
+          s.getTracks().forEach((t) => t.stop());
+          setScreenStatus('off');
+          return;
+        }
+        screenStream.current = s;
+        const video = streamPlayer(s);
+        await video.play().catch(() => undefined);
+        screenVideo.current = video;
+        rememberScreenRatio(video.videoWidth, video.videoHeight);
+        setScreenStatus('on');
+        s.getVideoTracks()[0]?.addEventListener('ended', () => {
+          // Stopped from the browser's own sharing bar.
+          releaseScreen();
+          setScreenStatus('ended');
+        });
+      })
+      .catch((err: unknown) => {
+        const name = err instanceof DOMException ? err.name : '';
+        setScreenStatus(
+          name === 'NotAllowedError'
+            ? 'denied'
+            : name === 'InvalidStateError'
+              ? 'needs-click'
+              : name === 'NotSupportedError'
+                ? 'unavailable'
+                : 'error',
+        );
+      })
+      .finally(() => {
+        screenAsking.current = false;
+      });
+  }, [releaseScreen]);
+
+  useEffect(() => {
+    if (!wantScreen) return;
+    requestScreen();
+    return () => {
+      releaseScreen();
+      setScreenStatus('off');
+    };
+  }, [wantScreen, requestScreen, releaseScreen]);
+
+  /* ----- taking stills ----- */
+  useEffect(() => {
+    if (!recording) return;
+    let cancelled = false;
+    let timer = 0;
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const tiny = document.createElement('canvas');
@@ -175,22 +410,26 @@ export function useTimelapseRecorder({
     const tinyCtx = tiny.getContext('2d', { willReadFrequently: true });
 
     const take = async () => {
-      const { capturing, options, stamp } = live.current;
-      if (!capturing || video.readyState < 2 || !ctx || !tinyCtx) return;
-      const w = video.videoWidth || 1280;
-      const h = video.videoHeight || 720;
-      canvas.width = Math.min(STILL_WIDTH, w);
-      canvas.height = Math.round((canvas.width * h) / w);
-      // Kept the way others see it, so notes and book pages read the right way round; only
-      // the little live preview is a mirror.
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const luma = lumaOf(tinyCtx, canvas);
-      const blob = await new Promise<Blob | null>((r) =>
-        canvas.toBlob(r, 'image/jpeg', STILL_QUALITY),
-      );
-      if (!blob || cancelled) return;
-      rememberStillBytes(blob.size);
-      const next = [...stillsRef.current, { blob, luma, ...stamp(), takenAt: Date.now() }];
+      const { capturing, options, stamp, wantCamera, wantScreen, status, screenStatus } =
+        live.current;
+      if (!capturing || !ctx || !tinyCtx) return;
+      // While a wanted source is still opening, wait for it, so the first stills have both.
+      if ((wantCamera && status === 'starting') || (wantScreen && screenStatus === 'starting'))
+        return;
+      const cam = cameraVideo.current;
+      const scr = screenVideo.current;
+      const camReady = !!cam && cam.readyState >= 2;
+      const scrReady = !!scr && scr.readyState >= 2;
+      if (!camReady && !scrReady) return;
+      const blob = camReady ? await snapshot(canvas, ctx, cam!, STILL_WIDTH, STILL_QUALITY) : null;
+      const luma = camReady ? lumaOf(tinyCtx, canvas) : 0.5;
+      const screen = scrReady
+        ? await snapshot(canvas, ctx, scr!, SCREEN_WIDTH, SCREEN_QUALITY)
+        : null;
+      if (cancelled || (!blob && !screen)) return;
+      if (blob) rememberBytes(STILL_BYTES_KEY, blob.size);
+      if (screen) rememberBytes(SCREEN_BYTES_KEY, screen.size);
+      const next = [...stillsRef.current, { blob, screen, luma, ...stamp(), takenAt: Date.now() }];
       const thinned = thinIfFull(next, stillCap(options));
       if (thinned) intervalRef.current *= 2;
       stillsRef.current = thinned ?? next;
@@ -205,40 +444,10 @@ export function useTimelapseRecorder({
       const wait = Math.max(0, intervalRef.current - (performance.now() - started));
       timer = window.setTimeout(() => void loop(), wait);
     };
-
-    setStatus('starting');
-    navigator.mediaDevices
-      .getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
-        audio: false,
-      })
-      .then(async (s) => {
-        if (cancelled) {
-          s.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        media = s;
-        video.srcObject = s;
-        await video.play().catch(() => undefined);
-        setStream(s);
-        setStatus('on');
-        const track = s.getVideoTracks()[0];
-        if (track) void restoreAutoExposure(track);
-        void loop();
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const name = err instanceof DOMException ? err.name : '';
-        setStatus(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'error');
-      });
-
+    void loop();
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
-      media?.getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
-      setStream(null);
-      setStatus((s) => (s === 'on' || s === 'starting' ? 'off' : s));
     };
   }, [recording]);
 
@@ -256,21 +465,32 @@ export function useTimelapseRecorder({
     setCount(0);
   }, []);
 
-  return { status, count, stream, stills, spanSeconds, clear };
+  return {
+    status,
+    screenStatus,
+    live: status === 'on' || screenStatus === 'on',
+    count,
+    stream,
+    requestScreen,
+    stills,
+    spanSeconds,
+    clear,
+  };
 }
 
 /* ---------- making the video ---------- */
 
 export interface TimelapseLook {
-  showTimer: boolean;
   smooth: boolean;
   deflicker: boolean;
   /** During a recorded break: the break's own time, or the session's running time. */
   breakClock?: 'break' | 'running';
-  /** Draw the time of day each frame was filmed, top left. */
-  showClockTime?: boolean;
-  /** The account's timezone for that time; the browser's when absent. */
+  /** The account's timezone for the time of day; the browser's when absent. */
   timeZone?: string;
+  /** The video's shape. */
+  aspect: TimelapseAspect;
+  /** Where each piece goes. */
+  layout: TimelapseLayout;
 }
 
 /** "2:14 PM EST": the time a still was taken, in the account's timezone. */
@@ -288,9 +508,12 @@ export function timeOfDayText(takenAt: number, timeZone?: string): string {
   }
 }
 
-/** What the corner clock says on a still. */
-function clockText(still: Still, look: TimelapseLook): string {
-  if (look.breakClock === 'running') {
+/** What the elapsed clock says on a still. */
+export function clockText(
+  still: Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds'>,
+  breakClock: TimelapseLook['breakClock'],
+): string {
+  if (breakClock === 'running') {
     const t = timelapseClock(still.totalSeconds);
     return still.breakSeconds !== null ? `${t} · Break` : t;
   }
@@ -318,107 +541,28 @@ function pickMime(): string {
 
 const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, Math.max(0, ms)));
 
-/**
- * A clock pill, sized to the video: the studied time in the bottom corner, or the time of
- * day in the top one.
- */
-function drawClock(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  text: string,
-  corner: 'bottom' | 'top' = 'bottom',
-) {
-  const size = Math.round(h * 0.055);
-  const pad = Math.round(size * 0.55);
-  ctx.save();
-  ctx.font = `600 ${size}px 'Inter Variable', Inter, system-ui, sans-serif`;
-  const tw = ctx.measureText(text).width;
-  const x = Math.round(h * 0.04);
-  const y = corner === 'top' ? Math.round(h * 0.04) : h - Math.round(h * 0.04) - size - pad;
-  ctx.fillStyle = 'rgba(10, 12, 24, 0.55)';
-  ctx.beginPath();
-  ctx.roundRect(x, y, tw + pad * 2, size + pad, (size + pad) / 2);
-  ctx.fill();
-  ctx.fillStyle = '#ffffff';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(text, x + pad, y + (size + pad) / 2 + 1);
-  ctx.restore();
-  void w;
+/** Draws frame `j` of the plan onto the canvas: decoding, blending, deflicker and layout. */
+type FrameDrawer = ((j: number, mark: WatermarkTone | null) => Promise<DrawnRects>) & {
+  dispose: () => void;
+};
+
+/** A canvas the size of a source's stills, where the stills behind a frame are blended. */
+function blendBuffer(first: ImageBitmap | null): {
+  canvas: HTMLCanvasElement;
+  ctx: CanvasRenderingContext2D;
+} | null {
+  if (!first) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = first.width;
+  canvas.height = first.height;
+  const ctx = canvas.getContext('2d');
+  return ctx ? { canvas, ctx } : null;
 }
 
-/** The watermark's colour: black on a light corner, white on a dark one. */
-type WatermarkTone = '#000000' | '#ffffff';
-
-/**
- * Black or white for the watermark, chosen once for the whole video from the 30th frame (or
- * the last, in a shorter one): the brightness of the corner the mark sits in, not the
- * frame's average, since a bright window behind a dark desk would mislead it.
- */
-async function watermarkTone(
-  stills: Still[],
-  plan: TimelapsePlan,
-  w: number,
-  h: number,
-): Promise<WatermarkTone> {
-  const frame = plan.frames[Math.min(29, plan.frames.length - 1)];
-  const still = frame ? stills[frame[0]] : stills[stills.length - 1];
-  if (!still) return '#ffffff';
-  try {
-    const bmp = await createImageBitmap(still.blob);
-    const c = document.createElement('canvas');
-    c.width = 64;
-    c.height = Math.max(1, Math.round((64 * h) / w));
-    const x = c.getContext('2d', { willReadFrequently: true });
-    if (!x) return '#ffffff';
-    x.drawImage(bmp, 0, 0, c.width, c.height);
-    bmp.close();
-    // The bottom-right third, where the mark goes.
-    const sx = Math.floor(c.width * 0.62);
-    const sy = Math.floor(c.height * 0.8);
-    const d = x.getImageData(sx, sy, c.width - sx, c.height - sy).data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4)
-      sum += 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
-    const luma = sum / (d.length / 4) / 255;
-    return luma > 0.55 ? '#000000' : '#ffffff';
-  } catch {
-    return '#ffffff';
-  }
+async function firstBitmap(stills: Still[], key: 'blob' | 'screen') {
+  const s = stills.find((x) => x[key]);
+  return s ? createImageBitmap(s[key]!) : null;
 }
-
-const LOGO_SHAPE = typeof Path2D !== 'undefined' ? new Path2D(LOGO_PATH) : null;
-const [LOGO_X, LOGO_Y, LOGO_SIZE] = LOGO_VIEWBOX.split(' ').map(Number) as [number, number, number];
-
-/**
- * The Komodon watermark in the bottom-right corner: the mark and the wordmark, as in the
- * portal nav, at 30% opacity, in the tone picked for this video.
- */
-function drawWatermark(ctx: CanvasRenderingContext2D, w: number, h: number, tone: WatermarkTone) {
-  const size = Math.round(h * 0.05);
-  const margin = Math.round(h * 0.04);
-  ctx.save();
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = tone;
-  ctx.font = `600 ${Math.round(size * 0.78)}px Satoshi, 'Inter Variable', system-ui, sans-serif`;
-  ctx.textBaseline = 'middle';
-  const text = 'Komodon';
-  const tw = ctx.measureText(text).width;
-  const gap = Math.round(size * 0.35);
-  const right = w - margin;
-  const cy = h - margin - size / 2;
-  ctx.fillText(text, right - tw, cy + 1);
-  if (LOGO_SHAPE) {
-    ctx.translate(right - tw - gap - size, cy - size / 2);
-    ctx.scale(size / LOGO_SIZE, size / LOGO_SIZE);
-    ctx.translate(-LOGO_X, -LOGO_Y);
-    ctx.fill(LOGO_SHAPE, 'evenodd');
-  }
-  ctx.restore();
-}
-
-/** Draws frame `j` of the plan onto the canvas: decoding, blending, deflicker and clock. */
-type FrameDrawer = ((j: number) => Promise<void>) & { dispose: () => void };
 
 function frameDrawer(
   ctx: CanvasRenderingContext2D,
@@ -427,25 +571,73 @@ function frameDrawer(
   stills: Still[],
   plan: TimelapsePlan,
   look: TimelapseLook,
-  mark: WatermarkTone,
+  buffers: {
+    camera: ReturnType<typeof blendBuffer>;
+    screen: ReturnType<typeof blendBuffer>;
+  },
 ): FrameDrawer {
   const gains = look.deflicker ? deflickerGains(stills.map((s) => s.luma)) : null;
   // Decoded stills, kept only while a frame still needs them.
-  const cache = new Map<number, ImageBitmap>();
-  const bitmap = async (i: number) => {
-    let b = cache.get(i);
-    if (!b) {
-      b = await createImageBitmap(stills[i]!.blob);
-      cache.set(i, b);
+  const cache = new Map<string, ImageBitmap | null>();
+  const bitmap = async (i: number, key: 'blob' | 'screen') => {
+    const id = `${key}${i}`;
+    if (!cache.has(id)) {
+      const b = stills[i]![key];
+      cache.set(id, b ? await createImageBitmap(b) : null);
     }
-    return b;
+    return cache.get(id) ?? null;
   };
   let previous: number | null = null;
-  const draw = async (j: number) => {
+
+  /** Blend the stills behind a frame for one source into its buffer; false when it has none. */
+  const blend = async (
+    buf: NonNullable<ReturnType<typeof blendBuffer>>,
+    key: 'blob' | 'screen',
+    from: number,
+    to: number,
+    gain: number,
+  ): Promise<boolean> => {
+    const { ctx: b, canvas } = buf;
+    const bw = canvas.width;
+    const bh = canvas.height;
+    b.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
+    b.globalAlpha = 1;
+    let drew = false;
+    if (look.smooth && to - from > 1) {
+      // Several stills behind this frame: average them, like a long shutter.
+      let n = 0;
+      for (let i = from; i < to; i++) {
+        const bmp = await bitmap(i, key);
+        if (!bmp) continue;
+        n++;
+        b.globalAlpha = 1 / n;
+        b.drawImage(bmp, 0, 0, bw, bh);
+        drew = true;
+      }
+    } else {
+      const now = await bitmap(from, key);
+      const before = previous !== null && previous !== from ? await bitmap(previous, key) : null;
+      if (look.smooth && now && before) {
+        // One still per frame: a little of the last one under it softens the steps.
+        b.drawImage(before, 0, 0, bw, bh);
+        b.globalAlpha = 0.7;
+        b.drawImage(now, 0, 0, bw, bh);
+        drew = true;
+      } else if (now) {
+        b.drawImage(now, 0, 0, bw, bh);
+        drew = true;
+      }
+    }
+    b.globalAlpha = 1;
+    b.filter = 'none';
+    return drew;
+  };
+
+  const draw = async (j: number, mark: WatermarkTone | null) => {
     const [from, to] = plan.frames[j]!;
-    for (const k of cache.keys()) {
-      if (k < from - 1) {
-        cache.get(k)!.close();
+    for (const k of [...cache.keys()]) {
+      if (Number(k.replace(/\D/g, '')) < from - 1) {
+        cache.get(k)?.close();
         cache.delete(k);
       }
     }
@@ -455,39 +647,64 @@ function frameDrawer(
       for (let i = from; i < to; i++) g += gains[i]!;
       gain = g / (to - from);
     }
-    ctx.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
-    ctx.globalAlpha = 1;
-    if (look.smooth && to - from > 1) {
-      // Several stills behind this frame: average them, like a long shutter.
-      for (let i = from, n = 1; i < to; i++, n++) {
-        ctx.globalAlpha = 1 / n;
-        ctx.drawImage(await bitmap(i), 0, 0, w, h);
-      }
-    } else if (look.smooth && previous !== null && previous !== from) {
-      // One still per frame: a little of the last one under it softens the steps.
-      ctx.drawImage(await bitmap(previous), 0, 0, w, h);
-      ctx.globalAlpha = 0.7;
-      ctx.drawImage(await bitmap(from), 0, 0, w, h);
-    } else {
-      ctx.drawImage(await bitmap(from), 0, 0, w, h);
-    }
-    ctx.globalAlpha = 1;
-    ctx.filter = 'none';
-    if (look.showTimer) drawClock(ctx, w, h, clockText(stills[to - 1]!, look));
-    if (look.showClockTime) {
-      const still = stills[to - 1]!;
-      // Stills kept from before the time was recorded have none to show.
-      if (still.takenAt) drawClock(ctx, w, h, timeOfDayText(still.takenAt, look.timeZone), 'top');
-    }
-    drawWatermark(ctx, w, h, mark);
+    const camera = buffers.camera
+      ? (await blend(buffers.camera, 'blob', from, to, gain))
+        ? buffers.camera.canvas
+        : null
+      : null;
+    const screen =
+      buffers.screen && look.layout.screen.visible
+        ? (await blend(buffers.screen, 'screen', from, to, 1))
+          ? buffers.screen.canvas
+          : null
+        : null;
+    const still = stills[to - 1]!;
+    const drawn = composeFrame(
+      ctx,
+      w,
+      h,
+      look.layout,
+      {
+        camera,
+        screen,
+        // Stills kept from before the time was recorded have none to show.
+        clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
+        elapsed: clockText(still, look.breakClock),
+        title: still.title,
+        progress: plan.frames.length > 1 ? j / (plan.frames.length - 1) : 1,
+      },
+      { mark },
+    );
     previous = to - 1;
+    return drawn;
   };
   return Object.assign(draw, {
     dispose: () => {
-      for (const b of cache.values()) b.close();
+      for (const b of cache.values()) b?.close();
       cache.clear();
     },
   });
+}
+
+/**
+ * Black or white for the mark, chosen once for the whole video from the 30th frame (or the
+ * last, in a shorter one): the brightness of the box the mark sits in, not the frame's
+ * average, since a bright window behind a dark desk would mislead it.
+ */
+async function watermarkTone(
+  draw: FrameDrawer,
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  plan: TimelapsePlan,
+): Promise<WatermarkTone> {
+  try {
+    const drawn = await draw(Math.min(29, plan.frames.length - 1), null);
+    if (!drawn.watermark) return '#ffffff';
+    return rectLuma(ctx, w, h, drawn.watermark) > 0.55 ? '#000000' : '#ffffff';
+  } catch {
+    return '#ffffff';
+  }
 }
 
 const AVC_CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
@@ -531,24 +748,40 @@ export async function renderTimelapse(
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; mime: string }> {
   if (stills.length === 0 || plan.frames.length === 0) throw new Error('Nothing to make yet');
-  const first = await createImageBitmap(stills[0]!.blob);
-  // H.264 wants even dimensions.
-  const w = first.width - (first.width % 2);
-  const h = first.height - (first.height % 2);
-  first.close();
+  const firstCamera = await firstBitmap(stills, 'blob');
+  const firstScreen = await firstBitmap(stills, 'screen');
+  const shapeFrom = firstCamera ?? firstScreen;
+  if (!shapeFrom) throw new Error('Nothing to make yet');
+  const cameraSize = firstCamera ? sourceSize(firstCamera) : null;
+  const screenSize = firstScreen ? sourceSize(firstScreen) : null;
+  const { w, h } = videoSize(
+    aspectRatio(
+      look.aspect,
+      cameraSize ? cameraSize.w / cameraSize.h : null,
+      screenSize ? screenSize.w / screenSize.h : knownScreenRatio(),
+    ),
+  );
+  const buffers = { camera: blendBuffer(firstCamera), screen: blendBuffer(firstScreen) };
+  firstCamera?.close();
+  firstScreen?.close();
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: false });
   if (!ctx) throw new Error('This browser cannot draw the video');
-  const mark = await watermarkTone(stills, plan, w, h);
   // The wordmark is in Satoshi; a canvas draws in whatever font is loaded by then.
   await document.fonts?.load('600 24px Satoshi').catch(() => undefined);
-  const draw = frameDrawer(ctx, w, h, stills, plan, look, mark);
+  const toneDraw = frameDrawer(ctx, w, h, stills, plan, look, buffers);
+  const mark = await watermarkTone(toneDraw, ctx, w, h, plan);
+  toneDraw.dispose();
+  const draw = frameDrawer(ctx, w, h, stills, plan, look, buffers);
+  const drawFrame = async (j: number) => {
+    await draw(j, mark);
+  };
   try {
     const config = await pickEncoderConfig(w, h, plan.fps);
-    if (config) return await encodeFrames(canvas, config, plan, draw, onProgress, signal);
-    return await recordFrames(canvas, plan, draw, onProgress, signal);
+    if (config) return await encodeFrames(canvas, config, plan, drawFrame, onProgress, signal);
+    return await recordFrames(canvas, plan, drawFrame, onProgress, signal);
   } finally {
     draw.dispose();
   }
@@ -558,7 +791,7 @@ async function encodeFrames(
   canvas: HTMLCanvasElement,
   config: VideoEncoderConfig,
   plan: TimelapsePlan,
-  draw: FrameDrawer,
+  draw: (j: number) => Promise<void>,
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; mime: string }> {
@@ -606,7 +839,7 @@ async function encodeFrames(
 async function recordFrames(
   canvas: HTMLCanvasElement,
   plan: TimelapsePlan,
-  draw: FrameDrawer,
+  draw: (j: number) => Promise<void>,
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; mime: string }> {

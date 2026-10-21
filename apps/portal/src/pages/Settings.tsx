@@ -48,6 +48,7 @@ import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseSettings } from '../components/focus/Timelapse';
+import { TimelapseLayoutEditor } from '../components/focus/TimelapseLayoutEditor';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
@@ -640,9 +641,20 @@ export function Settings() {
               <div className="divider" />
               <h3 className="font-medium">Timelapse</h3>
               <p className="field-hint">
-                Records you from the camera while you focus, as a short video. The stills stay on
-                this computer.
+                What the timelapse records and how its video is laid out are in{' '}
+                <a href="#timelapse">Timelapse</a>.
               </p>
+            </Section>
+
+            <Section id="timelapse" title="Timelapse">
+              <p className="field-hint">
+                Records you from the camera, and your screen if you like, while you focus, as a
+                short video. The stills stay on this computer.
+              </p>
+              <h3 className="font-medium">Layout</h3>
+              <TimelapseLayoutEditor value={s.timelapse} onChange={patch} />
+              <div className="divider" />
+              <h3 className="font-medium">Recording</h3>
               <TimelapseSettings value={s.timelapse} onChange={patch} />
             </Section>
 

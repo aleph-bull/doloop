@@ -1,4 +1,5 @@
 import { UOFT_GRADE_SCALE } from './grades';
+import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
@@ -139,6 +140,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
     deflicker: true,
     recordBreaks: false,
     breakClock: 'break',
+    // The camera's own shape, measured once it is seen.
+    aspect: 'camera',
+    layout: defaultTimelapseLayout(16 / 9),
   },
   dismissed: [],
 };
@@ -176,5 +180,14 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
   settings.dismissed = asList<string>(settings.dismissed, []);
   settings.blocking.domains = asList<string>(settings.blocking.domains, []);
   settings.grading.scale = asList(settings.grading.scale, DEFAULT_SETTINGS.grading.scale);
+  // A row saved before the layout existed: its two clock switches decide those pieces.
+  const tl = settings.timelapse;
+  const savedLayout = (partial.timelapse as { layout?: unknown } | undefined)?.layout;
+  const seed = defaultTimelapseLayout(16 / 9);
+  if (savedLayout === undefined) {
+    seed.elapsed.visible = tl.showTimer !== false;
+    seed.clock.visible = tl.showClockTime !== false;
+  }
+  tl.layout = normalizeTimelapseLayout(savedLayout, seed);
   return settings;
 }
