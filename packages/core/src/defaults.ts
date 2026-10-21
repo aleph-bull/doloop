@@ -40,7 +40,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showTimerByDefault: true,
   },
   review: { mode: 'quick' },
-  streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null },
+  streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null, daysPerWeek: 1 },
   goals: { weeklyMinutes: 300 },
   rewards: { minCostXp: 150, minCostChangedAt: null },
   pace: { maxComfortableMinutesPerDay: 240 },

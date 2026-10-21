@@ -191,6 +191,8 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'comfortable hours',
       'maximum per day',
       'streak',
+      'weekly streak',
+      'days per week',
       'minimum minutes',
       'freeze',
       'rewards',

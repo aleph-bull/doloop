@@ -4,6 +4,7 @@ import {
   studyHeatmap,
   universityById,
   weekdayProfile,
+  weekStreakNumbers,
   type Heatmap,
   type RhythmProfile,
 } from '@komogon/core';
@@ -45,7 +46,7 @@ export interface ProfileStats {
   longestSessionMinutes: number;
   bestDay: { date: string; minutes: number } | null;
   last28Minutes: number;
-  streak: { current: number; longest: number };
+  streak: { current: number; longest: number; weeks: { current: number; longest: number } };
   level: number;
 }
 
@@ -127,7 +128,11 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         longestSessionMinutes: lifetime.longestSessionMinutes,
         bestDay: lifetime.bestDay,
         last28Minutes: lifetime.last28Minutes,
-        streak: { current: row.streak.current, longest: row.streak.longest },
+        streak: {
+          current: row.streak.current,
+          longest: row.streak.longest,
+          weeks: weekStreakNumbers(row.streak),
+        },
         level: row.level,
       },
       heatmap: studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS }),

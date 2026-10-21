@@ -199,7 +199,7 @@ function FullDashboard() {
               </Link>
             }
           >
-            Rest days never break your streak, and your daily plan works around them.
+            Your daily plan works around rest days.
           </Hint>,
           <Hint
             key="xp"

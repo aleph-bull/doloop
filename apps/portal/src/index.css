@@ -4438,6 +4438,11 @@
     justify-items: start;
   }
 }
+.rc-streak-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .rc-streak-main {
   display: flex;
   align-items: center;

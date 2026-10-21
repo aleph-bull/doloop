@@ -176,16 +176,18 @@ const RING = 2 * Math.PI * 15;
  */
 function RailStats({
   streak,
+  weeks,
   level,
   ratio,
   toNext,
 }: {
   streak: number;
+  weeks: number;
   level: number;
   ratio: number;
   toNext: number;
 }) {
-  const days = `${streak} ${streak === 1 ? 'day' : 'days'} in a row`;
+  const streaks = `${streak} ${streak === 1 ? 'day' : 'days'} in a row, ${weeks} ${weeks === 1 ? 'week' : 'weeks'} in a row`;
   const lvl = `Level ${level}, ${toNext} XP to level ${level + 1}`;
 
   // Open, the two pills share the row, each with the same padding on every side, so the
@@ -234,7 +236,7 @@ function RailStats({
 
   return (
     <div ref={rowRef} className="sidenav-stats">
-      <NavLink to="/analytics" className="sidenav-stat" title={days} aria-label={days}>
+      <NavLink to="/analytics" className="sidenav-stat" title={streaks} aria-label={streaks}>
         <span className="sidenav-icon" aria-hidden>
           <Flame size={19} strokeWidth={1.9} />
           {streak > 0 && (
@@ -518,6 +520,7 @@ export function AppShell() {
             {user && (
               <RailStats
                 streak={user.streak.current}
+                weeks={user.streak.weeks?.current ?? 0}
                 level={user.level}
                 ratio={lp?.ratio ?? 0}
                 toNext={lp?.toNext ?? 0}
@@ -646,10 +649,16 @@ export function AppShell() {
           <div className="nav-spacer" aria-hidden />
           {user && (
             <div className="nav-stats">
-              <NavLink to="/analytics" className="nav-streak" title="Current streak">
+              <NavLink
+                to="/analytics"
+                className="nav-streak"
+                title={`Daily streak ${user.streak.current}, weekly streak ${user.streak.weeks?.current ?? 0}`}
+              >
                 <Flame size={15} aria-hidden className="nav-streak-flame" />
                 <span className="tabular">{user.streak.current}</span>
-                <span className="sr-only">day streak</span>
+                <span className="sr-only">
+                  day streak, {user.streak.weeks?.current ?? 0} week streak
+                </span>
               </NavLink>
               <LevelPill xp={user.xp} level={user.level} />
             </div>

@@ -23,6 +23,7 @@ import {
   timeOfDayClock,
   toLocalDate,
   weekdayProfile,
+  weekStreakNumbers,
   type HighlightKey,
   type StudyNode,
   type SubjectSlice,
@@ -220,7 +221,12 @@ export function recapRoutes(
         minMinutes: settings.streak.minMinutes,
         streak,
       }),
-      streak: { current: streak.current, longest: streak.longest, freezesHeld: streak.freezesHeld },
+      streak: {
+        current: streak.current,
+        longest: streak.longest,
+        freezesHeld: streak.freezesHeld,
+        weeks: weekStreakNumbers(streak),
+      },
       records: personalRecords({
         sessions,
         nodes,

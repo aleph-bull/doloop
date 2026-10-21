@@ -1,8 +1,10 @@
-import { addDays, eachDay, toLocalDate } from './dates';
-import { isRestDay } from './rest-days';
-import type { ISODate, ISODateTime, RestDayPolicy, Session, StreakState } from './types';
+import { addDays, eachDay, startOfWeekMonday, toLocalDate } from './dates';
+import type { ISODate, ISODateTime, Session, StreakState, WeekStreakState } from './types';
 
 export const STREAK_MILESTONES = [7, 14, 30, 60, 100] as const;
+
+/** How many streak days a week may be asked for before it counts toward the weekly streak. */
+export const WEEK_STREAK_DAYS = { MIN: 1, MAX: 7 } as const;
 
 /** When a streak day may begin, and how often that may change. */
 export const STREAK_DAY_START = { MIN_HOUR: 0, MAX_HOUR: 8, LOCK_HOURS: 24 } as const;
@@ -32,10 +34,26 @@ export function dayStartUnlocksAt(
 }
 
 export function emptyStreak(): StreakState {
-  return { current: 0, longest: 0, lastCountedDate: null, freezesHeld: 0, breakDaysHeld: 0 };
+  return {
+    current: 0,
+    longest: 0,
+    lastCountedDate: null,
+    freezesHeld: 0,
+    breakDaysHeld: 0,
+    weeks: emptyWeekStreak(),
+  };
 }
 
-export type StreakEventType = 'counted' | 'rest' | 'freeze-used' | 'reset';
+export function emptyWeekStreak(): WeekStreakState {
+  return { current: 0, longest: 0, lastCountedWeek: null };
+}
+
+/** The weekly streak's two numbers, zero for a streak saved before it existed. */
+export function weekStreakNumbers(state: StreakState): { current: number; longest: number } {
+  return { current: state.weeks?.current ?? 0, longest: state.weeks?.longest ?? 0 };
+}
+
+export type StreakEventType = 'counted' | 'freeze-used' | 'reset';
 
 export interface StreakEvent {
   type: StreakEventType;
@@ -73,7 +91,6 @@ export function qualifyingDays(
 export interface EvaluateStreakInput {
   state: StreakState;
   sessions: Session[];
-  policy: RestDayPolicy;
   minMinutes: number;
   /** Today's streak day in the user's timezone (see streakDay). */
   today: ISODate;
@@ -84,12 +101,13 @@ export interface EvaluateStreakInput {
 
 /**
  * Lazily bring the streak up to date through `today`. Idempotent for the same inputs:
- * `lastCountedDate` advances through every judged day (counted, rest, frozen, or reset),
- * so re-running on the same day changes nothing. Days before the first ever session are
- * never judged. Today is only judged if it already qualifies; a quiet today is left open.
+ * `lastCountedDate` advances through every judged day (counted, frozen, or reset), so
+ * re-running on the same day changes nothing. Days before the first ever session are never
+ * judged. Today is only judged if it already qualifies; a quiet today is left open. Rest days
+ * get no pass: they shape the plan, not the streak, so a quiet one is missed like any other.
  */
 export function evaluateStreak(input: EvaluateStreakInput): StreakEvaluation {
-  const { policy, today, timezone } = input;
+  const { today, timezone } = input;
   const days = qualifyingDays(input.sessions, input.minMinutes, timezone, input.dayStartHour ?? 0);
   const state: StreakState = { ...input.state };
   const events: StreakEvent[] = [];
@@ -117,11 +135,6 @@ export function evaluateStreak(input: EvaluateStreakInput): StreakEvaluation {
       continue;
     }
     if (d === today) break; // the day is not over
-    if (isRestDay(policy, d)) {
-      state.lastCountedDate = d;
-      events.push({ type: 'rest', date: d });
-      continue;
-    }
     if (state.current === 0) {
       // Nothing to protect; just move on without spending a freeze.
       state.lastCountedDate = d;
@@ -139,6 +152,63 @@ export function evaluateStreak(input: EvaluateStreakInput): StreakEvaluation {
   }
 
   return { state, events, milestonesReached };
+}
+
+export interface EvaluateWeekStreakInput {
+  /** Absent on a streak saved before weekly streaks; judged from the first session then. */
+  state: WeekStreakState | undefined;
+  sessions: Session[];
+  minMinutes: number;
+  /** Streak days a week needs to count (see WEEK_STREAK_DAYS). */
+  daysPerWeek: number;
+  /** Today's streak day in the user's timezone (see streakDay). */
+  today: ISODate;
+  timezone: string;
+  dayStartHour?: number;
+}
+
+/**
+ * The weekly streak: Monday-to-Sunday weeks in a row with at least `daysPerWeek` streak
+ * days, the days judged exactly as the daily streak judges them. Lazy and idempotent like
+ * evaluateStreak: `lastCountedWeek` (a Monday) advances through every judged week. This week
+ * counts as soon as it has enough days and is otherwise left open until it ends. Freezes are
+ * the daily streak's; a week short of its days ends the weekly one.
+ */
+export function evaluateWeekStreak(input: EvaluateWeekStreakInput): WeekStreakState {
+  const days = qualifyingDays(
+    input.sessions,
+    input.minMinutes,
+    input.timezone,
+    input.dayStartHour ?? 0,
+  );
+  const state: WeekStreakState = { ...(input.state ?? emptyWeekStreak()) };
+  const need = Math.min(WEEK_STREAK_DAYS.MAX, Math.max(WEEK_STREAK_DAYS.MIN, input.daysPerWeek));
+  const thisWeek = startOfWeekMonday(input.today);
+
+  let week: ISODate;
+  if (state.lastCountedWeek === null) {
+    let earliest: ISODate | null = null;
+    for (const d of days) if (earliest === null || d < earliest) earliest = d;
+    if (earliest === null) return state;
+    week = startOfWeekMonday(earliest);
+  } else {
+    week = addDays(state.lastCountedWeek, 7);
+  }
+
+  for (; week <= thisWeek; week = addDays(week, 7)) {
+    let studied = 0;
+    for (const d of eachDay(week, addDays(week, 6))) if (days.has(d)) studied += 1;
+    if (studied >= need) {
+      state.current += 1;
+      state.longest = Math.max(state.longest, state.current);
+      state.lastCountedWeek = week;
+      continue;
+    }
+    if (week === thisWeek) break; // the week is not over
+    state.current = 0;
+    state.lastCountedWeek = week;
+  }
+  return state;
 }
 
 /** True if `count` is exactly a milestone value. */

@@ -62,6 +62,15 @@ import type {
 export type RecapRangeParam = 'week' | 'month' | 'all';
 
 /** Everything the Analytics page draws for one range, from one call. */
+/**
+ * The weekly streak's numbers. Optional because a response saved in the offline cache before
+ * weekly streaks existed has none until it refreshes.
+ */
+export interface WeekStreak {
+  current: number;
+  longest: number;
+}
+
 export interface RecapResponse {
   now: string;
   range: RecapRangeParam;
@@ -80,7 +89,7 @@ export interface RecapResponse {
   cumulative: Cumulative;
   heatmap: StudyHeatmapData | null;
   consistency: Consistency;
-  streak: { current: number; longest: number; freezesHeld: number };
+  streak: { current: number; longest: number; freezesHeld: number; weeks?: WeekStreak };
   records: PersonalRecord[];
   personality: Personality | null;
   forecast: Forecast | null;
@@ -164,7 +173,13 @@ export interface EndSummary {
   levelBefore: number;
   levelAfter: number;
   leveledUp: boolean;
-  streak: { current: number; longest: number; message: string | null; milestonesReached: number[] };
+  streak: {
+    current: number;
+    longest: number;
+    message: string | null;
+    milestonesReached: number[];
+    weeks?: WeekStreak;
+  };
   statusAfter: PaceStatus;
   nodeCompleted: boolean;
   /** A routine session whose occurrence was ticked off as it ended. */
@@ -244,7 +259,7 @@ export interface ProfileStats {
   longestSessionMinutes: number;
   bestDay: { date: string; minutes: number } | null;
   last28Minutes: number;
-  streak: { current: number; longest: number };
+  streak: { current: number; longest: number; weeks?: WeekStreak };
   level: number;
 }
 

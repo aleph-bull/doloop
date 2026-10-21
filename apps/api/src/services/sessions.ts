@@ -17,6 +17,7 @@ import {
   pickPhrase,
   startTimer,
   viewTimer,
+  weekStreakNumbers,
   type AdvanceOptions,
   type PaceStatus,
   type Phrase,
@@ -284,7 +285,13 @@ export interface EndSummary {
   levelBefore: number;
   levelAfter: number;
   leveledUp: boolean;
-  streak: { current: number; longest: number; message: string | null; milestonesReached: number[] };
+  streak: {
+    current: number;
+    longest: number;
+    message: string | null;
+    milestonesReached: number[];
+    weeks: { current: number; longest: number };
+  };
   statusAfter: PaceStatus;
   nodeCompleted: boolean;
   /** A routine session whose occurrence was ticked off as it ended. */
@@ -843,6 +850,7 @@ async function finalize(
       longest: streakSync.streak.longest,
       message: streakSync.message,
       milestonesReached: streakSync.milestonesReached,
+      weeks: weekStreakNumbers(streakSync.streak),
     },
     statusAfter: task.statusAfter,
     nodeCompleted: task.nodeCompleted,

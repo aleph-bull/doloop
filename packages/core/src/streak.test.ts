@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { emptyRestDayPolicy } from './rest-days';
 import {
   describeStreakEvents,
   emptyStreak,
+  emptyWeekStreak,
   evaluateStreak,
+  evaluateWeekStreak,
   isStreakMilestone,
   qualifyingDays,
   type EvaluateStreakInput,
+  type EvaluateWeekStreakInput,
 } from './streak';
 import type { Session, StreakState } from './types';
 
@@ -38,8 +40,18 @@ const run = (over: Partial<EvaluateStreakInput>) =>
   evaluateStreak({
     state: emptyStreak(),
     sessions: [],
-    policy: emptyRestDayPolicy('u'),
     minMinutes: 15,
+    today: '2026-09-20',
+    timezone: TZ,
+    ...over,
+  });
+
+const runWeeks = (over: Partial<EvaluateWeekStreakInput>) =>
+  evaluateWeekStreak({
+    state: undefined,
+    sessions: [],
+    minMinutes: 15,
+    daysPerWeek: 1,
     today: '2026-09-20',
     timezone: TZ,
     ...over,
@@ -96,33 +108,29 @@ describe('evaluateStreak', () => {
     expect(describeStreakEvents(r.events)).toMatch(/Your streak ended/);
   });
 
-  it('skips rest days, vacations, and break days without breaking the streak', () => {
-    const policy = {
-      ...emptyRestDayPolicy('u'),
-      weeklyRestDays: [0, 6], // Sat 19, Sun 20
-      vacations: [{ from: '2026-09-16', to: '2026-09-17', label: 'x' }],
-      breakDays: ['2026-09-14'],
-    };
+  it('gives a quiet day no pass, whatever the rest-day plan says', () => {
+    // Rest days shape the plan only; the streak has no input for them.
     const r = run({
-      policy,
-      sessions: [
-        s(noon('2026-09-13'), 20), // Sun 13 is a weekly rest day but studying still counts
-        s(noon('2026-09-15'), 20),
-        s(noon('2026-09-18'), 20),
-      ],
+      state: { ...emptyStreak(), freezesHeld: 1 },
+      sessions: [s(noon('2026-09-13'), 20), s(noon('2026-09-15'), 20), s(noon('2026-09-18'), 20)],
       today: '2026-09-20',
     });
-    expect(r.state.current).toBe(3);
+    expect(r.state.current).toBe(0);
+    expect(r.state.longest).toBe(2);
     expect(r.events.map((e) => `${e.type}:${e.date}`)).toEqual([
       'counted:2026-09-13',
-      'rest:2026-09-14',
+      'freeze-used:2026-09-14',
       'counted:2026-09-15',
-      'rest:2026-09-16',
-      'rest:2026-09-17',
+      'reset:2026-09-16',
       'counted:2026-09-18',
-      'rest:2026-09-19',
+      'reset:2026-09-19',
     ]);
-    expect(describeStreakEvents(r.events)).toBeNull();
+  });
+
+  it('carries the weekly streak through untouched', () => {
+    const weeks = { current: 3, longest: 5, lastCountedWeek: '2026-09-07' };
+    const r = run({ state: { ...emptyStreak(), weeks }, sessions: [s(noon('2026-09-19'), 20)] });
+    expect(r.state.weeks).toEqual(weeks);
   });
 
   it('consumes a freeze automatically on a missed day and tells the user', () => {
@@ -211,5 +219,71 @@ describe('the streak day start', () => {
       '2026-09-22T10:00:00.000Z',
     );
     expect(dayStartUnlocksAt('2026-09-20T10:00:00.000Z', '2026-09-21T12:00:00.000Z')).toBeNull();
+  });
+});
+
+describe('evaluateWeekStreak', () => {
+  // Mondays: 2026-08-31, 09-07, 09-14, 09-21. Today (Sun 09-20) ends the week of 09-14.
+  it('does nothing with no sessions', () => {
+    expect(runWeeks({})).toEqual(emptyWeekStreak());
+  });
+
+  it('counts weeks in a row with a streak day, whichever day it fell on', () => {
+    const r = runWeeks({
+      sessions: [s(noon('2026-08-31'), 20), s(noon('2026-09-13'), 20), s(noon('2026-09-14'), 20)],
+    });
+    expect(r).toEqual({ current: 3, longest: 3, lastCountedWeek: '2026-09-14' });
+  });
+
+  it('judges the days the way the daily streak does', () => {
+    // Too short, and one that started before the 4am day start (so it is Sunday's).
+    const r = runWeeks({
+      sessions: [s(noon('2026-09-07'), 10), s('2026-09-14T05:30:00.000Z', 20)],
+      dayStartHour: 4,
+    });
+    expect(r).toEqual({ current: 1, longest: 1, lastCountedWeek: '2026-09-07' });
+  });
+
+  it('leaves this week open until it has its days', () => {
+    const r = runWeeks({ sessions: [s(noon('2026-09-10'), 20)], today: '2026-09-17' });
+    expect(r).toEqual({ current: 1, longest: 1, lastCountedWeek: '2026-09-07' });
+    const later = runWeeks({
+      state: r,
+      sessions: [s(noon('2026-09-10'), 20), s(noon('2026-09-18'), 20)],
+      today: '2026-09-18',
+    });
+    expect(later).toEqual({ current: 2, longest: 2, lastCountedWeek: '2026-09-14' });
+  });
+
+  it('ends after a week without its days, keeping the best', () => {
+    const r = runWeeks({
+      sessions: [s(noon('2026-08-24'), 20), s(noon('2026-08-31'), 20), s(noon('2026-09-19'), 20)],
+    });
+    expect(r).toEqual({ current: 1, longest: 2, lastCountedWeek: '2026-09-14' });
+  });
+
+  it('asks for more days when set to, and ends a week that falls short', () => {
+    const three = ['2026-09-08', '2026-09-09', '2026-09-11'].map((d) => s(noon(d), 20));
+    const r = runWeeks({
+      daysPerWeek: 3,
+      sessions: [...three, s(noon('2026-09-15'), 20), s(noon('2026-09-16'), 20)],
+      today: '2026-09-21',
+    });
+    expect(r).toEqual({ current: 0, longest: 1, lastCountedWeek: '2026-09-14' });
+  });
+
+  it('counts a week on more than one session on the same day only once', () => {
+    const r = runWeeks({
+      daysPerWeek: 2,
+      sessions: [s(noon('2026-09-15'), 20), s('2026-09-15T20:00:00.000Z', 20)],
+      today: '2026-09-21',
+    });
+    expect(r).toEqual({ current: 0, longest: 0, lastCountedWeek: '2026-09-14' });
+  });
+
+  it('is idempotent when re-run in the same week', () => {
+    const sessions = [s(noon('2026-09-07'), 20), s(noon('2026-09-15'), 20)];
+    const first = runWeeks({ sessions, today: '2026-09-16' });
+    expect(runWeeks({ state: first, sessions, today: '2026-09-17' })).toEqual(first);
   });
 });
