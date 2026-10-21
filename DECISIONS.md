@@ -1387,3 +1387,8 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 ## Card rail shadows, 2026-10-21 (user request)
 
 - **The dashboard card rail no longer clips card shadows.** The rail scrolls sideways, and a scroller clips anything past its padding box; its 6px of room was less than the glass shadow (about 12px out at the sides, 36px down on the dark theme), so cards showed a hard edge at the right and bottom. The track now keeps 14px at the sides and 40px below, pulled back with matching negative margins so nothing else moves.
+
+## Scrolling tabs and the bottom bar on a crowded top bar, 2026-10-21 (user request)
+
+- **The top bar's tabs scroll again when they do not fit**, with the faded edge and an arrow on each side that hides a tab, as before the sidebar arrived. The current tab is kept in view, also when the streak and level counters load and take some of the room.
+- **A top bar too small for a scrolling row hands the pages to the bottom bar.** When the tabs do not fit and have under 480px of room, the pages move to the phone-style icon bar along the bottom (centred, no wider than 560px) and the top bar keeps only the brand, counters and controls. The width the tabs need is remembered so the bar knows when there is room again. The bottom bar's rules key off a data-tabbar attribute set by AppShell (phones, or a crowded bar) instead of a media query alone.
