@@ -99,6 +99,27 @@
       "when": 1792468953574,
       "tag": "0013_password_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792558757948,
+      "tag": "0014_calendar_course_imports",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792560533539,
+      "tag": "0015_local_test_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792561631679,
+      "tag": "0016_email_verification_social",
+      "breakpoints": true
     }
   ]
 }

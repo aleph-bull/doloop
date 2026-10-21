@@ -299,6 +299,7 @@ export const settingsSchema = z
         burstSpikeOpacity: z.number().min(0).max(1),
       })
       .partial(),
+    dashboard: z.object({ focusOnly: z.boolean() }).partial(),
     features: z
       .object({
         routines: z.boolean(),

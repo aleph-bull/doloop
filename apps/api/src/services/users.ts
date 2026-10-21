@@ -233,7 +233,18 @@ export async function updateProfile(
 ): Promise<UserRow> {
   const set: Partial<UserRow> = {};
   if (patch.timezone) set.timezone = patch.timezone;
-  if (patch.onboarded) set.onboardedAt = dt(now);
+  if (patch.onboarded && !row.onboardedAt) {
+    set.onboardedAt = dt(now);
+    // First sign-in goes straight to a timer. Keep existing accounts' choices intact.
+    const settings = settingsOf(row);
+    set.settings = {
+      ...settings,
+      dashboard: { focusOnly: true },
+      focusScreen: { openOnStart: 'never' },
+      timelapse: { ...settings.timelapse, record: 'never' },
+      visualizer: { ...settings.visualizer, promptDismissed: true },
+    };
+  }
   if (Object.keys(set).length === 0) return row;
   const [updated] = await db.update(users).set(set).where(eq(users.id, row.id)).returning();
   return updated!;

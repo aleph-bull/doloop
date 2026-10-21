@@ -16,11 +16,13 @@ import {
   Settings as SettingsIcon,
   Trophy,
   WifiOff,
+  Users,
   type LucideIcon,
   Route as RouteIcon,
 } from 'lucide-react';
 import { Backdrop, Glass, LogoMark } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
+import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
@@ -55,6 +57,7 @@ const links: Array<{
     feature: 'calendar',
   },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn },
+  { to: '/social', label: 'Social', short: 'Social', icon: Users },
 ];
 
 /**
@@ -91,6 +94,7 @@ function LevelPill({ xp, level }: { xp: number; level: number }) {
 }
 
 export function AppShell() {
+  useCalendarImportRefresh();
   const me = useMe();
   const isAdmin = useIsAdmin();
   const settings = me.data?.user.settings;

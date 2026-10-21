@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router';
+import { Link, Navigate, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komogon/ui';
 import { friendlyAuthError, useAuth } from '../lib/auth';
+import { LocalTestAccounts } from '../components/LocalTestAccounts';
+import { LocalMailInbox } from '../components/LocalMailInbox';
 
 export function SignIn() {
   const auth = useAuth();
@@ -10,10 +12,11 @@ export function SignIn() {
   const turnedAway = (useLocation().state as { error?: string } | null)?.error ?? null;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(useLocation().pathname === '/signup');
   /** What the email we just sent is for, when one was sent. */
   const [sent, setSent] = useState<'link' | 'confirm' | null>(null);
   const [busy, setBusy] = useState(false);
+  const [code, setCode] = useState('');
 
   if (auth.status === 'signed-in') return <Navigate to="/" replace />;
 
@@ -55,11 +58,11 @@ export function SignIn() {
       <main className="min-h-screen flex items-center justify-center p-4 on-backdrop">
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
           <div>
-            <LogoMark size={40} className="mb-3" />
+            <Link to="/" aria-label="Back to Komodon">
+              <LogoMark size={40} className="mb-3" />
+            </Link>
             <h1 className="text-2xl">Komodon</h1>
-            <p className="muted text-sm mt-1">
-              Productivity app with nifty features to keep you motivated.
-            </p>
+            <p className="muted text-sm mt-1">Plan coursework, track deadlines and study.</p>
           </div>
 
           {turnedAway && !sent && (
@@ -68,7 +71,58 @@ export function SignIn() {
             </p>
           )}
 
-          {sent ? (
+          {sent === 'confirm' && auth.mode === 'server' && auth.pendingVerification ? (
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setBusy(true);
+                try {
+                  await auth.verifyEmailCode(code);
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : 'Could not verify that code.');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <h2 className="section-title">Check your email</h2>
+              <p className="muted text-sm">
+                Enter the code sent to {auth.pendingVerification.email}.
+              </p>
+              <Input
+                label="Verification code"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                autoFocus
+              />
+              <Button type="submit" variant="primary" loading={busy}>
+                Verify email
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await auth.resendVerification();
+                    toast('A new code has been sent.');
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : 'Could not resend.');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Resend code
+              </Button>
+              <LocalMailInbox email={auth.pendingVerification.email} />
+            </form>
+          ) : sent ? (
             <p className="text-sm">
               {sent === 'link'
                 ? 'Check your email for a sign-in link.'
@@ -104,6 +158,11 @@ export function SignIn() {
                   This is an early test of Komodon. I can see the accounts and study data saved
                   here.
                 </p>
+              )}
+              {!creating && auth.mode === 'server' && (
+                <Link className="link-button text-sm" to="/reset-password">
+                  Forgot password?
+                </Link>
               )}
               <Button type="submit" variant="primary" loading={busy} disabled={busy}>
                 {auth.mode === 'dev' ? 'Continue (dev)' : creating ? 'Create account' : 'Sign in'}
@@ -145,6 +204,7 @@ export function SignIn() {
               only.
             </p>
           )}
+          <LocalTestAccounts />
         </Glass>
       </main>
     </>

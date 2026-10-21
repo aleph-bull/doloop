@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify, SignJWT, type JWTPayload } from 'jose';
 export interface AuthUser {
   id: string;
   email: string | null;
+  authVersion?: number;
 }
 
 export interface Verifier {
@@ -16,7 +17,11 @@ export class AuthError extends Error {
 function toUser(payload: JWTPayload): AuthUser {
   if (!payload.sub) throw new AuthError('Token has no subject');
   const email = typeof payload.email === 'string' ? payload.email : null;
-  return { id: payload.sub, email };
+  return {
+    id: payload.sub,
+    email,
+    authVersion: typeof payload.authVersion === 'number' ? payload.authVersion : 0,
+  };
 }
 
 /** HS256 verifier for a shared secret (Supabase legacy JWT secret, or a dev secret). */
@@ -61,11 +66,11 @@ export function createSupabaseVerifier(opts: {
 /** Mint a dev/test token. Never used in production. */
 export async function signDevToken(
   secret: string,
-  user: { id: string; email: string },
+  user: { id: string; email: string; authVersion?: number },
   ttlSeconds = 3600,
 ): Promise<string> {
   const key = new TextEncoder().encode(secret);
-  return new SignJWT({ email: user.email })
+  return new SignJWT({ email: user.email, authVersion: user.authVersion ?? 0 })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
     .setIssuedAt()

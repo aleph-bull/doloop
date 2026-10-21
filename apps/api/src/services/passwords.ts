@@ -41,6 +41,17 @@ export async function signUp(
 ): Promise<{ id: string; email: string }> {
   const e = normalise(email);
   if (password.length < 6) throw badRequest('Use a password of at least 6 characters.');
+  return createPasswordAccount(db, e, await hashPassword(password), timezone, claimExisting);
+}
+
+export async function createPasswordAccount(
+  db: Db,
+  email: string,
+  passwordHash: string,
+  timezone: string | null,
+  claimExisting = false,
+) {
+  const e = normalise(email);
   const taken = await db.query.passwordAccounts.findFirst({
     where: eq(passwordAccounts.email, e),
   });
@@ -50,9 +61,7 @@ export async function signUp(
     : undefined;
   const id = existing?.id ?? randomUUID();
   if (!existing) await ensureUser(db, { id, email: e }, timezone);
-  await db
-    .insert(passwordAccounts)
-    .values({ userId: id, email: e, passwordHash: await hashPassword(password) });
+  await db.insert(passwordAccounts).values({ userId: id, email: e, passwordHash });
   return { id, email: e };
 }
 

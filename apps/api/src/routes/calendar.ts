@@ -1,9 +1,13 @@
 import type { FastifyInstance } from 'fastify';
+import { createHash, randomBytes } from 'node:crypto';
 import { findFreeSlots } from '@komogon/core';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { users } from '../db/schema';
+import { outlookCalendar, users } from '../db/schema';
+import { syncCalendarImport, outlookBusy, type OutlookDeps } from '../services/calendar-import';
+import { encrypt } from '../services/crypto';
+import { registerCalendarWorker } from '../services/calendar-worker';
 import { badRequest, notFound } from '../errors';
 import {
   busyTimes,
@@ -25,6 +29,8 @@ import { isoDateTime } from '../validation';
 
 export interface CalendarRouteOptions {
   deps: CalendarDeps | null;
+  outlook: OutlookDeps | null;
+  autoSync?: boolean;
   /** Secret for signing the OAuth state parameter. */
   stateSecret: string;
   portalUrl: string;
@@ -36,6 +42,84 @@ export function calendarRoutes(
   clock: () => string,
   opts: CalendarRouteOptions,
 ) {
+  const pending = new Map<string, { userId: string; verifier: string; expires: number }>();
+  const importDeps = { google: opts.deps, outlook: opts.outlook };
+  if (opts.autoSync) registerCalendarWorker(app, db, importDeps, clock);
+  app.get('/api/calendar/outlook/status', async (req) => {
+    const row = await db.query.outlookCalendar.findFirst({
+      where: eq(outlookCalendar.userId, req.user.id),
+    });
+    return {
+      available: !!opts.outlook,
+      connected: !!row,
+      revoked: !!row?.revokedAt,
+      lastSyncAt: row?.lastSyncAt?.toISOString() ?? null,
+    };
+  });
+  app.post('/api/calendar/outlook/connect', async (req) => {
+    if (!opts.outlook) throw badRequest('Outlook Calendar is not configured on this server');
+    for (const [key, item] of pending) if (item.expires < Date.now()) pending.delete(key);
+    const verifier = randomBytes(32).toString('base64url');
+    const state = signState(
+      `outlook:${req.user.id}:${randomBytes(16).toString('hex')}`,
+      opts.stateSecret,
+    );
+    pending.set(state, { userId: req.user.id, verifier, expires: Date.now() + 15 * 60_000 });
+    return {
+      url: opts.outlook.client.authUrl(
+        state,
+        createHash('sha256').update(verifier).digest('base64url'),
+      ),
+    };
+  });
+  app.get('/api/calendar/outlook/callback', { config: { public: true } }, async (req, reply) => {
+    const q = z
+      .object({
+        code: z.string().optional(),
+        state: z.string().optional(),
+        error: z.string().optional(),
+      })
+      .parse(req.query);
+    const back = (status: string) =>
+      reply.redirect(`${opts.portalUrl}/settings?outlook=${status}#calendar`);
+    if (!opts.outlook) return back('unavailable');
+    const attempt = q.state ? pending.get(q.state) : undefined;
+    if (q.state) pending.delete(q.state);
+    if (
+      !attempt ||
+      attempt.expires < Date.now() ||
+      !verifyState(q.state!, opts.stateSecret)?.startsWith(`outlook:${attempt.userId}:`)
+    )
+      return back('invalid');
+    if (q.error || !q.code) return back('denied');
+    const user = await db.query.users.findFirst({ where: eq(users.id, attempt.userId) });
+    if (!user) return back('invalid');
+    try {
+      const tokens = await opts.outlook.client.exchangeCode(q.code, attempt.verifier);
+      if (!tokens.refreshToken) throw new Error('Outlook did not grant offline access.');
+      const refreshTokenEnc = encrypt(tokens.refreshToken, opts.outlook.encryptionKey);
+      await db
+        .insert(outlookCalendar)
+        .values({ userId: user.id, refreshTokenEnc, connectedAt: new Date(clock()) })
+        .onConflictDoUpdate({
+          target: outlookCalendar.userId,
+          set: { refreshTokenEnc, revokedAt: null, connectedAt: new Date(clock()) },
+        });
+      await syncCalendarImport(db, user, 'outlook', importDeps, clock());
+      return back('connected');
+    } catch (err) {
+      req.log.error(err);
+      return back('failed');
+    }
+  });
+  app.post('/api/calendar/outlook/sync', async (req) => {
+    if (!opts.outlook) throw badRequest('Outlook Calendar is not configured on this server');
+    return syncCalendarImport(db, req.user, 'outlook', importDeps, clock());
+  });
+  app.delete('/api/calendar/outlook', async (req, reply) => {
+    await db.delete(outlookCalendar).where(eq(outlookCalendar.userId, req.user.id));
+    return reply.code(204).send();
+  });
   app.get('/api/calendar/google/status', async (req) => ({
     available: opts.deps !== null,
     ...(await connectionStatus(db, req.user.id)),
@@ -63,6 +147,7 @@ export function calendarRoutes(
     try {
       await completeConnection(db, opts.deps, user, q.code, clock());
       await syncGoogle(db, opts.deps, user, clock());
+      await syncCalendarImport(db, user, 'google', importDeps, clock());
       return back('connected');
     } catch (err) {
       req.log.error(err);
@@ -72,7 +157,12 @@ export function calendarRoutes(
 
   app.post('/api/calendar/google/sync', async (req) => {
     if (!opts.deps) throw badRequest('Google Calendar is not configured on this server');
-    return syncGoogle(db, opts.deps, req.user, clock());
+    const result = await syncGoogle(db, opts.deps, req.user, clock());
+    const academic =
+      result.status === 'ok'
+        ? await syncCalendarImport(db, req.user, 'google', importDeps, clock())
+        : null;
+    return { ...result, academic };
   });
 
   app.delete('/api/calendar/google', async (req, reply) => {
@@ -83,7 +173,11 @@ export function calendarRoutes(
   /** Busy intervals from the primary calendar, for the scheduler. */
   app.get('/api/calendar/busy', async (req) => {
     const q = z.object({ from: isoDateTime, to: isoDateTime }).parse(req.query);
-    return { busy: await busyTimes(db, opts.deps, req.user.id, q.from, q.to) };
+    const [google, outlook] = await Promise.all([
+      busyTimes(db, opts.deps, req.user.id, q.from, q.to),
+      outlookBusy(db, req.user.id, q.from, q.to),
+    ]);
+    return { busy: [...google, ...outlook] };
   });
 
   /**

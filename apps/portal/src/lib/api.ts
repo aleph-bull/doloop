@@ -225,6 +225,16 @@ export interface NodeInput {
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
+export interface SocialProfile {
+  userId: string;
+  displayName: string;
+  organizationName: string;
+  organizationEmail: string | null;
+  organizationDomain: string | null;
+  organizationVerifiedAt: string | null;
+  visible: boolean;
+}
+
 export const api = {
   health: () => request<{ ok: boolean }>('GET', '/api/health'),
   me: () => request<MeResponse>('GET', '/api/me'),
@@ -400,6 +410,64 @@ export const api = {
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 
+  emailStatus: () =>
+    request<{
+      available: boolean;
+      mode: string;
+      verificationRequired: boolean;
+      passwordReset: boolean;
+    }>('GET', '/api/auth/email/status'),
+  verifySignup: (challengeId: string, code: string) =>
+    request<{ token: string; email: string }>('POST', '/api/auth/email/verify-signup', {
+      challengeId,
+      code,
+    }),
+  resendEmailCode: (challengeId: string) =>
+    request<{ challengeId: string; email: string }>('POST', '/api/auth/email/resend', {
+      challengeId,
+    }),
+  requestPasswordReset: (email: string) =>
+    request<{ challengeId: string }>('POST', '/api/auth/password/request-reset', { email }),
+  resetPassword: (challengeId: string, code: string, password: string) =>
+    request<{ ok: boolean }>('POST', '/api/auth/password/reset', { challengeId, code, password }),
+  localOutbox: (email: string) =>
+    request<{ messages: Array<{ id: string; subject: string; text: string }> }>(
+      'GET',
+      `/api/auth/local-outbox?email=${encodeURIComponent(email)}`,
+    ),
+  socialMe: () =>
+    request<{
+      profile: SocialProfile;
+      accountEmail: string;
+      emailVerified: boolean;
+      mailAvailable: boolean;
+    }>('GET', '/api/social/me'),
+  updateSocial: (profile: Pick<SocialProfile, 'displayName' | 'organizationName' | 'visible'>) =>
+    request<{ profile: SocialProfile }>('PATCH', '/api/social/me', profile),
+  requestOrganizationCode: (email: string) =>
+    request<{ challengeId: string; email: string }>(
+      'POST',
+      '/api/social/organization/request-code',
+      { email },
+    ),
+  verifyOrganization: (challengeId: string, code: string) =>
+    request<{ profile: SocialProfile }>('POST', '/api/social/organization/verify', {
+      challengeId,
+      code,
+    }),
+  unlinkOrganization: () => request<{ ok: boolean }>('DELETE', '/api/social/organization'),
+  socialPeople: () =>
+    request<{
+      people: Array<
+        Pick<SocialProfile, 'displayName' | 'organizationName' | 'organizationDomain'> & {
+          id: string;
+        }
+      >;
+    }>('GET', '/api/social/people'),
+  requestAccountCode: () =>
+    request<{ challengeId: string; email: string }>('POST', '/api/auth/email/request-verification'),
+  verifyAccountCode: (challengeId: string, code: string) =>
+    request<{ ok: boolean }>('POST', '/api/auth/email/verify-account', { challengeId, code }),
   googleStatus: () =>
     request<{
       available: boolean;
@@ -410,11 +478,28 @@ export const api = {
     }>('GET', '/api/calendar/google/status'),
   googleConnect: () => request<{ url: string }>('POST', '/api/calendar/google/connect'),
   googleSync: () =>
-    request<{ status: string; pushed: number; pulled: number; imported: number }>(
-      'POST',
-      '/api/calendar/google/sync',
-    ),
+    request<{
+      status: string;
+      pushed: number;
+      pulled: number;
+      imported: number;
+      academic?: { courses: number; tasks: number; events: number } | null;
+    }>('POST', '/api/calendar/google/sync'),
   googleDisconnect: () => request<void>('DELETE', '/api/calendar/google'),
+  outlookStatus: () =>
+    request<{
+      available: boolean;
+      connected: boolean;
+      revoked: boolean;
+      lastSyncAt: string | null;
+    }>('GET', '/api/calendar/outlook/status'),
+  outlookConnect: () => request<{ url: string }>('POST', '/api/calendar/outlook/connect'),
+  outlookSync: () =>
+    request<{ status: string; courses: number; tasks: number; events: number }>(
+      'POST',
+      '/api/calendar/outlook/sync',
+    ),
+  outlookDisconnect: () => request<void>('DELETE', '/api/calendar/outlook'),
   busy: (from: string, to: string) =>
     request<{ busy: Array<{ start: string; end: string }> }>(
       'GET',

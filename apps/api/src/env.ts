@@ -17,6 +17,9 @@ function str(name: string, fallback?: string): string | undefined {
 }
 
 export interface Env {
+  resendApiKey: string | undefined;
+  mailFrom: string;
+  localTestAccounts: boolean;
   port: number;
   host: string;
   corsOrigins: string[];
@@ -39,6 +42,12 @@ export interface Env {
     redirectUri: string;
   };
   tokenEncryptionKey: string | undefined;
+  outlook: {
+    clientId: string | undefined;
+    clientSecret: string | undefined;
+    redirectUri: string;
+    tenant: string;
+  };
   portalUrl: string;
   /**
    * TMDB credentials for film and TV posters on the Analytics page: a v4 read access token
@@ -49,6 +58,18 @@ export interface Env {
 
 export function loadEnv(): Env {
   return {
+    resendApiKey: str('RESEND_API_KEY'),
+    mailFrom: str('MAIL_FROM', 'Komodon <noreply@komogon.app>')!,
+    localTestAccounts: process.env.LOCAL_TEST_ACCOUNTS === 'true',
+    outlook: {
+      clientId: str('OUTLOOK_CLIENT_ID'),
+      clientSecret: str('OUTLOOK_CLIENT_SECRET'),
+      redirectUri: str(
+        'OUTLOOK_REDIRECT_URI',
+        'http://localhost:8787/api/calendar/outlook/callback',
+      )!,
+      tenant: str('OUTLOOK_TENANT', 'common')!,
+    },
     port: Number(str('PORT', '8787')),
     host: str('HOST', '0.0.0.0')!,
     corsOrigins: str('CORS_ORIGINS', 'http://localhost:5173')!

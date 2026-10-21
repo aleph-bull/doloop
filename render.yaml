@@ -22,6 +22,11 @@ services:
       # Signs the API's own email-and-password sign-ins; changing it signs everyone out
       - key: AUTH_SECRET
         generateValue: true
+      # Resend sending key; verify komogon.app in Resend before enabling live mail.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: Komodon <noreply@komogon.app>
       # Postgres connection string (Neon, or any hosted Postgres)
       - key: DATABASE_URL
         sync: false

@@ -25,6 +25,10 @@ import { passwordAuthRoutes } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { leaderboardRoutes } from './routes/leaderboard';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
+import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
+import { emailAuthRoutes } from './routes/email-auth';
+import { socialRoutes } from './routes/social';
+import type { Mailer } from './services/mailer';
 
 export interface BuildOptions {
   db: Db;
@@ -37,6 +41,9 @@ export interface BuildOptions {
   passwordAuth?: { secret: string } | null;
   /** Who can see every account and its data (`ADMIN_EMAILS`). */
   adminEmails?: string[];
+  localTestAccounts?: boolean;
+  mailer?: Mailer | null;
+  requireEmailVerification?: boolean;
   /** Injectable clock for tests. */
   clock?: () => string;
   /** Google Calendar integration; null disables the connect flow. */
@@ -51,6 +58,14 @@ export interface BuildOptions {
 export async function buildServer(opts: BuildOptions) {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 8 * 1024 * 1024 });
   const clock = opts.clock ?? (() => new Date().toISOString());
+  const admins = [
+    ...(opts.adminEmails ?? []),
+    ...(opts.localTestAccounts ? [LOCAL_TEST_ACCOUNTS[1].email] : []),
+  ];
+  if (opts.localTestAccounts) {
+    if (!opts.passwordAuth) throw new Error('Local test accounts require password authentication.');
+    await seedLocalTestAccounts(opts.db, clock());
+  }
 
   await app.register(cors, {
     origin: opts.corsOrigins ?? true,
@@ -86,23 +101,39 @@ export async function buildServer(opts: BuildOptions) {
     passwordAuthRoutes(app, opts.db, {
       secret: opts.passwordAuth.secret,
       allowedEmails: opts.allowedEmails,
-      adminEmails: opts.adminEmails ?? [],
+      adminEmails: admins,
+      localTestAccounts: opts.localTestAccounts ?? false,
+      mailer: opts.mailer,
+      requireVerification: opts.requireEmailVerification ?? !!opts.mailer,
+      clock,
     });
 
   await app.register(authPlugin, {
     db: opts.db,
     verifier: opts.verifier,
     allowedEmails: opts.allowedEmails,
+    localTestAccounts: opts.localTestAccounts ?? false,
   });
 
   const calendar: CalendarRouteOptions = {
     deps: opts.calendar?.deps ?? null,
+    outlook: opts.calendar?.outlook ?? null,
+    autoSync: opts.calendar?.autoSync ?? false,
     stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
   };
+  const email = {
+    mailer: opts.mailer ?? null,
+    secret: opts.passwordAuth?.secret ?? calendar.stateSecret,
+    verificationRequired: opts.requireEmailVerification ?? !!opts.mailer,
+    localTestAccounts: opts.localTestAccounts ?? false,
+    passwordAuth: !!opts.passwordAuth,
+  };
+  emailAuthRoutes(app, opts.db, clock, email);
+  socialRoutes(app, opts.db, clock, email, admins);
   meRoutes(app, opts.db, clock);
-  adminRoutes(app, opts.db, opts.adminEmails ?? []);
-  leaderboardRoutes(app, opts.db);
+  adminRoutes(app, opts.db, admins);
+  leaderboardRoutes(app, opts.db, admins);
   nodeRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);

@@ -174,6 +174,9 @@ export function Calendar() {
             Drag on the grid to plan a block. Anything imported from your calendar is shown as a
             commitment, so you can plan around it.
           </p>
+          <Link className="section-link" to="/settings#calendar">
+            Connect Google or Outlook
+          </Link>
         </div>
         <div className="flex gap-2 items-center">
           <Button
@@ -296,7 +299,7 @@ export function Calendar() {
                   minutesInto(b.endAt, d) - HOUR_START * 60,
                 );
                 const node = b.nodeId ? byId.get(b.nodeId) : null;
-                const commitment = b.source === 'google';
+                const commitment = b.source === 'google' || b.source === 'outlook';
                 const done = b.source === 'session';
                 const label = commitment
                   ? (b.title ?? 'Busy')
@@ -393,8 +396,8 @@ export function Calendar() {
               })}
           </ul>
           <p className="muted text-sm">
-            Connect Google Calendar in <Link to="/settings#calendar">Settings</Link> to see busy
-            times here and sync blocks both ways.
+            Connect Google or Outlook Calendar in <Link to="/settings#calendar">Settings</Link> to
+            import courses, deadlines and events. Google also syncs your planned study blocks.
           </p>
         </Panel>
       )}

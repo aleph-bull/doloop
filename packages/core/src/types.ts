@@ -15,7 +15,7 @@ export type SessionMode = 'pomodoro' | 'unlimited' | 'scheduled';
  *   can plan around it; never treated as study time and never used to tell them to study.
  * - 'session': study that actually happened, logged after the timer ended.
  */
-export type PlannedBlockSource = 'app' | 'google' | 'session';
+export type PlannedBlockSource = 'app' | 'google' | 'outlook' | 'session';
 export type Distracted = 'no' | 'a-little' | 'a-lot';
 export type PaceStatus = 'done' | 'overdue' | 'critical' | 'behind' | 'on-track' | 'no-estimate';
 
@@ -231,6 +231,10 @@ export interface UserSettings {
    * holds across devices and reinstalls - closing a prompt means never again, not
    * "until this browser forgets".
    */
+  dashboard: {
+    /** Keep dashboard content focused on starting a session; navigation stays available. */
+    focusOnly: boolean;
+  };
   /** Optional pages. Turning one off takes it out of the nav; its data is kept. */
   features: {
     routines: boolean;

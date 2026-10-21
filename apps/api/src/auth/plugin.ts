@@ -5,6 +5,9 @@ import type { Db } from '../db/client';
 import type { UserRow } from '../db/schema';
 import { ensureUser } from '../services/users';
 import { AuthError, type Verifier } from './verify';
+import { isLocalTestEmail, requireLocalTestRequest } from '../services/local-test-accounts';
+import { eq } from 'drizzle-orm';
+import { users } from '../db/schema';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -21,6 +24,7 @@ export interface AuthPluginOptions {
   verifier: Verifier;
   /** Invite list for a closed test; empty or missing lets every signed-in account in. */
   allowedEmails?: string[];
+  localTestAccounts?: boolean;
 }
 
 /**
@@ -54,6 +58,14 @@ export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOption
     if (!token) return reply.code(401).send({ error: 'Missing bearer token' });
     try {
       const auth = await opts.verifier.verify(token);
+      const existing = await opts.db.query.users.findFirst({ where: eq(users.id, auth.id) });
+      if (existing && existing.authVersion !== (auth.authVersion ?? 0))
+        return reply.code(401).send({ error: 'Session expired. Sign in again.' });
+      if (existing?.isTestAccount || isLocalTestEmail(auth.email)) {
+        requireLocalTestRequest(req, opts.localTestAccounts ?? false);
+        if (!existing)
+          return reply.code(401).send({ error: 'Test account was reset. Sign in again.' });
+      }
       // Checked before ensureUser, so an uninvited sign-in never creates an account row.
       if (!isInvited(auth.email, opts.allowedEmails))
         return reply.code(403).send({ error: 'invite_only' });

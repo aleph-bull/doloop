@@ -1340,3 +1340,80 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The app is now called Komodon** everywhere people see it: the portal and extension text, page titles, the installed-app name, the logo's label, calendar event descriptions, the .ics feed, and download file names (`komodon-export-…`, `komodon-week-…`, `komodon-timelapse-…`).
 - **Internal names stay komogon**: packages, storage keys, IndexedDB names, extension message types, the `~/.komogon` data folder, the local scripts and startup shortcut, and the komogon.app domain (the user said to leave the address for now). Changing them would drop saved browser state or break the always-on copy.
 - Earlier entries keep the name they were written under.
+
+# 2026-10-21: Start with a session
+
+After account creation or sign-in, new users enter the dashboard directly. No name,
+course, task or due date is required, and no placeholder study items are created.
+The initial dashboard shows Start with inline Pomodoro, timelapse and timer visibility
+options. Timelapse is opt-in and opens the focus screen in the same tab. Audio sharing,
+timelapse and focus-screen questions are suppressed for these accounts.
+Planning, progress, hints and secondary navigation stay hidden until the user chooses
+"Show planning and progress", or turns off "Focus on the timer" in Settings > Pages >
+Dashboard. This account setting persists across devices. Existing onboarded accounts
+retain their layout and preferences.
+
+## 2026-10-21: Calendar courses and deadlines
+
+Google imports now read all accessible calendars except the app-owned Study calendar,
+which keeps its existing two-way block sync. Outlook imports use Microsoft Graph with
+read-only calendar permission, offline access, PKCE and encrypted refresh tokens.
+Both providers refresh automatically about every 15 minutes while the API runs, plus
+on connection and manual sync. The rolling import window is 30 days back and 180 ahead.
+Course codes and existing course names group imported tasks. Assessment and deadline
+keywords create assessments or tasks; other events remain calendar commitments and
+never count as study time. Date-only deadlines last through their local day.
+Provider event identity prevents repeat imports; matching courses and tasks are reused.
+Changes update untouched imported fields, preserving manual edits, completions and
+user deletions. Removed events cancel commitments and archive untouched imported work.
+Disconnecting stops refreshes and keeps imported data. Connection controls live in
+Settings > Calendar, with a link from Calendar. No extra onboarding step is introduced.
+
+## 2026-10-21: Keep navigation during onboarding
+
+The simplified first dashboard only reduces dashboard content and session prompts.
+The full top bar, mobile navigation, streak and Achievements entry remain visible,
+respecting the user's individual page visibility settings. Users can explore planning,
+calendars, progress and future social features without first switching dashboard modes.
+The dashboard action now says "Show full dashboard"; its setting is "Simplify the
+dashboard" in Settings > Pages > Dashboard. No new social feature is added here.
+
+## 2026-10-21: Local test accounts and a public landing page
+
+Signed-out visitors now land on a public page describing coursework, calendars, timers
+and progress. Create an account opens signup; Sign in opens login. Signed-in visitors
+still enter their dashboard at the home URL. /welcome provides a landing-page preview.
+Copy describes the available features directly, without a narrated product tour.
+The localhost password sandbox seeds onboarding@komodon.test and admin@komodon.test.
+Sign-in shows their credentials and actions only when this test mode is enabled.
+Reset onboarding clears that account only. Test accounts and configured admins are
+excluded from the leaderboard; their personal study records remain usable for tests.
+Local test mode requires an isolated sandbox database and a loopback listener outside
+production. Requests for test accounts also check loopback IP, hostname and origin.
+Normal hosted signup cannot create the reserved test identities.
+
+## 2026-10-21: Landing, email codes and Social
+
+The public landing uses the dashboard's rounded cards, pill navigation and neutral
+surfaces, with no photo background. Cluely supplies the broad centered headline and
+product-preview composition; no assets or marketing claims are copied. Copy names
+the available features directly. The full app navigation remains available after login.
+
+Resend is the initial mail provider on its free plan. The user chose the existing
+komogon.app domain; the default sender is Komodon <noreply@komogon.app>. DNS verification
+and a private API-server RESEND_API_KEY are required before live sending. Emails are
+plain text with a code, purpose and expiry. Local test mode uses a loopback-only inbox
+and never sends real email. Hosted code flows fail clearly if mail is unconfigured.
+
+Password signup creates the account only after email verification. Codes are random,
+keyed hashes at rest, expire after ten minutes, allow five guesses and are redeemed
+atomically once. Resends invalidate prior codes. Database counters limit recipients,
+IPs and total outbound mail. Password reset uses the same mailer and revokes existing
+sessions. Pending signup stores a password hash, never a plaintext password.
+
+Social profiles carry a display name and school/organization label. A separate email
+proof verifies access to the organization domain; it does not change the sign-in email
+or calendar OAuth connection and makes no claim about an official role. Sharing is
+opt-in and limited to people with the exact same verified domain. Directory responses
+exclude private email addresses, study data, test accounts and configured admins.
+Removing or replacing the proof resets sharing. No product tour or modal is introduced.

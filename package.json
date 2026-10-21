@@ -8,6 +8,8 @@
   },
   "scripts": {
     "dev": "pnpm -r --parallel --stream dev",
+    "sandbox:test:api": "node scripts/local/sandbox-test-api.mjs",
+    "sandbox:test:portal": "pnpm --filter @komogon/portal exec vite --config vite.test.config.ts --host 127.0.0.1",
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "test:coverage": "pnpm --filter @komogon/core test:coverage",
