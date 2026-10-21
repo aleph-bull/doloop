@@ -94,6 +94,9 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   unformatted, and it rewrites other sessions' work. Format only the files you changed.
 - Ideas they mention but don't ask to have built go in `docs/IDEAS.md`. Don't build them
   unasked.
+- **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
+  to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
+  numbered batches. Work on it only when they ask, and tick items off there as they ship.
 - Verify UI changes in a sandbox and show a screenshot; the owner expects it checked, not
   described.
 - Record each change of direction in DECISIONS.md, with the date.
