@@ -123,7 +123,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstShowSpikes: true,
     burstSpikeOpacity: 1,
   },
-  features: { routines: true, plans: true, grades: true, calendar: true },
+  features: { routines: true, plans: true, grades: false, calendar: true },
   focusScreen: { openOnStart: 'ask' },
   timelapse: {
     record: 'ask',
