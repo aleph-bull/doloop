@@ -211,7 +211,7 @@ function RailStats({
               strokeDashoffset={RING * (1 - Math.min(1, Math.max(0, ratio)))}
             />
           </svg>
-          <Trophy size={15} strokeWidth={1.9} />
+          <Trophy size={16} strokeWidth={1.9} />
         </span>
         <span className="sidenav-stat-text" aria-hidden>
           <span className="sidenav-stat-value tabular">{level}</span>
@@ -238,6 +238,13 @@ export function AppShell() {
   const more = shown.filter((l) => l.group === 'more');
   const sidebar = settings?.nav?.style === 'sidebar';
   const [pinned, setPinned] = usePinnedRail();
+  // After Collapse is clicked the pointer is still over the sidebar, which would hold it
+  // open over the page that has just moved under it. It rests shut until the pointer leaves.
+  const [resting, setResting] = useState(false);
+  const togglePinned = () => {
+    setPinned(!pinned);
+    if (pinned) setResting(true);
+  };
   const location = useLocation();
 
   // The page's left margin follows the sidebar, so the layout reads it from the root.
@@ -339,7 +346,11 @@ export function AppShell() {
 
       {/* Chosen in Settings › Appearance: a slim sidebar that opens to show labels, or stays open. */}
       {sidebar && (
-        <aside className={`sidenav chrome${pinned ? ' is-pinned' : ''}`} aria-label="Primary">
+        <aside
+          className={`sidenav chrome${pinned ? ' is-pinned' : ''}${resting ? ' is-resting' : ''}`}
+          aria-label="Primary"
+          onMouseLeave={() => setResting(false)}
+        >
           <NavLink to="/" className="sidenav-brand" aria-label="Komodon home" title="Komodon">
             <span className="sidenav-icon" aria-hidden>
               <LogoMark size={22} />
@@ -391,7 +402,7 @@ export function AppShell() {
             <button
               type="button"
               className="sidenav-link"
-              onClick={() => setPinned(!pinned)}
+              onClick={togglePinned}
               aria-pressed={pinned}
               aria-label={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}
               title={pinned ? 'Collapse the sidebar' : 'Keep the sidebar open'}

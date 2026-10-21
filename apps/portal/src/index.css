@@ -169,7 +169,8 @@
   }
 }
 
-/* Primary tabs share one lens that slides between them; the links stay transparent. */
+/* Primary tabs share one lens that slides between them; the links stay transparent. It eases
+   out without a spring: a long jump (Plans to Dashboard) overshot past the first tab. */
 .nav-primary {
   position: relative;
 }
@@ -189,8 +190,8 @@
 }
 .nav-indicator.is-animated {
   transition:
-    transform var(--dur-slow) var(--ease-spring),
-    width var(--dur-slow) var(--ease-spring),
+    transform var(--dur-slow) var(--ease-out),
+    width var(--dur-slow) var(--ease-out),
     opacity var(--dur-fast) var(--ease-out);
 }
 .brand {
@@ -518,12 +519,12 @@
     --rail-delay: 0ms;
     transition: width var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
-  .sidenav:hover,
+  .sidenav:not(.is-resting):hover,
   .sidenav:has(:focus-visible),
   .sidenav.is-pinned {
     width: var(--rail-open);
   }
-  .sidenav:hover {
+  .sidenav:not(.is-resting):hover {
     --rail-delay: 120ms;
   }
   .sidenav.chrome::after {
@@ -538,7 +539,7 @@
     pointer-events: none;
   }
   /* Opened over the page, it firms up so the text behind does not show through. */
-  .sidenav:not(.is-pinned):hover::after {
+  .sidenav:not(.is-pinned):not(.is-resting):hover::after {
     opacity: 0.82;
   }
   .sidenav-group {
@@ -606,7 +607,7 @@
       opacity var(--dur-fast) var(--ease-out),
       transform var(--dur-fast) var(--ease-out);
   }
-  .sidenav:hover .sidenav-label,
+  .sidenav:not(.is-resting):hover .sidenav-label,
   .sidenav:has(:focus-visible) .sidenav-label,
   .sidenav.is-pinned .sidenav-label {
     opacity: 1;
@@ -713,28 +714,28 @@
   .sidenav-badge {
     transition: opacity var(--dur-fast) var(--ease-out);
   }
-  .sidenav:hover .sidenav-stats,
+  .sidenav:not(.is-resting):hover .sidenav-stats,
   .sidenav:has(:focus-visible) .sidenav-stats,
   .sidenav.is-pinned .sidenav-stats {
     height: 40px;
   }
-  .sidenav:hover .sidenav-stat,
+  .sidenav:not(.is-resting):hover .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat,
   .sidenav.is-pinned .sidenav-stat {
     width: calc(50% - 1px);
   }
-  .sidenav:hover .sidenav-stat + .sidenav-stat,
+  .sidenav:not(.is-resting):hover .sidenav-stat + .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat + .sidenav-stat,
   .sidenav.is-pinned .sidenav-stat + .sidenav-stat {
     transform: translateX(calc(100% + 2px));
   }
-  .sidenav:hover .sidenav-stat-text,
+  .sidenav:not(.is-resting):hover .sidenav-stat-text,
   .sidenav:has(:focus-visible) .sidenav-stat-text,
   .sidenav.is-pinned .sidenav-stat-text {
     opacity: 1;
     transition: opacity var(--dur-base) var(--ease-out) calc(var(--rail-delay) + 90ms);
   }
-  .sidenav:hover .sidenav-badge,
+  .sidenav:not(.is-resting):hover .sidenav-badge,
   .sidenav:has(:focus-visible) .sidenav-badge,
   .sidenav.is-pinned .sidenav-badge {
     opacity: 0;
