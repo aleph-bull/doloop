@@ -1490,3 +1490,8 @@ komogon.app domain and private server key before hosted password signup can send
 
 - **The streak and level numbers sit the same distance from their icons.** The flame is narrower than the level ring but both sit in the same 44px cell, so the streak number floated far from its flame while the level number crowded its ring. The numbers now shift (5px in for the streak, 2px out for the level) so each is about 7px from its icon; the icons, the slim rail and the open and close animations are unchanged.
 - **Fix:** collapsing with the pointer away from the sidebar (from the keyboard, say) left hover-opening off until the pointer had gone in and out once. The sidebar now rests shut only when Collapse is clicked with the pointer on it.
+
+## The page centred with the sidebar, and a wider level pill, 2026-10-21 (user request)
+
+- **With the sidebar, the page sits in the middle of the window**, as it does with the top bar, whether the sidebar is pinned or collapsed. Only on a window too narrow for both does it step right, just far enough to clear the open sidebar. This replaces keeping a fixed left margin for the open sidebar, which pushed the page off centre.
+- **The level pill takes more of the stats row.** Open, the streak pill is only as wide as its count needs (84px for one digit, 94px for two, 98px for three or more) and the level pill takes the rest, 110px while the streak is a single digit; before, the two split the row evenly and the level crowded its edge. The row is 196px, so a streak of 100 days or more is about 2px tight.

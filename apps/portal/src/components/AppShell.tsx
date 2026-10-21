@@ -190,7 +190,7 @@ function RailStats({
   const days = `${streak} ${streak === 1 ? 'day' : 'days'} in a row`;
   const lvl = `Level ${level}, ${toNext} XP to level ${level + 1}`;
   return (
-    <div className="sidenav-stats">
+    <div className="sidenav-stats" data-digits={Math.min(3, String(streak).length)}>
       <NavLink to="/analytics" className="sidenav-stat" title={days} aria-label={days}>
         <span className="sidenav-icon" aria-hidden>
           <Flame size={19} strokeWidth={1.9} />

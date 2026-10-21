@@ -508,10 +508,15 @@
     --rail-open: 212px;
     --rail-ease: cubic-bezier(0.32, 0.72, 0, 1);
   }
-  /* The page keeps room for the open rail whether it is pinned or not, so collapsing or
-     pinning only changes the rail: the page never moves, and the rail never covers it. */
-  :root[data-nav^='sidebar'] body {
-    padding-left: calc(var(--rail-open) + 24px);
+  /*
+   * The page sits in the middle of the window, as with the top bar, and never moves when
+   * the rail is pinned or collapsed. Only when the window is too narrow for both does it
+   * step right, just far enough to clear the open rail, so the rail never covers it.
+   */
+  :root[data-nav^='sidebar'] .page {
+    width: auto;
+    margin-left: max(calc(var(--rail-open) + 24px), calc((100% - 1120px) / 2));
+    margin-right: max(0px, calc((100% - 1120px) / 2));
   }
   :root[data-nav^='sidebar'] .nav {
     display: none;
@@ -743,15 +748,27 @@
   .sidenav.is-pinned .sidenav-stats {
     height: 40px;
   }
+  /* Open, the two share the row unevenly: the streak pill is as wide as its count needs
+     (data-digits, set in AppShell), and the level pill, with its ring, takes the rest. */
+  .sidenav-stats {
+    --stat-streak: 84px;
+  }
+  .sidenav-stats[data-digits='2'] {
+    --stat-streak: 94px;
+  }
+  .sidenav-stats[data-digits='3'] {
+    --stat-streak: 98px;
+  }
   .sidenav:not(.is-resting):hover .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat,
   .sidenav.is-pinned .sidenav-stat {
-    width: calc(50% - 1px);
+    width: var(--stat-streak);
   }
   .sidenav:not(.is-resting):hover .sidenav-stat + .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat + .sidenav-stat,
   .sidenav.is-pinned .sidenav-stat + .sidenav-stat {
-    transform: translateX(calc(100% + 2px));
+    width: calc(var(--rail-open) - 16px - var(--stat-streak) - 2px);
+    transform: translateX(calc(var(--stat-streak) + 2px));
   }
   .sidenav:not(.is-resting):hover .sidenav-stat-text,
   .sidenav:has(:focus-visible) .sidenav-stat-text,
