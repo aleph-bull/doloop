@@ -253,6 +253,8 @@ export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
 export interface FriendshipStatus {
   status: FriendshipState;
   requestId: string | null;
+  /** When you became friends; null otherwise. */
+  since: string | null;
 }
 
 /** A post on Social, with its counts as the viewer sees them. */

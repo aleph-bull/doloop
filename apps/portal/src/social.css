@@ -1950,3 +1950,46 @@
   padding-top: 22px;
   border-top: 0;
 }
+
+/* The Friends chip on a profile opens a small card: since when, and a remove that asks first. */
+.friend-wrap {
+  position: relative;
+}
+.friend-chip {
+  border: 0;
+  cursor: pointer;
+  gap: 5px;
+}
+.friend-chip:hover {
+  background: color-mix(in srgb, var(--fg) 13%, transparent);
+}
+.friend-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 200px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-fill, #1c1b22);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+.friend-pop-since {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.friend-pop-sure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.friend-pop-actions {
+  display: flex;
+  gap: 6px;
+}

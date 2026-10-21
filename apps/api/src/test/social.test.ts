@@ -233,7 +233,7 @@ describe('friends', () => {
     const profile = (
       await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })
     ).json();
-    expect(profile.profile.friendship).toEqual({ status: 'incoming', requestId });
+    expect(profile.profile.friendship).toEqual({ status: 'incoming', requestId, since: null });
 
     // Only the person asked can accept.
     const notMine = await t.api({
@@ -263,7 +263,11 @@ describe('friends', () => {
     );
     const found = (await t.api({ method: 'GET', url: '/api/social/people?q=be' })).json();
     expect(found.results).toEqual([
-      { userId: USER_B.id, friendship: { status: 'friends', requestId }, acceptsRequests: true },
+      {
+        userId: USER_B.id,
+        friendship: { status: 'friends', requestId, since: expect.any(String) },
+        acceptsRequests: true,
+      },
     ]);
   });
 

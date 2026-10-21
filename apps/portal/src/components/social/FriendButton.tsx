@@ -1,5 +1,7 @@
-import { Check, UserMinus, UserPlus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Check, ChevronDown, UserMinus, UserPlus } from 'lucide-react';
 import { Button, useToast } from '@komogon/ui';
+import { fmtDate } from '../../lib/format';
 import type { FriendshipStatus } from '../../lib/api';
 import {
   useAcceptFriendRequest,
@@ -31,23 +33,90 @@ export function FriendButton({
   const unfriend = useRemoveFriend();
   const { toast } = useToast();
   const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
+  // The Friends chip opens a small card: since when, and a remove that asks first.
+  const [open, setOpen] = useState(false);
+  const [sure, setSure] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) {
+        setOpen(false);
+        setSure(false);
+      }
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setOpen(false);
+        setSure(false);
+      }
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
 
   switch (friendship.status) {
     case 'friends':
-      return (
-        <span className="friend-state">
+      if (!remove)
+        return (
           <span className="chip chip-neutral">
             <Check size={13} aria-hidden /> Friends
           </span>
-          {remove && (
-            <Button
-              size="sm"
-              variant="ghost"
-              loading={unfriend.isPending}
-              onClick={() => unfriend.mutate(userId, { onError: fail })}
-            >
-              <UserMinus size={14} aria-hidden /> Remove
-            </Button>
+        );
+      return (
+        <span className="friend-state friend-wrap" ref={wrap}>
+          <button
+            type="button"
+            className="chip chip-neutral friend-chip"
+            aria-expanded={open}
+            aria-haspopup="dialog"
+            onClick={() => {
+              setOpen((v) => !v);
+              setSure(false);
+            }}
+          >
+            <Check size={13} aria-hidden /> Friends
+            <ChevronDown size={12} aria-hidden />
+          </button>
+          {open && (
+            <span className="friend-pop" role="dialog" aria-label="Friends">
+              {friendship.since && (
+                <span className="friend-pop-since">
+                  Friends since {fmtDate(friendship.since, { year: 'numeric' })}
+                </span>
+              )}
+              {sure ? (
+                <span className="friend-pop-sure">
+                  <span>Are you sure?</span>
+                  <span className="friend-pop-actions">
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      loading={unfriend.isPending}
+                      onClick={() =>
+                        unfriend.mutate(userId, {
+                          onSuccess: () => setOpen(false),
+                          onError: fail,
+                        })
+                      }
+                    >
+                      Remove
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setSure(false)}>
+                      Keep
+                    </Button>
+                  </span>
+                </span>
+              ) : (
+                <Button size="sm" variant="ghost" onClick={() => setSure(true)}>
+                  <UserMinus size={14} aria-hidden /> Remove friend
+                </Button>
+              )}
+            </span>
           )}
         </span>
       );

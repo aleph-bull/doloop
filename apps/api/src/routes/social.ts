@@ -61,6 +61,8 @@ export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
 export interface FriendshipStatus {
   status: FriendshipState;
   requestId: string | null;
+  /** When you became friends; null otherwise. */
+  since: string | null;
 }
 
 /** Parses a data URL into what the row stores, checking the type and the size. */
@@ -103,16 +105,25 @@ export async function friendIds(db: Db, userId: string): Promise<string[]> {
 
 /** Where you stand with one person. */
 export async function friendshipWith(db: Db, me: string, other: string): Promise<FriendshipStatus> {
-  if (me === other) return { status: 'none', requestId: null };
+  if (me === other) return { status: 'none', requestId: null, since: null };
   const row = await db.query.friendships.findFirst({
     where: or(
       and(eq(friendships.requesterId, me), eq(friendships.addresseeId, other)),
       and(eq(friendships.requesterId, other), eq(friendships.addresseeId, me)),
     ),
   });
-  if (!row) return { status: 'none', requestId: null };
-  if (row.status === 'accepted') return { status: 'friends', requestId: row.id };
-  return { status: row.requesterId === me ? 'requested' : 'incoming', requestId: row.id };
+  if (!row) return { status: 'none', requestId: null, since: null };
+  if (row.status === 'accepted')
+    return {
+      status: 'friends',
+      requestId: row.id,
+      since: (row.respondedAt ?? row.createdAt).toISOString(),
+    };
+  return {
+    status: row.requesterId === me ? 'requested' : 'incoming',
+    requestId: row.id,
+    since: null,
+  };
 }
 
 /**
