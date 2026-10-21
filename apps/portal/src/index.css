@@ -653,47 +653,92 @@
   .sidenav-badge-flame {
     background: color-mix(in srgb, var(--flame) 55%, transparent);
   }
-  /* Once the labels show, they say the same thing, so the badges step aside. */
-  .sidenav-badge,
-  .sidenav-level-bar {
+  /* Streak and level: numbers, not sentences. Slim, they stack as icons; open, they sit
+     side by side as two small stats and the flame's badge steps aside. */
+  .sidenav-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidenav-stat {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 40px;
+    border-radius: 12px;
+    color: var(--fg-muted);
+  }
+  .sidenav-stat:hover {
+    color: var(--fg);
+    text-decoration: none;
+    background: color-mix(in srgb, var(--fg) 8%, transparent);
+  }
+  .sidenav-stat[aria-current='page'] {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--fg) 11%, transparent);
+  }
+  .sidenav-stat .sidenav-icon {
+    position: relative;
+  }
+  .sidenav-stat-text {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    min-width: 0;
+    white-space: nowrap;
+    opacity: 0;
     transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .sidenav-stat-value {
+    font-size: var(--text-base);
+    font-weight: 700;
+    color: var(--fg);
+  }
+  .sidenav-stat-unit {
+    font-size: var(--text-xs);
+    font-weight: 400;
+    color: var(--fg-muted);
+  }
+  .sidenav-badge {
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .sidenav:hover .sidenav-stats,
+  .sidenav:has(:focus-visible) .sidenav-stats,
+  .sidenav.is-pinned .sidenav-stats {
+    flex-direction: row;
+  }
+  .sidenav:hover .sidenav-stat,
+  .sidenav:has(:focus-visible) .sidenav-stat,
+  .sidenav.is-pinned .sidenav-stat {
+    flex: 1;
+  }
+  .sidenav:hover .sidenav-stat-text,
+  .sidenav:has(:focus-visible) .sidenav-stat-text,
+  .sidenav.is-pinned .sidenav-stat-text {
+    opacity: 1;
   }
   .sidenav:hover .sidenav-badge,
   .sidenav:has(:focus-visible) .sidenav-badge,
   .sidenav.is-pinned .sidenav-badge {
     opacity: 0;
   }
-  /* Slim: a short bar under the trophy, with room between them. The track is strong
-     enough that its far end, where the level is done, is easy to see. */
-  .sidenav-level-bar {
+  /* The level ring: the track is the whole level, the fill what is done. */
+  .sidenav-ring {
     position: absolute;
-    left: 10px;
-    bottom: 2px;
-    width: 24px;
-    height: 3px;
-    border-radius: 2px;
-    overflow: hidden;
-    background: color-mix(in srgb, var(--fg) 26%, transparent);
+    left: 5px;
+    top: 3px;
+    transform: rotate(-90deg);
   }
-  .sidenav-level-bar > span {
-    display: block;
-    height: 100%;
-    border-radius: inherit;
-    background: var(--accent);
+  .sidenav-ring circle {
+    fill: none;
+    stroke-width: 2.5;
   }
-  /* Open: the bar moves beside "Level N" and fills the rest of the row. */
-  .sidenav-link:has(.sidenav-level-bar) .sidenav-label {
-    flex: none;
+  .sidenav-ring-track {
+    stroke: color-mix(in srgb, var(--fg) 22%, transparent);
   }
-  .sidenav:hover .sidenav-level-bar,
-  .sidenav:has(:focus-visible) .sidenav-level-bar,
-  .sidenav.is-pinned .sidenav-level-bar {
-    position: static;
-    flex: 1;
-    width: auto;
-    height: 5px;
-    margin: 0 14px 0 2px;
-    border-radius: 3px;
+  .sidenav-ring-fill {
+    stroke: var(--accent);
+    stroke-linecap: round;
   }
 }
 

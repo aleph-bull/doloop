@@ -63,7 +63,14 @@ const links: Array<{
     group: 'more',
     feature: 'routines',
   },
-  { to: '/plans', label: 'Plans', short: 'Plans', icon: RouteIcon, group: 'more', feature: 'plans' },
+  {
+    to: '/plans',
+    label: 'Plans',
+    short: 'Plans',
+    icon: RouteIcon,
+    group: 'more',
+    feature: 'plans',
+  },
   {
     to: '/grades',
     label: 'Grades',
@@ -152,6 +159,66 @@ function RailLink({
       <span className="sidenav-label">{label}</span>
       {children}
     </NavLink>
+  );
+}
+
+/** The ring's circumference: r = 15 in a 34 box. */
+const RING = 2 * Math.PI * 15;
+
+/**
+ * Streak and level at the foot of the sidebar, as numbers rather than sentences. Slim,
+ * they stack as icons: the flame carries the day count, and a ring around the trophy fills
+ * toward the next level, so a full circle is a finished level. Open, they sit side by side
+ * as two small stats.
+ */
+function RailStats({
+  streak,
+  level,
+  ratio,
+  toNext,
+}: {
+  streak: number;
+  level: number;
+  ratio: number;
+  toNext: number;
+}) {
+  const days = `${streak} ${streak === 1 ? 'day' : 'days'} in a row`;
+  const lvl = `Level ${level}, ${toNext} XP to level ${level + 1}`;
+  return (
+    <div className="sidenav-stats">
+      <NavLink to="/analytics" className="sidenav-stat" title={days} aria-label={days}>
+        <span className="sidenav-icon" aria-hidden>
+          <Flame size={19} strokeWidth={1.9} />
+          {streak > 0 && (
+            <span className="sidenav-badge sidenav-badge-flame tabular">{streak}</span>
+          )}
+        </span>
+        <span className="sidenav-stat-text" aria-hidden>
+          <span className="sidenav-stat-value tabular">{streak}</span>
+          <span className="sidenav-stat-unit">{streak === 1 ? 'day' : 'days'}</span>
+        </span>
+      </NavLink>
+      <NavLink to="/achievements" className="sidenav-stat" title={lvl} aria-label={lvl}>
+        <span className="sidenav-icon" aria-hidden>
+          <svg className="sidenav-ring" viewBox="0 0 34 34" width="34" height="34">
+            <circle cx="17" cy="17" r="15" className="sidenav-ring-track" />
+            <circle
+              cx="17"
+              cy="17"
+              r="15"
+              className="sidenav-ring-fill"
+              strokeDasharray={RING}
+              strokeDashoffset={RING * (1 - Math.min(1, Math.max(0, ratio)))}
+            />
+          </svg>
+          <Trophy size={15} strokeWidth={1.9} />
+        </span>
+        <span className="sidenav-stat-text" aria-hidden>
+          <span className="sidenav-stat-value tabular">{level}</span>
+          <span className="sidenav-stat-unit">level</span>
+        </span>
+      </NavLink>
+    </div>
   );
 }
 
@@ -318,24 +385,12 @@ export function AppShell() {
           <div className="flex-1" />
           <div className="sidenav-group">
             {user && (
-              <>
-                <RailLink
-                  to="/analytics"
-                  label={`${user.streak.current} ${user.streak.current === 1 ? 'day' : 'days'} in a row`}
-                  icon={Flame}
-                >
-                  {user.streak.current > 0 && (
-                    <span className="sidenav-badge sidenav-badge-flame tabular" aria-hidden>
-                      {user.streak.current}
-                    </span>
-                  )}
-                </RailLink>
-                <RailLink to="/achievements" label={`Level ${user.level}`} icon={Trophy}>
-                  <span className="sidenav-level-bar" aria-hidden>
-                    <span style={{ width: `${Math.round((lp?.ratio ?? 0) * 100)}%` }} />
-                  </span>
-                </RailLink>
-              </>
+              <RailStats
+                streak={user.streak.current}
+                level={user.level}
+                ratio={lp?.ratio ?? 0}
+                toNext={lp?.toNext ?? 0}
+              />
             )}
             {isAdmin && <RailLink to="/admin" label="Admin" icon={ShieldCheck} />}
             {FEEDBACK_URL && (
