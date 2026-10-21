@@ -82,3 +82,16 @@ export function pct(ratio: number | null | undefined): string {
 export function fmtPerDay(min: number): string {
   return fmtMinutes(min > 0 ? Math.ceil(min / 5) * 5 : 0);
 }
+
+/** How long ago, short: "Just now", "5 min ago", "3 h ago", "2 d ago", then the date. */
+export function fmtAgo(iso: string, now = Date.now()): string {
+  const s = Math.max(0, (now - Date.parse(iso)) / 1000);
+  if (s < 60) return 'Just now';
+  const m = s / 60;
+  if (m < 60) return `${Math.round(m)} min ago`;
+  const h = m / 60;
+  if (h < 24) return `${Math.round(h)} h ago`;
+  const d = h / 24;
+  if (d < 7) return `${Math.round(d)} d ago`;
+  return fmtDate(iso, d > 365 ? { year: 'numeric' } : {});
+}

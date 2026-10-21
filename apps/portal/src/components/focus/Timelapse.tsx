@@ -6,7 +6,7 @@ import {
   type TimelapseOptions,
   type UserSettings,
 } from '@komogon/core';
-import { Download, Square, Video } from 'lucide-react';
+import { Download, Share2, Square, Video } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Button,
@@ -20,7 +20,8 @@ import {
   useToast,
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
-import { useMe } from '../../lib/queries';
+import { blobToDataUrl, POST_VIDEO_MAX_BYTES, posterFromImage } from '../../lib/post-media';
+import { useCreatePost, useMe } from '../../lib/queries';
 import {
   freeStorageBytes,
   measuredStillBytes,
@@ -366,6 +367,8 @@ export interface TimelapseExportProps {
   recording: boolean;
   /** The video was saved, so the stills behind it are safe to lose. */
   onSaved?: () => void;
+  /** The session the stills came from, so sharing can attach it to the post. */
+  sessionId?: string | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -375,12 +378,15 @@ export function TimelapseExport({
   onChange,
   recording,
   onSaved,
+  sessionId,
 }: TimelapseExportProps) {
   const { toast } = useToast();
+  const share = useCreatePost();
+  const [sharing, setSharing] = useState(false);
   // The time of day in the video reads in the account's timezone, not the computer's.
   const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
-  const [video, setVideo] = useState<{ url: string; mime: string } | null>(null);
+  const [video, setVideo] = useState<{ url: string; mime: string; blob: Blob } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
   const span = recorder.spanSeconds();
@@ -413,7 +419,7 @@ export function TimelapseExport({
         setProgress,
         abort.current.signal,
       );
-      setVideo({ url: URL.createObjectURL(blob), mime });
+      setVideo({ url: URL.createObjectURL(blob), mime, blob });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
         toast(err instanceof Error ? err.message : 'Could not make the video');
@@ -429,6 +435,30 @@ export function TimelapseExport({
     a.download = timelapseFileName(video.mime);
     a.click();
     onSaved?.();
+  };
+
+  /** The video goes up as a post with the session's minutes, and a still as its poster. */
+  const shareToSocial = async () => {
+    if (!video) return;
+    if (video.blob.size > POST_VIDEO_MAX_BYTES)
+      return toast('Up to 5 MB can be shared. Pick a shorter length and make it again.');
+    setSharing(true);
+    try {
+      const stills = recorder.stills();
+      const middle = stills[Math.floor(stills.length / 2)];
+      const poster = middle ? await posterFromImage(middle.blob) : null;
+      await share.mutateAsync({
+        sessionId: sessionId ?? undefined,
+        media: await blobToDataUrl(video.blob),
+        poster: poster ?? undefined,
+      });
+      toast('Shared to Social.');
+      onSaved?.();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not share it');
+    } finally {
+      setSharing(false);
+    }
   };
 
   const discard = () => {
@@ -455,6 +485,9 @@ export function TimelapseExport({
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={download}>
               <Download size={14} aria-hidden /> Save the video
+            </Button>
+            <Button variant="secondary" onClick={() => void shareToSocial()} loading={sharing}>
+              <Share2 size={14} aria-hidden /> Share to Social
             </Button>
             <Button
               variant="ghost"

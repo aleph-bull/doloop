@@ -504,6 +504,7 @@ export function Focus() {
                 onChange={patch}
                 recording={recording}
                 onSaved={() => setTlSavedAt(recorder.count)}
+                sessionId={summary.session.id}
               />
             )}
             <div className="focus-actions" style={{ marginTop: 20 }}>
@@ -575,6 +576,7 @@ export function Focus() {
                   onChange={patch}
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
+                  sessionId={session?.session.id ?? null}
                 />
               )}
             </section>

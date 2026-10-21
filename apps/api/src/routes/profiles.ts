@@ -7,21 +7,27 @@ import {
   type Heatmap,
   type RhythmProfile,
 } from '@komogon/core';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { posts, userAssets, users } from '../db/schema';
 import { notFound } from '../errors';
 import { loadCompletedSessions } from '../services/pace';
-import { dt } from '../services/sessions-mapper';
+import type { Person } from '../services/people';
 import { settingsOf } from '../services/users';
 import { uuid } from '../validation';
+import {
+  friendIds,
+  friendshipWith,
+  loadPosts,
+  type FeedPost,
+  type FriendshipStatus,
+} from './social';
 
 /** How many weeks of squares a profile shows. */
 export const PROFILE_HEATMAP_WEEKS = 26;
 /** The newest posts a profile returns. */
 export const PROFILE_POSTS_LIMIT = 50;
-export const POST_MAX_LENGTH = 500;
 
 export interface PublicProfile {
   id: string;
@@ -34,6 +40,9 @@ export interface PublicProfile {
   joinedAt: string;
   /** This is the person asking. */
   you: boolean;
+  friendCount: number;
+  /** Where the person asking stands with this profile; 'none' on your own. */
+  friendship: FriendshipStatus;
 }
 
 export interface ProfileStats {
@@ -49,27 +58,14 @@ export interface ProfileStats {
   level: number;
 }
 
-export interface Post {
-  id: string;
-  userId: string;
-  body: string;
-  createdAt: string;
-}
-
 export interface ProfileResponse {
   profile: PublicProfile;
   stats: ProfileStats;
   heatmap: Heatmap;
   weekday: RhythmProfile;
-  posts: Post[];
+  posts: FeedPost[];
+  people: Record<string, Person>;
 }
-
-const toPost = (r: typeof posts.$inferSelect): Post => ({
-  id: r.id,
-  userId: r.userId,
-  body: r.body,
-  createdAt: r.createdAt.toISOString(),
-});
 
 /**
  * Profiles: the public face of an account. Anyone signed in can open anyone's, so only what
@@ -90,16 +86,14 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     if (!row || row.onboardedAt === null) throw notFound('No such profile');
     const now = clock();
     const settings = settingsOf(row);
-    const [sessions, avatar, postRows] = await Promise.all([
+    const [sessions, avatar, page, friends, friendship] = await Promise.all([
       loadCompletedSessions(db, row.id),
       db.query.userAssets.findFirst({
         where: and(eq(userAssets.userId, row.id), eq(userAssets.kind, 'avatar')),
       }),
-      db.query.posts.findMany({
-        where: eq(posts.userId, row.id),
-        orderBy: [desc(posts.createdAt)],
-        limit: PROFILE_POSTS_LIMIT,
-      }),
+      loadPosts(db, req.user.id, eq(posts.userId, row.id), PROFILE_POSTS_LIMIT),
+      friendIds(db, row.id),
+      friendshipWith(db, req.user.id, row.id),
     ]);
     const tz = row.timezone;
     const lifetime = lifetimeStats({
@@ -118,6 +112,8 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,
         joinedAt: row.createdAt.toISOString(),
         you: row.id === req.user.id,
+        friendCount: friends.length,
+        friendship,
       },
       stats: {
         totalMinutes: lifetime.totalMinutes,
@@ -132,30 +128,9 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       },
       heatmap: studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS }),
       weekday: weekdayProfile(sessions, tz),
-      posts: postRows.map(toPost),
+      posts: page.posts,
+      people: page.people,
     };
     return response;
-  });
-
-  app.post('/api/profiles/me/posts', async (req, reply) => {
-    const { body } = z
-      .object({ body: z.string().trim().min(1).max(POST_MAX_LENGTH) })
-      .parse(req.body);
-    const [row] = await db
-      .insert(posts)
-      .values({ userId: req.user.id, body, createdAt: dt(clock()) })
-      .returning();
-    return reply.code(201).send({ post: toPost(row!) });
-  });
-
-  app.delete('/api/posts/:id', async (req, reply) => {
-    const { id } = z.object({ id: uuid }).parse(req.params);
-    // Only your own: a post that isn't yours reads as not there.
-    const deleted = await db
-      .delete(posts)
-      .where(and(eq(posts.id, id), eq(posts.userId, req.user.id)))
-      .returning({ id: posts.id });
-    if (deleted.length === 0) throw notFound('No such post');
-    return reply.code(204).send();
   });
 }

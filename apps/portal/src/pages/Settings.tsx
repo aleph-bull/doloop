@@ -403,8 +403,8 @@ export function Settings() {
               <Toggle
                 checked={s.features.social}
                 onChange={(v) => patch({ features: { social: v } })}
-                label="Your profile"
-                description="Your profile page, with the days you studied and your totals, and other people's. It sits at the end of the nav."
+                label="Social"
+                description="The feed, friends, how you compare and the leaderboard, plus your profile at the end of the nav."
               />
               {/*
                * Pages holds every setting about what the screens show and how they are laid

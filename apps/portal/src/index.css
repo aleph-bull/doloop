@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import '@komogon/ui/tokens.css';
 @import '@komogon/ui/styles.css';
+@import './social.css';
 
 @theme {
   --font-sans: var(--font-sans);

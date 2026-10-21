@@ -234,6 +234,101 @@ export interface PublicProfile {
   avatarUrl: string | null;
   joinedAt: string;
   you: boolean;
+  friendCount: number;
+  /** Where you stand with this person; 'none' on your own profile. */
+  friendship: FriendshipStatus;
+}
+
+/** Someone as the feed, comments and friend lists name them. */
+export interface Person {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  university: { id: string; name: string; short?: string } | null;
+}
+
+export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
+export interface FriendshipStatus {
+  status: FriendshipState;
+  requestId: string | null;
+}
+
+/** A post on Social, with its counts as the viewer sees them. */
+export interface FeedPost {
+  id: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+  session: { minutes: number; subject: string | null } | null;
+  media: { mime: string; bytes: number; poster: string | null } | null;
+  likes: number;
+  liked: boolean;
+  comments: number;
+  you: boolean;
+}
+
+export interface FeedComment {
+  id: string;
+  postId: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+  you: boolean;
+}
+
+export interface FeedPage {
+  posts: FeedPost[];
+  people: Record<string, Person>;
+  nextBefore: string | null;
+}
+
+export type FeedScope = 'everyone' | 'friends';
+
+export interface NewPost {
+  body?: string;
+  sessionId?: string;
+  /** A video as a data URL (mp4 or webm, under 5 MB). */
+  media?: string;
+  /** A small JPEG data URL shown before the video loads. */
+  poster?: string;
+}
+
+export interface FriendsResponse {
+  friends: Array<{ userId: string; since: string }>;
+  incoming: Array<{ id: string; userId: string; at: string }>;
+  outgoing: Array<{ id: string; userId: string; at: string }>;
+  people: Record<string, Person>;
+}
+
+export interface CompareRow {
+  userId: string;
+  thisWeek: number;
+  lastWeek: number;
+  last28: number;
+  activeDays28: number;
+  sessionsThisWeek: number;
+  longest28: number;
+  streak: number;
+  /** Minutes per week, oldest first, ending with this week. */
+  weekly: number[];
+}
+
+export interface CompareResponse {
+  you: CompareRow;
+  friends: CompareRow[];
+  people: Record<string, Person>;
+  /** The Monday of each week in `weekly`, oldest first. */
+  weekStarts: string[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  focusMinutes: number;
+  you: boolean;
+  friend: boolean;
 }
 
 export interface ProfileStats {
@@ -246,13 +341,6 @@ export interface ProfileStats {
   last28Minutes: number;
   streak: { current: number; longest: number };
   level: number;
-}
-
-export interface Post {
-  id: string;
-  userId: string;
-  body: string;
-  createdAt: string;
 }
 
 /** Your own university verification, from GET /api/me/university. */
@@ -268,7 +356,8 @@ export interface ProfileResponse {
   stats: ProfileStats;
   heatmap: StudyHeatmapData;
   weekday: RhythmProfile;
-  posts: Post[];
+  posts: FeedPost[];
+  people: Record<string, Person>;
 }
 
 export const api = {
@@ -465,8 +554,53 @@ export const api = {
 
   /** 'me' or a user id. */
   profile: (id: string) => request<ProfileResponse>('GET', `/api/profiles/${id}`),
-  createPost: (body: string) => request<{ post: Post }>('POST', '/api/profiles/me/posts', { body }),
+
+  /* ---------- Social ---------- */
+  feed: (scope: FeedScope, before?: string | null) =>
+    request<FeedPage>(
+      'GET',
+      `/api/social/feed?scope=${scope}${before ? `&before=${encodeURIComponent(before)}` : ''}`,
+    ),
+  createPost: (input: NewPost) =>
+    request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
+  /** The video behind a post, as a blob to play from an object URL. */
+  postMedia: async (id: string): Promise<Blob> => {
+    const res = await fetch(`${BASE}/api/posts/${id}/media`, { headers: await authHeaders() });
+    if (!res.ok) throw new ApiError(res.status, res.statusText);
+    return res.blob();
+  },
+  like: (id: string) => request<{ likes: number; liked: boolean }>('POST', `/api/posts/${id}/like`),
+  unlike: (id: string) =>
+    request<{ likes: number; liked: boolean }>('DELETE', `/api/posts/${id}/like`),
+  comments: (id: string) =>
+    request<{ comments: FeedComment[]; people: Record<string, Person> }>(
+      'GET',
+      `/api/posts/${id}/comments`,
+    ),
+  addComment: (id: string, body: string) =>
+    request<{ comment: FeedComment; people: Record<string, Person> }>(
+      'POST',
+      `/api/posts/${id}/comments`,
+      { body },
+    ),
+  deleteComment: (id: string) => request<void>('DELETE', `/api/comments/${id}`),
+  friends: () => request<FriendsResponse>('GET', '/api/social/friends'),
+  findPeople: (q: string) =>
+    request<{
+      results: Array<{ userId: string; friendship: FriendshipStatus }>;
+      people: Record<string, Person>;
+    }>('GET', `/api/social/people?q=${encodeURIComponent(q)}`),
+  sendFriendRequest: (userId: string) =>
+    request<{ friendship: FriendshipStatus }>('POST', '/api/social/friends/requests', { userId }),
+  acceptFriendRequest: (id: string) =>
+    request<{ friendship: FriendshipStatus }>('POST', `/api/social/friends/requests/${id}/accept`),
+  /** Decline one made to you, or take back one you made. */
+  deleteFriendRequest: (id: string) =>
+    request<void>('DELETE', `/api/social/friends/requests/${id}`),
+  removeFriend: (userId: string) => request<void>('DELETE', `/api/social/friends/${userId}`),
+  compare: () => request<CompareResponse>('GET', '/api/social/compare'),
+  leaderboard: () => request<{ entries: LeaderboardEntry[] }>('GET', '/api/leaderboard'),
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 

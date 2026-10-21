@@ -26,6 +26,7 @@ import { passwordAuthRoutes, type PasswordAuthOptions } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { leaderboardRoutes } from './routes/leaderboard';
 import { profileRoutes } from './routes/profiles';
+import { socialRoutes } from './routes/social';
 import { universityRoutes } from './routes/university';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
@@ -154,6 +155,7 @@ export async function buildServer(opts: BuildOptions) {
   adminRoutes(app, opts.db, admins);
   leaderboardRoutes(app, opts.db, admins);
   profileRoutes(app, opts.db, clock);
+  socialRoutes(app, opts.db, clock);
   // Codes go through the same mailer as account email; with none, verifying is off.
   universityRoutes(app, opts.db, clock, opts.mailer ?? null);
   nodeRoutes(app, opts.db, clock);

@@ -350,7 +350,10 @@ export const universityVerifications = pgTable(
   ],
 );
 
-/** A short note on someone's profile, visible to everyone signed in. */
+/**
+ * A post on Social: a note, a session shared as progress, a timelapse, or any of those
+ * together. Visible to everyone signed in, on the feed and on the author's profile.
+ */
 export const posts = pgTable(
   'posts',
   {
@@ -358,10 +361,91 @@ export const posts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** Empty when the post is only a session or a video. */
+    body: text('body').notNull(),
+    /** The session shared, when the post is about one. */
+    sessionId: uuid('session_id').references(() => sessions.id, { onDelete: 'set null' }),
+    /** What the session showed when it was shared, kept so the post reads the same later. */
+    minutes: integer('minutes'),
+    subject: text('subject'),
+    /** The attached video's type and size; the bytes are in `post_media`. */
+    mediaMime: text('media_mime'),
+    mediaBytes: integer('media_bytes'),
+    /** A small JPEG data URL shown before the video loads. */
+    poster: text('poster'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('posts_user_created_idx').on(t.userId, t.createdAt),
+    index('posts_created_idx').on(t.createdAt),
+  ],
+);
+
+/** The video behind a post, kept apart from the post so listing the feed never reads it. */
+export const postMedia = pgTable('post_media', {
+  postId: uuid('post_id')
+    .primaryKey()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  mime: text('mime').notNull(),
+  data: text('data').notNull(), // base64
+  bytes: integer('bytes').notNull(),
+});
+
+export const postLikes = pgTable(
+  'post_likes',
+  {
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+);
+
+export const postComments = pgTable(
+  'post_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     body: text('body').notNull(),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
-  (t) => [index('posts_user_created_idx').on(t.userId, t.createdAt)],
+  (t) => [index('post_comments_post_idx').on(t.postId, t.createdAt)],
+);
+
+/**
+ * A friend request and, once accepted, the friendship. One row per pair, whichever way
+ * it was asked; declining deletes the row, so the same person can be asked again later.
+ */
+export const friendships = pgTable(
+  'friendships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requesterId: uuid('requester_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    addresseeId: uuid('addressee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: ['pending', 'accepted'] })
+      .notNull()
+      .default('pending'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    respondedAt: ts('responded_at'),
+  },
+  (t) => [
+    uniqueIndex('friendships_pair_idx').on(t.requesterId, t.addresseeId),
+    index('friendships_addressee_idx').on(t.addresseeId),
+    check('friendships_not_self', sql`requester_id <> addressee_id`),
+  ],
 );
 
 /** User-defined rewards, bought with XP or opened by finishing a task. */
@@ -687,6 +771,10 @@ export const schema = {
   streakEvents,
   userAssets,
   posts,
+  postMedia,
+  postLikes,
+  postComments,
+  friendships,
   universityVerifications,
   customRewards,
   routines,

@@ -8,9 +8,15 @@ import {
 } from '@tanstack/react-query';
 import {
   api,
+  type FeedComment,
+  type FeedPage,
+  type FeedPost,
+  type FeedScope,
   type LogTrackerInput,
   type DrillInput,
+  type NewPost,
   type NodeInput,
+  type Person,
   type PlanInput,
   type PlanPatch,
   type PlanView,
@@ -52,6 +58,12 @@ export const keys = {
   plans: ['plans'] as const,
   plan: (id: string) => ['plans', id] as const,
   profile: (id: string) => ['profiles', id] as const,
+  feed: (scope: FeedScope) => ['social', 'feed', scope] as const,
+  comments: (postId: string) => ['social', 'comments', postId] as const,
+  friends: ['social', 'friends'] as const,
+  people: (q: string) => ['social', 'people', q] as const,
+  compare: ['social', 'compare'] as const,
+  leaderboard: ['leaderboard'] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
   avatar: ['avatar', 'me'] as const,
@@ -418,11 +430,28 @@ export function useUniversityStatus(enabled = true) {
   });
 }
 
+/* ---------- Social ---------- */
+
+/** Everything that lists posts: the feed and the profiles. */
+const POST_KEYS = [['social', 'feed'], ['profiles']] as const;
+
+export function useFeed(scope: FeedScope) {
+  return useInfiniteQuery({
+    queryKey: keys.feed(scope),
+    queryFn: ({ pageParam }) => api.feed(scope, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: FeedPage) => last.nextBefore,
+    staleTime: 30_000,
+  });
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) => api.createPost(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+    mutationFn: (input: NewPost) => api.createPost(input),
+    onSuccess: () => {
+      for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
   });
 }
 
@@ -430,8 +459,139 @@ export function useDeletePost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deletePost(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: () => {
+      for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
   });
+}
+
+/** Writes new counts into every cached list that holds the post, instead of refetching. */
+function patchPost(
+  qc: ReturnType<typeof useQueryClient>,
+  id: string,
+  patch: (p: FeedPost) => FeedPost,
+) {
+  const apply = (posts: FeedPost[]) => posts.map((p) => (p.id === id ? patch(p) : p));
+  qc.setQueriesData<{ pages: FeedPage[]; pageParams: unknown[] }>(
+    { queryKey: ['social', 'feed'] },
+    (data) =>
+      data && { ...data, pages: data.pages.map((pg) => ({ ...pg, posts: apply(pg.posts) })) },
+  );
+  qc.setQueriesData<{ posts: FeedPost[] }>(
+    { queryKey: ['profiles'] },
+    (data) => data && { ...data, posts: apply(data.posts) },
+  );
+}
+
+export function useLikePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
+      liked ? api.unlike(id) : api.like(id),
+    onMutate: ({ id, liked }) =>
+      patchPost(qc, id, (p) => ({ ...p, liked: !liked, likes: p.likes + (liked ? -1 : 1) })),
+    onSuccess: (counts, { id }) => patchPost(qc, id, (p) => ({ ...p, ...counts })),
+    onError: (_err, { id, liked }) =>
+      patchPost(qc, id, (p) => ({ ...p, liked, likes: p.likes + (liked ? 1 : -1) })),
+  });
+}
+
+export function useComments(postId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.comments(postId),
+    queryFn: () => api.comments(postId),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
+type CommentsData = { comments: FeedComment[]; people: Record<string, Person> };
+
+export function useAddComment(postId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.addComment(postId, body),
+    onSuccess: ({ comment, people }) => {
+      qc.setQueryData<CommentsData>(
+        keys.comments(postId),
+        (data) =>
+          data && { comments: [...data.comments, comment], people: { ...data.people, ...people } },
+      );
+      patchPost(qc, postId, (p) => ({ ...p, comments: p.comments + 1 }));
+    },
+  });
+}
+
+export function useDeleteComment(postId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteComment(id),
+    onSuccess: (_void, id) => {
+      qc.setQueryData<CommentsData>(
+        keys.comments(postId),
+        (data) => data && { ...data, comments: data.comments.filter((c) => c.id !== id) },
+      );
+      patchPost(qc, postId, (p) => ({ ...p, comments: Math.max(0, p.comments - 1) }));
+    },
+  });
+}
+
+export function useFriends() {
+  return useQuery({ queryKey: keys.friends, queryFn: api.friends, staleTime: 30_000 });
+}
+
+export function useFindPeople(q: string) {
+  return useQuery({
+    queryKey: keys.people(q),
+    queryFn: () => api.findPeople(q),
+    enabled: q.trim().length > 0,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Every list that says where you stand with someone. */
+const FRIEND_KEYS = [
+  keys.friends,
+  ['profiles'],
+  ['social', 'people'],
+  keys.compare,
+  keys.leaderboard,
+  ['social', 'feed'],
+] as const;
+
+function useFriendMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      for (const key of FRIEND_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+export function useSendFriendRequest() {
+  return useFriendMutation((userId: string) => api.sendFriendRequest(userId));
+}
+
+export function useAcceptFriendRequest() {
+  return useFriendMutation((id: string) => api.acceptFriendRequest(id));
+}
+
+export function useDeleteFriendRequest() {
+  return useFriendMutation((id: string) => api.deleteFriendRequest(id));
+}
+
+export function useRemoveFriend() {
+  return useFriendMutation((userId: string) => api.removeFriend(userId));
+}
+
+export function useCompare() {
+  return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
+}
+
+export function useLeaderboard() {
+  return useQuery({ queryKey: keys.leaderboard, queryFn: api.leaderboard, staleTime: 60_000 });
 }
 
 export function useUpdateSettings() {

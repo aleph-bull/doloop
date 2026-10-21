@@ -78,6 +78,9 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'calendar',
       'social',
       'profile',
+      'feed',
+      'friends',
+      'leaderboard',
       // Layout of each page, starting with the dashboard.
       'layout',
       'dashboard',

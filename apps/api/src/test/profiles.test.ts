@@ -128,21 +128,21 @@ describe('profiles', () => {
   it('posts belong to their author: newest first, only the author can delete', async () => {
     const empty = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
+      url: '/api/social/posts',
       payload: { body: '  ' },
     });
     expect(empty.statusCode).toBe(400);
 
     const first = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
+      url: '/api/social/posts',
       payload: { body: 'Finished the first problem set.' },
     });
     expect(first.statusCode).toBe(201);
     t.clock.now = '2026-09-21T15:00:00.000Z';
     const second = await t.api({
       method: 'POST',
-      url: '/api/profiles/me/posts',
+      url: '/api/social/posts',
       payload: { body: 'Two hours on linear algebra today.' },
     });
     const prof = (
