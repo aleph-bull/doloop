@@ -322,7 +322,6 @@ export const settingsSchema = z
         posts: z.enum(['everyone', 'friends']),
         stats: z.boolean(),
         leaderboard: z.enum(['global', 'friends', 'off']),
-        compare: z.boolean(),
         requests: z.boolean(),
       })
       .partial(),

@@ -302,25 +302,33 @@ export interface FriendsResponse {
   people: Record<string, Person>;
 }
 
-export interface CompareRow {
+/** A jam: a game friends enter; focused minutes from joining count, the most at the end wins. */
+export interface JamMember {
   userId: string;
-  thisWeek: number;
-  lastWeek: number;
-  last28: number;
-  activeDays28: number;
-  sessionsThisWeek: number;
-  longest28: number;
-  streak: number;
-  /** Minutes per week, oldest first, ending with this week. */
-  weekly: number[];
+  joinedAt: string;
+  minutes: number;
+  sessions: number;
 }
 
-export interface CompareResponse {
-  you: CompareRow;
-  friends: CompareRow[];
+export interface Jam {
+  id: string;
+  hostId: string;
+  title: string;
+  /** Members see the code; others get null. */
+  code: string | null;
+  startsAt: string;
+  endsAt: string;
+  ended: boolean;
+  you: boolean;
+  /** Ranked, most minutes first. */
+  members: JamMember[];
+}
+
+export interface JamsResponse {
+  active: Jam[];
+  open: Jam[];
+  ended: Jam[];
   people: Record<string, Person>;
-  /** The Monday of each week in `weekly`, oldest first. */
-  weekStarts: string[];
 }
 
 export type LeaderboardScope = 'global' | 'friends';
@@ -604,7 +612,18 @@ export const api = {
   deleteFriendRequest: (id: string) =>
     request<void>('DELETE', `/api/social/friends/requests/${id}`),
   removeFriend: (userId: string) => request<void>('DELETE', `/api/social/friends/${userId}`),
-  compare: () => request<CompareResponse>('GET', '/api/social/compare'),
+  jams: () => request<JamsResponse>('GET', '/api/social/jams'),
+  createJam: (input: { title?: string; days: number }) =>
+    request<{ jam: Jam; people: Record<string, Person> }>('POST', '/api/social/jams', input),
+  joinJamByCode: (code: string) =>
+    request<{ jam: Jam; people: Record<string, Person> }>('POST', '/api/social/jams/join', {
+      code,
+    }),
+  joinJam: (id: string) =>
+    request<{ jam: Jam; people: Record<string, Person> }>('POST', `/api/social/jams/${id}/join`),
+  leaveJam: (id: string) => request<void>('POST', `/api/social/jams/${id}/leave`),
+  endJam: (id: string) =>
+    request<{ jam: Jam; people: Record<string, Person> }>('POST', `/api/social/jams/${id}/end`),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(
       'GET',

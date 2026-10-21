@@ -257,24 +257,6 @@ describe('friends', () => {
     ]);
   });
 
-  it('compares your weeks with your friends', async () => {
-    const res = await t.api({ method: 'GET', url: '/api/social/compare' });
-    expect(res.statusCode).toBe(200);
-    const { you, friends, weekStarts } = res.json();
-    expect(weekStarts).toHaveLength(8);
-    expect(weekStarts[7]).toBe('2026-09-21');
-    expect(you).toMatchObject({
-      userId: USER_A.id,
-      thisWeek: 90,
-      last28: 90,
-      activeDays28: 1,
-      sessionsThisWeek: 1,
-      longest28: 90,
-    });
-    expect(you.weekly).toHaveLength(8);
-    expect(friends.map((f: { userId: string }) => f.userId)).toEqual([USER_B.id]);
-  });
-
   it('removes a friend, then declining a new request deletes it', async () => {
     const gone = await t.api({ method: 'DELETE', url: `/api/social/friends/${USER_B.id}` });
     expect(gone.statusCode).toBe(204);
@@ -322,14 +304,11 @@ describe('sharing settings', () => {
           posts: 'friends',
           stats: false,
           leaderboard: 'friends',
-          compare: false,
           requests: false,
         },
       },
     });
     expect(saved.statusCode).toBe(200);
-    const compare = (await t.api({ method: 'GET', url: '/api/social/compare' })).json();
-    expect(compare.friends).toEqual([]);
     // Friends only: off the global board, still on a friend's board.
     const board = (await t.api({ method: 'GET', url: '/api/leaderboard' })).json();
     expect(board.scope).toBe('global');

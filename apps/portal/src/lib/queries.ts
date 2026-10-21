@@ -63,7 +63,7 @@ export const keys = {
   comments: (postId: string) => ['social', 'comments', postId] as const,
   friends: ['social', 'friends'] as const,
   people: (q: string) => ['social', 'people', q] as const,
-  compare: ['social', 'compare'] as const,
+  jams: ['social', 'jams'] as const,
   leaderboard: (scope: LeaderboardScope) => ['leaderboard', scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
@@ -556,7 +556,7 @@ const FRIEND_KEYS = [
   keys.friends,
   ['profiles'],
   ['social', 'people'],
-  keys.compare,
+  keys.jams,
   ['leaderboard'],
   ['social', 'feed'],
 ] as const;
@@ -587,8 +587,32 @@ export function useRemoveFriend() {
   return useFriendMutation((userId: string) => api.removeFriend(userId));
 }
 
-export function useCompare() {
-  return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
+export function useJams() {
+  return useQuery({ queryKey: keys.jams, queryFn: api.jams, staleTime: 30_000 });
+}
+
+function useJamMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.jams }),
+  });
+}
+
+export function useCreateJam() {
+  return useJamMutation((input: { title?: string; days: number }) => api.createJam(input));
+}
+export function useJoinJamByCode() {
+  return useJamMutation((code: string) => api.joinJamByCode(code));
+}
+export function useJoinJam() {
+  return useJamMutation((id: string) => api.joinJam(id));
+}
+export function useLeaveJam() {
+  return useJamMutation((id: string) => api.leaveJam(id));
+}
+export function useEndJam() {
+  return useJamMutation((id: string) => api.endJam(id));
 }
 
 export function useLeaderboard(scope: LeaderboardScope) {

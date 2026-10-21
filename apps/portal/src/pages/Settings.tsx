@@ -404,7 +404,7 @@ export function Settings() {
                 checked={s.features.social}
                 onChange={(v) => patch({ features: { social: v } })}
                 label="Social"
-                description="The feed, friends, how you compare and the leaderboard, plus your profile at the end of the nav."
+                description="The feed, friends, jams and the leaderboard, plus your profile at the end of the nav."
               />
               {/*
                * Pages holds every setting about what the screens show and how they are laid
@@ -476,12 +476,6 @@ export function Settings() {
                   Where your focused time counts. Friends see a board of their own.
                 </span>
               </div>
-              <Toggle
-                checked={s.social.compare}
-                onChange={(v) => patch({ social: { compare: v } })}
-                label="Let friends compare with you"
-                description="Your weeks beside theirs in Compare."
-              />
               <Toggle
                 checked={s.social.requests}
                 onChange={(v) => patch({ social: { requests: v } })}

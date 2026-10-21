@@ -5,7 +5,7 @@ import type { FeedScope } from '../../lib/api';
 import { useFeed } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Composer } from './Composer';
-import { MiniLeaderboard, ProfileCard } from './FeedSide';
+import { FriendsCard, MiniLeaderboard, ProfileCard } from './FeedSide';
 import { PostCard } from './PostCard';
 
 /**
@@ -23,6 +23,7 @@ export function Feed() {
       <div className="feed-layout">
         <div className="feed-side is-left">
           <ProfileCard />
+          <FriendsCard />
         </div>
         <div className="feed">
           <Composer />

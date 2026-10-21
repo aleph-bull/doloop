@@ -111,7 +111,7 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'posts',
       'friends only',
       'leaderboard',
-      'compare',
+      'jams',
       'friend requests',
       'profile stats',
     ],

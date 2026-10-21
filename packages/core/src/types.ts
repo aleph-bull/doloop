@@ -262,8 +262,6 @@ export interface UserSettings {
      * your friends' ('friends'), or none ('off').
      */
     leaderboard: 'global' | 'friends' | 'off';
-    /** Let friends see your weeks beside theirs in Compare. */
-    compare: boolean;
     /** Take friend requests. */
     requests: boolean;
   };

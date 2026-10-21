@@ -201,6 +201,10 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   ('global' | 'friends' | 'off', older true/false normalised in `withDefaults`). Posts
   carry a video or a picture; sample media for the seed is made with a scratch
   `ffmpeg-static` and passed as `SEED_MEDIA_DIR` (there is no ffmpeg on this PC).
+  Jams (`routes/jams.ts`, `components/social/JamsTab.tsx`) replaced Compare: a timed game
+  people join by friendship or by code; minutes count from each person's joining time.
+  Friends have no tab: they are the `FriendsCard` beside the feed. The owner wants these
+  cards dense (40px pictures on posts, 26px in lists, 12-14px padding); don't let them grow.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,

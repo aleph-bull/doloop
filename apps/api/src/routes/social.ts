@@ -1,12 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import {
-  addDays,
-  startOfWeekMonday,
-  toLocalDate,
-  withDefaults,
-  type Session,
-  type UserSettings,
-} from '@komogon/core';
+import { withDefaults, type UserSettings } from '@komogon/core';
 import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -22,7 +15,6 @@ import {
   users,
 } from '../db/schema';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
-import { loadCompletedSessions } from '../services/pace';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
@@ -35,8 +27,6 @@ export const POST_VIDEO_MAX_BYTES = 5 * 1024 * 1024;
 export const POST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const POST_POSTER_MAX_BYTES = 200 * 1024;
 export const FEED_PAGE = 20;
-/** The weeks the comparison looks back over, this week included. */
-export const COMPARE_WEEKS = 8;
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm']);
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -71,19 +61,6 @@ export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
 export interface FriendshipStatus {
   status: FriendshipState;
   requestId: string | null;
-}
-
-export interface CompareRow {
-  userId: string;
-  thisWeek: number;
-  lastWeek: number;
-  last28: number;
-  activeDays28: number;
-  sessionsThisWeek: number;
-  longest28: number;
-  streak: number;
-  /** Minutes per week, oldest first, ending with this week. */
-  weekly: number[];
 }
 
 /** Parses a data URL into what the row stores, checking the type and the size. */
@@ -196,63 +173,9 @@ export async function loadPosts(
   };
 }
 
-/** Minutes of focus per local day, for a run of finished sessions. */
-function minutesByDay(done: Session[], tz: string): Map<string, number> {
-  const byDay = new Map<string, number>();
-  for (const s of done) {
-    const d = toLocalDate(s.startedAt, tz);
-    byDay.set(d, (byDay.get(d) ?? 0) + s.workSeconds / 60);
-  }
-  return byDay;
-}
-
-/** One person's numbers for the comparison, all in the viewer's weeks. */
-export function compareRow(
-  userId: string,
-  done: Session[],
-  streak: number,
-  now: string,
-  tz: string,
-): CompareRow {
-  const today = toLocalDate(now, tz);
-  const weekStart = startOfWeekMonday(today);
-  const byDay = minutesByDay(done, tz);
-  const inRange = (from: string, to: string) => {
-    let total = 0;
-    for (const [d, m] of byDay) if (d >= from && d <= to) total += m;
-    return total;
-  };
-  const weekly: number[] = [];
-  for (let i = COMPARE_WEEKS - 1; i >= 0; i--) {
-    const from = addDays(weekStart, -7 * i);
-    weekly.push(Math.round(inRange(from, addDays(from, 6))));
-  }
-  const from28 = addDays(today, -27);
-  let activeDays28 = 0;
-  for (const [d, m] of byDay) if (d >= from28 && d <= today && m > 0) activeDays28++;
-  let sessionsThisWeek = 0;
-  let longest28 = 0;
-  for (const s of done) {
-    const d = toLocalDate(s.startedAt, tz);
-    if (d >= weekStart && d <= today) sessionsThisWeek++;
-    if (d >= from28 && d <= today) longest28 = Math.max(longest28, s.workSeconds / 60);
-  }
-  return {
-    userId,
-    thisWeek: weekly[weekly.length - 1] ?? 0,
-    lastWeek: weekly[weekly.length - 2] ?? 0,
-    last28: Math.round(inRange(from28, today)),
-    activeDays28,
-    sessionsThisWeek,
-    longest28: Math.round(longest28),
-    streak,
-    weekly,
-  };
-}
-
 /**
- * Social: the feed of posts, likes and comments, friends and friend requests, and how
- * your weeks compare with your friends'. Everything here shows only what people chose to
+ * Social: the feed of posts, likes and comments, friends and friend requests. Jams are
+ * in routes/jams.ts. Everything here shows only what people chose to
  * share plus finished-session totals; emails, settings and tasks never leave an account.
  */
 export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) {
@@ -603,31 +526,5 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
         ),
       );
     return reply.code(204).send();
-  });
-
-  /* ---------- how you compare ---------- */
-
-  app.get('/api/social/compare', async (req) => {
-    const me = req.user;
-    const now = clock();
-    const tz = me.timezone;
-    const all = await friendIds(db, me.id);
-    const rows = await db.query.users.findMany({
-      where: inArray(users.id, [me.id, ...all]),
-      columns: { id: true, streak: true, settings: true },
-    });
-    // Friends who keep their weeks to themselves (Settings › Social) are left out.
-    const sharing = new Set(rows.filter((r) => socialOf(r.settings).compare).map((r) => r.id));
-    const ids = all.filter((id) => sharing.has(id));
-    const streaks = new Map(rows.map((r) => [r.id, r.streak.current]));
-    const compute = async (id: string) =>
-      compareRow(id, await loadCompletedSessions(db, id), streaks.get(id) ?? 0, now, tz);
-    const [you, ...friends] = await Promise.all([me.id, ...ids].map(compute));
-    const people = await loadPeople(db, [me.id, ...ids]);
-    const today = toLocalDate(now, tz);
-    const weekStart = startOfWeekMonday(today);
-    const weekStarts: string[] = [];
-    for (let i = COMPARE_WEEKS - 1; i >= 0; i--) weekStarts.push(addDays(weekStart, -7 * i));
-    return { you, friends, people, weekStarts };
   });
 }

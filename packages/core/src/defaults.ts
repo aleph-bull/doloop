@@ -128,7 +128,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
     posts: 'everyone',
     stats: true,
     leaderboard: 'global',
-    compare: true,
     requests: true,
   },
   dashboard: { focusOnly: false },

@@ -134,6 +134,13 @@
       "when": 1792613601371,
       "tag": "0018_social_feed",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792617816991,
+      "tag": "0019_jams",
+      "breakpoints": true
     }
   ]
 }

@@ -448,6 +448,43 @@ export const friendships = pgTable(
   ],
 );
 
+/**
+ * A jam: a small game friends enter for a day or a week. Focused minutes from the moment
+ * each person joins count; the most at the end wins. Anyone with the code can join.
+ */
+export const jams = pgTable(
+  'jams',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    /** Six letters and digits, for joining from outside the friend list. */
+    code: text('code').notNull().unique(),
+    startsAt: ts('starts_at').notNull(),
+    endsAt: ts('ends_at').notNull(),
+    /** Set when the host ends it early. */
+    endedAt: ts('ended_at'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('jams_ends_idx').on(t.endsAt)],
+);
+
+export const jamMembers = pgTable(
+  'jam_members',
+  {
+    jamId: uuid('jam_id')
+      .notNull()
+      .references(() => jams.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: ts('joined_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.jamId, t.userId] }), index('jam_members_user_idx').on(t.userId)],
+);
+
 /** User-defined rewards, bought with XP or opened by finishing a task. */
 export const customRewards = pgTable(
   'custom_rewards',
@@ -775,6 +812,8 @@ export const schema = {
   postLikes,
   postComments,
   friendships,
+  jams,
+  jamMembers,
   universityVerifications,
   customRewards,
   routines,

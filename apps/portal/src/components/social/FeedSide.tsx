@@ -1,12 +1,211 @@
-import { useState } from 'react';
+import { useDeferredValue, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { universityById } from '@komogon/core';
-import { ChevronRight, Flame, SlidersHorizontal, Trophy, Users } from 'lucide-react';
-import { Panel, Spinner } from '@komogon/ui';
-import type { LeaderboardScope } from '../../lib/api';
+import {
+  Check,
+  ChevronRight,
+  Flame,
+  Search,
+  SlidersHorizontal,
+  Trophy,
+  Users,
+  X,
+} from 'lucide-react';
+import { Panel, Spinner, useToast } from '@komogon/ui';
+import type { LeaderboardScope, Person } from '../../lib/api';
 import { fmtHours } from '../../lib/format';
-import { useAvatar, useFriends, useLeaderboard, useMe } from '../../lib/queries';
+import {
+  useAcceptFriendRequest,
+  useAvatar,
+  useDeleteFriendRequest,
+  useFindPeople,
+  useFriends,
+  useLeaderboard,
+  useMe,
+  useRemoveFriend,
+  useSendFriendRequest,
+} from '../../lib/queries';
 import { Avatar } from './Avatar';
+
+const unknown = (id: string): Person => ({ id, name: 'Someone', avatarUrl: null, university: null });
+
+/** A small round button on a person's row: accept, decline, remove. */
+function RowButton({
+  label,
+  onClick,
+  busy,
+  tone,
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  busy?: boolean;
+  tone?: 'yes';
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={`side-row-btn${tone === 'yes' ? ' is-yes' : ''}`}
+      aria-label={label}
+      title={label}
+      disabled={busy}
+      onClick={onClick}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PersonRow({ person, children }: { person: Person; children?: ReactNode }) {
+  return (
+    <li className="side-person">
+      <Link to={`/profile/${person.id}`} className="side-person-link">
+        <Avatar name={person.name} url={person.avatarUrl} size="xs" />
+        <span className="side-person-name">{person.name}</span>
+      </Link>
+      <span className="side-person-actions">{children}</span>
+    </li>
+  );
+}
+
+/** Friends, under your card: requests to answer, the list, and a box to find more. */
+export function FriendsCard() {
+  const q = useFriends();
+  const [query, setQuery] = useState('');
+  const deferred = useDeferredValue(query.trim());
+  const found = useFindPeople(deferred);
+  const accept = useAcceptFriendRequest();
+  const decline = useDeleteFriendRequest();
+  const remove = useRemoveFriend();
+  const send = useSendFriendRequest();
+  const { toast } = useToast();
+  const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
+  const data = q.data;
+  const who = (id: string) => data?.people[id] ?? found.data?.people[id] ?? unknown(id);
+
+  return (
+    <Panel as="aside" className="side-card" aria-label="Friends">
+      <div className="side-head">
+        <h2 className="side-title">
+          Friends
+          {data && data.friends.length > 0 && (
+            <span className="side-count tabular">{data.friends.length}</span>
+          )}
+        </h2>
+      </div>
+      <label className="side-search">
+        <Search size={14} aria-hidden />
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Find people"
+          aria-label="Find people by name"
+        />
+      </label>
+      {deferred && (
+        <ul className="side-people">
+          {found.isPending ? (
+            <li className="muted text-xs">Looking…</li>
+          ) : found.data?.results.length === 0 ? (
+            <li className="muted text-xs">No one by that name.</li>
+          ) : (
+            found.data?.results.map((r) => (
+              <PersonRow key={r.userId} person={who(r.userId)}>
+                {r.friendship.status === 'friends' ? (
+                  <span className="side-person-note">Friends</span>
+                ) : r.friendship.status === 'requested' ? (
+                  <span className="side-person-note">Asked</span>
+                ) : r.friendship.status === 'incoming' ? (
+                  <span className="side-person-note">Asked you</span>
+                ) : !r.acceptsRequests ? (
+                  <span className="side-person-note">Not taking requests</span>
+                ) : (
+                  <button
+                    type="button"
+                    className="side-add"
+                    disabled={send.isPending}
+                    onClick={() => send.mutate(r.userId, { onError: fail })}
+                  >
+                    Add
+                  </button>
+                )}
+              </PersonRow>
+            ))
+          )}
+        </ul>
+      )}
+      {!data ? (
+        <Spinner />
+      ) : (
+        <>
+          {data.incoming.length > 0 && (
+            <>
+              <p className="side-label">Requests</p>
+              <ul className="side-people">
+                {data.incoming.map((r) => (
+                  <PersonRow key={r.id} person={who(r.userId)}>
+                    <RowButton
+                      label="Accept"
+                      tone="yes"
+                      busy={accept.isPending}
+                      onClick={() => accept.mutate(r.id, { onError: fail })}
+                    >
+                      <Check size={13} aria-hidden />
+                    </RowButton>
+                    <RowButton
+                      label="Decline"
+                      busy={decline.isPending}
+                      onClick={() => decline.mutate(r.id, { onError: fail })}
+                    >
+                      <X size={13} aria-hidden />
+                    </RowButton>
+                  </PersonRow>
+                ))}
+              </ul>
+            </>
+          )}
+          {data.friends.length === 0 ? (
+            !deferred && <p className="muted text-xs">No friends yet. Search above.</p>
+          ) : (
+            <ul className="side-people">
+              {data.friends.map((f) => (
+                <PersonRow key={f.userId} person={who(f.userId)}>
+                  <RowButton
+                    label="Remove friend"
+                    busy={remove.isPending}
+                    onClick={() => remove.mutate(f.userId, { onError: fail })}
+                  >
+                    <X size={13} aria-hidden />
+                  </RowButton>
+                </PersonRow>
+              ))}
+            </ul>
+          )}
+          {data.outgoing.length > 0 && (
+            <>
+              <p className="side-label">Asked</p>
+              <ul className="side-people">
+                {data.outgoing.map((r) => (
+                  <PersonRow key={r.id} person={who(r.userId)}>
+                    <RowButton
+                      label="Take the request back"
+                      busy={decline.isPending}
+                      onClick={() => decline.mutate(r.id, { onError: fail })}
+                    >
+                      <X size={13} aria-hidden />
+                    </RowButton>
+                  </PersonRow>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+    </Panel>
+  );
+}
 
 /** How many rows the small board on the feed shows. */
 const MINI_ROWS = 5;
