@@ -9,6 +9,7 @@ import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
 import { Today } from './pages/Today';
+import { Landing } from './pages/Landing';
 
 // Route-level code splitting keeps the first paint small (spec §9: LCP < 2 s).
 const AuthCallback = lazy(() =>
@@ -32,6 +33,9 @@ const Extension = lazy(() => import('./pages/Extension').then((m) => ({ default:
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
 const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
+const ResetPassword = lazy(() =>
+  import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })),
+);
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -47,7 +51,7 @@ const fallback = (
   </div>
 );
 
-function RequireAuth({ children }: { children: ReactNode }) {
+function RequireAuth({ children, landing = false }: { children: ReactNode; landing?: boolean }) {
   const auth = useAuth();
   const location = useLocation();
   if (auth.status === 'loading')
@@ -56,6 +60,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
         <Spinner />
       </Centered>
     );
+  if (auth.status === 'signed-out' && landing && location.pathname === '/') return <Landing />;
   if (auth.status === 'signed-out')
     return <Navigate to="/signin" state={{ from: location }} replace />;
   return <>{children}</>;
@@ -110,6 +115,9 @@ export function App() {
       <Suspense fallback={fallback}>
         <Routes>
           <Route path="/signin" element={<SignIn />} />
+          <Route path="/signup" element={<SignIn />} />
+          <Route path="/welcome" element={<Landing />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
             path="/onboarding"
@@ -134,7 +142,7 @@ export function App() {
           />
           <Route
             element={
-              <RequireAuth>
+              <RequireAuth landing>
                 <Gate>
                   <AppShell />
                 </Gate>

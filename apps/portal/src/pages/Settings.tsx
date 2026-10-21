@@ -29,6 +29,7 @@ import {
 import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
+import { OutlookCalendarSettings } from '../components/OutlookCalendarSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
 import { ProfileFields } from '../components/ProfileFields';
 import { SignOutButton } from '../components/SignOutButton';
@@ -411,6 +412,12 @@ export function Settings() {
                * The one exception is the top bar or sidebar choice, which sits in Appearance.
                */}
               <h3 className="settings-group-head">Dashboard</h3>
+              <Toggle
+                checked={s.dashboard.focusOnly}
+                onChange={(v) => patch({ dashboard: { focusOnly: v } })}
+                label="Simplify the dashboard"
+                description="Show just the timer and session options on the dashboard. Other pages stay available in navigation."
+              />
               <div className="field">
                 <span className="field-label">Daily card</span>
                 <Segmented
@@ -895,6 +902,12 @@ export function Settings() {
 
             <Section id="calendar" title="Calendar">
               <GoogleCalendarSettings />
+              <OutlookCalendarSettings />
+              <p className="field-hint">
+                Calendars update automatically about every 15 minutes. Course codes such as CSC108
+                and existing course names group your work. Exams become assessments; assignments and
+                deadlines become tasks. Edit imported work in Tasks; your changes are kept.
+              </p>
               <div className="divider" />
               <div className="flex flex-col gap-2">
                 <span className="field-label">Subscribe from any calendar app (.ics)</span>

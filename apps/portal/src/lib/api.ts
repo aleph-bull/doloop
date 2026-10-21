@@ -470,6 +470,35 @@ export const api = {
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 
+  emailStatus: () =>
+    request<{
+      available: boolean;
+      mode: string;
+      verificationRequired: boolean;
+      passwordReset: boolean;
+    }>('GET', '/api/auth/email/status'),
+  verifySignup: (challengeId: string, code: string) =>
+    request<{ token: string; email: string }>('POST', '/api/auth/email/verify-signup', {
+      challengeId,
+      code,
+    }),
+  resendEmailCode: (challengeId: string) =>
+    request<{ challengeId: string; email: string }>('POST', '/api/auth/email/resend', {
+      challengeId,
+    }),
+  requestPasswordReset: (email: string) =>
+    request<{ challengeId: string }>('POST', '/api/auth/password/request-reset', { email }),
+  resetPassword: (challengeId: string, code: string, password: string) =>
+    request<{ ok: boolean }>('POST', '/api/auth/password/reset', { challengeId, code, password }),
+  localOutbox: (email: string) =>
+    request<{ messages: Array<{ id: string; subject: string; text: string }> }>(
+      'GET',
+      `/api/auth/local-outbox?email=${encodeURIComponent(email)}`,
+    ),
+  requestAccountCode: () =>
+    request<{ challengeId: string; email: string }>('POST', '/api/auth/email/request-verification'),
+  verifyAccountCode: (challengeId: string, code: string) =>
+    request<{ ok: boolean }>('POST', '/api/auth/email/verify-account', { challengeId, code }),
   googleStatus: () =>
     request<{
       available: boolean;
@@ -480,11 +509,28 @@ export const api = {
     }>('GET', '/api/calendar/google/status'),
   googleConnect: () => request<{ url: string }>('POST', '/api/calendar/google/connect'),
   googleSync: () =>
-    request<{ status: string; pushed: number; pulled: number; imported: number }>(
-      'POST',
-      '/api/calendar/google/sync',
-    ),
+    request<{
+      status: string;
+      pushed: number;
+      pulled: number;
+      imported: number;
+      academic?: { courses: number; tasks: number; events: number } | null;
+    }>('POST', '/api/calendar/google/sync'),
   googleDisconnect: () => request<void>('DELETE', '/api/calendar/google'),
+  outlookStatus: () =>
+    request<{
+      available: boolean;
+      connected: boolean;
+      revoked: boolean;
+      lastSyncAt: string | null;
+    }>('GET', '/api/calendar/outlook/status'),
+  outlookConnect: () => request<{ url: string }>('POST', '/api/calendar/outlook/connect'),
+  outlookSync: () =>
+    request<{ status: string; courses: number; tasks: number; events: number }>(
+      'POST',
+      '/api/calendar/outlook/sync',
+    ),
+  outlookDisconnect: () => request<void>('DELETE', '/api/calendar/outlook'),
   busy: (from: string, to: string) =>
     request<{ busy: Array<{ start: string; end: string }> }>(
       'GET',

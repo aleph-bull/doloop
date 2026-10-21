@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { universityVerifications, users, type UserRow } from '../db/schema';
 import { badRequest, HttpError } from '../errors';
-import type { Mailer } from '../services/mail';
+import type { Mailer } from '../services/mailer';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
 import { dt } from '../services/sessions-mapper';
 import { settingsOf } from '../services/users';
@@ -42,7 +42,7 @@ export function universityRoutes(
   app: FastifyInstance,
   db: Db,
   clock: () => string,
-  mailer: Mailer,
+  mailer: Mailer | null,
 ) {
   // Codes sent per account per day, so a mistake can't turn the API into a mailer.
   const sends = new RateLimiter({ max: 8, windowMs: 24 * 3_600_000 }, () => Date.parse(clock()));
@@ -102,6 +102,11 @@ export function universityRoutes(
     const { email } = z
       .object({ email: z.string().trim().toLowerCase().email().max(320) })
       .parse(req.body);
+    if (!mailer)
+      throw new HttpError(
+        503,
+        'This server cannot send email yet, so a university cannot be verified here.',
+      );
     const uni = universityForEmail(email);
     if (!uni)
       throw badRequest(

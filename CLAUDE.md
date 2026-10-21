@@ -154,8 +154,9 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   to anyone signed in; the API route (`routes/profiles.ts`) shares only chosen fields and
   finished-session totals, never the email.
   The university is set only by `routes/university.ts` after a code emailed to an address
-  on that university's domain comes back; `RESEND_API_KEY` + `MAIL_FROM` send it, and
-  without them the code is printed in the API log (so in a sandbox, read it from the logs).
+  on that university's domain comes back, through the same mailer as account email
+  (`RESEND_API_KEY` + `MAIL_FROM`; with `LOCAL_TEST_ACCOUNTS=true` the local inbox page
+  shows it; with neither, the route answers 503).
   One address can verify only one account (checked in the route and by a partial unique
   index).
 - Navigation (2026-10-21): the top bar is the default; Settings › Appearance › Navigation

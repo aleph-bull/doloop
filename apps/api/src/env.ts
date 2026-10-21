@@ -17,6 +17,9 @@ function str(name: string, fallback?: string): string | undefined {
 }
 
 export interface Env {
+  resendApiKey: string | undefined;
+  mailFrom: string;
+  localTestAccounts: boolean;
   port: number;
   host: string;
   corsOrigins: string[];
@@ -46,21 +49,34 @@ export interface Env {
     redirectUri: string;
   };
   tokenEncryptionKey: string | undefined;
+  outlook: {
+    clientId: string | undefined;
+    clientSecret: string | undefined;
+    redirectUri: string;
+    tenant: string;
+  };
   portalUrl: string;
   /**
    * TMDB credentials for film and TV posters on the Analytics page: a v4 read access token
    * or a v3 API key. Without either, the equivalents fall back to listed runtimes and icons.
    */
   tmdb: { readToken: string | undefined; apiKey: string | undefined };
-  /**
-   * Resend, for the university verification codes. Without a key the codes are printed to
-   * the API's log instead (fine locally, useless hosted).
-   */
-  mail: { resendApiKey: string | undefined; from: string };
 }
 
 export function loadEnv(): Env {
   return {
+    resendApiKey: str('RESEND_API_KEY'),
+    mailFrom: str('MAIL_FROM', 'Komodon <noreply@komogon.app>')!,
+    localTestAccounts: process.env.LOCAL_TEST_ACCOUNTS === 'true',
+    outlook: {
+      clientId: str('OUTLOOK_CLIENT_ID'),
+      clientSecret: str('OUTLOOK_CLIENT_SECRET'),
+      redirectUri: str(
+        'OUTLOOK_REDIRECT_URI',
+        'http://localhost:8787/api/calendar/outlook/callback',
+      )!,
+      tenant: str('OUTLOOK_TENANT', 'common')!,
+    },
     port: Number(str('PORT', '8787')),
     host: str('HOST', '0.0.0.0')!,
     corsOrigins: str('CORS_ORIGINS', 'http://localhost:5173')!
@@ -94,9 +110,5 @@ export function loadEnv(): Env {
     tokenEncryptionKey: str('TOKEN_ENCRYPTION_KEY'),
     portalUrl: str('PORTAL_URL', 'http://localhost:5173')!,
     tmdb: { readToken: str('TMDB_READ_TOKEN'), apiKey: str('TMDB_API_KEY') },
-    mail: {
-      resendApiKey: str('RESEND_API_KEY'),
-      from: str('MAIL_FROM', 'Komodon <no-reply@komogon.app>')!,
-    },
   };
 }

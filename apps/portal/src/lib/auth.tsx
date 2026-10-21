@@ -5,7 +5,7 @@ import {
 } from '@supabase/supabase-js';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { apiBaseUrl, setTokenGetter } from './api';
+import { api as accountApi, apiBaseUrl, setTokenGetter } from './api';
 
 /**
  * Three auth backends:
@@ -50,6 +50,9 @@ interface AuthState {
 }
 
 interface AuthApi extends AuthState {
+  pendingVerification: { challengeId: string; email: string } | null;
+  verifyEmailCode: (code: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
   mode: typeof authMode;
   signInWithMagicLink: (email: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
@@ -72,7 +75,12 @@ export const EMAIL_KEY = authMode === 'dev' ? 'komogon.dev.email' : 'komogon.ema
 async function serverAuth(
   path: 'signin' | 'signup' | 'google',
   body: { email: string; password: string } | { credential: string },
-): Promise<{ token: string; email: string }> {
+): Promise<{
+  token?: string;
+  email: string;
+  verificationRequired?: boolean;
+  challengeId?: string;
+}> {
   const res = await fetch(`${apiBaseUrl(true)}/api/auth/${path}`, {
     method: 'POST',
     headers: {
@@ -84,14 +92,22 @@ async function serverAuth(
   const data = (await res.json().catch(() => null)) as {
     token?: string;
     email?: string;
+    verificationRequired?: boolean;
+    challengeId?: string;
     error?: string;
   } | null;
   if (res.status === 404) throw new Error('Password sign-in is not set up on the server.');
   if (res.status === 403 && data?.error === 'invite_only') throw new Error(NOT_INVITED_MESSAGE);
   if (res.status === 400 && data?.error === 'Validation failed')
     throw new Error('Enter a valid email and a password.');
-  if (!res.ok || !data?.token) throw new Error(data?.error ?? 'Sign-in failed');
-  return { token: data.token, email: data.email ?? ('email' in body ? body.email : '') };
+  if (!res.ok || (!data?.token && !data?.verificationRequired))
+    throw new Error(data?.error ?? 'Sign-in failed');
+  return {
+    token: data.token,
+    email: data.email ?? ('email' in body ? body.email : ''),
+    verificationRequired: data.verificationRequired,
+    challengeId: data.challengeId,
+  };
 }
 
 /** Server mode: the Google client id when the API offers "Continue with Google", else null. */
@@ -144,6 +160,10 @@ async function mintDevToken(email: string): Promise<string> {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [pendingVerification, setPendingVerification] = useState<{
+    challengeId: string;
+    email: string;
+  } | null>(null);
   const [state, setState] = useState<AuthState>({ status: 'loading', email: null });
 
   useEffect(() => {
@@ -193,6 +213,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       if (!supabase) {
         const r = await serverAuth('signin', { email, password });
+        if (!r.token) throw new Error('Verify your email before signing in.');
         keepToken(r.token, r.email);
         return;
       }
@@ -206,6 +227,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       if (!supabase) {
         const r = await serverAuth('signup', { email, password });
+        if (r.verificationRequired && r.challengeId) {
+          setPendingVerification({ challengeId: r.challengeId, email: r.email });
+          return true;
+        }
+        if (!r.token) throw new Error('Could not create your account.');
         keepToken(r.token, r.email);
         return false;
       }
@@ -230,9 +256,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const verifyEmailCode = useCallback(
+    async (code: string) => {
+      if (!pendingVerification) throw new Error('Request a new signup code.');
+      const result = await accountApi.verifySignup(pendingVerification.challengeId, code);
+      setPendingVerification(null);
+      keepToken(result.token, result.email);
+    },
+    [pendingVerification, keepToken],
+  );
+  const resendVerification = useCallback(async () => {
+    if (!pendingVerification) return;
+    setPendingVerification(await accountApi.resendEmailCode(pendingVerification.challengeId));
+  }, [pendingVerification]);
   const signInWithGoogleCredential = useCallback(
     async (credential: string) => {
       const r = await serverAuth('google', { credential });
+      if (!r.token) throw new Error('Google sign-in failed.');
       keepToken(r.token, r.email);
     },
     [keepToken],
@@ -259,6 +299,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const api = useMemo<AuthApi>(
     () => ({
       ...state,
+      pendingVerification,
+      verifyEmailCode,
+      resendVerification,
       mode: authMode,
       signInWithMagicLink,
       signInWithPassword,
@@ -270,6 +313,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }),
     [
       state,
+      pendingVerification,
+      verifyEmailCode,
+      resendVerification,
       signInWithMagicLink,
       signInWithPassword,
       signUpWithPassword,

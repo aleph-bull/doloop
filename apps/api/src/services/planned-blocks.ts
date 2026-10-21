@@ -68,7 +68,7 @@ export async function updateBlock(
   // An imported commitment stays a commitment. Attaching a task to it would quietly turn
   // "I have a lecture at two" into "I plan to study at two", which is not what importing a
   // calendar means. Study time is something the user schedules here.
-  if (row.source === 'google' && patch.nodeId)
+  if ((row.source === 'google' || row.source === 'outlook') && patch.nodeId)
     throw badRequest('Imported events are commitments, not study time. Plan a block instead.');
   const startAt = patch.startAt ? dt(patch.startAt) : row.startAt;
   const endAt = patch.endAt ? dt(patch.endAt) : row.endAt;

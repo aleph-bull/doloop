@@ -2,11 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createHsVerifier, signDevToken } from '../auth/verify';
 import { createPgliteDb } from '../db/client';
 import { buildServer } from '../server';
-import type { Mail } from '../services/mail';
+import type { MailMessage } from '../services/mailer';
 import { TEST_SECRET, USER_A, USER_B, type TestApp } from './helpers';
 
 let t: TestApp;
-const sent: Mail[] = [];
+const sent: MailMessage[] = [];
 let mailDown = false;
 const lastCode = () => sent[sent.length - 1]!.subject.match(/^(\d{6}) /)![1]!;
 
@@ -18,6 +18,7 @@ beforeAll(async () => {
     verifier: createHsVerifier(TEST_SECRET),
     clock: () => clock.now,
     mailer: {
+      mode: 'local' as const,
       send: async (m) => {
         if (mailDown) throw new Error('mail is down');
         sent.push(m);

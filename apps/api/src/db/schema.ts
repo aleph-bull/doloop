@@ -45,6 +45,53 @@ export const users = pgTable('users', {
   purchasedBackgrounds: jsonb('purchased_backgrounds').$type<string[]>().notNull().default([]),
   lastPhraseId: text('last_phrase_id'),
   onboardedAt: ts('onboarded_at'),
+  isTestAccount: boolean('is_test_account').notNull().default(false),
+  emailVerifiedAt: ts('email_verified_at'),
+  authVersion: integer('auth_version').notNull().default(0),
+});
+
+export const emailCodes = pgTable(
+  'email_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull(),
+    purpose: text('purpose', {
+      enum: ['signup', 'account', 'organization', 'password-reset'],
+    }).notNull(),
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    codeHash: text('code_hash').notNull(),
+    payload: jsonb('payload')
+      .$type<{ passwordHash?: string; timezone?: string | null; claimExisting?: boolean }>()
+      .notNull()
+      .default({}),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    expiresAt: ts('expires_at').notNull(),
+    consumedAt: ts('consumed_at'),
+  },
+  (t) => [index('email_codes_recipient_idx').on(t.email, t.purpose)],
+);
+
+export const emailRateLimits = pgTable('email_rate_limits', {
+  key: text('key').primaryKey(),
+  hits: integer('hits').notNull(),
+  expiresAt: ts('expires_at').notNull(),
+});
+
+/**
+ * From an earlier Social that was replaced by profiles (2026-10-21). Unused; kept so the
+ * merge drops nothing. Drop it in a later migration once the alpha data is not needed.
+ */
+export const socialProfiles = pgTable('social_profiles', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  displayName: text('display_name').notNull().default(''),
+  organizationName: text('organization_name').notNull().default(''),
+  organizationEmail: text('organization_email').unique(),
+  organizationDomain: text('organization_domain'),
+  organizationVerifiedAt: ts('organization_verified_at'),
+  visible: boolean('visible').notNull().default(false),
 });
 
 /**
@@ -152,7 +199,7 @@ export const plannedBlocks = pgTable(
      * Google). 'google' is an imported commitment: context to plan around, never a study
      * plan. 'session' is a block of study that actually happened.
      */
-    source: text('source', { enum: ['app', 'google', 'session'] })
+    source: text('source', { enum: ['app', 'google', 'outlook', 'session'] })
       .notNull()
       .default('app'),
     /** Title for imported commitments, so the grid can show what the time is taken by. */
@@ -428,6 +475,41 @@ export const googleCalendar = pgTable('google_calendar', {
   lastSyncAt: ts('last_sync_at'),
 });
 
+export const outlookCalendar = pgTable('outlook_calendar', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  refreshTokenEnc: text('refresh_token_enc').notNull(),
+  revokedAt: ts('revoked_at'),
+  connectedAt: ts('connected_at').notNull().defaultNow(),
+  lastSyncAt: ts('last_sync_at'),
+});
+
+/** Provider identity and the last imported values keep resyncs idempotent and preserve edits. */
+export const calendarImports = pgTable(
+  'calendar_imports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    provider: text('provider', { enum: ['google', 'outlook'] }).notNull(),
+    calendarId: text('calendar_id').notNull(),
+    eventId: text('event_id').notNull(),
+    nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'set null' }),
+    blockId: uuid('block_id').references(() => plannedBlocks.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    dueAt: ts('due_at'),
+    startAt: ts('start_at').notNull(),
+    endAt: ts('end_at').notNull(),
+    ownsNode: boolean('owns_node').notNull().default(false),
+    cancelled: boolean('cancelled').notNull().default(false),
+  },
+  (t) => [
+    uniqueIndex('calendar_imports_identity_idx').on(t.userId, t.provider, t.calendarId, t.eventId),
+  ],
+);
+
 /** A user-defined thing to count daily, rendered as its own contribution grid. */
 export const trackers = pgTable(
   'trackers',
@@ -585,6 +667,9 @@ export const drillItems = pgTable(
 );
 
 export const schema = {
+  emailCodes,
+  emailRateLimits,
+  socialProfiles,
   users,
   passwordAccounts,
   nodes,
@@ -597,6 +682,8 @@ export const schema = {
   estimateChanges,
   weeklyReviews,
   googleCalendar,
+  outlookCalendar,
+  calendarImports,
   streakEvents,
   userAssets,
   posts,

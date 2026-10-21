@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "university_verifications_email_idx" ON "university_verifications" USING btree ("email") WHERE verified_at IS NOT NULL;

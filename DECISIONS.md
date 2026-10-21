@@ -1341,6 +1341,83 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Internal names stay komogon**: packages, storage keys, IndexedDB names, extension message types, the `~/.komogon` data folder, the local scripts and startup shortcut, and the komogon.app domain (the user said to leave the address for now). Changing them would drop saved browser state or break the always-on copy.
 - Earlier entries keep the name they were written under.
 
+# 2026-10-21: Start with a session
+
+After account creation or sign-in, new users enter the dashboard directly. No name,
+course, task or due date is required, and no placeholder study items are created.
+The initial dashboard shows Start with inline Pomodoro, timelapse and timer visibility
+options. Timelapse is opt-in and opens the focus screen in the same tab. Audio sharing,
+timelapse and focus-screen questions are suppressed for these accounts.
+Planning, progress, hints and secondary navigation stay hidden until the user chooses
+"Show planning and progress", or turns off "Focus on the timer" in Settings > Pages >
+Dashboard. This account setting persists across devices. Existing onboarded accounts
+retain their layout and preferences.
+
+## 2026-10-21: Calendar courses and deadlines
+
+Google imports now read all accessible calendars except the app-owned Study calendar,
+which keeps its existing two-way block sync. Outlook imports use Microsoft Graph with
+read-only calendar permission, offline access, PKCE and encrypted refresh tokens.
+Both providers refresh automatically about every 15 minutes while the API runs, plus
+on connection and manual sync. The rolling import window is 30 days back and 180 ahead.
+Course codes and existing course names group imported tasks. Assessment and deadline
+keywords create assessments or tasks; other events remain calendar commitments and
+never count as study time. Date-only deadlines last through their local day.
+Provider event identity prevents repeat imports; matching courses and tasks are reused.
+Changes update untouched imported fields, preserving manual edits, completions and
+user deletions. Removed events cancel commitments and archive untouched imported work.
+Disconnecting stops refreshes and keeps imported data. Connection controls live in
+Settings > Calendar, with a link from Calendar. No extra onboarding step is introduced.
+
+## 2026-10-21: Keep navigation during onboarding
+
+The simplified first dashboard only reduces dashboard content and session prompts.
+The full top bar, mobile navigation, streak and Achievements entry remain visible,
+respecting the user's individual page visibility settings. Users can explore planning,
+calendars, progress and future social features without first switching dashboard modes.
+The dashboard action now says "Show full dashboard"; its setting is "Simplify the
+dashboard" in Settings > Pages > Dashboard. No new social feature is added here.
+
+## 2026-10-21: Local test accounts and a public landing page
+
+Signed-out visitors now land on a public page describing coursework, calendars, timers
+and progress. Create an account opens signup; Sign in opens login. Signed-in visitors
+still enter their dashboard at the home URL. /welcome provides a landing-page preview.
+Copy describes the available features directly, without a narrated product tour.
+The localhost password sandbox seeds onboarding@komodon.test and admin@komodon.test.
+Sign-in shows their credentials and actions only when this test mode is enabled.
+Reset onboarding clears that account only. Test accounts and configured admins are
+excluded from the leaderboard; their personal study records remain usable for tests.
+Local test mode requires an isolated sandbox database and a loopback listener outside
+production. Requests for test accounts also check loopback IP, hostname and origin.
+Normal hosted signup cannot create the reserved test identities.
+
+## 2026-10-21: Landing, email codes and Social
+
+The public landing uses the dashboard's rounded cards, pill navigation and neutral
+surfaces, with no photo background. Cluely supplies the broad centered headline and
+product-preview composition; no assets or marketing claims are copied. Copy names
+the available features directly. The full app navigation remains available after login.
+
+Resend is the initial mail provider on its free plan. The user chose the existing
+komogon.app domain; the default sender is Komodon <noreply@komogon.app>. DNS verification
+and a private API-server RESEND_API_KEY are required before live sending. Emails are
+plain text with a code, purpose and expiry. Local test mode uses a loopback-only inbox
+and never sends real email. Hosted code flows fail clearly if mail is unconfigured.
+
+Password signup creates the account only after email verification. Codes are random,
+keyed hashes at rest, expire after ten minutes, allow five guesses and are redeemed
+atomically once. Resends invalidate prior codes. Database counters limit recipients,
+IPs and total outbound mail. Password reset uses the same mailer and revokes existing
+sessions. Pending signup stores a password hash, never a plaintext password.
+
+Social profiles carry a display name and school/organization label. A separate email
+proof verifies access to the organization domain; it does not change the sign-in email
+or calendar OAuth connection and makes no claim about an official role. Sharing is
+opt-in and limited to people with the exact same verified domain. Directory responses
+exclude private email addresses, study data, test accounts and configured admins.
+Removing or replacing the proof resets sharing. No product tour or modal is introduced.
+
 ## Navigation: top bar by default, sidebar as a choice, 2026-10-21 (user request)
 
 - **Top bar stays the default.** Settings › Pages › Navigation offers **Top bar** or **Sidebar** (`settings.nav.style`, saved on the account). It only changes a computer; phones always use the bottom bar.
@@ -1349,6 +1426,7 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The phone bar shows every page as an icon, and the current one widens into a pill with its name.** This replaced a "More" menu the user didn't like: nothing is hidden, and every page is one tap away. It holds about nine pages before it would need to scroll.
 - **Sign out** is also a labelled button in Settings › Account, beside "Signed in as" (the sidebar has no sign-out icon).
 - Considered and set aside: grouping pages into Today/Plan/Progress tabs, reaching pages only from dashboard cards (the dashboard would get too long), and a "More" menu.
+
 ## Continue with Google, 2026-10-21 (user request)
 
 - **Google sign-in for the API's own accounts**, beside email and password. The portal shows Google's own button (Google Identity Services, popup); it hands back an ID token, and `POST /api/auth/google` checks the signature against Google's published keys, the issuer, and that the token was made for our client id (`GOOGLE_SIGNIN_CLIENT_ID`, a separate env var from the calendar's `GOOGLE_CLIENT_ID`). Only the client id is needed: no secret, no redirect.
@@ -1371,6 +1449,16 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then XP, then the calendar), and the next one takes its place after it is closed.
 - **The streak freeze hint became a regular tip** (user request, same day): it now rotates with the other tips, linking to the shop, instead of being its own card.
 
+## 2026-10-21: Merge onboarding, calendar and Social with the latest main
+
+The user requested a safe merge and push. Incoming Google sign-in, login rate limits,
+top-bar/sidebar navigation, default-hidden Grades and single dashboard tips are retained.
+Social is part of the main navigation in either layout. Google sign-in records Google's
+email proof separately from organization verification and uses the same session version
+as password sign-in, so password reset revokes sessions from both methods. Reserved local
+test identities remain blocked from hosted signup and Google sign-in. Migrations 0014–0016
+are additive; existing study records are preserved. Resend still requires a verified
+komogon.app domain and private server key before hosted password signup can send codes.
 ## Sidebar sign out, top bar words, Navigation in Appearance, and the lost blur, 2026-10-21 (user request)
 
 - **The sidebar has a Sign out row** under Settings, above the pin: the icon while slim, the label once it opens. It asks first, like the top bar's icon.
@@ -1401,6 +1489,16 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The sidebar trophy is 16px, not 15px**, so it lands on whole pixels inside the 44px cell and the ring; at 15px its half-pixel left edge read as a shift to the right.
 - **The same fields in Settings › Account** (user request, same day): picture, name, university and the line about you are one component, `components/ProfileFields.tsx`, used by the gear dialog (name and bio save on Save) and by Settings › Account (each saves as you leave it). Account search also answers "picture", "university", "verify" and "bio".
 
+## Card rail shadows, 2026-10-21 (user request)
+
+- **The dashboard card rail no longer clips card shadows.** The rail scrolls sideways, and a scroller clips anything past its padding box; its 6px of room was less than the glass shadow (about 12px out at the sides, 36px down on the dark theme), so cards showed a hard edge at the right and bottom. The track now keeps 14px at the sides and 40px below, pulled back with matching negative margins so nothing else moves.
+
+## Scrolling tabs and the bottom bar on a crowded top bar, 2026-10-21 (user request)
+
+- **The top bar's tabs scroll again when they do not fit**, with the faded edge and an arrow on each side that hides a tab, as before the sidebar arrived. The current tab is kept in view, also when the streak and level counters load and take some of the room.
+- **A top bar too small for a scrolling row hands the pages to the bottom bar.** When the tabs do not fit and have under 480px of room, the pages move to the phone-style icon bar along the bottom (centred, no wider than 560px) and the top bar keeps only the brand, counters and controls. The width the tabs need is remembered so the bar knows when there is room again. The bottom bar's rules key off a data-tabbar attribute set by AppShell (phones, or a crowded bar) instead of a media query alone.
+- **Fix (same day):** once the bottom bar had shown, it stayed for good. The spacer that keeps the controls to the right fills the bar while the tabs are hidden, and the room measurement counted its width as a control, so the tabs never seemed to fit again. The spacer now counts as zero width.
+
 ## The page stays put when the sidebar is pinned or collapsed, 2026-10-21 (user request)
 
 - **Pinning and collapsing no longer move the page.** Pinning used to widen the page's left margin from the slim rail to the open one, sliding everything over. The page now always keeps room for the open rail, so the two only change the rail itself, and the rail opening on hover never covers the page either. The collapsed rail sits beside a wider margin as a result.
@@ -1425,3 +1523,9 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **After a review, same day**: settings writes now merge in the database (`updateSettings` and the university routes build a `jsonb` merge instead of writing back the copy the request started with), so a bio saved on blur beside a code confirm keeps both. A verified address is never replaced in place: Remove first, then verify another. The verification mail goes out before anything is recorded, so a mail failure (502) costs no cooldown or daily send. The unique-index catch reads drizzle's wrapped error (`cause.code`). The profile dialog seeds its fields only when it opens, not on each refetch.
 - **"Your profile" instead of a Social tab** (user request, same day): the profile link left the page tabs and took the sign-out button's place, at the end of the top bar and as the sidebar's last row (icon: a person; label "Your profile"). Sign out is now a labelled button on your own profile, beside the gear, and in Settings › Account as before. The Settings › Pages toggle is named "Your profile" and only hides the icon.
 - **The nav shows your picture** (user request, same day): the profile link is the person's own picture once one is chosen, the person icon otherwise. It comes from a small `GET /api/me/avatar` (query key `['avatar','me']`, kept ten minutes, refreshed when the picture changes), which Settings › Account now uses too instead of loading the whole profile.
+
+## Two Socials became one, 2026-10-21 (user decision)
+
+- **Origin's main had a second Social** from another session (`social_profiles` with organization verification, a Social page and a people directory), already deployed. The user chose to keep the profile pages from this session. The merge keeps everything else origin added (simplified onboarding, calendar imports, local test accounts, account email verification, the marketing site) and drops only the other Social: its routes, page, API client calls and tests.
+- **Nothing is dropped in the database.** `social_profiles`, `email_codes` and `email_rate_limits` stay (the first is unused; drop it in a later migration once the alpha data is not needed). This session's tables arrive as migration 0017, after origin's 0014 to 0016, so the hosted database applies them cleanly.
+- **One mailer.** The university codes go through origin's `services/mailer.ts` (Resend, or the local inbox with `LOCAL_TEST_ACCOUNTS=true`); this session's console mailer is gone. With no mailer the university route answers 503 instead of printing codes.

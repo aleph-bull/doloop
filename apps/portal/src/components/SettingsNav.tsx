@@ -81,6 +81,10 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       // Layout of each page, starting with the dashboard.
       'layout',
       'dashboard',
+      'focus only',
+      'simple dashboard',
+      'planning',
+      'progress',
       'home',
       'quote',
       'quotes',
@@ -225,7 +229,21 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
   {
     id: 'calendar',
     title: 'Calendar',
-    keywords: ['google calendar', 'sync', 'ics', 'feed', 'busy times', 'planned blocks', 'export'],
+    keywords: [
+      'google calendar',
+      'outlook',
+      'microsoft',
+      'courses',
+      'import',
+      'midterm',
+      'deadline',
+      'sync',
+      'ics',
+      'feed',
+      'busy times',
+      'planned blocks',
+      'export',
+    ],
   },
   {
     id: 'history',

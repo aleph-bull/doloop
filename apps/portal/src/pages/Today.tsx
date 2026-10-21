@@ -12,6 +12,7 @@ import { CardRail } from '../components/CardRail';
 import { DashboardStats } from '../components/DashboardStats';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
+import { FocusDashboard } from '../components/FocusDashboard';
 import { Hint } from '../components/Hint';
 import { NamePrompt } from '../components/NamePrompt';
 import { NodeCard } from '../components/NodeCard';
@@ -39,6 +40,11 @@ const EMPTY_NODES: StudyNode[] = [];
 const EMPTY_PACE: Record<string, NodePace> = {};
 
 export function Today() {
+  const me = useMe();
+  return me.data?.user.settings.dashboard.focusOnly ? <FocusDashboard /> : <FullDashboard />;
+}
+
+function FullDashboard() {
   const me = useMe();
   const nodes = useNodes();
   const pace = usePace();

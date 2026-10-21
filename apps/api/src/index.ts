@@ -6,9 +6,18 @@ import { backPayBadges } from './services/achievements';
 import { createGoogleClient } from './services/google';
 import { createGoogleTokenVerifier } from './services/google-signin';
 import type { CalendarDeps } from './services/calendar-sync';
-import { createConsoleMailer, createResendMailer } from './services/mail';
+import { createOutlookClient } from './services/outlook';
+import { allowLocalTestAccounts } from './services/local-test-accounts';
+import { createLocalMailer, createResendMailer } from './services/mailer';
 
 const env = loadEnv();
+const localTestAccounts = allowLocalTestAccounts({
+  enabled: env.localTestAccounts,
+  host: env.host,
+  databaseUrl: env.databaseUrl,
+  dataDir: env.pgliteDataDir,
+  production: process.env.NODE_ENV === 'production',
+});
 
 let verifier: Verifier;
 if (env.supabaseUrl) {
@@ -61,15 +70,14 @@ if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
   );
 }
 
-let mailer;
-if (env.mail.resendApiKey) {
-  mailer = createResendMailer(env.mail.resendApiKey, env.mail.from);
-} else {
-  console.warn('[api] RESEND_API_KEY not set; verification codes are printed here instead.');
-  mailer = createConsoleMailer();
-}
-
 const app = await buildServer({
+  mailer: localTestAccounts
+    ? createLocalMailer()
+    : env.resendApiKey
+      ? createResendMailer(env.resendApiKey, env.mailFrom)
+      : null,
+  requireEmailVerification: true,
+  localTestAccounts,
   db,
   verifier,
   logger: true,
@@ -91,11 +99,23 @@ const app = await buildServer({
       : null,
   calendar: {
     deps: calendarDeps,
-    stateSecret: env.tokenEncryptionKey ?? env.devAuthSecret ?? 'dev-state-secret',
+    outlook:
+      env.outlook.clientId && env.outlook.clientSecret && env.tokenEncryptionKey
+        ? {
+            client: createOutlookClient({
+              ...env.outlook,
+              clientId: env.outlook.clientId,
+              clientSecret: env.outlook.clientSecret,
+            }),
+            encryptionKey: env.tokenEncryptionKey,
+          }
+        : null,
+    autoSync: true,
+    stateSecret:
+      env.tokenEncryptionKey ?? env.authSecret ?? env.devAuthSecret ?? 'dev-state-secret',
     portalUrl: env.portalUrl,
   },
   tmdb: env.tmdb,
-  mailer,
 });
 
 const shutdown = async () => {

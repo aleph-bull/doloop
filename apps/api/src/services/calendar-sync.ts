@@ -1,4 +1,4 @@
-import { and, eq, gte, isNotNull } from 'drizzle-orm';
+import { and, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import {
   googleCalendar,
@@ -91,7 +91,7 @@ export async function disconnect(db: Db, userId: string): Promise<void> {
     .where(and(eq(plannedBlocks.userId, userId), isNotNull(plannedBlocks.googleEventId)));
 }
 
-async function accessTokenFor(
+export async function accessTokenFor(
   db: Db,
   deps: CalendarDeps,
   userId: string,
@@ -380,7 +380,7 @@ export async function importedCommitments(
   return db.query.plannedBlocks.findMany({
     where: and(
       eq(plannedBlocks.userId, userId),
-      eq(plannedBlocks.source, 'google'),
+      inArray(plannedBlocks.source, ['google', 'outlook']),
       eq(plannedBlocks.cancelled, false),
       gte(plannedBlocks.endAt, dt(from)),
     ),

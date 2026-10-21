@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router';
 import { Button, Chip, Toggle, useToast } from '@komogon/ui';
@@ -14,12 +14,14 @@ export function GoogleCalendarSettings() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [params, setParams] = useSearchParams();
+  const handledResult = useRef<string | null>(null);
 
   useEffect(() => {
     const g = params.get('google');
-    if (!g) return;
+    if (!g || handledResult.current === g) return;
+    handledResult.current = g;
     const msg: Record<string, string> = {
-      connected: 'Google Calendar connected. A "Study" calendar was created.',
+      connected: 'Google Calendar connected. Courses and deadlines are imported automatically.',
       denied: 'Google access was not granted.',
       invalid: 'The connection link expired. Try again.',
       failed: 'Connecting to Google failed. Try again.',
@@ -29,6 +31,9 @@ export function GoogleCalendarSettings() {
     params.delete('google');
     setParams(params, { replace: true });
     void qc.invalidateQueries({ queryKey: keys.google });
+    void qc.invalidateQueries({ queryKey: keys.nodes });
+    void qc.invalidateQueries({ queryKey: keys.pace });
+    void qc.invalidateQueries({ queryKey: ['blocks'] });
   }, [params, setParams, toast, qc]);
 
   const s = status.data;
@@ -46,13 +51,16 @@ export function GoogleCalendarSettings() {
       const r = await api.googleSync();
       toast(
         r.status === 'ok'
-          ? `Synced: ${r.pushed} pushed, ${r.pulled} updated, ${r.imported} imported`
+          ? `Synced. ${r.academic?.courses ?? 0} new courses, ${r.academic?.tasks ?? 0} new tasks and assessments. Events are up to date.`
           : r.status === 'revoked'
             ? 'Google access was revoked. Reconnect.'
             : 'Not connected',
       );
       void qc.invalidateQueries({ queryKey: keys.google });
       void qc.invalidateQueries({ queryKey: ['blocks'] });
+      void qc.invalidateQueries({ queryKey: keys.nodes });
+      void qc.invalidateQueries({ queryKey: keys.pace });
+      void qc.invalidateQueries({ queryKey: keys.commitments });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Sync failed');
     }
@@ -63,7 +71,7 @@ export function GoogleCalendarSettings() {
     : !s.available
       ? 'Not configured, so this does not work yet.'
       : !s.connected
-        ? 'Add your planned blocks to a Study calendar in Google, and see when you are busy.'
+        ? 'Import courses, assessments and deadlines from your calendars, and sync planned study blocks back to Google.'
         : s.revoked
           ? 'Access was revoked. Reconnect to resume syncing.'
           : `Connected. ${s.lastSyncAt ? `Last sync ${fmtDate(s.lastSyncAt)} ${fmtTime(s.lastSyncAt)}.` : 'Not synced yet.'}`;

@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { desc, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { sessions, users } from '../db/schema';
 
@@ -21,7 +21,7 @@ export interface LeaderboardEntry {
  * The ten people with the most focused time across all finished sessions. Only the chosen
  * name and the total are shared; someone who hasn't chosen a name shows as "Someone".
  */
-export function leaderboardRoutes(app: FastifyInstance, db: Db) {
+export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[] = []) {
   app.get('/api/leaderboard', async (req) => {
     const focusSeconds = sql<number>`sum(${sessions.workSeconds})::int`;
     const rows = await db
@@ -32,7 +32,20 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db) {
       })
       .from(sessions)
       .innerJoin(users, sql`${users.id} = ${sessions.userId}`)
-      .where(isNotNull(sessions.endedAt))
+      .where(
+        and(
+          isNotNull(sessions.endedAt),
+          eq(users.isTestAccount, false),
+          ...(admins.length
+            ? [
+                notInArray(
+                  sql`lower(${users.email})`,
+                  admins.map((email) => email.trim().toLowerCase()),
+                ),
+              ]
+            : []),
+        ),
+      )
       .groupBy(sessions.userId, users.settings)
       .having(sql`sum(${sessions.workSeconds}) > 0`)
       .orderBy(desc(focusSeconds))

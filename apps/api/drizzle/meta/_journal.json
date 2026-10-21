@@ -103,22 +103,29 @@
     {
       "idx": 14,
       "version": "7",
-      "when": 1792597357418,
-      "tag": "0014_profiles_posts",
+      "when": 1792558757948,
+      "tag": "0014_calendar_course_imports",
       "breakpoints": true
     },
     {
       "idx": 15,
       "version": "7",
-      "when": 1792600237249,
-      "tag": "0015_university_verifications",
+      "when": 1792560533539,
+      "tag": "0015_local_test_accounts",
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "7",
-      "when": 1792606278580,
-      "tag": "0016_university_email_unique",
+      "when": 1792561631679,
+      "tag": "0016_email_verification_social",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792612251624,
+      "tag": "0017_profiles_university",
       "breakpoints": true
     }
   ]

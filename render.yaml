@@ -22,6 +22,12 @@ services:
       # Signs the API's own email-and-password sign-ins; changing it signs everyone out
       - key: AUTH_SECRET
         generateValue: true
+      # Resend sending key; verify komogon.app in Resend before enabling live mail.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        value: Komodon <noreply@komogon.app>
+
       # Render's proxy adds the caller's address to X-Forwarded-For; trust that one entry
       # so the sign-in limits count each caller, not the proxy
       - key: TRUST_PROXY_HOPS
@@ -40,12 +46,6 @@ services:
         sync: false
       # Optional invite list (emails or @domain, comma separated); empty lets anyone sign up
       - key: ALLOWED_EMAILS
-        sync: false
-      # Resend API key, for the university verification codes; without it the codes only
-      # reach the log. MAIL_FROM must be an address on a domain verified in Resend.
-      - key: RESEND_API_KEY
-        sync: false
-      - key: MAIL_FROM
         sync: false
       # Admins: the Admin page (every account, its data, setting a new password)
       - key: ADMIN_EMAILS

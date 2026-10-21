@@ -13,6 +13,7 @@ export interface GoogleEvent {
   id: string;
   status?: 'confirmed' | 'tentative' | 'cancelled';
   summary?: string;
+  description?: string;
   start?: { dateTime?: string; date?: string };
   end?: { dateTime?: string; date?: string };
   updated?: string;
@@ -62,7 +63,7 @@ export interface GoogleCalendarClient {
   listEvents(
     accessToken: string,
     calendarId: string,
-    opts: { syncToken?: string | null; timeMin?: string },
+    opts: { syncToken?: string | null; timeMin?: string; timeMax?: string },
   ): Promise<ListEventsResult>;
   freeBusy(
     accessToken: string,
@@ -107,6 +108,7 @@ export function createGoogleClient(cfg: GoogleConfig): GoogleCalendarClient {
   ): Promise<T> {
     const res = await fetch(url, {
       method,
+      signal: AbortSignal.timeout(30_000),
       headers: {
         authorization: `Bearer ${accessToken}`,
         ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
@@ -124,6 +126,7 @@ export function createGoogleClient(cfg: GoogleConfig): GoogleCalendarClient {
   async function token(params: Record<string, string>): Promise<GoogleTokens> {
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
+      signal: AbortSignal.timeout(30_000),
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: cfg.clientId,
@@ -167,12 +170,20 @@ export function createGoogleClient(cfg: GoogleConfig): GoogleCalendarClient {
     refreshAccessToken: (refreshToken) =>
       token({ refresh_token: refreshToken, grant_type: 'refresh_token' }),
     async listCalendars(at) {
-      const r = await call<{ items?: Array<{ id: string; summary: string }> }>(
-        at,
-        'GET',
-        `${API}/users/me/calendarList`,
-      );
-      return r.items ?? [];
+      const items: Array<{ id: string; summary: string }> = [];
+      let pageToken: string | undefined;
+      do {
+        const q = new URLSearchParams({ maxResults: '250' });
+        if (pageToken) q.set('pageToken', pageToken);
+        const r = await call<{ items?: typeof items; nextPageToken?: string }>(
+          at,
+          'GET',
+          `${API}/users/me/calendarList?${q}`,
+        );
+        items.push(...(r.items ?? []));
+        pageToken = r.nextPageToken;
+      } while (pageToken);
+      return items;
     },
     async createCalendar(at, summary) {
       return call<{ id: string }>(at, 'POST', `${API}/calendars`, { summary });
@@ -216,7 +227,10 @@ export function createGoogleClient(cfg: GoogleConfig): GoogleCalendarClient {
           showDeleted: 'true',
         });
         if (opts.syncToken) q.set('syncToken', opts.syncToken);
-        else if (opts.timeMin) q.set('timeMin', opts.timeMin);
+        else {
+          if (opts.timeMin) q.set('timeMin', opts.timeMin);
+          if (opts.timeMax) q.set('timeMax', opts.timeMax);
+        }
         if (pageToken) q.set('pageToken', pageToken);
         const r = await call<{
           items?: GoogleEvent[];

@@ -20,6 +20,7 @@ import {
   trackers,
   weeklyReviews,
   xpTransactions,
+  socialProfiles,
   type UserRow,
 } from '../db/schema';
 import { iso, toNode, toPlannedBlock, toSession } from './sessions-mapper';
@@ -57,6 +58,9 @@ export async function exportUserData(db: Db, user: UserRow) {
     db.query.streakEvents.findMany({ where: eq(streakEvents.userId, user.id) }),
   ]);
   const more = {
+    socialProfile: await db.query.socialProfiles
+      .findFirst({ where: eq(socialProfiles.userId, user.id) })
+      .then((row) => (row ? plain(row) : null)),
     routines: rt.map(plain),
     routineCompletions: rc.map(plain),
     trackers: tr.map(plain),
