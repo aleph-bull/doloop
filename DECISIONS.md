@@ -1670,3 +1670,7 @@ The owner sent a sketch of the video: the time of day top left, the screen top r
 - **Audio sharing:** one paragraph: "The visualizer needs to hear your music. Share a tab, window or your screen, and tick share audio in the browser's picker. We don't record anything, and it's optional."
 - **Delete time:** "You'd have stopped at 3:10 AM." / "That's 1 h of focus, 10 min of breaks gone, and 120 XP off (25 left)." The achievements note and the "Time comes off the end…" hint were removed at the owner's request.
 - **Session history:** "Finished sessions show up here." / "Left one running? Delete time trims the end, and the XP that came with it."
+
+## Admins on the leaderboard, 2026-10-21 (user request)
+
+The owner (zachzhao2015@gmail.com, the only `ADMIN_EMAILS` entry on Render) wasn't on either leaderboard: the earlier rule left configured admins off it along with test accounts. They asked to be on it. Admins are now ranked like anyone else on both boards and in `/api/leaderboard/stats`; test accounts (`is_test_account`, which both seeded local accounts carry) stay off. `leaderboardRoutes` no longer takes the admin list.
