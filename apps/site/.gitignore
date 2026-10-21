@@ -1,0 +1,5 @@
+node_modules
+dist
+# Source mockups (PSDs) and reference screenshots are kept out of git; see README.
+design/mockups
+design/*.png
