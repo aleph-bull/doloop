@@ -162,8 +162,10 @@ export function Profile() {
               <p className="rc-tile-note">
                 {days === 0
                   ? 'The last six months. Each day with a session lights up a square.'
-                  : `The last six months. ${days} active ${days === 1 ? 'day' : 'days'}${
-                      heatmap.longestRun >= 2 ? `, a longest run of ${heatmap.longestRun}` : ''
+                  : `${days} active ${days === 1 ? 'day' : 'days'} in the last six months${
+                      heatmap.longestRun >= 2
+                        ? `, with a longest streak of ${heatmap.longestRun}`
+                        : ''
                     }.`}
               </p>
             </div>
