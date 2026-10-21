@@ -53,6 +53,8 @@ export const keys = {
   plan: (id: string) => ['plans', id] as const,
   profile: (id: string) => ['profiles', id] as const,
   university: ['me', 'university'] as const,
+  // Not under ['me']: a settings change should not refetch the picture.
+  avatar: ['avatar', 'me'] as const,
 };
 
 export function useMe() {
@@ -400,6 +402,11 @@ export function useProfile(id: string) {
     queryFn: () => api.profile(id),
     staleTime: 30_000,
   });
+}
+
+/** Your own picture as a data URL, or null. Changes only when the picture is changed. */
+export function useAvatar() {
+  return useQuery({ queryKey: keys.avatar, queryFn: api.avatar, staleTime: 10 * 60_000 });
 }
 
 export function useUniversityStatus(enabled = true) {

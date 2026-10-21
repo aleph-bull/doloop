@@ -6,17 +6,15 @@ import {
   CalendarDays,
   GraduationCap,
   Settings as SettingsIcon,
-  Trash2,
   Trophy,
 } from 'lucide-react';
-import { Button, Columns, Heatmap, Panel, Spinner, Textarea, useToast } from '@komogon/ui';
+import { Button, Columns, Heatmap, Panel, Spinner } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { ProfileSettingsDialog } from '../components/ProfileSettingsDialog';
-import { ApiError, type Post, type PublicProfile } from '../lib/api';
+import { SignOutButton } from '../components/SignOutButton';
+import { ApiError, type PublicProfile } from '../lib/api';
 import { fmtDate, fmtHours } from '../lib/format';
-import { useCreatePost, useDeletePost, useProfile } from '../lib/queries';
-
-export const POST_MAX_LENGTH = 500;
+import { useProfile } from '../lib/queries';
 
 /** The picture, or the first letter of the name on a tint of the accent. */
 export function Avatar({
@@ -39,18 +37,6 @@ function joined(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(
     new Date(iso),
   );
-}
-
-function posted(iso: string): string {
-  const d = new Date(iso);
-  const thisYear = d.getFullYear() === new Date().getFullYear();
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...(thisYear ? {} : { year: 'numeric' }),
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(d);
 }
 
 /** Name, picture, university and a line about them, with the gear on your own. */
@@ -79,16 +65,18 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
         </div>
       </div>
       {profile.you ? (
-        <Button
-          icon
-          variant="ghost"
-          className="profile-gear"
-          aria-label="Profile settings"
-          title="Profile settings"
-          onClick={onSettings}
-        >
-          <SettingsIcon size={18} aria-hidden />
-        </Button>
+        <div className="profile-actions">
+          <Button
+            icon
+            variant="ghost"
+            aria-label="Profile settings"
+            title="Profile settings"
+            onClick={onSettings}
+          >
+            <SettingsIcon size={18} aria-hidden />
+          </Button>
+          <SignOutButton labelled />
+        </div>
       ) : (
         <Link to="/social" className="btn btn-ghost btn-sm profile-gear">
           <ArrowLeft size={15} aria-hidden />
@@ -105,93 +93,9 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
   );
 }
 
-/** Write a short note for your profile. */
-function Composer() {
-  const create = useCreatePost();
-  const { toast } = useToast();
-  const [body, setBody] = useState('');
-  const trimmed = body.trim();
-  const submit = async () => {
-    if (!trimmed) return;
-    try {
-      await create.mutateAsync(trimmed);
-      setBody('');
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not post');
-    }
-  };
-  return (
-    <form
-      className="profile-composer"
-      onSubmit={(e) => {
-        e.preventDefault();
-        void submit();
-      }}
-    >
-      <Textarea
-        aria-label="New post"
-        placeholder="How is studying going?"
-        rows={3}
-        maxLength={POST_MAX_LENGTH}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        onKeyDown={(e) => {
-          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') void submit();
-        }}
-      />
-      <div className="profile-composer-foot">
-        <span className="field-hint">
-          {body.length > POST_MAX_LENGTH - 80
-            ? `${POST_MAX_LENGTH - body.length} characters left.`
-            : 'Anyone signed in to Komodon can read it.'}
-        </span>
-        <Button
-          type="submit"
-          variant="primary"
-          size="sm"
-          disabled={!trimmed}
-          loading={create.isPending}
-        >
-          Post
-        </Button>
-      </div>
-    </form>
-  );
-}
-
-function PostRow({ post, you }: { post: Post; you: boolean }) {
-  const remove = useDeletePost();
-  const { toast } = useToast();
-  return (
-    <li className="profile-post">
-      <div className="profile-post-body">
-        <p>{post.body}</p>
-        <div className="profile-post-when">{posted(post.createdAt)}</div>
-      </div>
-      {you && (
-        <Button
-          icon
-          size="sm"
-          variant="ghost"
-          aria-label="Delete this post"
-          title="Delete this post"
-          loading={remove.isPending}
-          onClick={() =>
-            remove
-              .mutateAsync(post.id)
-              .catch((err) => toast(err instanceof Error ? err.message : 'Could not delete'))
-          }
-        >
-          <Trash2 size={15} aria-hidden />
-        </Button>
-      )}
-    </li>
-  );
-}
-
 /**
- * Someone's page on Komodon: who they are, the days they studied, their totals, and what they
- * have posted. Your own has a gear for the profile settings.
+ * Someone's page on Komodon: who they are, the days they studied and their totals. Posts are
+ * kept in the API for later but not shown for now. Your own has a gear for the profile settings.
  */
 export function Profile() {
   const { id } = useParams();
@@ -207,7 +111,7 @@ export function Profile() {
       </div>
     );
 
-  const { profile, stats, heatmap, weekday, posts } = q.data;
+  const { profile, stats, heatmap, weekday } = q.data;
   const you = profile.you;
   const days = heatmap.activeDays;
   const studied = stats.totalMinutes > 0;
@@ -250,88 +154,79 @@ export function Profile() {
     <div className="flex flex-col gap-6">
       <Head profile={profile} onSettings={() => setSettingsOpen(true)} />
 
-      <Panel as="section" className="rc-tile" aria-label="Days studied">
-        <div className="rc-tile-head">
-          <h2 className="rc-tile-title">Days studied</h2>
-          <p className="rc-tile-note">
-            {days === 0
-              ? 'The last six months. Each day with a session lights up a square.'
-              : `The last six months. ${days} active ${days === 1 ? 'day' : 'days'}${
-                  heatmap.longestRun >= 2 ? `, a longest run of ${heatmap.longestRun}` : ''
-                }.`}
-          </p>
-        </div>
-        <div className="profile-grid">
-          <Heatmap
-            weeks={heatmap.weeks}
-            monthLabels={spacedLabels(heatmap.monthLabels)}
-            thresholds={heatmap.thresholds}
-            ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
-          />
-        </div>
-      </Panel>
-
-      <Panel as="section" className="rc-tile" aria-label="Totals">
-        <div className="rc-tile-head">
-          <h2 className="rc-tile-title">Totals</h2>
-          {stats.level > 0 && (
-            <p className="rc-tile-note profile-level">
-              <Trophy size={13} aria-hidden />
-              Level {stats.level}
-            </p>
+      <Panel as="section" className="rc-tile" aria-label="Study">
+        <div className="profile-study">
+          <div className="profile-study-col">
+            <div className="rc-tile-head">
+              <h2 className="rc-tile-title">Days studied</h2>
+              <p className="rc-tile-note">
+                {days === 0
+                  ? 'The last six months. Each day with a session lights up a square.'
+                  : `The last six months. ${days} active ${days === 1 ? 'day' : 'days'}${
+                      heatmap.longestRun >= 2 ? `, a longest run of ${heatmap.longestRun}` : ''
+                    }.`}
+              </p>
+            </div>
+            <div className="profile-grid">
+              <Heatmap
+                weeks={heatmap.weeks}
+                monthLabels={spacedLabels(heatmap.monthLabels)}
+                thresholds={heatmap.thresholds}
+                ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
+              />
+            </div>
+          </div>
+          {weekday.totalMinutes > 0 && (
+            <div className="profile-study-col">
+              <div className="rc-tile-head">
+                <h2 className="rc-tile-title">Strongest days</h2>
+                {weekday.peak && (
+                  <p className="rc-tile-note">{weekday.peak.label} carries the most.</p>
+                )}
+              </div>
+              <Columns
+                bars={weekday.buckets.map((b) => ({
+                  label: b.label.slice(0, 3),
+                  value: b.minutes,
+                  highlight: b.label === weekday.peak?.label,
+                }))}
+                fmt={fmtHours}
+                columnName="Day"
+                ariaLabel="Study time by day of the week"
+              />
+            </div>
           )}
         </div>
-        {totals.length === 0 ? (
-          <p className="muted text-sm">
-            {you ? 'Your first session will start the count.' : 'No sessions yet.'}
-          </p>
-        ) : (
-          <dl className="days-panel-stats">
-            {totals.map((t) => (
-              <div key={t.label}>
-                <dt>{t.label}</dt>
-                <dd className="tabular">
-                  {t.value}
-                  <small>{t.unit}</small>
-                </dd>
-                {t.note && <dd className="profile-stat-note">{t.note}</dd>}
-              </div>
-            ))}
-          </dl>
-        )}
-        {weekday.totalMinutes > 0 && (
-          <div className="profile-weekday">
-            <h3 className="text-sm font-medium">Strongest days</h3>
-            <Columns
-              bars={weekday.buckets.map((b) => ({
-                label: b.label.slice(0, 3),
-                value: b.minutes,
-                highlight: b.label === weekday.peak?.label,
-              }))}
-              fmt={fmtHours}
-              columnName="Day"
-              ariaLabel="Study time by day of the week"
-            />
-          </div>
-        )}
-      </Panel>
 
-      <Panel as="section" className="rc-tile" aria-label="Posts">
-        <div className="rc-tile-head">
-          <h2 className="rc-tile-title">Posts</h2>
+        <div className="profile-totals">
+          <div className="rc-tile-head">
+            <h2 className="rc-tile-title">Totals</h2>
+            {stats.level > 0 && (
+              <p className="rc-tile-note profile-level">
+                <Trophy size={13} aria-hidden />
+                Level {stats.level}
+              </p>
+            )}
+          </div>
+          {totals.length === 0 ? (
+            <p className="muted text-sm">
+              {you ? 'Your first session will start the count.' : 'No sessions yet.'}
+            </p>
+          ) : (
+            <dl className="days-panel-stats">
+              {totals.map((t) => (
+                <div key={t.label}>
+                  <dt>{t.label}</dt>
+                  <dd className="tabular">
+                    {t.value}
+                    <small>{t.unit}</small>
+                  </dd>
+                  {t.note && <dd className="profile-stat-note">{t.note}</dd>}
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
-        {you && <Composer />}
-        {posts.length === 0 ? (
-          <p className="muted text-sm">
-            {you ? 'Nothing posted yet.' : `${profile.name} has not posted yet.`}
-          </p>
-        ) : (
-          <ul className="profile-posts">
-            {posts.map((p) => (
-              <PostRow key={p.id} post={p} you={you} />
-            ))}
-          </ul>
-        )}
       </Panel>
 
       {you && (

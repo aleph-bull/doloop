@@ -204,22 +204,25 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
 }
 
 export async function updateSettings(db: Db, row: UserRow, patch: SettingsPatch): Promise<UserRow> {
-  const current = row.settings ?? {};
-  const merged: Record<string, unknown> = { ...current };
+  // The merge happens in the database, against the row as it is at that moment, so two
+  // writes landing together (a bio saved on blur beside a university confirm, say) both
+  // keep: each adds its own keys rather than writing back the copy it started with.
+  let merged = sql`${users.settings}`;
   for (const [k, v] of Object.entries(patch)) {
     if (v === undefined) continue;
+    const json = JSON.stringify(v);
     // A group of settings merges field by field, so a patch of one field leaves its
-    // siblings alone. An array or a scalar replaces outright: spreading an array into an
+    // siblings alone. An array or a scalar replaces outright: merging an array into an
     // object would store {"0": "..."} instead of a list, and there is no sensible way to
     // "merge" two lists of dismissed prompts other than taking the newer one.
-    merged[k] =
+    merged =
       v && typeof v === 'object' && !Array.isArray(v)
-        ? { ...((current as Record<string, unknown>)[k] as object), ...v }
-        : v;
+        ? sql`${merged} || jsonb_build_object(${k}::text, coalesce(${users.settings} -> ${k}::text, '{}'::jsonb) || ${json}::jsonb)`
+        : sql`${merged} || jsonb_build_object(${k}::text, ${json}::jsonb)`;
   }
   const [updated] = await db
     .update(users)
-    .set({ settings: merged as Partial<UserSettings> })
+    .set({ settings: merged })
     .where(eq(users.id, row.id))
     .returning();
   return updated!;

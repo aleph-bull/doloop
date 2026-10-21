@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button, Modal, useToast } from '@komogon/ui';
 import type { PublicProfile } from '../lib/api';
 import { useUpdateSettings } from '../lib/queries';
@@ -22,11 +22,18 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
   const [bio, setBio] = useState('');
 
   // Start from what the profile shows each time it opens, so a cancelled edit leaves no trace.
+  // Only on opening: the picture and university fields refetch the profile while the dialog
+  // is up, and that must not wipe a name or bio typed but not yet saved.
+  const latest = useRef(profile);
+  useEffect(() => {
+    latest.current = profile;
+  }, [profile]);
   useEffect(() => {
     if (!open) return;
-    setName(profile.name === 'Someone' ? '' : profile.name);
-    setBio(profile.bio ?? '');
-  }, [open, profile]);
+    const p = latest.current;
+    setName(p.name === 'Someone' ? '' : p.name);
+    setBio(p.bio ?? '');
+  }, [open]);
 
   const save = async () => {
     try {

@@ -76,7 +76,15 @@ export function assetRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     return reply.code(204).send();
   });
 
-  /** The profile picture. Read back through the profile itself (GET /api/profiles/:id). */
+  /** Your own picture, for the nav and the settings form; null when there is none. */
+  app.get('/api/me/avatar', async (req) => {
+    const row = await db.query.userAssets.findFirst({
+      where: and(eq(userAssets.userId, req.user.id), eq(userAssets.kind, 'avatar')),
+    });
+    return { dataUrl: row ? `data:${row.mime};base64,${row.data}` : null };
+  });
+
+  /** The profile picture. Others see it through the profile (GET /api/profiles/:id). */
   app.put('/api/me/avatar', async (req) => {
     const { dataUrl } = z
       .object({ dataUrl: z.string().max(AVATAR_MAX_BYTES * 1.4) })

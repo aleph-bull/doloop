@@ -17,7 +17,7 @@ import {
   Repeat,
   Settings as SettingsIcon,
   Trophy,
-  Users,
+  UserRound,
   WifiOff,
   type LucideIcon,
   Route as RouteIcon,
@@ -27,12 +27,11 @@ import { useAppearance } from '../lib/appearance';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
-import { useMe } from '../lib/queries';
+import { useAvatar, useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
-import { SignOutButton } from './SignOutButton';
 
 /**
  * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
@@ -58,14 +57,6 @@ const links: Array<{
     feature: 'calendar',
   },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn, group: 'main' },
-  {
-    to: '/social',
-    label: 'Social',
-    short: 'Social',
-    icon: Users,
-    group: 'main',
-    feature: 'social',
-  },
   {
     to: '/routines',
     label: 'Routines',
@@ -290,6 +281,10 @@ export function AppShell() {
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
+  // The profile is not a tab: it sits where Sign out used to, at the end of the nav, shown
+  // as the person's picture once they have chosen one.
+  const profileShown = settings?.features?.social !== false;
+  const avatarUrl = useAvatar().data?.dataUrl ?? null;
   const main = shown.filter((l) => l.group === 'main');
   const more = shown.filter((l) => l.group === 'more');
   const sidebar = settings?.nav?.style === 'sidebar';
@@ -542,7 +537,19 @@ export function AppShell() {
               </a>
             )}
             <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
-            <SignOutButton rail />
+            {/* Your profile takes the sign-out row; signing out is on the profile itself. */}
+            {profileShown && (
+              <NavLink to="/social" className="sidenav-link" title="Your profile">
+                <span className="sidenav-icon" aria-hidden>
+                  {avatarUrl ? (
+                    <img className="nav-avatar" src={avatarUrl} alt="" />
+                  ) : (
+                    <UserRound size={19} strokeWidth={1.9} />
+                  )}
+                </span>
+                <span className="sidenav-label">Your profile</span>
+              </NavLink>
+            )}
             <button
               type="button"
               className="sidenav-link"
@@ -665,7 +672,20 @@ export function AppShell() {
           <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden />
           </NavLink>
-          <SignOutButton />
+          {profileShown && (
+            <NavLink
+              to="/social"
+              className="nav-icon"
+              aria-label="Your profile"
+              title="Your profile"
+            >
+              {avatarUrl ? (
+                <img className="nav-avatar" src={avatarUrl} alt="" />
+              ) : (
+                <UserRound size={18} aria-hidden />
+              )}
+            </NavLink>
+          )}
         </div>
       </header>
 

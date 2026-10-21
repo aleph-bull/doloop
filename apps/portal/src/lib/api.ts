@@ -443,6 +443,7 @@ export const api = {
   uploadBackground: (dataUrl: string) =>
     request<{ ok: boolean; bytes: number }>('PUT', '/api/me/background', { dataUrl }),
   deleteBackground: () => request<void>('DELETE', '/api/me/background'),
+  avatar: () => request<{ dataUrl: string | null }>('GET', '/api/me/avatar'),
   uploadAvatar: (dataUrl: string) =>
     request<{ ok: boolean; bytes: number }>('PUT', '/api/me/avatar', { dataUrl }),
   deleteAvatar: () => request<void>('DELETE', '/api/me/avatar'),

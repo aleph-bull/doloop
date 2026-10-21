@@ -52,7 +52,7 @@ import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
-import { keys, useProfile } from '../lib/queries';
+import { keys, useAvatar } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import { useResolvedTheme } from '../lib/appearance';
 import {
@@ -259,7 +259,7 @@ export function Settings() {
   const [name, setName] = useState<string | null>(null);
   const [bio, setBio] = useState<string | null>(null);
   // For the picture, which lives with the profile rather than in settings.
-  const myProfile = useProfile('me');
+  const avatar = useAvatar();
 
   // Links elsewhere in the app point at a group by hash (/settings#rest-days), so honour
   // it on arrival and whenever it changes.
@@ -335,7 +335,7 @@ export function Settings() {
             <Section id="profile" title="Account">
               {/* The same fields as the gear on your profile; each one saves as you leave it. */}
               <ProfileFields
-                avatarUrl={myProfile.data?.profile.avatarUrl ?? null}
+                avatarUrl={avatar.data?.dataUrl ?? null}
                 name={name ?? s.profile.name ?? ''}
                 onNameChange={setName}
                 bio={bio ?? s.profile.bio ?? ''}
@@ -402,8 +402,8 @@ export function Settings() {
               <Toggle
                 checked={s.features.social}
                 onChange={(v) => patch({ features: { social: v } })}
-                label="Social"
-                description="Your profile, with the days you studied and your posts, and other people's."
+                label="Your profile"
+                description="Your profile page, with the days you studied and your totals, and other people's. It sits at the end of the nav."
               />
               {/*
                * Pages holds every setting about what the screens show and how they are laid

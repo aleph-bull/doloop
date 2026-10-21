@@ -44,7 +44,10 @@ function PictureField({ avatarUrl, name }: { avatarUrl: string | null; name: str
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ['profiles'] });
+  const refresh = async () => {
+    await qc.invalidateQueries({ queryKey: ['profiles'] });
+    await qc.invalidateQueries({ queryKey: keys.avatar });
+  };
 
   const choose = async (file: File | undefined) => {
     if (!file) return;
@@ -246,7 +249,7 @@ function UniversityField({ active }: { active: boolean }) {
           id="uni-email"
           type="email"
           autoComplete="email"
-          placeholder="you@mail.utoronto.ca"
+          placeholder="john@university.ca"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           onKeyDown={(e) => {

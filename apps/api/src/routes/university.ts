@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { universityById, universityForEmail } from '@komogon/core';
 import { createHash, randomInt } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull, ne, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { universityVerifications, users, type UserRow } from '../db/schema';
-import { badRequest } from '../errors';
+import { badRequest, HttpError } from '../errors';
 import type { Mailer } from '../services/mail';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
 import { dt } from '../services/sessions-mapper';
@@ -68,6 +68,34 @@ export function universityRoutes(
     };
   };
 
+  /**
+   * Writes profile.university in the database itself, merging into whatever the settings
+   * row holds now, so a settings PATCH landing at the same moment (the Account form saves
+   * the bio on blur) is not overwritten by the copy this request started with.
+   */
+  const setUniversity = (userId: string, universityId: string | null) =>
+    db
+      .update(users)
+      .set({
+        settings: sql`${users.settings} || jsonb_build_object(
+          'profile',
+          coalesce(${users.settings} -> 'profile', '{}'::jsonb)
+            || jsonb_build_object('university', ${universityId}::text)
+        )`,
+      })
+      .where(eq(users.id, userId));
+
+  /** Whether another account has already verified this address. One address, one account. */
+  const takenByAnother = async (email: string, userId: string) =>
+    !!(await db.query.universityVerifications.findFirst({
+      where: and(
+        eq(universityVerifications.email, email),
+        isNotNull(universityVerifications.verifiedAt),
+        ne(universityVerifications.userId, userId),
+      ),
+      columns: { userId: true },
+    }));
+
   app.get('/api/me/university', async (req) => status(req.user));
 
   app.post('/api/me/university/send', async (req) => {
@@ -83,10 +111,17 @@ export function universityRoutes(
     const existing = await db.query.universityVerifications.findFirst({
       where: eq(universityVerifications.userId, req.user.id),
     });
-    if (existing && !existing.verifiedAt && now - existing.createdAt.getTime() < RESEND_AFTER_MS)
+    // A verified row is the proof behind the university on the profile; it is never
+    // overwritten by a new attempt. Remove first, then verify another address.
+    if (existing?.verifiedAt)
+      throw badRequest(
+        'Your university is already verified. Remove it first to use another address.',
+      );
+    if (existing && now - existing.createdAt.getTime() < RESEND_AFTER_MS)
       throw badRequest('A code was just sent. Give it a minute before asking for another.');
+    if (await takenByAnother(email, req.user.id))
+      throw badRequest('That address is already on another account.');
     checkLimits([[sends, req.user.id]]);
-    sends.hit(req.user.id);
 
     const code = newCode();
     const values = {
@@ -99,15 +134,26 @@ export function universityRoutes(
       verifiedAt: null,
       createdAt: new Date(now),
     };
+    // The mail goes first: a code that never left should cost nothing, so the next try
+    // is not met by the cooldown or the daily count.
+    try {
+      await mailer.send({
+        to: email,
+        subject: `${code} is your Komodon code`,
+        text: `Enter this code in Komodon to put ${uni.name} on your profile: ${code}\n\nIt works for 15 minutes. If you didn't ask for it, you can ignore this email.`,
+      });
+    } catch (err) {
+      req.log.error(err, 'verification mail failed');
+      throw new HttpError(
+        502,
+        'The code could not be sent right now. Please try again in a moment.',
+      );
+    }
+    sends.hit(req.user.id);
     await db
       .insert(universityVerifications)
       .values(values)
       .onConflictDoUpdate({ target: universityVerifications.userId, set: values });
-    await mailer.send({
-      to: email,
-      subject: `${code} is your Komodon code`,
-      text: `Enter this code in Komodon to put ${uni.name} on your profile: ${code}\n\nIt works for 15 minutes. If you didn't ask for it, you can ignore this email.`,
-    });
     return {
       university: { id: uni.id, name: uni.name },
       email,
@@ -142,13 +188,23 @@ export function universityRoutes(
           : 'That code is not right, and it has now expired. Ask for a new one.',
       );
     }
-    await db
-      .update(universityVerifications)
-      .set({ verifiedAt: dt(clock()), codeHash: '' })
-      .where(eq(universityVerifications.userId, req.user.id));
-    const settings = { ...(req.user.settings ?? {}) } as Record<string, unknown>;
-    settings.profile = { ...((settings.profile as object) ?? {}), university: v.universityId };
-    await db.update(users).set({ settings }).where(eq(users.id, req.user.id));
+    // Checked again here: two accounts could have asked for codes to the same address.
+    if (await takenByAnother(v.email, req.user.id))
+      throw badRequest('That address is already on another account.');
+    try {
+      await db
+        .update(universityVerifications)
+        .set({ verifiedAt: dt(clock()), codeHash: '' })
+        .where(eq(universityVerifications.userId, req.user.id));
+    } catch (err) {
+      // The unique index caught a confirm that landed in the same instant. drizzle wraps
+      // the driver's error, so the Postgres code is on the cause.
+      const e = err as { code?: string; cause?: { code?: string } };
+      if (e.code === '23505' || e.cause?.code === '23505')
+        throw badRequest('That address is already on another account.');
+      throw err;
+    }
+    await setUniversity(req.user.id, v.universityId);
     const uni = universityById(v.universityId)!;
     return { university: { id: uni.id, name: uni.name }, email: v.email };
   });
@@ -156,9 +212,7 @@ export function universityRoutes(
   /** Take the university off the profile (and forget the address and any pending code). */
   app.delete('/api/me/university', async (req, reply) => {
     await db.delete(universityVerifications).where(eq(universityVerifications.userId, req.user.id));
-    const settings = { ...(req.user.settings ?? {}) } as Record<string, unknown>;
-    settings.profile = { ...((settings.profile as object) ?? {}), university: null };
-    await db.update(users).set({ settings }).where(eq(users.id, req.user.id));
+    await setUniversity(req.user.id, null);
     return reply.code(204).send();
   });
 }

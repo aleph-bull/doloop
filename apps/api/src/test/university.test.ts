@@ -7,6 +7,7 @@ import { TEST_SECRET, USER_A, USER_B, type TestApp } from './helpers';
 
 let t: TestApp;
 const sent: Mail[] = [];
+let mailDown = false;
 const lastCode = () => sent[sent.length - 1]!.subject.match(/^(\d{6}) /)![1]!;
 
 beforeAll(async () => {
@@ -16,7 +17,12 @@ beforeAll(async () => {
     db,
     verifier: createHsVerifier(TEST_SECRET),
     clock: () => clock.now,
-    mailer: { send: async (m) => void sent.push(m) },
+    mailer: {
+      send: async (m) => {
+        if (mailDown) throw new Error('mail is down');
+        sent.push(m);
+      },
+    },
   });
   await app.ready();
   const tokenA = await signDevToken(TEST_SECRET, USER_A);
@@ -150,6 +156,85 @@ describe('university verification', () => {
     });
     expect(late.statusCode).toBe(400);
     expect(late.json().error).toContain('expired');
+  });
+
+  it('lets one address verify only one account', async () => {
+    tick(60_000);
+    // Ada is verified with U of T from above; a verified address is never replaced in place.
+    await t.api({ method: 'DELETE', url: '/api/me/university' });
+    await t.api({
+      method: 'POST',
+      url: '/api/me/university/send',
+      payload: { email: 'shared@queensu.ca' },
+    });
+    await t.api({
+      method: 'POST',
+      url: '/api/me/university/confirm',
+      payload: { code: lastCode() },
+    });
+    const other = await t.api({
+      method: 'POST',
+      url: '/api/me/university/send',
+      token: t.tokenB,
+      payload: { email: 'Shared@QueensU.ca' },
+    });
+    expect(other.statusCode).toBe(400);
+    expect(other.json().error).toContain('already on another account');
+  });
+
+  it('keeps a verified address until it is removed', async () => {
+    tick(60_000);
+    const res = await t.api({
+      method: 'POST',
+      url: '/api/me/university/send',
+      payload: { email: 'ada@uwaterloo.ca' },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain('Remove it first');
+    const status = (await t.api({ method: 'GET', url: '/api/me/university' })).json();
+    expect(status).toMatchObject({ university: { id: 'queens' }, email: 'shared@queensu.ca' });
+  });
+
+  it('records nothing when the mail cannot be sent, so the next try is not blocked', async () => {
+    tick(60_000);
+    mailDown = true;
+    const down = await t.api({
+      method: 'POST',
+      url: '/api/me/university/send',
+      token: t.tokenB,
+      payload: { email: 'ben@uottawa.ca' },
+    });
+    expect(down.statusCode).toBe(502);
+    mailDown = false;
+    const retry = await t.api({
+      method: 'POST',
+      url: '/api/me/university/send',
+      token: t.tokenB,
+      payload: { email: 'ben@uottawa.ca' },
+    });
+    expect(retry.statusCode).toBe(200);
+  });
+
+  it('a settings change landing beside confirm is not lost', async () => {
+    // Ben confirms the uOttawa code while a bio PATCH goes through: both must land.
+    const [patch, confirm] = await Promise.all([
+      t.api({
+        method: 'PATCH',
+        url: '/api/me/settings',
+        token: t.tokenB,
+        payload: { profile: { bio: 'Kept.' } },
+      }),
+      t.api({
+        method: 'POST',
+        url: '/api/me/university/confirm',
+        token: t.tokenB,
+        payload: { code: lastCode() },
+      }),
+    ]);
+    expect(patch.statusCode).toBe(200);
+    expect(confirm.statusCode).toBe(200);
+    const me = (await t.api({ method: 'GET', url: '/api/me', token: t.tokenB })).json();
+    expect(me.user.settings.profile).toMatchObject({ bio: 'Kept.', university: 'ottawa' });
   });
 
   it('removes the university and forgets the address', async () => {

@@ -100,6 +100,9 @@ describe('profiles', () => {
     expect(up.statusCode).toBe(200);
     let prof = (await t.api({ method: 'GET', url: '/api/profiles/me' })).json();
     expect(prof.profile.avatarUrl).toBe(PNG);
+    expect((await t.api({ method: 'GET', url: '/api/me/avatar' })).json()).toEqual({
+      dataUrl: PNG,
+    });
     // Others see it too.
     const seen = (
       await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })
@@ -110,6 +113,9 @@ describe('profiles', () => {
     expect(gone.statusCode).toBe(204);
     prof = (await t.api({ method: 'GET', url: '/api/profiles/me' })).json();
     expect(prof.profile.avatarUrl).toBeNull();
+    expect((await t.api({ method: 'GET', url: '/api/me/avatar' })).json()).toEqual({
+      dataUrl: null,
+    });
 
     const bad = await t.api({
       method: 'PUT',
