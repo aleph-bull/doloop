@@ -52,6 +52,11 @@ export interface Env {
    * or a v3 API key. Without either, the equivalents fall back to listed runtimes and icons.
    */
   tmdb: { readToken: string | undefined; apiKey: string | undefined };
+  /**
+   * Resend, for the university verification codes. Without a key the codes are printed to
+   * the API's log instead (fine locally, useless hosted).
+   */
+  mail: { resendApiKey: string | undefined; from: string };
 }
 
 export function loadEnv(): Env {
@@ -89,5 +94,9 @@ export function loadEnv(): Env {
     tokenEncryptionKey: str('TOKEN_ENCRYPTION_KEY'),
     portalUrl: str('PORTAL_URL', 'http://localhost:5173')!,
     tmdb: { readToken: str('TMDB_READ_TOKEN'), apiKey: str('TMDB_API_KEY') },
+    mail: {
+      resendApiKey: str('RESEND_API_KEY'),
+      from: str('MAIL_FROM', 'Komodon <no-reply@komogon.app>')!,
+    },
   };
 }

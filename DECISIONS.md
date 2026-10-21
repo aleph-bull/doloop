@@ -1378,18 +1378,25 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **Top bar or sidebar is chosen in Settings › Appearance › Navigation**, moved out of Pages. It is the one layout setting outside Pages, because the owner sees it as part of the look.
 - **The hosted site had no backdrop blur at all.** The source wrote -webkit-backdrop-filter beside backdrop-filter; the production CSS pass (Lightning CSS, through Tailwind's Vite plugin) kept only the prefixed one, and Chrome no longer understands the prefix. So glass bars and cards were flat translucent fills, and switching Panels to Matte barely changed the top bar or sidebar. The prefixed lines are gone from the source; the build adds the prefix for Safari itself. The dev server never minified, so sandboxes always looked right.
 
+## Social: a profile page, 2026-10-21 (user request)
+
+- **Social opens your own profile** (`/social`; the top bar, sidebar and phone bar all have it, after Analytics, and Settings › Pages can turn it off). Someone else's is `/social/<user id>`, reached from the leaderboard, whose names now open profiles.
+- **A profile shows** the picture, the chosen name ("Someone" when none), the Ontario university if one was chosen, a line about them, when they joined, then "Days studied" (the last 26 weeks as the same contribution grid Analytics uses), "Totals" (all-time study time, sessions, days studied, streak or best streak, longest session, the last 28 days; only values above zero, so a quiet start is one sentence rather than a row of zeros, in line with the wins-only rule), their strongest weekdays, and their posts.
+- **Anyone signed in can open anyone's profile.** What is on it is only what a person chose to share plus study totals; the email, settings, tasks and sessions themselves never leave the account (`GET /api/profiles/:id` builds the response from the chosen fields and finished sessions). This supersedes the "friends-only by default" note from 2026-10-05 for the alpha, where everyone is a tester; friends and sharing choices stay in `docs/IDEAS.md`.
+- **The gear on your own profile** opens a dialog for the picture (cropped to a square and shrunk to 256px in the browser, stored as a `user_assets` row of kind `avatar`, under 512 KB), the name (the same field as Settings › Account), the university (a fixed list of Ontario's universities in `packages/core/src/universities.ts`, stored as an id in `settings.profile.university`; "Not set" for anyone else) and a line about you (`settings.profile.bio`, up to 280 characters). The picture saves when chosen; the rest on Save.
+- **Posts** are short text notes (up to 500 characters) on your own profile, newest first, with a delete for your own only (`posts` table, migration 0014). No likes, replies or feed: the profile is the whole social layer for now.
+- Universities are limited to Ontario at the user's request; the list is the public universities plus the two French-language ones.
+
+## University verified by email, 2026-10-21 (user request)
+
+- **A university goes on a profile only after a code sent to a university address comes back.** The dialog asks for the address, `POST /api/me/university/send` works out the university from the domain (`universityForEmail` in `packages/core/src/universities.ts`; subdomains count, so `mail.utoronto.ca` is U of T) and emails a six-digit code; `POST /api/me/university/confirm` writes `settings.profile.university` when the code matches. The settings route refuses the field, so nothing else can set it.
+- **Codes** last 15 minutes, allow five wrong tries, can be re-sent after a minute, and at most eight go out per account per day. Only a sha256 of the code is stored, emptied once used (`university_verifications`, migration 0015).
+- **The address stays private.** The owner sees it in the dialog ("Verified with …"); the profile shows the university with a check mark and never the address. Remove takes the university off and forgets the address.
+- **Sending** goes through Resend when `RESEND_API_KEY` is set (`MAIL_FROM` on a domain verified there; both are `sync: false` in `render.yaml`). Without a key the code is printed to the API's log, which is how local copies and sandboxes work. No SMTP dependency: it is one `fetch` to Resend's API (`services/mail.ts`).
+
 ## Nav pill without the spring, sidebar rests shut after Collapse, trophy on whole pixels, 2026-10-21 (user request)
 
 - **The top bar's sliding pill no longer springs.** A long jump (Plans to Dashboard) overshot past the first tab and poked out of the bar. It now uses the plain ease-out over the same 320ms.
 - **After Collapse, the sidebar rests shut until the pointer leaves.** The pointer is still over the sidebar when Collapse is clicked, so hover kept it open as an overlay while the page slid under it, hiding the left of the page. An is-resting class turns hover-opening off until mouseleave.
 - **The sidebar trophy is 16px, not 15px**, so it lands on whole pixels inside the 44px cell and the ring; at 15px its half-pixel left edge read as a shift to the right.
-
-## Card rail shadows, 2026-10-21 (user request)
-
-- **The dashboard card rail no longer clips card shadows.** The rail scrolls sideways, and a scroller clips anything past its padding box; its 6px of room was less than the glass shadow (about 12px out at the sides, 36px down on the dark theme), so cards showed a hard edge at the right and bottom. The track now keeps 14px at the sides and 40px below, pulled back with matching negative margins so nothing else moves.
-
-## Scrolling tabs and the bottom bar on a crowded top bar, 2026-10-21 (user request)
-
-- **The top bar's tabs scroll again when they do not fit**, with the faded edge and an arrow on each side that hides a tab, as before the sidebar arrived. The current tab is kept in view, also when the streak and level counters load and take some of the room.
-- **A top bar too small for a scrolling row hands the pages to the bottom bar.** When the tabs do not fit and have under 480px of room, the pages move to the phone-style icon bar along the bottom (centred, no wider than 560px) and the top bar keeps only the brand, counters and controls. The width the tabs need is remembered so the bar knows when there is room again. The bottom bar's rules key off a data-tabbar attribute set by AppShell (phones, or a crowded bar) instead of a media query alone.
-- **Fix (same day):** once the bottom bar had shown, it stayed for good. The spacer that keeps the controls to the right fills the bar while the tabs are hidden, and the room measurement counted its width as a control, so the tabs never seemed to fit again. The spacer now counts as zero width.
+- **The same fields in Settings › Account** (user request, same day): picture, name, university and the line about you are one component, `components/ProfileFields.tsx`, used by the gear dialog (name and bio save on Save) and by Settings › Account (each saves as you leave it). Account search also answers "picture", "university", "verify" and "bio".

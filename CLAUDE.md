@@ -145,6 +145,16 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 
 ## Recent changes (2026-10-20)
 
+- Social (2026-10-21): `/social` is your own profile (`pages/Profile.tsx`), `/social/:id` someone
+  else's. Picture, name, Ontario university (`settings.profile.university`, ids in
+  `packages/core/src/universities.ts`), bio, the study-days grid, totals and posts (`posts`
+  table). The gear on your own profile opens `ProfileSettingsDialog`; its fields are
+  `ProfileFields`, shared with Settings › Account. Profiles are visible
+  to anyone signed in; the API route (`routes/profiles.ts`) shares only chosen fields and
+  finished-session totals, never the email.
+  The university is set only by `routes/university.ts` after a code emailed to an address
+  on that university's domain comes back; `RESEND_API_KEY` + `MAIL_FROM` send it, and
+  without them the code is printed in the API log (so in a sandbox, read it from the logs).
 - Navigation (2026-10-21): the top bar is the default; Settings › Appearance › Navigation
   can switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card
   row, not the nav). New pages go in the `links` list (`group: 'more'` puts them under the

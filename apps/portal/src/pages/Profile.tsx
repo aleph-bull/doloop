@@ -1,0 +1,379 @@
+import { useState } from 'react';
+import { Link, useParams } from 'react-router';
+import {
+  ArrowLeft,
+  BadgeCheck,
+  CalendarDays,
+  GraduationCap,
+  Settings as SettingsIcon,
+  Trash2,
+  Trophy,
+} from 'lucide-react';
+import { Button, Columns, Heatmap, Panel, Spinner, Textarea, useToast } from '@komogon/ui';
+import { ErrorPanel } from '../components/ErrorState';
+import { ProfileSettingsDialog } from '../components/ProfileSettingsDialog';
+import { ApiError, type Post, type PublicProfile } from '../lib/api';
+import { fmtDate, fmtHours } from '../lib/format';
+import { useCreatePost, useDeletePost, useProfile } from '../lib/queries';
+
+export const POST_MAX_LENGTH = 500;
+
+/** The picture, or the first letter of the name on a tint of the accent. */
+export function Avatar({
+  name,
+  url,
+  size = 'md',
+}: {
+  name: string;
+  url: string | null;
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <span className={`profile-avatar${size === 'sm' ? ' is-sm' : ''}`} aria-hidden>
+      {url ? <img src={url} alt="" /> : name.trim().charAt(0).toUpperCase() || '?'}
+    </span>
+  );
+}
+
+function joined(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(
+    new Date(iso),
+  );
+}
+
+function posted(iso: string): string {
+  const d = new Date(iso);
+  const thisYear = d.getFullYear() === new Date().getFullYear();
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(thisYear ? {} : { year: 'numeric' }),
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(d);
+}
+
+/** Name, picture, university and a line about them, with the gear on your own. */
+function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () => void }) {
+  return (
+    <Panel as="header" className="profile-head">
+      <Avatar name={profile.name} url={profile.avatarUrl} />
+      <div className="profile-id">
+        <h1 className="page-title profile-name">{profile.name}</h1>
+        <div className="pill-row">
+          {profile.university && (
+            <span
+              className="chip chip-neutral profile-chip"
+              title="Verified with a university email address"
+            >
+              <GraduationCap size={13} aria-hidden />
+              {profile.university.name}
+              <BadgeCheck size={13} aria-hidden className="profile-verified" />
+              <span className="sr-only">, verified</span>
+            </span>
+          )}
+          <span className="chip chip-neutral profile-chip">
+            <CalendarDays size={13} aria-hidden />
+            Joined {joined(profile.joinedAt)}
+          </span>
+        </div>
+      </div>
+      {profile.you ? (
+        <Button
+          icon
+          variant="ghost"
+          className="profile-gear"
+          aria-label="Profile settings"
+          title="Profile settings"
+          onClick={onSettings}
+        >
+          <SettingsIcon size={18} aria-hidden />
+        </Button>
+      ) : (
+        <Link to="/social" className="btn btn-ghost btn-sm profile-gear">
+          <ArrowLeft size={15} aria-hidden />
+          Your profile
+        </Link>
+      )}
+      {/* Its own row under the name, so it reads at full width on a phone too. */}
+      {profile.bio && (
+        <p className="profile-bio">
+          <span>{profile.bio}</span>
+        </p>
+      )}
+    </Panel>
+  );
+}
+
+/** Write a short note for your profile. */
+function Composer() {
+  const create = useCreatePost();
+  const { toast } = useToast();
+  const [body, setBody] = useState('');
+  const trimmed = body.trim();
+  const submit = async () => {
+    if (!trimmed) return;
+    try {
+      await create.mutateAsync(trimmed);
+      setBody('');
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not post');
+    }
+  };
+  return (
+    <form
+      className="profile-composer"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+    >
+      <Textarea
+        aria-label="New post"
+        placeholder="How is studying going?"
+        rows={3}
+        maxLength={POST_MAX_LENGTH}
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') void submit();
+        }}
+      />
+      <div className="profile-composer-foot">
+        <span className="field-hint">
+          {body.length > POST_MAX_LENGTH - 80
+            ? `${POST_MAX_LENGTH - body.length} characters left.`
+            : 'Anyone signed in to Komodon can read it.'}
+        </span>
+        <Button
+          type="submit"
+          variant="primary"
+          size="sm"
+          disabled={!trimmed}
+          loading={create.isPending}
+        >
+          Post
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+function PostRow({ post, you }: { post: Post; you: boolean }) {
+  const remove = useDeletePost();
+  const { toast } = useToast();
+  return (
+    <li className="profile-post">
+      <div className="profile-post-body">
+        <p>{post.body}</p>
+        <div className="profile-post-when">{posted(post.createdAt)}</div>
+      </div>
+      {you && (
+        <Button
+          icon
+          size="sm"
+          variant="ghost"
+          aria-label="Delete this post"
+          title="Delete this post"
+          loading={remove.isPending}
+          onClick={() =>
+            remove
+              .mutateAsync(post.id)
+              .catch((err) => toast(err instanceof Error ? err.message : 'Could not delete'))
+          }
+        >
+          <Trash2 size={15} aria-hidden />
+        </Button>
+      )}
+    </li>
+  );
+}
+
+/**
+ * Someone's page on Komodon: who they are, the days they studied, their totals, and what they
+ * have posted. Your own has a gear for the profile settings.
+ */
+export function Profile() {
+  const { id } = useParams();
+  const q = useProfile(id ?? 'me');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  if (q.isError)
+    return <ErrorPanel message={describe(q.error, id ?? 'me')} onRetry={() => q.refetch()} />;
+  if (!q.data)
+    return (
+      <div className="flex justify-center p-12">
+        <Spinner />
+      </div>
+    );
+
+  const { profile, stats, heatmap, weekday, posts } = q.data;
+  const you = profile.you;
+  const days = heatmap.activeDays;
+  const studied = stats.totalMinutes > 0;
+
+  // Only what is there to show: a quiet start is not a row of zeros.
+  const totals: Array<{ label: string; value: number; unit: string; note?: string }> = [];
+  if (studied) {
+    totals.push({ label: 'Studied, all time', ...figure(stats.totalMinutes) });
+    totals.push({
+      label: 'Sessions',
+      value: stats.totalSessions,
+      unit: stats.totalSessions === 1 ? 'session' : 'sessions',
+    });
+    totals.push({
+      label: 'Days studied',
+      value: stats.activeDays,
+      unit: stats.activeDays === 1 ? 'day' : 'days',
+    });
+  }
+  if (stats.streak.current > 0)
+    totals.push({
+      label: 'Streak',
+      value: stats.streak.current,
+      unit: stats.streak.current === 1 ? 'day' : 'days',
+      note:
+        stats.streak.longest > stats.streak.current ? `Best ${stats.streak.longest}` : undefined,
+    });
+  else if (stats.streak.longest > 0)
+    totals.push({
+      label: 'Best streak',
+      value: stats.streak.longest,
+      unit: stats.streak.longest === 1 ? 'day' : 'days',
+    });
+  if (stats.longestSessionMinutes > 0)
+    totals.push({ label: 'Longest session', ...figure(stats.longestSessionMinutes) });
+  if (stats.last28Minutes > 0)
+    totals.push({ label: 'Last 28 days', ...figure(stats.last28Minutes) });
+
+  return (
+    <div className="flex flex-col gap-6">
+      <Head profile={profile} onSettings={() => setSettingsOpen(true)} />
+
+      <Panel as="section" className="rc-tile" aria-label="Days studied">
+        <div className="rc-tile-head">
+          <h2 className="rc-tile-title">Days studied</h2>
+          <p className="rc-tile-note">
+            {days === 0
+              ? 'The last six months. Each day with a session lights up a square.'
+              : `The last six months. ${days} active ${days === 1 ? 'day' : 'days'}${
+                  heatmap.longestRun >= 2 ? `, a longest run of ${heatmap.longestRun}` : ''
+                }.`}
+          </p>
+        </div>
+        <div className="profile-grid">
+          <Heatmap
+            weeks={heatmap.weeks}
+            monthLabels={spacedLabels(heatmap.monthLabels)}
+            thresholds={heatmap.thresholds}
+            ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
+          />
+        </div>
+      </Panel>
+
+      <Panel as="section" className="rc-tile" aria-label="Totals">
+        <div className="rc-tile-head">
+          <h2 className="rc-tile-title">Totals</h2>
+          {stats.level > 0 && (
+            <p className="rc-tile-note profile-level">
+              <Trophy size={13} aria-hidden />
+              Level {stats.level}
+            </p>
+          )}
+        </div>
+        {totals.length === 0 ? (
+          <p className="muted text-sm">
+            {you ? 'Your first session will start the count.' : 'No sessions yet.'}
+          </p>
+        ) : (
+          <dl className="days-panel-stats">
+            {totals.map((t) => (
+              <div key={t.label}>
+                <dt>{t.label}</dt>
+                <dd className="tabular">
+                  {t.value}
+                  <small>{t.unit}</small>
+                </dd>
+                {t.note && <dd className="profile-stat-note">{t.note}</dd>}
+              </div>
+            ))}
+          </dl>
+        )}
+        {weekday.totalMinutes > 0 && (
+          <div className="profile-weekday">
+            <h3 className="text-sm font-medium">Strongest days</h3>
+            <Columns
+              bars={weekday.buckets.map((b) => ({
+                label: b.label.slice(0, 3),
+                value: b.minutes,
+                highlight: b.label === weekday.peak?.label,
+              }))}
+              fmt={fmtHours}
+              columnName="Day"
+              ariaLabel="Study time by day of the week"
+            />
+          </div>
+        )}
+      </Panel>
+
+      <Panel as="section" className="rc-tile" aria-label="Posts">
+        <div className="rc-tile-head">
+          <h2 className="rc-tile-title">Posts</h2>
+        </div>
+        {you && <Composer />}
+        {posts.length === 0 ? (
+          <p className="muted text-sm">
+            {you ? 'Nothing posted yet.' : `${profile.name} has not posted yet.`}
+          </p>
+        ) : (
+          <ul className="profile-posts">
+            {posts.map((p) => (
+              <PostRow key={p.id} post={p} you={you} />
+            ))}
+          </ul>
+        )}
+      </Panel>
+
+      {you && (
+        <ProfileSettingsDialog
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          profile={profile}
+        />
+      )}
+      {stats.bestDay && studied && (
+        <p className="sr-only">Best day {fmtDate(stats.bestDay.date)}.</p>
+      )}
+    </div>
+  );
+}
+
+/** Why a profile didn't load, in words that say what to do. */
+function describe(err: unknown, id: string): string {
+  if (err instanceof ApiError && err.status === 404) {
+    // The API itself has no profile route: a copy started before the Social page existed.
+    if (/route/i.test(err.message) || /not found/i.test(err.message))
+      return 'The API this app is talking to is older than the app and has no profiles yet. Restart it, then try again.';
+    return id === 'me' ? 'Your profile is not ready yet.' : 'There is no profile at this address.';
+  }
+  const detail = err instanceof Error && err.message ? ` (${err.message})` : '';
+  return `Could not load this profile${detail}.`;
+}
+
+/** Month labels at least three columns apart, so a month that starts in the first column does not overlap the next. */
+function spacedLabels(labels: Array<{ column: number; label: string }>) {
+  const out: Array<{ column: number; label: string }> = [];
+  for (const l of labels) {
+    const prev = out[out.length - 1];
+    if (prev && l.column - prev.column < 3) out.pop();
+    out.push(l);
+  }
+  return out;
+}
+
+/** Minutes as a big number with a small unit: "1.5 h", "45 min". */
+function figure(minutes: number): { value: number; unit: string } {
+  if (minutes < 60) return { value: Math.max(1, Math.round(minutes)), unit: 'min' };
+  const h = minutes / 60;
+  return { value: h >= 100 ? Math.round(h) : Math.round(h * 10) / 10, unit: 'h' };
+}

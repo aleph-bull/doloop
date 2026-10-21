@@ -58,6 +58,13 @@ export interface UserSettings {
   profile: {
     /** What the greeting calls you. Asked at onboarding, editable in settings. */
     name: string | null;
+    /**
+     * An Ontario university's id (see ONTARIO_UNIVERSITIES), shown on the profile. Only the
+     * API writes it, after a code sent to an address on that university's domain comes back.
+     */
+    university: string | null;
+    /** A line or two about you, on the profile. */
+    bio: string | null;
   };
   pomodoro: PomodoroConfig;
   review: { mode: ReviewMode };
@@ -237,6 +244,8 @@ export interface UserSettings {
     plans: boolean;
     grades: boolean;
     calendar: boolean;
+    /** The Social page: your profile, and other people's. */
+    social: boolean;
   };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };

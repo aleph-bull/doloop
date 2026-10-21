@@ -84,7 +84,7 @@ export function Onboarding() {
               <h1 className="text-2xl">What should we call you?</h1>
               <Input
                 label="Name"
-                hint="Used to say hello, and shown on the leaderboard."
+                hint="Used to say hello, and shown on your profile and the leaderboard."
                 placeholder="e.g. John"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

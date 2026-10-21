@@ -225,6 +225,52 @@ export interface NodeInput {
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
+/** What anyone signed in can see of an account: see the API's profiles route. */
+export interface PublicProfile {
+  id: string;
+  name: string;
+  university: { id: string; name: string; short?: string } | null;
+  bio: string | null;
+  avatarUrl: string | null;
+  joinedAt: string;
+  you: boolean;
+}
+
+export interface ProfileStats {
+  totalMinutes: number;
+  totalSessions: number;
+  activeDays: number;
+  avgMinutesPerActiveDay: number;
+  longestSessionMinutes: number;
+  bestDay: { date: string; minutes: number } | null;
+  last28Minutes: number;
+  streak: { current: number; longest: number };
+  level: number;
+}
+
+export interface Post {
+  id: string;
+  userId: string;
+  body: string;
+  createdAt: string;
+}
+
+/** Your own university verification, from GET /api/me/university. */
+export interface UniversityStatus {
+  university: { id: string; name: string } | null;
+  /** The address it was verified with; shown to you only. */
+  email: string | null;
+  pending: { email: string; university: { id: string; name: string }; expiresAt: string } | null;
+}
+
+export interface ProfileResponse {
+  profile: PublicProfile;
+  stats: ProfileStats;
+  heatmap: StudyHeatmapData;
+  weekday: RhythmProfile;
+  posts: Post[];
+}
+
 export const api = {
   health: () => request<{ ok: boolean }>('GET', '/api/health'),
   me: () => request<MeResponse>('GET', '/api/me'),
@@ -397,6 +443,29 @@ export const api = {
   uploadBackground: (dataUrl: string) =>
     request<{ ok: boolean; bytes: number }>('PUT', '/api/me/background', { dataUrl }),
   deleteBackground: () => request<void>('DELETE', '/api/me/background'),
+  uploadAvatar: (dataUrl: string) =>
+    request<{ ok: boolean; bytes: number }>('PUT', '/api/me/avatar', { dataUrl }),
+  deleteAvatar: () => request<void>('DELETE', '/api/me/avatar'),
+
+  universityStatus: () => request<UniversityStatus>('GET', '/api/me/university'),
+  sendUniversityCode: (email: string) =>
+    request<{ university: { id: string; name: string }; email: string; expiresAt: string }>(
+      'POST',
+      '/api/me/university/send',
+      { email },
+    ),
+  confirmUniversityCode: (code: string) =>
+    request<{ university: { id: string; name: string }; email: string }>(
+      'POST',
+      '/api/me/university/confirm',
+      { code },
+    ),
+  removeUniversity: () => request<void>('DELETE', '/api/me/university'),
+
+  /** 'me' or a user id. */
+  profile: (id: string) => request<ProfileResponse>('GET', `/api/profiles/${id}`),
+  createPost: (body: string) => request<{ post: Post }>('POST', '/api/profiles/me/posts', { body }),
+  deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 

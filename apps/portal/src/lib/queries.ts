@@ -51,6 +51,8 @@ export const keys = {
   history: ['sessions', 'history'] as const,
   plans: ['plans'] as const,
   plan: (id: string) => ['plans', id] as const,
+  profile: (id: string) => ['profiles', id] as const,
+  university: ['me', 'university'] as const,
 };
 
 export function useMe() {
@@ -391,12 +393,47 @@ function useInvalidate() {
   };
 }
 
+/** A profile: 'me' for your own, or a user id. */
+export function useProfile(id: string) {
+  return useQuery({
+    queryKey: keys.profile(id),
+    queryFn: () => api.profile(id),
+    staleTime: 30_000,
+  });
+}
+
+export function useUniversityStatus(enabled = true) {
+  return useQuery({
+    queryKey: keys.university,
+    queryFn: api.universityStatus,
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
+export function useCreatePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.createPost(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+  });
+}
+
+export function useDeletePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deletePost(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+  });
+}
+
 export function useUpdateSettings() {
   const invalidate = useInvalidate();
   type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
   return useMutation({
     mutationFn: (patch: DeepPartial<UserSettings>) => api.updateSettings(patch),
-    onSuccess: () => invalidate(keys.me, keys.quote, keys.pace, keys.rewards, ['analytics']),
+    onSuccess: () =>
+      invalidate(keys.me, keys.quote, keys.pace, keys.rewards, ['analytics'], ['profiles']),
   });
 }
 

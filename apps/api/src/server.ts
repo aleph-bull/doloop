@@ -25,6 +25,9 @@ import { recapRoutes } from './routes/recap';
 import { passwordAuthRoutes, type PasswordAuthOptions } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { leaderboardRoutes } from './routes/leaderboard';
+import { profileRoutes } from './routes/profiles';
+import { universityRoutes } from './routes/university';
+import { createConsoleMailer, type Mailer } from './services/mail';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 
 export interface BuildOptions {
@@ -55,6 +58,8 @@ export interface BuildOptions {
   tmdb?: TmdbCredentials | null;
   /** Injectable fetch for the TMDB lookups, for tests. */
   tmdbFetch?: FetchLike;
+  /** Sends verification codes; the console when unset. */
+  mailer?: Mailer;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -122,6 +127,8 @@ export async function buildServer(opts: BuildOptions) {
   meRoutes(app, opts.db, clock);
   adminRoutes(app, opts.db, opts.adminEmails ?? []);
   leaderboardRoutes(app, opts.db);
+  profileRoutes(app, opts.db, clock);
+  universityRoutes(app, opts.db, clock, opts.mailer ?? createConsoleMailer());
   nodeRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);

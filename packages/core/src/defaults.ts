@@ -29,7 +29,7 @@ export const POMODORO_DURATION_KEYS = [
 
 /** Default settings for a new user (spec §9). Theme defaults to dark per kickoff decision. */
 export const DEFAULT_SETTINGS: UserSettings = {
-  profile: { name: null },
+  profile: { name: null, university: null, bio: null },
   pomodoro: {
     workMin: 25,
     shortBreakMin: 5,
@@ -123,7 +123,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstShowSpikes: true,
     burstSpikeOpacity: 1,
   },
-  features: { routines: true, plans: true, grades: false, calendar: true },
+  features: { routines: true, plans: true, grades: false, calendar: true, social: true },
   nav: { style: 'top' },
   focusScreen: { openOnStart: 'ask' },
   timelapse: {

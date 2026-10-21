@@ -33,8 +33,8 @@ describe('leaderboard', () => {
     expect(res.statusCode).toBe(200);
     const { entries } = res.json();
     expect(entries).toEqual([
-      { rank: 1, name: 'Someone', focusMinutes: 120, you: false },
-      { rank: 2, name: 'Ada', focusMinutes: 60, you: true },
+      { rank: 1, userId: USER_B.id, name: 'Someone', focusMinutes: 120, you: false },
+      { rank: 2, userId: USER_A.id, name: 'Ada', focusMinutes: 60, you: true },
     ]);
     expect(res.body).not.toContain('@example.com');
   });

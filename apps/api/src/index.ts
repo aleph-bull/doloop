@@ -6,6 +6,7 @@ import { backPayBadges } from './services/achievements';
 import { createGoogleClient } from './services/google';
 import { createGoogleTokenVerifier } from './services/google-signin';
 import type { CalendarDeps } from './services/calendar-sync';
+import { createConsoleMailer, createResendMailer } from './services/mail';
 
 const env = loadEnv();
 
@@ -60,6 +61,14 @@ if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
   );
 }
 
+let mailer;
+if (env.mail.resendApiKey) {
+  mailer = createResendMailer(env.mail.resendApiKey, env.mail.from);
+} else {
+  console.warn('[api] RESEND_API_KEY not set; verification codes are printed here instead.');
+  mailer = createConsoleMailer();
+}
+
 const app = await buildServer({
   db,
   verifier,
@@ -86,6 +95,7 @@ const app = await buildServer({
     portalUrl: env.portalUrl,
   },
   tmdb: env.tmdb,
+  mailer,
 });
 
 const shutdown = async () => {

@@ -165,7 +165,15 @@ export const gradeBand = z.object({
 
 export const settingsSchema = z
   .object({
-    profile: z.object({ name: z.string().trim().max(60).nullable() }).partial(),
+    profile: z
+      .object({
+        name: z.string().trim().max(60).nullable(),
+        // `university` is set only by the verification routes (routes/university.ts);
+        // strict, so sending it is an error rather than silently dropped.
+        bio: z.string().trim().max(280).nullable(),
+      })
+      .partial()
+      .strict(),
     pomodoro: pomodoro.partial(),
     review: z.object({ mode: z.enum(['quick', 'full', 'off']) }).partial(),
     // dayStartChangedAt is the server's to set; a client can only ask for a new hour.
@@ -305,6 +313,7 @@ export const settingsSchema = z
         plans: z.boolean(),
         grades: z.boolean(),
         calendar: z.boolean(),
+        social: z.boolean(),
       })
       .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),

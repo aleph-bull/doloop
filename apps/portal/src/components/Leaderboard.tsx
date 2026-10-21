@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router';
 import { Panel, Spinner } from '@komogon/ui';
 import { apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtHours } from '../lib/format';
 
 interface LeaderboardEntry {
   rank: number;
+  userId: string;
   name: string;
   focusMinutes: number;
   you: boolean;
@@ -35,8 +37,8 @@ export function Leaderboard() {
   return (
     <Panel className="p-5 flex flex-col gap-3">
       <p className="muted text-sm">
-        The ten people with the most focused time so far. Names are the ones each person chose in
-        Settings.
+        The ten people with the most focused time so far. Names are the ones each person chose, and
+        open their profile.
       </p>
       {board.data.length === 0 ? (
         <p>No finished sessions yet. Yours could be the first.</p>
@@ -55,7 +57,12 @@ export function Leaderboard() {
                 <tr key={e.rank} aria-current={e.you ? 'true' : undefined}>
                   <td className="tabular">{e.rank}</td>
                   <td>
-                    {e.name}
+                    <Link
+                      to={e.you ? '/social' : `/social/${e.userId}`}
+                      className="leaderboard-name"
+                    >
+                      {e.name}
+                    </Link>
                     {e.you && <span className="muted"> (you)</span>}
                   </td>
                   <td className="tabular">{fmtHours(e.focusMinutes)}</td>

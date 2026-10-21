@@ -5854,3 +5854,186 @@
 .leaderboard-table tr[aria-current='true'] td {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+/* ---------- profile (Social) ---------- */
+
+.profile-head {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  padding: 24px;
+}
+.profile-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--fg);
+  font-size: 2rem;
+  font-weight: 600;
+  user-select: none;
+}
+.profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.profile-avatar.is-sm {
+  width: 56px;
+  height: 56px;
+  font-size: 1.25rem;
+}
+.profile-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-name {
+  overflow-wrap: anywhere;
+}
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.profile-verified {
+  color: var(--accent);
+}
+.profile-bio {
+  flex: 0 0 100%;
+  width: 100%;
+  box-sizing: border-box;
+  /* Lines up with the name, past the picture. */
+  padding-left: 108px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.profile-bio > span {
+  display: block;
+  max-width: 60ch;
+}
+.profile-gear {
+  flex: none;
+}
+/* A small line under a total ("Best 12"), not another big figure. */
+.days-panel-stats dd.profile-stat-note {
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--fg-subtle);
+}
+.profile-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+/* The grid is wider than a phone; it scrolls sideways rather than squashing. */
+.profile-grid {
+  overflow-x: auto;
+}
+.profile-weekday {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.profile-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.profile-posts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.profile-post {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+.profile-post:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.profile-posts:not(:first-child) .profile-post:first-child {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.profile-post-body {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.profile-post-when {
+  margin-top: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+/* The university field in the dialog: an input and its button on one line. */
+.profile-uni-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.profile-uni-row .input {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+.profile-uni-row .profile-uni-code {
+  flex: 0 1 140px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+}
+.profile-uni-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  font-weight: 500;
+}
+.profile-dialog-avatar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.leaderboard-name {
+  color: inherit;
+}
+.leaderboard-name:hover {
+  text-decoration: underline;
+}
+@media (max-width: 600px) {
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
+    font-size: 1.5rem;
+  }
+  .profile-bio {
+    padding-left: 0;
+  }
+}

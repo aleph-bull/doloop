@@ -17,6 +17,7 @@ import {
   Repeat,
   Settings as SettingsIcon,
   Trophy,
+  Users,
   WifiOff,
   type LucideIcon,
   Route as RouteIcon,
@@ -57,6 +58,14 @@ const links: Array<{
     feature: 'calendar',
   },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn, group: 'main' },
+  {
+    to: '/social',
+    label: 'Social',
+    short: 'Social',
+    icon: Users,
+    group: 'main',
+    feature: 'social',
+  },
   {
     to: '/routines',
     label: 'Routines',

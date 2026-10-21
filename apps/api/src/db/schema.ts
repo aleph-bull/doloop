@@ -259,20 +259,53 @@ export const weeklyReviews = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.weekStart] })],
 );
 
-/** Small per-user binary assets (currently only the custom background image). */
+/** Small per-user binary assets: the custom background image and the profile picture. */
 export const userAssets = pgTable(
   'user_assets',
   {
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    kind: text('kind', { enum: ['background'] }).notNull(),
+    kind: text('kind', { enum: ['background', 'avatar'] }).notNull(),
     mime: text('mime').notNull(),
     data: text('data').notNull(), // base64
     bytes: integer('bytes').notNull(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.kind] })],
+);
+
+/**
+ * One row per account: the university email a code was sent to, and whether it came
+ * back. `settings.profile.university` is written only from a verified row.
+ */
+export const universityVerifications = pgTable('university_verifications', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  universityId: text('university_id').notNull(),
+  /** Lower-cased. */
+  email: text('email').notNull(),
+  /** sha256 of the code; emptied once it is used. */
+  codeHash: text('code_hash').notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  expiresAt: ts('expires_at').notNull(),
+  verifiedAt: ts('verified_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+/** A short note on someone's profile, visible to everyone signed in. */
+export const posts = pgTable(
+  'posts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    body: text('body').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('posts_user_created_idx').on(t.userId, t.createdAt)],
 );
 
 /** User-defined rewards, bought with XP or opened by finishing a task. */
@@ -557,6 +590,8 @@ export const schema = {
   googleCalendar,
   streakEvents,
   userAssets,
+  posts,
+  universityVerifications,
   customRewards,
   routines,
   routineCompletions,

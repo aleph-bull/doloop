@@ -30,6 +30,7 @@ import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
+import { ProfileFields } from '../components/ProfileFields';
 import { SignOutButton } from '../components/SignOutButton';
 import {
   matchSections,
@@ -51,7 +52,7 @@ import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
-import { keys } from '../lib/queries';
+import { keys, useProfile } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import { useResolvedTheme } from '../lib/appearance';
 import {
@@ -256,6 +257,9 @@ export function Settings() {
   const [query, setQuery] = useState('');
   const [activeId, setActiveId] = useState(SETTINGS_SECTIONS[0]!.id);
   const [name, setName] = useState<string | null>(null);
+  const [bio, setBio] = useState<string | null>(null);
+  // For the picture, which lives with the profile rather than in settings.
+  const myProfile = useProfile('me');
 
   // Links elsewhere in the app point at a group by hash (/settings#rest-days), so honour
   // it on arrival and whenever it changes.
@@ -329,17 +333,20 @@ export function Settings() {
             )}
 
             <Section id="profile" title="Account">
-              <Input
-                label="Name"
-                hint="Used to say hello, and shown on the leaderboard."
-                placeholder="e.g. John"
-                maxLength={60}
-                value={name ?? s.profile.name ?? ''}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => {
-                  const next = (name ?? '').trim();
-                  if (name === null || next === (s.profile.name ?? '')) return;
-                  void patch({ profile: { name: next || null } });
+              {/* The same fields as the gear on your profile; each one saves as you leave it. */}
+              <ProfileFields
+                avatarUrl={myProfile.data?.profile.avatarUrl ?? null}
+                name={name ?? s.profile.name ?? ''}
+                onNameChange={setName}
+                bio={bio ?? s.profile.bio ?? ''}
+                onBioChange={setBio}
+                onCommit={() => {
+                  const next: { name?: string | null; bio?: string | null } = {};
+                  if (name !== null && name.trim() !== (s.profile.name ?? ''))
+                    next.name = name.trim() || null;
+                  if (bio !== null && bio.trim() !== (s.profile.bio ?? ''))
+                    next.bio = bio.trim() || null;
+                  if (Object.keys(next).length > 0) void patch({ profile: next });
                 }}
               />
               <Select
@@ -391,6 +398,12 @@ export function Settings() {
                 onChange={(v) => patch({ features: { calendar: v } })}
                 label="Calendar"
                 description="Your week laid out with deadlines and sessions."
+              />
+              <Toggle
+                checked={s.features.social}
+                onChange={(v) => patch({ features: { social: v } })}
+                label="Social"
+                description="Your profile, with the days you studied and your posts, and other people's."
               />
               {/*
                * Pages holds every setting about what the screens show and how they are laid

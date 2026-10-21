@@ -8,6 +8,8 @@ export const LEADERBOARD_SIZE = 10;
 
 export interface LeaderboardEntry {
   rank: number;
+  /** Opens their profile. */
+  userId: string;
   /** The name they chose (Settings › profile); never their email. */
   name: string;
   focusMinutes: number;
@@ -37,6 +39,7 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db) {
       .limit(LEADERBOARD_SIZE);
     const entries: LeaderboardEntry[] = rows.map((r, i) => ({
       rank: i + 1,
+      userId: r.userId,
       name: r.name?.trim() || 'Someone',
       focusMinutes: Math.round(Number(r.focusSeconds) / 60),
       you: r.userId === req.user.id,
