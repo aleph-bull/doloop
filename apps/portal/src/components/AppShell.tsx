@@ -328,7 +328,12 @@ export function AppShell() {
     let room = inner.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
     for (const child of Array.from(inner.children)) {
       if (child === scroller) continue;
-      room -= child.getBoundingClientRect().width + gap;
+      // The spacer grows to fill the bar once the tabs are hidden, so its width is room the
+      // tabs would have, not a control. Counting it kept the bottom bar on for good.
+      const width = child.classList.contains('nav-spacer')
+        ? 0
+        : child.getBoundingClientRect().width;
+      room -= width + gap;
     }
     room -= parseFloat(getComputedStyle(scroller).marginLeft) || 0;
     setCrowded(neededWidth.current > room + 1 && room < 480);
