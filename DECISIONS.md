@@ -1383,3 +1383,7 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 - **The top bar's sliding pill no longer springs.** A long jump (Plans to Dashboard) overshot past the first tab and poked out of the bar. It now uses the plain ease-out over the same 320ms.
 - **After Collapse, the sidebar rests shut until the pointer leaves.** The pointer is still over the sidebar when Collapse is clicked, so hover kept it open as an overlay while the page slid under it, hiding the left of the page. An is-resting class turns hover-opening off until mouseleave.
 - **The sidebar trophy is 16px, not 15px**, so it lands on whole pixels inside the 44px cell and the ring; at 15px its half-pixel left edge read as a shift to the right.
+
+## Card rail shadows, 2026-10-21 (user request)
+
+- **The dashboard card rail no longer clips card shadows.** The rail scrolls sideways, and a scroller clips anything past its padding box; its 6px of room was less than the glass shadow (about 12px out at the sides, 36px down on the dark theme), so cards showed a hard edge at the right and bottom. The track now keeps 14px at the sides and 40px below, pulled back with matching negative margins so nothing else moves.

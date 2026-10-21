@@ -3016,11 +3016,12 @@
   flex: 1;
   scroll-snap-type: x proximity;
   scroll-behavior: smooth;
-  /* Room for card shadows, which a scroller would otherwise clip. The scroll padding
-     keeps snapping from parking the first card 6px in. */
-  padding: 6px;
-  margin: -6px;
-  scroll-padding-inline: 6px;
+  /* Room for card shadows, which a scroller would otherwise clip: the glass shadow reaches
+     about 12px out at the sides and 36px down. The scroll padding keeps snapping from
+     parking the first card inside that room. */
+  padding: 12px 14px 40px;
+  margin: -12px -14px -40px;
+  scroll-padding-inline: 14px;
 }
 /* Reads like the links beside it ("Manage"), not like a button. */
 .rail-toggle {
