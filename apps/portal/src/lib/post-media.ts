@@ -1,5 +1,7 @@
 /** The largest video a post may carry; the API refuses more. */
 export const POST_VIDEO_MAX_BYTES = 5 * 1024 * 1024;
+/** The largest picture a post may carry. */
+export const POST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 /** The poster's width; it is a thumbnail, not the video. */
 const POSTER_WIDTH = 480;
 
@@ -65,9 +67,15 @@ export async function posterFromImage(blob: Blob): Promise<string | null> {
 }
 
 /** Why a file cannot be posted, or null when it can. */
-export function videoProblem(file: Blob): string | null {
+export function mediaProblem(file: Blob): string | null {
   const type = file.type.split(';')[0];
-  if (type !== 'video/mp4' && type !== 'video/webm') return 'MP4 or WebM only.';
-  if (file.size > POST_VIDEO_MAX_BYTES) return 'Up to 5 MB. A shorter video, or a smaller one.';
-  return null;
+  if (type === 'video/mp4' || type === 'video/webm')
+    return file.size > POST_VIDEO_MAX_BYTES
+      ? 'Up to 5 MB. A shorter video, or a smaller one.'
+      : null;
+  if (type === 'image/jpeg' || type === 'image/png' || type === 'image/webp')
+    return file.size > POST_IMAGE_MAX_BYTES ? 'Up to 2 MB for a picture.' : null;
+  return 'MP4, WebM, JPEG, PNG or WebP only.';
 }
+
+export const isVideo = (file: Blob) => file.type.startsWith('video/');

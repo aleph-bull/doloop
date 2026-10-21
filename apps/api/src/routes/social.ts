@@ -31,12 +31,15 @@ export const POST_MAX_LENGTH = 500;
 export const COMMENT_MAX_LENGTH = 500;
 /** The largest video a post may carry, before base64. */
 export const POST_VIDEO_MAX_BYTES = 5 * 1024 * 1024;
+/** The largest picture a post may carry. */
+export const POST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const POST_POSTER_MAX_BYTES = 200 * 1024;
 export const FEED_PAGE = 20;
 /** The weeks the comparison looks back over, this week included. */
 export const COMPARE_WEEKS = 8;
 
 const VIDEO_TYPES = new Set(['video/mp4', 'video/webm']);
+const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 export interface FeedPost {
   id: string;
@@ -45,7 +48,7 @@ export interface FeedPost {
   createdAt: string;
   /** The session shared, as it was when shared. */
   session: { minutes: number; subject: string | null } | null;
-  /** The attached video; the bytes come from GET /api/posts/:id/media. */
+  /** The attached video or picture; the bytes come from GET /api/posts/:id/media. */
   media: { mime: string; bytes: number; poster: string | null } | null;
   likes: number;
   liked: boolean;
@@ -325,8 +328,11 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       }
     }
 
+    // A video, or a picture: the type says which, and each has its own size.
     const media = input.media
-      ? parseDataUrl(input.media, VIDEO_TYPES, POST_VIDEO_MAX_BYTES, 'video')
+      ? /^data:image\//i.test(input.media)
+        ? parseDataUrl(input.media, IMAGE_TYPES, POST_IMAGE_MAX_BYTES, 'picture')
+        : parseDataUrl(input.media, VIDEO_TYPES, POST_VIDEO_MAX_BYTES, 'video')
       : null;
     const poster = input.poster
       ? parseDataUrl(
@@ -336,7 +342,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
           'poster',
         )
       : null;
-    if (poster && !media) throw badRequest('A poster goes with a video');
+    if (poster && !media?.mime.startsWith('video/')) throw badRequest('A poster goes with a video');
 
     const post = await db.transaction(async (tx) => {
       const [row] = await tx

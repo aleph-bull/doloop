@@ -323,6 +323,8 @@ export interface CompareResponse {
   weekStarts: string[];
 }
 
+export type LeaderboardScope = 'global' | 'friends';
+
 export interface LeaderboardEntry {
   rank: number;
   userId: string;
@@ -603,7 +605,11 @@ export const api = {
     request<void>('DELETE', `/api/social/friends/requests/${id}`),
   removeFriend: (userId: string) => request<void>('DELETE', `/api/social/friends/${userId}`),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
-  leaderboard: () => request<{ entries: LeaderboardEntry[] }>('GET', '/api/leaderboard'),
+  leaderboard: (scope: LeaderboardScope) =>
+    request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(
+      'GET',
+      `/api/leaderboard?scope=${scope}`,
+    ),
   buyBackground: (id: string) =>
     request<{ xp: number; purchasedBackgrounds: string[] }>('POST', '/api/shop/background', { id }),
 

@@ -1,11 +1,14 @@
 import type { FastifyInstance } from 'fastify';
-import { and, desc, eq, isNotNull, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNotNull, notInArray, sql } from 'drizzle-orm';
+import { z } from 'zod';
 import type { Db } from '../db/client';
 import { sessions, userAssets, users } from '../db/schema';
 import { friendIds } from './social';
 
 /** How many people the leaderboard shows. */
 export const LEADERBOARD_SIZE = 10;
+
+export type LeaderboardScope = 'global' | 'friends';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -22,11 +25,19 @@ export interface LeaderboardEntry {
 }
 
 /**
- * The ten people with the most focused time across all finished sessions. Only the chosen
- * name, picture and the total are shared; someone who hasn't chosen a name shows as "Someone".
+ * The people with the most focused time across all finished sessions: everyone who joined
+ * the global board, or just you and your friends. Only the chosen name, picture and the
+ * total are shared; someone who hasn't chosen a name shows as "Someone". Settings › Social
+ * decides who is on which board: 'global' is both, 'friends' only the friends board, 'off'
+ * neither (older rows hold true or false, which read as 'global' and 'off').
  */
 export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[] = []) {
   app.get('/api/leaderboard', async (req) => {
+    const { scope } = z
+      .object({ scope: z.enum(['global', 'friends']).default('global') })
+      .parse(req.query);
+    const friends = await friendIds(db, req.user.id);
+    const joined = sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'global')`;
     const focusSeconds = sql<number>`sum(${sessions.workSeconds})::int`;
     const rows = await db
       .select({
@@ -46,8 +57,12 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[]
         and(
           isNotNull(sessions.endedAt),
           eq(users.isTestAccount, false),
-          // Settings › Social › "Appear on the leaderboard", on unless turned off.
-          sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'true') <> 'false'`,
+          ...(scope === 'friends'
+            ? [
+                inArray(sessions.userId, [req.user.id, ...friends]),
+                sql`${joined} in ('global', 'friends', 'true')`,
+              ]
+            : [sql`${joined} in ('global', 'true')`]),
           ...(admins.length
             ? [
                 notInArray(
@@ -62,7 +77,7 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[]
       .having(sql`sum(${sessions.workSeconds}) > 0`)
       .orderBy(desc(focusSeconds))
       .limit(LEADERBOARD_SIZE);
-    const friends = new Set(await friendIds(db, req.user.id));
+    const friendSet = new Set(friends);
     const entries: LeaderboardEntry[] = rows.map((r, i) => ({
       rank: i + 1,
       userId: r.userId,
@@ -70,8 +85,8 @@ export function leaderboardRoutes(app: FastifyInstance, db: Db, admins: string[]
       avatarUrl: r.mime && r.data ? `data:${r.mime};base64,${r.data}` : null,
       focusMinutes: Math.round(Number(r.focusSeconds) / 60),
       you: r.userId === req.user.id,
-      friend: friends.has(r.userId),
+      friend: friendSet.has(r.userId),
     }));
-    return { entries };
+    return { scope, entries };
   });
 }

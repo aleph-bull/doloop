@@ -460,11 +460,22 @@ export function Settings() {
                 label="Study totals on your profile"
                 description="The days grid, strongest days and totals. Off, your profile shows who you are and your posts."
               />
-              <Toggle
-                checked={s.social.leaderboard}
-                onChange={(v) => patch({ social: { leaderboard: v } })}
-                label="Appear on the leaderboard"
-              />
+              <div className="field">
+                <span className="field-label">Leaderboards</span>
+                <Segmented
+                  ariaLabel="Which leaderboards count you"
+                  value={s.social.leaderboard}
+                  onChange={(leaderboard) => patch({ social: { leaderboard } })}
+                  options={[
+                    { value: 'global', label: 'Global and friends' },
+                    { value: 'friends', label: 'Friends only' },
+                    { value: 'off', label: 'Neither' },
+                  ]}
+                />
+                <span className="field-hint">
+                  Where your focused time counts. Friends see a board of their own.
+                </span>
+              </div>
               <Toggle
                 checked={s.social.compare}
                 onChange={(v) => patch({ social: { compare: v } })}

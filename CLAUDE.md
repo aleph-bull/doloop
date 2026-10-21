@@ -197,6 +197,10 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   card, the posts, a five-row leaderboard. Settings › Social (`settings.social`) is what a
   person shares; the API enforces it in `routes/social.ts`, `profiles.ts` and
   `leaderboard.ts`, so a new place that shows someone's numbers must check it too.
+  The leaderboard has a global and a friends scope (`?scope=`); the setting is three-way
+  ('global' | 'friends' | 'off', older true/false normalised in `withDefaults`). Posts
+  carry a video or a picture; sample media for the seed is made with a scratch
+  `ffmpeg-static` and passed as `SEED_MEDIA_DIR` (there is no ffmpeg on this PC).
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,

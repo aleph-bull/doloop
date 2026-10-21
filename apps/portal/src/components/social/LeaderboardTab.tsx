@@ -1,6 +1,6 @@
-import { Link } from 'react-router';
-import { Panel, Spinner } from '@komogon/ui';
-import type { LeaderboardEntry } from '../../lib/api';
+import { Link, useSearchParams } from 'react-router';
+import { Panel, Segmented, Spinner } from '@komogon/ui';
+import type { LeaderboardEntry, LeaderboardScope } from '../../lib/api';
 import { fmtHours } from '../../lib/format';
 import { useLeaderboard } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
@@ -29,9 +29,30 @@ function Podium({ top }: { top: LeaderboardEntry[] }) {
   );
 }
 
-/** The ten people with the most focused time, by the name each chose. */
+/** The ten people with the most focused time, by the name each chose: everyone, or your friends. */
 export function LeaderboardTab() {
-  const board = useLeaderboard();
+  const [params, setParams] = useSearchParams();
+  const scope: LeaderboardScope = params.get('scope') === 'friends' ? 'friends' : 'global';
+  const setScope = (next: LeaderboardScope) => {
+    const p = new URLSearchParams(params);
+    if (next === 'global') p.delete('scope');
+    else p.set('scope', next);
+    setParams(p);
+  };
+  const picker = (
+    <div className="board-scope">
+      <Segmented
+        ariaLabel="Which board"
+        value={scope}
+        onChange={setScope}
+        options={[
+          { value: 'global', label: 'Global' },
+          { value: 'friends', label: 'Friends' },
+        ]}
+      />
+    </div>
+  );
+  const board = useLeaderboard(scope);
   if (board.isError)
     return <ErrorPanel message="The leaderboard could not load." onRetry={() => board.refetch()} />;
   if (!board.data)
@@ -43,17 +64,29 @@ export function LeaderboardTab() {
   const entries = board.data.entries;
   if (entries.length === 0)
     return (
-      <Panel className="p-5">
-        <p>No finished sessions yet. Yours could be the first.</p>
-      </Panel>
+      <div className="board">
+        {picker}
+        <Panel className="p-5">
+          <p>
+            {scope === 'friends'
+              ? 'No friends on the board yet. Add a few in the Friends tab.'
+              : 'No finished sessions yet. Yours could be the first.'}
+          </p>
+        </Panel>
+      </div>
     );
   const top = entries[0]!.focusMinutes;
   const rest = entries.slice(3);
 
   return (
     <div className="board">
+      {picker}
       <Panel as="section" className="board-top" aria-label="Leaderboard">
-        <p className="rc-tile-note">Most focused time, all time. Top ten.</p>
+        <p className="rc-tile-note">
+          {scope === 'friends'
+            ? 'Most focused time among you and your friends, all time.'
+            : 'Most focused time, all time. Top ten.'}
+        </p>
         <Podium top={entries.slice(0, 3)} />
       </Panel>
       {rest.length > 0 && (

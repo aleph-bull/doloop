@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { universityById } from '@komogon/core';
 import { ChevronRight, Flame, SlidersHorizontal, Trophy, Users } from 'lucide-react';
 import { Panel, Spinner } from '@komogon/ui';
+import type { LeaderboardScope } from '../../lib/api';
 import { fmtHours } from '../../lib/format';
 import { useAvatar, useFriends, useLeaderboard, useMe } from '../../lib/queries';
 import { Avatar } from './Avatar';
@@ -17,14 +19,12 @@ export function ProfileCard() {
   if (!user) return null;
   const name = user.settings.profile.name?.trim() || 'Someone';
   const uni = universityById(user.settings.profile.university);
-  const bio = user.settings.profile.bio?.trim();
   return (
     <Panel as="aside" className="side-card" aria-label="You">
       <Link to="/profile" className="side-me">
         <Avatar name={name} url={avatar} size="sm" />
         <span className="side-name">{name}</span>
         {uni && <span className="side-uni">{uni.name}</span>}
-        {bio && <span className="side-bio">{bio}</span>}
       </Link>
       <ul className="side-stats">
         <li>
@@ -51,17 +51,35 @@ export function ProfileCard() {
   );
 }
 
-/** The first few of the leaderboard, beside the feed, with the way to the whole board. */
+/** The first few of a leaderboard, beside the feed, with the way to the whole board. */
 export function MiniLeaderboard() {
-  const board = useLeaderboard();
+  const [scope, setScope] = useState<LeaderboardScope>('global');
+  const board = useLeaderboard(scope);
   const entries = board.data?.entries ?? [];
   return (
     <Panel as="aside" className="side-card" aria-label="Leaderboard">
-      <h2 className="side-title">Leaderboard</h2>
+      <div className="side-head">
+        <h2 className="side-title">Leaderboard</h2>
+        <div className="side-scope" role="group" aria-label="Which board">
+          {(['global', 'friends'] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              className="side-scope-item"
+              aria-pressed={scope === s}
+              onClick={() => setScope(s)}
+            >
+              {s === 'global' ? 'Global' : 'Friends'}
+            </button>
+          ))}
+        </div>
+      </div>
       {board.isPending ? (
         <Spinner />
       ) : entries.length === 0 ? (
-        <p className="muted text-sm">No finished sessions yet.</p>
+        <p className="muted text-sm">
+          {scope === 'friends' ? 'No friends on it yet.' : 'No finished sessions yet.'}
+        </p>
       ) : (
         <ol className="side-board">
           {entries.slice(0, MINI_ROWS).map((e) => (
@@ -76,7 +94,7 @@ export function MiniLeaderboard() {
           ))}
         </ol>
       )}
-      <Link to="/social?tab=leaderboard" className="side-link">
+      <Link to={`/social?tab=leaderboard&scope=${scope}`} className="side-link">
         See the board
         <ChevronRight size={14} aria-hidden />
       </Link>

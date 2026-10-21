@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
-import { Timer, Video, X } from 'lucide-react';
+import { Image as ImageIcon, Timer, Video, X } from 'lucide-react';
 import { Button, Panel, useToast } from '@komogon/ui';
 import { fmtDate, fmtMinutes } from '../../lib/format';
-import { blobToDataUrl, posterFromVideo, videoProblem } from '../../lib/post-media';
+import { blobToDataUrl, isVideo, mediaProblem, posterFromVideo } from '../../lib/post-media';
 import { useAvatar, useCreatePost, useMe, useNodes, useSessions } from '../../lib/queries';
 import { Avatar } from './Avatar';
 
@@ -41,7 +41,7 @@ export function Composer() {
 
   const pick = (file: File | null) => {
     if (!file) return;
-    const problem = videoProblem(file);
+    const problem = mediaProblem(file);
     if (problem) return toast(problem);
     setVideo(file);
   };
@@ -53,7 +53,8 @@ export function Composer() {
     setBusy(true);
     try {
       const media = video ? await blobToDataUrl(video) : undefined;
-      const poster = video ? ((await posterFromVideo(video)) ?? undefined) : undefined;
+      const poster =
+        video && isVideo(video) ? ((await posterFromVideo(video)) ?? undefined) : undefined;
       await create.mutateAsync({
         body: text.trim() || undefined,
         sessionId: sessionId || undefined,
@@ -109,12 +110,16 @@ export function Composer() {
           )}
           {video ? (
             <span className="chip composer-file" title={video.name}>
-              <Video size={13} aria-hidden />
+              {isVideo(video) ? (
+                <Video size={13} aria-hidden />
+              ) : (
+                <ImageIcon size={13} aria-hidden />
+              )}
               {video.name.length > 24 ? `${video.name.slice(0, 22)}…` : video.name}
               <button
                 type="button"
                 className="composer-file-x"
-                aria-label="Remove the video"
+                aria-label="Remove the file"
                 onClick={() => {
                   setVideo(null);
                   if (fileRef.current) fileRef.current.value = '';
@@ -125,13 +130,13 @@ export function Composer() {
             </span>
           ) : (
             <Button size="sm" variant="ghost" onClick={() => fileRef.current?.click()}>
-              <Video size={15} aria-hidden /> Add a video
+              <ImageIcon size={15} aria-hidden /> Add a photo or video
             </Button>
           )}
           <input
             ref={fileRef}
             type="file"
-            accept="video/mp4,video/webm"
+            accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"
             hidden
             onChange={(e) => pick(e.target.files?.[0] ?? null)}
           />

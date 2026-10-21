@@ -28,6 +28,25 @@ function figure(minutes: number): { value: string; unit: string } {
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };
 }
 
+/** A picture on a post, fetched with the token like the videos are. */
+function PostImage({ post }: { post: FeedPost }) {
+  const media = useQuery({
+    queryKey: ['social', 'media', post.id],
+    queryFn: () => api.postMedia(post.id),
+    staleTime: Infinity,
+  });
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!media.data) return;
+    const next = URL.createObjectURL(media.data);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [media.data]);
+  if (media.isError) return <p className="muted text-sm">Could not load the picture.</p>;
+  if (!url) return <div className="post-image is-loading" aria-hidden />;
+  return <img className="post-image" src={url} alt="" />;
+}
+
 /** The poster until it is asked to play; then the video, fetched with the token. */
 function PostVideo({ post }: { post: FeedPost }) {
   const [playing, setPlaying] = useState(false);
@@ -202,7 +221,12 @@ export function PostCard({ post, people }: { post: FeedPost; people: Record<stri
       )}
 
       {post.body && <p className="post-body">{post.body}</p>}
-      {post.media && <PostVideo post={post} />}
+      {post.media &&
+        (post.media.mime.startsWith('image/') ? (
+          <PostImage post={post} />
+        ) : (
+          <PostVideo post={post} />
+        ))}
 
       <footer className="post-foot">
         <button

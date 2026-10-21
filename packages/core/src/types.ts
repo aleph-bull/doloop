@@ -257,8 +257,11 @@ export interface UserSettings {
     posts: 'everyone' | 'friends';
     /** Your study totals, the days grid and strongest days on your profile. */
     stats: boolean;
-    /** Appear on the leaderboard. */
-    leaderboard: boolean;
+    /**
+     * Which leaderboards count you: the global one and your friends' ('global'), only
+     * your friends' ('friends'), or none ('off').
+     */
+    leaderboard: 'global' | 'friends' | 'off';
     /** Let friends see your weeks beside theirs in Compare. */
     compare: boolean;
     /** Take friend requests. */

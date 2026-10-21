@@ -83,18 +83,35 @@ describe('posts on the feed', () => {
       payload: { sessionId },
     });
     expect(theirs.statusCode).toBe(404);
-    const png = await t.api({
+    const gif = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { media: 'data:image/png;base64,AAAA' },
+      payload: { media: 'data:image/gif;base64,AAAA' },
     });
-    expect(png.statusCode).toBe(400);
+    expect(gif.statusCode).toBe(400);
     const poster = await t.api({
       method: 'POST',
       url: '/api/social/posts',
       payload: { body: 'Hi', poster: JPEG },
     });
     expect(poster.statusCode).toBe(400);
+  });
+
+  it('takes a picture too, but no poster with it', async () => {
+    const pic = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { media: 'data:image/png;base64,iVBORw0KGgo=' },
+    });
+    expect(pic.statusCode).toBe(201);
+    expect(pic.json().post.media).toEqual({ mime: 'image/png', bytes: 8, poster: null });
+    const withPoster = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { media: 'data:image/png;base64,iVBORw0KGgo=', poster: JPEG },
+    });
+    expect(withPoster.statusCode).toBe(400);
+    await t.api({ method: 'DELETE', url: `/api/posts/${pic.json().post.id}` });
   });
 
   it('serves the video as bytes to anyone signed in', async () => {
@@ -304,7 +321,7 @@ describe('sharing settings', () => {
         social: {
           posts: 'friends',
           stats: false,
-          leaderboard: false,
+          leaderboard: 'friends',
           compare: false,
           requests: false,
         },
@@ -313,8 +330,22 @@ describe('sharing settings', () => {
     expect(saved.statusCode).toBe(200);
     const compare = (await t.api({ method: 'GET', url: '/api/social/compare' })).json();
     expect(compare.friends).toEqual([]);
+    // Friends only: off the global board, still on a friend's board.
     const board = (await t.api({ method: 'GET', url: '/api/leaderboard' })).json();
+    expect(board.scope).toBe('global');
     expect(board.entries.map((e: { userId: string }) => e.userId)).not.toContain(USER_B.id);
+    const mine = (await t.api({ method: 'GET', url: '/api/leaderboard?scope=friends' })).json();
+    expect(mine.entries.map((e: { userId: string }) => e.userId).sort()).toEqual(
+      [USER_A.id, USER_B.id].sort(),
+    );
+    await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      token: t.tokenB,
+      payload: { social: { leaderboard: 'off' } },
+    });
+    const none = (await t.api({ method: 'GET', url: '/api/leaderboard?scope=friends' })).json();
+    expect(none.entries.map((e: { userId: string }) => e.userId)).toEqual([USER_A.id]);
     // A friend still sees friends-only posts and the totals are a separate choice.
     let feed = (await t.api({ method: 'GET', url: '/api/social/feed' })).json();
     expect(feed.posts.some((p: { userId: string }) => p.userId === USER_B.id)).toBe(true);

@@ -12,6 +12,7 @@ import {
   type FeedPage,
   type FeedPost,
   type FeedScope,
+  type LeaderboardScope,
   type LogTrackerInput,
   type DrillInput,
   type NewPost,
@@ -63,7 +64,7 @@ export const keys = {
   friends: ['social', 'friends'] as const,
   people: (q: string) => ['social', 'people', q] as const,
   compare: ['social', 'compare'] as const,
-  leaderboard: ['leaderboard'] as const,
+  leaderboard: (scope: LeaderboardScope) => ['leaderboard', scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
   avatar: ['avatar', 'me'] as const,
@@ -556,7 +557,7 @@ const FRIEND_KEYS = [
   ['profiles'],
   ['social', 'people'],
   keys.compare,
-  keys.leaderboard,
+  ['leaderboard'],
   ['social', 'feed'],
 ] as const;
 
@@ -590,8 +591,12 @@ export function useCompare() {
   return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
 }
 
-export function useLeaderboard() {
-  return useQuery({ queryKey: keys.leaderboard, queryFn: api.leaderboard, staleTime: 60_000 });
+export function useLeaderboard(scope: LeaderboardScope) {
+  return useQuery({
+    queryKey: keys.leaderboard(scope),
+    queryFn: () => api.leaderboard(scope),
+    staleTime: 60_000,
+  });
 }
 
 export function useUpdateSettings() {
@@ -608,7 +613,7 @@ export function useUpdateSettings() {
         ['analytics'],
         ['profiles'],
         ['social'],
-        keys.leaderboard,
+        ['leaderboard'],
       ),
   });
 }
