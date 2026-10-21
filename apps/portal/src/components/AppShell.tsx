@@ -4,6 +4,7 @@ import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
   ChartColumn,
+  ChevronLeft,
   ChevronRight,
   Flame,
   GraduationCap,
@@ -29,6 +30,7 @@ import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
 import { useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
+import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 import { SignOutButton } from './SignOutButton';
@@ -298,9 +300,81 @@ export function AppShell() {
     [placeIndicator],
   );
 
+  // When the bar is too narrow for every tab, the tabs scroll sideways, with an arrow on
+  // each side that hides one.
+  const {
+    edges: overflow,
+    measure: measureOverflow,
+    scrollByPage: scrollTabs,
+  } = useScrollEdges(navRef);
+
+  // Narrower still, the top bar is too small for a scrolling row to be any use: under
+  // 480px of room, with tabs that do not fit, the pages move to the bottom bar, as on a
+  // phone. The width the tabs need is remembered from the last time they showed, so the
+  // bar knows when there is room for them again.
+  const [crowded, setCrowded] = useState(false);
+  const neededWidth = useRef(0);
+  const measureCrowd = useCallback(() => {
+    const nav = navRef.current;
+    const scroller = nav?.parentElement;
+    const inner = scroller?.parentElement;
+    if (!nav || !scroller || !inner || sidebar) {
+      setCrowded(false);
+      return;
+    }
+    if (scroller.offsetParent !== null) neededWidth.current = nav.scrollWidth;
+    const style = getComputedStyle(inner);
+    const gap = parseFloat(style.columnGap) || 0;
+    let room = inner.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    for (const child of Array.from(inner.children)) {
+      if (child === scroller) continue;
+      room -= child.getBoundingClientRect().width + gap;
+    }
+    room -= parseFloat(getComputedStyle(scroller).marginLeft) || 0;
+    setCrowded(neededWidth.current > room + 1 && room < 480);
+  }, [sidebar]);
+
+  // The bottom bar shows on phones, and on a computer whose top bar is crowded.
   useLayoutEffect(() => {
+    const root = document.documentElement;
+    const phone = window.matchMedia('(max-width: 767px)');
+    const apply = () => {
+      if (phone.matches || crowded) root.dataset.tabbar = '1';
+      else delete root.dataset.tabbar;
+    };
+    apply();
+    phone.addEventListener('change', apply);
+    return () => {
+      phone.removeEventListener('change', apply);
+      delete root.dataset.tabbar;
+    };
+  }, [crowded]);
+
+  // The current tab should never sit scrolled out of sight: not on arrival, and not when
+  // the counters beside the tabs appear and take some of the room.
+  const revealActive = useCallback(() => {
+    const nav = navRef.current;
+    const active = nav?.querySelector<HTMLElement>('.nav-link[aria-current="page"]');
+    if (!nav || !active) return;
+    const start = active.offsetLeft;
+    const end = start + active.offsetWidth;
+    if (start < nav.scrollLeft) nav.scrollLeft = start - 32;
+    else if (end > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = end - nav.clientWidth + 32;
+  }, []);
+
+  useLayoutEffect(() => {
+    measureCrowd();
     measureIndicator();
-  }, [measureIndicator, location.pathname, shown.length]);
+    revealActive();
+    measureOverflow();
+  }, [
+    measureCrowd,
+    measureIndicator,
+    revealActive,
+    measureOverflow,
+    location.pathname,
+    shown.length,
+  ]);
 
   // The bars firm up as the page scrolls under them, so text passing behind stays legible;
   // at the top they keep their usual glass. 0 at the top, 1 after the first 80px.
@@ -321,10 +395,19 @@ export function AppShell() {
     const nav = navRef.current;
     if (!nav) return;
     // Window resizes, the nav's own reflow, and late web fonts all move the links.
-    const onChange = () => measureIndicator();
+    const onChange = () => {
+      measureCrowd();
+      measureIndicator();
+      revealActive();
+    };
     const ro = new ResizeObserver(onChange);
     ro.observe(nav);
     if (nav.parentElement) ro.observe(nav.parentElement);
+    // The bar itself and the controls beside the tabs decide how much room they have.
+    if (nav.parentElement?.parentElement) {
+      for (const sibling of Array.from(nav.parentElement.parentElement.children))
+        ro.observe(sibling);
+    }
     for (const child of Array.from(nav.children)) ro.observe(child);
     window.addEventListener('resize', onChange);
     void document.fonts?.ready.then(onChange);
@@ -332,7 +415,7 @@ export function AppShell() {
       ro.disconnect();
       window.removeEventListener('resize', onChange);
     };
-  }, [measureIndicator]);
+  }, [measureCrowd, measureIndicator, revealActive]);
 
   const user = me.data?.user;
   const lp = user ? levelProgress(user.xp) : null;
@@ -437,7 +520,23 @@ export function AppShell() {
             </span>
             <span>Komodon</span>
           </NavLink>
-          <div className="nav-scroll scroll-edges ml-2">
+          <div
+            className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${
+              overflow.right ? ' can-right' : ''
+            }`}
+          >
+            {overflow.left && (
+              <button
+                type="button"
+                className="scroll-arrow scroll-arrow-left"
+                tabIndex={-1}
+                aria-hidden
+                title="More tabs"
+                onClick={() => scrollTabs(-1)}
+              >
+                <ChevronLeft size={16} aria-hidden />
+              </button>
+            )}
             <nav
               ref={navRef}
               className="nav-primary scroll-edges-track flex items-center gap-1"
@@ -464,7 +563,21 @@ export function AppShell() {
                 </NavLink>
               ))}
             </nav>
+            {overflow.right && (
+              <button
+                type="button"
+                className="scroll-arrow scroll-arrow-right"
+                tabIndex={-1}
+                aria-hidden
+                title="More tabs"
+                onClick={() => scrollTabs(1)}
+              >
+                <ChevronRight size={16} aria-hidden />
+              </button>
+            )}
           </div>
+          {/* With the tabs gone to the bottom bar, the counters and controls keep right. */}
+          <div className="nav-spacer" aria-hidden />
           {user && (
             <div className="nav-stats">
               <NavLink to="/analytics" className="nav-streak" title="Current streak">
@@ -499,7 +612,8 @@ export function AppShell() {
         </div>
       </header>
 
-      {/* Phones: every page as an icon, and the one you are on widens to show its name. */}
+      {/* Phones, and a crowded top bar: every page as an icon, and the one you are on widens
+          to show its name. */}
       <nav className="tabbar chrome" aria-label="Primary">
         {shown.map((l) => (
           <NavLink

@@ -162,8 +162,8 @@
   color: var(--fg);
 }
 @media (min-width: 768px) {
-  /* The tabs take the room between the brand and the counters, and scroll when it runs out:
-     they always keep their names. */
+  /* The tabs take the room between the brand and the counters, and scroll when it runs out,
+     with an arrow on each side that hides one: they always keep their names. */
   .nav-scroll {
     flex: 1 1 0;
   }
@@ -387,12 +387,6 @@
   display: none;
 }
 @media (max-width: 767px) {
-  :root {
-    --tabbar-clearance: 76px;
-  }
-  .page {
-    padding-bottom: calc(120px + env(safe-area-inset-bottom));
-  }
   .nav {
     top: 8px;
     margin-top: 8px;
@@ -402,70 +396,96 @@
     min-height: 52px;
     padding: 6px;
   }
-  .nav-scroll {
-    display: none !important;
+}
+/*
+ * The bottom bar shows on phones, and on a computer whose top bar is too crowded for the
+ * tabs (data-tabbar, set in AppShell). Then the top bar keeps only the brand and controls.
+ */
+:root[data-tabbar] {
+  --tabbar-clearance: 76px;
+}
+:root[data-tabbar] .page {
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
+}
+:root[data-tabbar] .nav-scroll {
+  display: none !important;
+}
+:root[data-tabbar] .nav-spacer {
+  flex: 1 1 0;
+}
+:root[data-tabbar] .tabbar {
+  position: fixed;
+  z-index: 45;
+  left: 8px;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 30px;
+}
+@media (min-width: 768px) {
+  /* On a computer it sits in the middle, no wider than the page. */
+  :root[data-tabbar] .tabbar {
+    left: 50%;
+    right: auto;
+    width: min(560px, calc(100% - 24px));
+    transform: translateX(-50%);
   }
-  .tabbar {
-    position: fixed;
-    z-index: 45;
-    left: 8px;
-    right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom));
-    display: flex;
-    gap: 2px;
-    padding: 5px;
-    border-radius: 30px;
-  }
-  /* Every page is an icon; the current one widens into a pill with its name beside it. */
-  .tabbar-link {
-    display: flex;
-    flex: 1 1 0;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    min-width: 0;
-    height: 46px;
-    padding: 0 6px;
-    border-radius: 24px;
-    color: var(--fg-muted);
-    text-decoration: none;
-    transition:
-      background var(--dur-base) var(--ease-out),
-      color var(--dur-fast) var(--ease-out);
-  }
-  /* The current page sizes to its name; the others share what is left. */
-  .tabbar-link[aria-current='page'] {
-    flex: 0 0 auto;
-    padding: 0 14px 0 12px;
-  }
-  .tabbar-link:hover {
-    text-decoration: none;
-  }
-  .tabbar-link:active .tabbar-icon {
-    transform: scale(0.86);
-  }
-  .tabbar-link[aria-current='page'] {
-    color: var(--accent-text);
-    background: color-mix(in srgb, var(--fg) 10%, transparent);
-  }
-  .tabbar-icon {
-    display: grid;
-    place-items: center;
-    transition: transform var(--dur-base) var(--ease-spring);
-  }
-  .tabbar-label {
+  :root[data-tabbar][data-nav='sidebar'] .tabbar,
+  :root[data-tabbar][data-nav='sidebar-pinned'] .tabbar {
     display: none;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--text-sm);
-    font-weight: 600;
-    letter-spacing: 0;
   }
-  .tabbar-link[aria-current='page'] .tabbar-label {
-    display: block;
-  }
+}
+/* Every page is an icon; the current one widens into a pill with its name beside it. */
+:root[data-tabbar] .tabbar-link {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 0;
+  height: 46px;
+  padding: 0 6px;
+  border-radius: 24px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition:
+    background var(--dur-base) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+/* The current page sizes to its name; the others share what is left. */
+:root[data-tabbar] .tabbar-link[aria-current='page'] {
+  flex: 0 0 auto;
+  padding: 0 14px 0 12px;
+}
+:root[data-tabbar] .tabbar-link:hover {
+  text-decoration: none;
+}
+:root[data-tabbar] .tabbar-link:active .tabbar-icon {
+  transform: scale(0.86);
+}
+:root[data-tabbar] .tabbar-link[aria-current='page'] {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+:root[data-tabbar] .tabbar-icon {
+  display: grid;
+  place-items: center;
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+:root[data-tabbar] .tabbar-label {
+  display: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+:root[data-tabbar] .tabbar-link[aria-current='page'] .tabbar-label {
+  display: block;
 }
 @media (max-width: 400px) {
   .brand > span:last-child {
