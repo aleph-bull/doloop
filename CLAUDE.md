@@ -86,7 +86,8 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - Record each change of direction in DECISIONS.md, with the date.
 - **Settings about what a page shows or how it is laid out go in Settings › Pages**, under a
   sub-panel for that page (`<h3 className="settings-group-head">Dashboard</h3>` and so on).
-  Add the words people might search for to the `pages` entry in `SettingsNav.tsx`.
+  Add the words people might search for to the `pages` entry in `SettingsNav.tsx`. The one
+  exception, at the owner's request, is the top bar or sidebar choice: it is in Appearance.
 
 ## Rules the app keeps
 
@@ -134,16 +135,22 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
+- Never write `-webkit-backdrop-filter` beside `backdrop-filter`. The production CSS pass
+  (Lightning CSS, through Tailwind's Vite plugin) then keeps only the prefixed one, which
+  Chrome no longer understands, and the hosted site silently lost every blur (found
+  2026-10-21). Write the unprefixed property alone; the build adds the prefix for Safari.
 - The browser preview only paints during screenshots: animations and IntersectionObserver
   effects stall. Set `document.documentElement.dataset.motion = 'off'` to see the finished
   state.
 
 ## Recent changes (2026-10-20)
 
-- Navigation (2026-10-21): the top bar is the default; Settings › Pages › Navigation can
-  switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card row, not the nav). New pages go in the `links` list
-  (`group: 'more'` puts them under the sidebar's divider). A crowded top bar and the phone
-  bar show icons, with only the current page named. There is no "More" menu on purpose.
+- Navigation (2026-10-21): the top bar is the default; Settings › Appearance › Navigation
+  can switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card
+  row, not the nav). New pages go in the `links` list (`group: 'more'` puts them under the
+  sidebar's divider). The top bar always shows page names and scrolls when they don't fit;
+  the icons are for the sidebar and the phone bar, which names only the current page. The
+  sidebar has a Sign out row. There is no "More" menu on purpose.
 - Removed the weekly review page. `/analytics/review` redirects to Analytics; the API route
   and the `weekly_reviews` table are still there, unused by the portal.
 - Background pickers in Settings open minimized every time ("Show all backgrounds" opens

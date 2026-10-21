@@ -255,23 +255,6 @@ export function AppShell() {
   const navRef = useRef<HTMLElement | null>(null);
   const [indicator, setIndicator] = useState({ left: 0, width: 0, animate: false });
 
-  // When every label no longer fits, the bar shows icons and names only the current page.
-  // The width the labels need is kept from the last time they showed, to know when they
-  // fit again.
-  const [compact, setCompact] = useState(false);
-  const labelledWidth = useRef(0);
-  const measureFit = useCallback(() => {
-    const nav = navRef.current;
-    const room = nav?.parentElement?.clientWidth ?? 0;
-    if (!nav || !room) return;
-    if (!compact) {
-      labelledWidth.current = nav.scrollWidth;
-      if (nav.scrollWidth > room + 1) setCompact(true);
-    } else if (labelledWidth.current && labelledWidth.current <= room) {
-      setCompact(false);
-    }
-  }, [compact]);
-
   const placeIndicator = useCallback((target: HTMLElement) => {
     const left = target.offsetLeft;
     const width = target.offsetWidth;
@@ -305,9 +288,8 @@ export function AppShell() {
   );
 
   useLayoutEffect(() => {
-    measureFit();
     measureIndicator();
-  }, [measureFit, measureIndicator, location.pathname, compact, shown.length]);
+  }, [measureIndicator, location.pathname, shown.length]);
 
   // The bars firm up as the page scrolls under them, so text passing behind stays legible;
   // at the top they keep their usual glass. 0 at the top, 1 after the first 80px.
@@ -328,10 +310,7 @@ export function AppShell() {
     const nav = navRef.current;
     if (!nav) return;
     // Window resizes, the nav's own reflow, and late web fonts all move the links.
-    const onChange = () => {
-      measureFit();
-      measureIndicator();
-    };
+    const onChange = () => measureIndicator();
     const ro = new ResizeObserver(onChange);
     ro.observe(nav);
     if (nav.parentElement) ro.observe(nav.parentElement);
@@ -342,7 +321,7 @@ export function AppShell() {
       ro.disconnect();
       window.removeEventListener('resize', onChange);
     };
-  }, [measureFit, measureIndicator]);
+  }, [measureIndicator]);
 
   const user = me.data?.user;
   const lp = user ? levelProgress(user.xp) : null;
@@ -358,7 +337,7 @@ export function AppShell() {
         Skip to content
       </a>
 
-      {/* Chosen in Settings › Pages: a slim sidebar that opens to show labels, or stays open. */}
+      {/* Chosen in Settings › Appearance: a slim sidebar that opens to show labels, or stays open. */}
       {sidebar && (
         <aside className={`sidenav chrome${pinned ? ' is-pinned' : ''}`} aria-label="Primary">
           <NavLink to="/" className="sidenav-brand" aria-label="Komodon home" title="Komodon">
@@ -408,6 +387,7 @@ export function AppShell() {
               </a>
             )}
             <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
+            <SignOutButton rail />
             <button
               type="button"
               className="sidenav-link"
@@ -445,9 +425,7 @@ export function AppShell() {
           <div className="nav-scroll scroll-edges ml-2">
             <nav
               ref={navRef}
-              className={`nav-primary scroll-edges-track flex items-center gap-1${
-                compact ? ' is-compact' : ''
-              }`}
+              className="nav-primary scroll-edges-track flex items-center gap-1"
               aria-label="Primary"
             >
               <span
@@ -465,12 +443,9 @@ export function AppShell() {
                   to={l.to}
                   end={l.to === '/'}
                   className="nav-link"
-                  title={compact ? l.label : undefined}
-                  aria-label={l.label}
                   onClick={onNavClick}
                 >
-                  <l.icon size={17} strokeWidth={1.9} className="nav-link-icon" aria-hidden />
-                  <span className="nav-link-label">{l.label}</span>
+                  {l.label}
                 </NavLink>
               ))}
             </nav>

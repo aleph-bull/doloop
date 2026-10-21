@@ -161,27 +161,9 @@
 .nav-link[aria-current='page'] {
   color: var(--fg);
 }
-/* Icons wait for a crowded bar: then every page is an icon and the current one keeps its name. */
-.nav-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-.nav-link-icon {
-  display: none;
-  flex: none;
-}
-.nav-primary.is-compact .nav-link {
-  padding: 7px 11px;
-}
-.nav-primary.is-compact .nav-link-icon {
-  display: block;
-}
-.nav-primary.is-compact .nav-link:not([aria-current='page']) .nav-link-label {
-  display: none;
-}
 @media (min-width: 768px) {
-  /* The tabs take the room between the brand and the counters, so it can be measured. */
+  /* The tabs take the room between the brand and the counters, and scroll when it runs out:
+     they always keep their names. */
   .nav-scroll {
     flex: 1 1 0;
   }
@@ -491,7 +473,7 @@
 }
 
 /*
- * ---------- Sidebar (Settings › Pages › Navigation): a slim column of icons ----------
+ * ---------- Sidebar (Settings › Appearance › Navigation): a slim column of icons ----------
  * Chosen instead of the top bar on a computer. It opens over the page to show labels on
  * hover or keyboard focus, and can be kept open, which moves the page over instead.
  * Phones keep the top bar and the tab bar either way.
@@ -2997,7 +2979,6 @@
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--glass-fill-strong);
-  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   color: var(--fg);
   cursor: pointer;
@@ -5481,7 +5462,6 @@
   border-color: var(--panel-border);
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 :root[data-panel='glass'] .eq-card,
 :root[data-panel='glass'] .trophy {
@@ -5493,7 +5473,6 @@
   border-color: var(--glass-border);
   box-shadow: var(--glass-border-inner), var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
 :root[data-panel='custom'] .eq-card,
 :root[data-panel='custom'] .trophy {

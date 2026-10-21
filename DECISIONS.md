@@ -1370,3 +1370,10 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 
 - **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then XP, then the calendar), and the next one takes its place after it is closed.
 - **The streak freeze hint became a regular tip** (user request, same day): it now rotates with the other tips, linking to the shop, instead of being its own card.
+
+## Sidebar sign out, top bar words, Navigation in Appearance, and the lost blur, 2026-10-21 (user request)
+
+- **The sidebar has a Sign out row** under Settings, above the pin: the icon while slim, the label once it opens. It asks first, like the top bar's icon.
+- **The top bar always shows page names.** The icons-when-crowded mode is gone: when the names do not fit, the tabs scroll sideways with faded edges, as they did before the sidebar arrived. Icons stay on the sidebar and the phone bar.
+- **Top bar or sidebar is chosen in Settings › Appearance › Navigation**, moved out of Pages. It is the one layout setting outside Pages, because the owner sees it as part of the look.
+- **The hosted site had no backdrop blur at all.** The source wrote -webkit-backdrop-filter beside backdrop-filter; the production CSS pass (Lightning CSS, through Tailwind's Vite plugin) kept only the prefixed one, and Chrome no longer understands the prefix. So glass bars and cards were flat translucent fills, and switching Panels to Matte barely changed the top bar or sidebar. The prefixed lines are gone from the source; the build adds the prefix for Safari itself. The dev server never minified, so sandboxes always looked right.
