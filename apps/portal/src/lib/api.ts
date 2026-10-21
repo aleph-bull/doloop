@@ -352,6 +352,42 @@ export interface CompareResponse {
   weekStarts: string[];
 }
 
+/** A study group's week: see the API's Group. */
+export interface LiveMember {
+  userId: string;
+  startedAt: string;
+  subject: string | null;
+}
+export interface GroupMemberWeek {
+  userId: string;
+  minutes: number;
+  byDay: Array<number | null>;
+  subjects: Array<{ title: string; minutes: number }>;
+  nudgeable: boolean;
+}
+export interface Group {
+  id: string;
+  hostId: string;
+  name: string;
+  code: string | null;
+  you: boolean;
+  weekStart: string;
+  today: number;
+  totalMinutes: number;
+  members: GroupMemberWeek[];
+  live: LiveMember[];
+}
+export interface GroupsResponse {
+  groups: Group[];
+  open: Group[];
+  live: LiveMember[];
+  people: Record<string, Person>;
+}
+export interface NudgesResponse {
+  nudges: Array<{ id: string; fromId: string; groupName: string | null; at: string }>;
+  people: Record<string, Person>;
+}
+
 export type LeaderboardScope = 'global' | 'friends';
 
 /** You beside everyone on the global board; see the API's GlobalStats. */
@@ -662,6 +698,28 @@ export const api = {
   endJam: (id: string) =>
     request<{ jam: Jam; people: Record<string, Person> }>('POST', `/api/social/jams/${id}/end`),
   leaderboardStats: () => request<GlobalStats>('GET', '/api/leaderboard/stats'),
+  groups: () => request<GroupsResponse>('GET', '/api/social/groups'),
+  createGroup: (name: string) =>
+    request<{ group: Group; people: Record<string, Person> }>('POST', '/api/social/groups', {
+      name,
+    }),
+  joinGroupByCode: (code: string) =>
+    request<{ group: Group; people: Record<string, Person> }>('POST', '/api/social/groups/join', {
+      code,
+    }),
+  joinGroup: (id: string) =>
+    request<{ group: Group; people: Record<string, Person> }>(
+      'POST',
+      `/api/social/groups/${id}/join`,
+    ),
+  leaveGroup: (id: string) => request<void>('POST', `/api/social/groups/${id}/leave`),
+  nudge: (userId: string, groupId?: string) =>
+    request<{ nudge: { id: string; toId: string; at: string } }>('POST', '/api/social/nudges', {
+      userId,
+      groupId,
+    }),
+  nudges: () => request<NudgesResponse>('GET', '/api/social/nudges'),
+  nudgesSeen: () => request<void>('POST', '/api/social/nudges/seen'),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

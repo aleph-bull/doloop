@@ -65,6 +65,8 @@ export const keys = {
   people: (q: string) => ['social', 'people', q] as const,
   jams: ['social', 'jams'] as const,
   compare: ['social', 'compare'] as const,
+  groups: ['social', 'groups'] as const,
+  nudges: ['social', 'nudges'] as const,
   leaderboard: (scope: LeaderboardScope) => ['leaderboard', scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
@@ -614,6 +616,56 @@ export function useLeaveJam() {
 }
 export function useEndJam() {
   return useJamMutation((id: string) => api.endJam(id));
+}
+
+export function useGroups() {
+  // Live timers and nudges go stale fast: refetch while the tab is open.
+  return useQuery({
+    queryKey: keys.groups,
+    queryFn: api.groups,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+function useGroupMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.groups }),
+  });
+}
+export function useCreateGroup() {
+  return useGroupMutation((name: string) => api.createGroup(name));
+}
+export function useJoinGroupByCode() {
+  return useGroupMutation((code: string) => api.joinGroupByCode(code));
+}
+export function useJoinGroup() {
+  return useGroupMutation((id: string) => api.joinGroup(id));
+}
+export function useLeaveGroup() {
+  return useGroupMutation((id: string) => api.leaveGroup(id));
+}
+export function useNudge() {
+  return useGroupMutation(({ userId, groupId }: { userId: string; groupId?: string }) =>
+    api.nudge(userId, groupId),
+  );
+}
+export function useNudges() {
+  return useQuery({
+    queryKey: keys.nudges,
+    queryFn: api.nudges,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+}
+export function useNudgesSeen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.nudgesSeen(),
+    onSuccess: () => qc.setQueryData(keys.nudges, { nudges: [], people: {} }),
+  });
 }
 
 export function useCompare() {

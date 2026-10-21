@@ -1,11 +1,12 @@
 import { Navigate, useSearchParams } from 'react-router';
 import { Segmented } from '@komogon/ui';
 import { Feed } from '../components/social/Feed';
+import { GroupsTab } from '../components/social/GroupsTab';
 import { JamsTab } from '../components/social/JamsTab';
 import { LeaderboardTab } from '../components/social/LeaderboardTab';
 import { useFriends, useJams } from '../lib/queries';
 
-const TABS = ['feed', 'jams', 'leaderboard'] as const;
+const TABS = ['feed', 'groups', 'jams', 'leaderboard'] as const;
 type Tab = (typeof TABS)[number];
 
 /**
@@ -47,6 +48,7 @@ export function Social() {
                 </>
               ),
             },
+            { value: 'groups', label: 'Groups' },
             {
               value: 'jams',
               label: (
@@ -60,7 +62,15 @@ export function Social() {
           ]}
         />
       </div>
-      {tab === 'jams' ? <JamsTab /> : tab === 'leaderboard' ? <LeaderboardTab /> : <Feed />}
+      {tab === 'groups' ? (
+        <GroupsTab />
+      ) : tab === 'jams' ? (
+        <JamsTab />
+      ) : tab === 'leaderboard' ? (
+        <LeaderboardTab />
+      ) : (
+        <Feed />
+      )}
     </div>
   );
 }

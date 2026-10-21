@@ -29,6 +29,7 @@ import { profileRoutes } from './routes/profiles';
 import { socialRoutes } from './routes/social';
 import { jamRoutes } from './routes/jams';
 import { compareRoutes } from './routes/compare';
+import { groupRoutes } from './routes/groups';
 import { universityRoutes } from './routes/university';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
@@ -160,6 +161,7 @@ export async function buildServer(opts: BuildOptions) {
   socialRoutes(app, opts.db, clock);
   jamRoutes(app, opts.db, clock);
   compareRoutes(app, opts.db, clock);
+  groupRoutes(app, opts.db, clock);
   // Codes go through the same mailer as account email; with none, verifying is off.
   universityRoutes(app, opts.db, clock, opts.mailer ?? null);
   nodeRoutes(app, opts.db, clock);

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { Heart, MessageCircle, Play, Timer, Trash2, X } from 'lucide-react';
+import { MessageCircle, Play, ThumbsUp, Timer, Trash2, X } from 'lucide-react';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
 import { api, type FeedPost, type Person } from '../../lib/api';
 import { fmtAgo } from '../../lib/format';
@@ -233,11 +233,13 @@ export function PostCard({ post, people }: { post: FeedPost; people: Record<stri
           type="button"
           className={`post-action${post.liked ? ' is-on' : ''}`}
           aria-pressed={post.liked}
-          aria-label={post.liked ? 'Unlike' : 'Like'}
+          aria-label={post.liked ? 'Take your kudos back' : 'Give kudos'}
+          title={post.liked ? 'Kudos given' : 'Give kudos'}
           onClick={() => like.mutate({ id: post.id, liked: post.liked })}
         >
-          <Heart size={17} aria-hidden fill={post.liked ? 'currentColor' : 'none'} />
-          {post.likes > 0 && <span className="tabular">{post.likes}</span>}
+          <ThumbsUp size={16} aria-hidden fill={post.liked ? 'currentColor' : 'none'} />
+          <span>Kudos</span>
+          {post.likes > 0 && <span className="tabular post-count">{post.likes}</span>}
         </button>
         <button
           type="button"

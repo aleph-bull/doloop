@@ -2,6 +2,7 @@ import { useDeferredValue, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { universityById } from '@komogon/core';
 import {
+  BellRing,
   Check,
   ChevronRight,
   Flame,
@@ -22,6 +23,7 @@ import {
   useFriends,
   useLeaderboard,
   useMe,
+  useNudge,
   useRemoveFriend,
   useSendFriendRequest,
 } from '../../lib/queries';
@@ -84,6 +86,7 @@ export function FriendsCard() {
   const decline = useDeleteFriendRequest();
   const remove = useRemoveFriend();
   const send = useSendFriendRequest();
+  const nudge = useNudge();
   const { toast } = useToast();
   const fail = (err: unknown) => toast(err instanceof Error ? err.message : 'Could not do that');
   const data = q.data;
@@ -151,6 +154,21 @@ export function FriendsCard() {
             <ul className="side-people">
               {data.friends.map((f) => (
                 <PersonRow key={f.userId} person={who(f.userId)}>
+                  <RowButton
+                    label="Nudge to study"
+                    busy={nudge.isPending}
+                    onClick={() =>
+                      nudge.mutate(
+                        { userId: f.userId },
+                        {
+                          onSuccess: () => toast(`Nudged ${who(f.userId).name}.`),
+                          onError: fail,
+                        },
+                      )
+                    }
+                  >
+                    <BellRing size={13} aria-hidden />
+                  </RowButton>
                   <RowButton
                     label="Remove friend"
                     busy={remove.isPending}

@@ -208,6 +208,12 @@ quirky, flirty or salesy, and never pushy (no nagging about rest or gaps, no pep
   people join by friendship or by code; minutes count from each person's joining time.
   Friends have no tab: they are the `FriendsCard` beside the feed. The owner wants these
   cards dense (40px pictures on posts, 26px in lists, 12-14px padding); don't let them grow.
+  Groups (`routes/groups.ts`, `GroupsTab.tsx`): lasting groups with this week's lines and
+  ranks, "Live now" (sessions with `last_seen_at` in the last ten minutes) and nudges
+  (`nudges` table, one per pair per two hours; `NudgesCard` shows them on the dashboard).
+  Posts have kudos (the like routes, relabelled). The leaderboard tab also carries
+  `GET /api/leaderboard/stats` (you against everyone, people under 15 min a week left out,
+  last week when this week is empty) and, on the friends scope, the Compare bento.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,

@@ -471,6 +471,53 @@ export const jams = pgTable(
   (t) => [index('jams_ends_idx').on(t.endsAt)],
 );
 
+/** A study group: friends who keep each other company week after week. Anyone with the code joins. */
+export const groups = pgTable('groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  hostId: uuid('host_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  code: text('code').notNull().unique(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const groupMembers = pgTable(
+  'group_members',
+  {
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: ts('joined_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.groupId, t.userId] }),
+    index('group_members_user_idx').on(t.userId),
+  ],
+);
+
+/** A nudge to study, friend to friend, at most one every two hours per pair. Shown on the dashboard. */
+export const nudges = pgTable(
+  'nudges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    fromId: uuid('from_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    toId: uuid('to_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The group it was sent from, when it was. */
+    groupId: uuid('group_id').references(() => groups.id, { onDelete: 'set null' }),
+    at: ts('at').notNull().defaultNow(),
+    seenAt: ts('seen_at'),
+  },
+  (t) => [index('nudges_to_idx').on(t.toId, t.at), index('nudges_pair_idx').on(t.fromId, t.toId)],
+);
+
 export const jamMembers = pgTable(
   'jam_members',
   {
@@ -814,6 +861,9 @@ export const schema = {
   friendships,
   jams,
   jamMembers,
+  groups,
+  groupMembers,
+  nudges,
   universityVerifications,
   customRewards,
   routines,
