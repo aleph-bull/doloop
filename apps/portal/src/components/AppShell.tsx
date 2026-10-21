@@ -195,8 +195,53 @@ function RailStats({
 }) {
   const days = `${streak} ${streak === 1 ? 'day' : 'days'} in a row`;
   const lvl = `Level ${level}, ${toNext} XP to level ${level + 1}`;
+
+  // Open, the two pills share the row, each with the same padding on every side, so the
+  // content sits centred in both. That depends on how wide each count is, so it is measured:
+  // the streak pill's width and a nudge for each pill's content go on the row as variables.
+  const rowRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    if (!row) return;
+    const fit = () => {
+      const pills = Array.from(row.children) as HTMLElement[];
+      const rail = row.closest<HTMLElement>('.sidenav');
+      if (pills.length !== 2 || !rail) return;
+      const railStyle = getComputedStyle(rail);
+      const open = parseFloat(
+        getComputedStyle(document.documentElement).getPropertyValue('--rail-open'),
+      );
+      const width = open - parseFloat(railStyle.paddingLeft) - parseFloat(railStyle.paddingRight);
+      const between = 2;
+      // From the icon's visible left edge to the end of the unit, as laid out unnudged.
+      const parts = pills.map((pill) => {
+        const cell = pill.querySelector<HTMLElement>('.sidenav-icon');
+        const icon = cell?.querySelector('svg');
+        const text = pill.querySelector<HTMLElement>('.sidenav-stat-text');
+        const value = pill.querySelector('.sidenav-stat-value');
+        const unit = pill.querySelector('.sidenav-stat-unit');
+        if (!cell || !icon || !text || !value || !unit) return null;
+        const inset = (cell.offsetWidth - icon.getBoundingClientRect().width) / 2;
+        const style = getComputedStyle(text);
+        const words =
+          value.getBoundingClientRect().width +
+          (parseFloat(style.columnGap) || 0) +
+          unit.getBoundingClientRect().width;
+        return { inset, content: cell.offsetWidth - inset + parseFloat(style.marginLeft) + words };
+      });
+      const [a, b] = parts;
+      if (!a || !b) return;
+      const pad = Math.max(4, (width - between - a.content - b.content) / 4);
+      row.style.setProperty('--stat-streak', `${a.content + 2 * pad}px`);
+      row.style.setProperty('--stat-shift-a', `${pad - a.inset}px`);
+      row.style.setProperty('--stat-shift-b', `${pad - b.inset}px`);
+    };
+    fit();
+    void document.fonts?.ready.then(fit);
+  }, [streak, level]);
+
   return (
-    <div className="sidenav-stats" data-digits={Math.min(3, String(streak).length)}>
+    <div ref={rowRef} className="sidenav-stats">
       <NavLink to="/analytics" className="sidenav-stat" title={days} aria-label={days}>
         <span className="sidenav-icon" aria-hidden>
           <Flame size={19} strokeWidth={1.9} />

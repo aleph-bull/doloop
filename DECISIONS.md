@@ -1414,3 +1414,7 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 
 - **With the sidebar, the page sits in the middle of the window**, as it does with the top bar, whether the sidebar is pinned or collapsed. Only on a window too narrow for both does it step right, just far enough to clear the open sidebar. This replaces keeping a fixed left margin for the open sidebar, which pushed the page off centre.
 - **The level pill takes more of the stats row.** Open, the streak pill is only as wide as its count needs (84px for one digit, 94px for two, 98px for three or more) and the level pill takes the rest, 110px while the streak is a single digit; before, the two split the row evenly and the level crowded its edge. The row is 196px, so a streak of 100 days or more is about 2px tight.
+
+## Sidebar stats centred in their pills, 2026-10-21 (user request)
+
+- **Each stat's icon and number sit centred in their pill.** The flame and the ring are different widths inside the same 44px icon cell, so the content leaned left in the streak pill and right in the level pill. RailStats now measures both after each change of count (and once fonts load), sizes the streak pill so both pills get the same padding on every side, and nudges each pill's content to match; the nudge glides with the sidebar's open and close animation, and the slim rail is unchanged. This replaces the fixed widths by digit count.
