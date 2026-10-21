@@ -164,7 +164,9 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         summary.nodeCompleted ||
         summary.routineTicked) && (
         <div className="text-sm muted flex flex-col gap-1 summary-reveal" style={stagger()}>
-          {summary.streak.milestonesReached.length > 0 && <span>Streak milestone reached.</span>}
+          {summary.streak.milestonesReached.length > 0 && (
+            <span>{Math.max(...summary.streak.milestonesReached)}-day streak. Keep it up!</span>
+          )}
           {summary.streak.message && <span>{summary.streak.message}</span>}
           {summary.nodeCompleted && <span>Marked as done.</span>}
           {summary.routineTicked && <span>Ticked off.</span>}

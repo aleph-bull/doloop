@@ -1574,3 +1574,16 @@ The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked throug
 - **Hints and tips:** "pace" is gone from the rest-days line ("your daily plan works around them"); the level hint links to Achievements instead of saying "Achievements has the details"; the calendar hint is "Plan study blocks and sync Google Calendar in Calendar."; most tips no longer open with "You can", and "to see how far you have come" is cut.
 - **First visit:** "Add a course and what's due in it, and Today plans your day."
 - **Greetings cut:** "Brand new. Let's see what this button does.", "{hours} banked this week." and "The week is at {hours}." The other greetings flagged in the audit were kept on purpose.
+
+## Copy audit, batch 2: starting and running a session, 2026-10-21 (user request)
+
+- **Time to focus screen:** the "Your session" card lost "Start now and stop whenever you like."; its toggles read "Pomodoro" and "Timelapse" (no "Enable"). "A little space for what you want to do." was kept on purpose.
+- **Start dialog:** Pomodoro help ends "long break every 4 cycles."; the For hint is just the length ("1 h"); Until past today reads "Tomorrow, 4 h 59 min from now."; "Show the timer" has no description; the zero-length toast says "Pick a later time" or "Pick at least 1 minute" (also in the extension).
+- **Replacing a running session:** "End ECO220 and start a new one?", button "End and start", body "Its time so far is kept."
+- **Focus screen prompt** (owner's words): "Opens a new tab with a focus screen that just has the timer."
+- **Cutting a block short:** "This ends your work block 10 minutes early." ("Are you sure?" dropped).
+- **Focus screen:** no line under "Nothing running"; the shortcuts read "Esc to leave · Space to pause · H to hide the clock" under "Your session keeps running."; the hide button's tooltip matches its label.
+- **After sleep** (owner's words): "The session kept running while your computer slept."
+- **End early:** "Your time is saved, but it counts toward your level only after 10 minutes or when the task is done."
+- **"Done with {task}?"** has no body, in the app and the extension.
+- **Session summary streak line** (owner's words): "{n}-day streak. Keep it up!"

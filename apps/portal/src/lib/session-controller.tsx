@@ -370,10 +370,7 @@ export function useSessionController({
           </>
         }
       >
-        <p className="muted">
-          Did you keep studying until now, or did you stop at {sleptAt}? The session kept running
-          while it slept, so nothing is lost either way.
-        </p>
+        <p className="muted">The session kept running while your computer slept.</p>
       </Modal>
 
       <Modal
@@ -392,8 +389,8 @@ export function useSessionController({
         }
       >
         <p className="muted">
-          Under ten minutes of focus so far. The minutes are saved either way, but it only counts
-          toward your level after ten minutes, or if you mark the task done.
+          Your time is saved, but it counts toward your level only after 10 minutes or when the task
+          is done.
         </p>
       </Modal>
 
@@ -413,9 +410,7 @@ export function useSessionController({
             </>
           }
         >
-          <p className="muted">
-            The minutes are saved either way. Choose Not yet to keep it on your list.
-          </p>
+          {null}
         </Modal>
       )}
 
