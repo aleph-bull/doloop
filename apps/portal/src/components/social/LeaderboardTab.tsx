@@ -145,42 +145,51 @@ function Everyone({ stats }: { stats: GlobalStats }) {
           )}
         </div>
       </div>
-      <div className="everyone-grid">
-        {week && (
-          <Pair
-            label="Focused time"
-            you={week.you}
-            average={week.average}
-            fmt={fmtHours}
-            note={weekNote}
-          />
-        )}
-        {days && week && (
-          <Pair
-            label="Days studied"
-            you={days.you}
-            average={days.average}
-            fmt={(v) => `${v}`}
-            note={week.which === 'this' ? 'This week' : 'Last week'}
-          />
-        )}
-        {sessionLength && (
-          <Pair
-            label="Session length"
-            you={sessionLength.you}
-            average={sessionLength.average}
-            fmt={fmtHours}
-            note="Last 28 days"
-          />
-        )}
-        {streak && (
-          <Pair
-            label="Streak"
-            you={streak.you}
-            average={streak.average}
-            fmt={(v) => `${v} ${v === 1 ? 'day' : 'days'}`}
-            note="People with one running"
-          />
+      <div className="everyone-body">
+        <div className="everyone-grid">
+          {week && (
+            <Pair
+              label="Focused time"
+              you={week.you}
+              average={week.average}
+              fmt={fmtHours}
+              note={weekNote}
+            />
+          )}
+          {days && week && (
+            <Pair
+              label="Days studied"
+              you={days.you}
+              average={days.average}
+              fmt={(v) => `${v}`}
+              note={week.which === 'this' ? 'This week' : 'Last week'}
+            />
+          )}
+        </div>
+        {(sessionLength || streak) && (
+          <div className="everyone-figures">
+            {sessionLength && (
+              <div className="everyone-figure">
+                <span className="everyone-figure-label">Session length</span>
+                <Figure minutes={sessionLength.you} />
+                <span className="everyone-figure-note">
+                  average {fmtHours(sessionLength.average)} · last 28 days
+                </span>
+              </div>
+            )}
+            {streak && (
+              <div className="everyone-figure">
+                <span className="everyone-figure-label">Streak</span>
+                <span className="lb-figure tabular">
+                  {streak.you}
+                  <small>{streak.you === 1 ? 'day' : 'days'}</small>
+                </span>
+                <span className="everyone-figure-note">
+                  average {streak.average} among people with one running
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </div>
       {week && (
@@ -209,11 +218,6 @@ export function LeaderboardTab() {
   const stats = useLeaderboardStats();
   const picker = (
     <div className="board-scope">
-      <p className="rc-tile-note">
-        {scope === 'friends'
-          ? 'Most focused time among you and your friends, all time.'
-          : 'Most focused time, all time. Top ten.'}
-      </p>
       <Segmented
         ariaLabel="Which board"
         value={scope}

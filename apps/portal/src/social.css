@@ -1905,3 +1905,38 @@
 .jam-title-wrap {
   flex: 1;
 }
+
+/* You and everyone: two bar pairs on the left, two plain figures on the right. */
+.everyone-body {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 14px 32px;
+  align-items: start;
+}
+.everyone-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+.everyone-figures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.everyone-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.everyone-figure-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.everyone-figure-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+@media (max-width: 700px) {
+  .everyone-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
