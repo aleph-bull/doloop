@@ -1940,3 +1940,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The profile's study section as three panels: the grid and the weekdays side by side, the totals under. */
+.profile-study {
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.profile-totals {
+  padding-top: 22px;
+  border-top: 0;
+}

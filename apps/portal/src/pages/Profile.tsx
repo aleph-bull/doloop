@@ -164,9 +164,9 @@ export function Profile() {
           <p className="muted text-sm">Keeps their study time to themselves.</p>
         </Panel>
       ) : (
-        <Panel as="section" className="rc-tile" aria-label="Study">
+        <>
           <div className="profile-study">
-            <div className="profile-study-col">
+            <Panel as="section" className="rc-tile profile-study-col" aria-label="Days studied">
               <div className="rc-tile-head">
                 <h2 className="rc-tile-title">Days studied</h2>
                 <p className="rc-tile-note">
@@ -187,9 +187,9 @@ export function Profile() {
                   ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
                 />
               </div>
-            </div>
+            </Panel>
             {weekday.totalMinutes > 0 && (
-              <div className="profile-study-col">
+              <Panel as="section" className="rc-tile profile-study-col" aria-label="Strongest days">
                 <div className="rc-tile-head">
                   <h2 className="rc-tile-title">Strongest days</h2>
                   {weekday.peak && (
@@ -206,11 +206,11 @@ export function Profile() {
                   columnName="Day"
                   ariaLabel="Study time by day of the week"
                 />
-              </div>
+              </Panel>
             )}
           </div>
 
-          <div className="profile-totals">
+          <Panel as="section" className="rc-tile profile-totals" aria-label="Totals">
             <div className="rc-tile-head">
               <h2 className="rc-tile-title">Totals</h2>
               {stats.level > 0 && (
@@ -238,8 +238,8 @@ export function Profile() {
                 ))}
               </dl>
             )}
-          </div>
-        </Panel>
+          </Panel>
+        </>
       )}
 
       {(posts.length > 0 || you) && (
