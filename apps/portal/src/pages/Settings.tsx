@@ -396,21 +396,8 @@ export function Settings() {
               {/*
                * Pages holds every setting about what the screens show and how they are laid
                * out, one sub-panel per page. New layout settings go here, not in other sections.
+               * The one exception is the top bar or sidebar choice, which sits in Appearance.
                */}
-              <h3 className="settings-group-head">Navigation</h3>
-              <div className="field">
-                <span className="field-label">Pages sit in</span>
-                <Segmented
-                  ariaLabel="Navigation"
-                  value={s.nav?.style ?? 'top'}
-                  onChange={(style) => patch({ nav: { style } })}
-                  options={[
-                    { value: 'top', label: 'Top bar' },
-                    { value: 'sidebar', label: 'Sidebar' },
-                  ]}
-                />
-                <span className="field-hint">On a computer. Phones keep the bar along the bottom.</span>
-              </div>
               <h3 className="settings-group-head">Dashboard</h3>
               <Toggle
                 checked={s.dashboard.focusOnly}
@@ -506,6 +493,21 @@ export function Settings() {
                 panelAlpha={s.theme.panelAlpha}
                 onChange={patch}
               />
+              <div className="field">
+                <span className="field-label">Navigation</span>
+                <Segmented
+                  ariaLabel="Navigation"
+                  value={s.nav?.style ?? 'top'}
+                  onChange={(style) => patch({ nav: { style } })}
+                  options={[
+                    { value: 'top', label: 'Top bar' },
+                    { value: 'sidebar', label: 'Sidebar' },
+                  ]}
+                />
+                <span className="field-hint">
+                  Where the pages sit on a computer. Phones keep the bar along the bottom.
+                </span>
+              </div>
               <Toggle
                 checked={advanced || !!s.theme.customBackgroundUrl}
                 onChange={setAdvanced}

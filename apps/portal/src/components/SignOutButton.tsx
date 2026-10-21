@@ -5,11 +5,18 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/auth';
 
 /**
- * Sign out, as the phone bar's icon or as a labelled button in Settings. It asks first:
- * the icon sits beside Settings, so it is easy to hit by mistake, and signing out also
- * clears the offline copy in this browser.
+ * Sign out, as the top bar's icon, a row of the sidebar, or a labelled button in Settings.
+ * It asks first: the icon sits beside Settings, so it is easy to hit by mistake, and signing
+ * out also clears the offline copy in this browser.
  */
-export function SignOutButton({ labelled = false }: { labelled?: boolean }) {
+export function SignOutButton({
+  labelled = false,
+  rail = false,
+}: {
+  labelled?: boolean;
+  /** A row of the sidebar: the icon always, the label once the sidebar opens. */
+  rail?: boolean;
+}) {
   const auth = useAuth();
   const navigate = useNavigate();
   const [asking, setAsking] = useState(false);
@@ -28,7 +35,19 @@ export function SignOutButton({ labelled = false }: { labelled?: boolean }) {
 
   return (
     <>
-      {labelled ? (
+      {rail ? (
+        <button
+          type="button"
+          className="sidenav-link"
+          title="Sign out"
+          onClick={() => setAsking(true)}
+        >
+          <span className="sidenav-icon" aria-hidden>
+            <LogOut size={19} strokeWidth={1.9} />
+          </span>
+          <span className="sidenav-label">Sign out</span>
+        </button>
+      ) : labelled ? (
         <Button variant="secondary" size="sm" onClick={() => setAsking(true)}>
           <LogOut size={15} aria-hidden /> Sign out
         </Button>
@@ -61,8 +80,8 @@ export function SignOutButton({ labelled = false }: { labelled?: boolean }) {
         }
       >
         <p>
-          You can sign back in any time. Your data stays in your account; only the copy kept in
-          this browser is cleared.
+          You can sign back in any time. Your data stays in your account; only the copy kept in this
+          browser is cleared.
         </p>
       </Modal>
     </>

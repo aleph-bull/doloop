@@ -32,8 +32,8 @@ export function PanelSettings({ panel, panelColor, panelAlpha, onChange }: Panel
         />
         <span className="field-hint">
           Every card and panel uses this. Glass shows the background through them; Matte turns off
-          glass everywhere, the top bar and dialogs included. Text colour adapts automatically so it
-          stays readable.
+          glass everywhere, the top bar or sidebar and dialogs included. Text colour adapts
+          automatically so it stays readable.
         </span>
       </div>
       {panel === 'custom' && (
