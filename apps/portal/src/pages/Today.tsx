@@ -196,19 +196,6 @@ export function Today() {
             Rest days never break your streak. Set the days you don't study and pace will plan
             around them.
           </Hint>,
-          <Hint
-            key="freezes"
-            id="freezes"
-            when={(me.data?.user.streak.current ?? 0) >= 3}
-            action={
-              <Link to="/achievements" className="btn btn-secondary btn-sm">
-                Open the shop
-              </Link>
-            }
-          >
-            Your streak is growing. A streak freeze from the shop covers one missed day
-            automatically.
-          </Hint>,
           <Hint key="xp" id="xp" when={sessionCount >= 1 && sessionCount < 3}>
             Every session moves you toward the next level, and levels unlock new backgrounds.
             Achievements has the details.

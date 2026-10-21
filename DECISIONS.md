@@ -1368,4 +1368,5 @@ several hints were deleted or shortened (see the settings panel and Settings pag
 
 ## One tip at a time on the dashboard, 2026-10-21 (user request)
 
-- **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then streak freezes, then XP, then the calendar), and the next one takes its place after it is closed.
+- **The dashboard shows at most one tip.** While the rotating tip card is up, the one-time hints wait; otherwise only the first hint that is due shows (rest days, then XP, then the calendar), and the next one takes its place after it is closed.
+- **The streak freeze hint became a regular tip** (user request, same day): it now rotates with the other tips, linking to the shop, instead of being its own card.

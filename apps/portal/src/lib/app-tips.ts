@@ -47,6 +47,12 @@ export const APP_TIPS: AppTip[] = [
     link: 'Set rest days',
   },
   {
+    id: 'freezes',
+    text: 'A streak freeze from the shop covers one missed day automatically.',
+    to: '/achievements',
+    link: 'Open the shop',
+  },
+  {
     id: 'routines',
     text: 'Routines are for the things you do on a schedule, like reading every day or a weekly problem set.',
     to: '/routines',
