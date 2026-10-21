@@ -350,7 +350,10 @@ export const universityVerifications = pgTable(
   ],
 );
 
-/** A short note on someone's profile, visible to everyone signed in. */
+/**
+ * A post on Social: a note, a session shared as progress, a timelapse, or any of those
+ * together. Visible to everyone signed in, on the feed and on the author's profile.
+ */
 export const posts = pgTable(
   'posts',
   {
@@ -358,10 +361,175 @@ export const posts = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    /** Empty when the post is only a session or a video. */
+    body: text('body').notNull(),
+    /** The session shared, when the post is about one. */
+    sessionId: uuid('session_id').references(() => sessions.id, { onDelete: 'set null' }),
+    /** What the session showed when it was shared, kept so the post reads the same later. */
+    minutes: integer('minutes'),
+    subject: text('subject'),
+    /** The attached video's type and size; the bytes are in `post_media`. */
+    mediaMime: text('media_mime'),
+    mediaBytes: integer('media_bytes'),
+    /** A small JPEG data URL shown before the video loads. */
+    poster: text('poster'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('posts_user_created_idx').on(t.userId, t.createdAt),
+    index('posts_created_idx').on(t.createdAt),
+  ],
+);
+
+/** The video behind a post, kept apart from the post so listing the feed never reads it. */
+export const postMedia = pgTable('post_media', {
+  postId: uuid('post_id')
+    .primaryKey()
+    .references(() => posts.id, { onDelete: 'cascade' }),
+  mime: text('mime').notNull(),
+  data: text('data').notNull(), // base64
+  bytes: integer('bytes').notNull(),
+});
+
+export const postLikes = pgTable(
+  'post_likes',
+  {
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.userId] })],
+);
+
+export const postComments = pgTable(
+  'post_comments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
     body: text('body').notNull(),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
-  (t) => [index('posts_user_created_idx').on(t.userId, t.createdAt)],
+  (t) => [index('post_comments_post_idx').on(t.postId, t.createdAt)],
+);
+
+/**
+ * A friend request and, once accepted, the friendship. One row per pair, whichever way
+ * it was asked; declining deletes the row, so the same person can be asked again later.
+ */
+export const friendships = pgTable(
+  'friendships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    requesterId: uuid('requester_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    addresseeId: uuid('addressee_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status', { enum: ['pending', 'accepted'] })
+      .notNull()
+      .default('pending'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+    respondedAt: ts('responded_at'),
+  },
+  (t) => [
+    uniqueIndex('friendships_pair_idx').on(t.requesterId, t.addresseeId),
+    index('friendships_addressee_idx').on(t.addresseeId),
+    check('friendships_not_self', sql`requester_id <> addressee_id`),
+  ],
+);
+
+/**
+ * A jam: a small game friends enter for a day or a week. Focused minutes from the moment
+ * each person joins count; the most at the end wins. Anyone with the code can join.
+ */
+export const jams = pgTable(
+  'jams',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hostId: uuid('host_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    /** Six letters and digits, for joining from outside the friend list. */
+    code: text('code').notNull().unique(),
+    startsAt: ts('starts_at').notNull(),
+    endsAt: ts('ends_at').notNull(),
+    /** Set when the host ends it early. */
+    endedAt: ts('ended_at'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('jams_ends_idx').on(t.endsAt)],
+);
+
+/** A study group: friends who keep each other company week after week. Anyone with the code joins. */
+export const groups = pgTable('groups', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  hostId: uuid('host_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  code: text('code').notNull().unique(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
+export const groupMembers = pgTable(
+  'group_members',
+  {
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => groups.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: ts('joined_at').notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.groupId, t.userId] }),
+    index('group_members_user_idx').on(t.userId),
+  ],
+);
+
+/** A nudge to study, friend to friend, at most one every two hours per pair. Shown on the dashboard. */
+export const nudges = pgTable(
+  'nudges',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    fromId: uuid('from_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    toId: uuid('to_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The group it was sent from, when it was. */
+    groupId: uuid('group_id').references(() => groups.id, { onDelete: 'set null' }),
+    at: ts('at').notNull().defaultNow(),
+    seenAt: ts('seen_at'),
+  },
+  (t) => [index('nudges_to_idx').on(t.toId, t.at), index('nudges_pair_idx').on(t.fromId, t.toId)],
+);
+
+export const jamMembers = pgTable(
+  'jam_members',
+  {
+    jamId: uuid('jam_id')
+      .notNull()
+      .references(() => jams.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    joinedAt: ts('joined_at').notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.jamId, t.userId] }), index('jam_members_user_idx').on(t.userId)],
 );
 
 /** User-defined rewards, bought with XP or opened by finishing a task. */
@@ -687,6 +855,15 @@ export const schema = {
   streakEvents,
   userAssets,
   posts,
+  postMedia,
+  postLikes,
+  postComments,
+  friendships,
+  jams,
+  jamMembers,
+  groups,
+  groupMembers,
+  nudges,
   universityVerifications,
   customRewards,
   routines,

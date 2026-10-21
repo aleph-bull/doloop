@@ -1,12 +1,15 @@
 import {
   fmtBytes,
   planTimelapse,
+  TIMELAPSE_DEFAULT_STILL_BYTES,
+  timelapseClock,
   timelapseSizeEstimate,
+  trimIndices,
   type TimelapseLengthMode,
   type TimelapseOptions,
   type UserSettings,
 } from '@komogon/core';
-import { Download, Square, Video } from 'lucide-react';
+import { Download, MonitorUp, Share2, Square, Video } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -21,21 +24,54 @@ import {
   useToast,
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
-import { useMe } from '../../lib/queries';
+import { blobToDataUrl, POST_VIDEO_MAX_BYTES, posterFromImage } from '../../lib/post-media';
+import { useCreatePost, useMe } from '../../lib/queries';
 import {
+  DEFAULT_SCREEN_BYTES,
   freeStorageBytes,
+  measuredScreenBytes,
   measuredStillBytes,
   renderTimelapse,
+  screenSupported,
   timelapseFileName,
   videoSupported,
   type RecorderStatus,
+  type ScreenStatus,
+  type Still,
   type TimelapseRecorder,
+  type TimelapseSources,
 } from '../../lib/timelapse';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 type TimelapseSettingsValue = UserSettings['timelapse'];
 
 const SPEEDS = [60, 120, 300, 600, 1200, 3600];
+
+/** Where the timelapse's own settings live, layout editor included. */
+export const TIMELAPSE_SETTINGS_PATH = '/settings#timelapse';
+
+/**
+ * A link to the timelapse settings. From the focus screen it opens in a new tab, since
+ * leaving the focus screen would drop the stills; the change reaches this tab when it is
+ * looked at again.
+ */
+export function TimelapseSettingsLink({
+  children,
+  newTab = false,
+}: {
+  children: React.ReactNode;
+  newTab?: boolean;
+}) {
+  return (
+    <Link
+      to={TIMELAPSE_SETTINGS_PATH}
+      className="timelapse-link"
+      {...(newTab ? { target: '_blank', rel: 'noopener' } : {})}
+    >
+      {children}
+    </Link>
+  );
+}
 
 /* ---------- the question ---------- */
 
@@ -71,9 +107,44 @@ export function TimelapsePrompt({ open, onYes, onNo, onAlways, onNever }: Timela
     >
       <p className="muted text-sm">
         We take stills from your computer&rsquo;s camera and give you a timelapse in the end.{' '}
-        <Link to="/settings#focus" className="link-button" target="_blank" rel="noreferrer">
+        <Link to={TIMELAPSE_SETTINGS_PATH} className="link-button" target="_blank" rel="noreferrer">
           Change what it looks like
         </Link>
+      </p>
+    </Modal>
+  );
+}
+
+export interface ScreenPromptProps {
+  open: boolean;
+  /** Record the screen this session. Called from the click, which the browser's picker needs. */
+  onYes: () => void;
+  onNo: () => void;
+}
+
+/**
+ * Asked each time a recording starts: the screen this session, or just the camera. Saying
+ * no leaves the whole camera picture, with no space kept for the screen.
+ */
+export function ScreenPrompt({ open, onYes, onNo }: ScreenPromptProps) {
+  return (
+    <Modal
+      open={open}
+      onClose={onNo}
+      title="Record your screen this time?"
+      actions={
+        <>
+          <Button onClick={onNo}>Just the camera</Button>
+          <Button variant="primary" onClick={onYes}>
+            <MonitorUp size={14} aria-hidden /> Record my screen
+          </Button>
+        </>
+      }
+    >
+      <p className="muted text-sm">
+        Your screen goes in the video where you placed it in the{' '}
+        <TimelapseSettingsLink newTab>timelapse layout</TimelapseSettingsLink>, and the browser asks
+        which screen or window to share. Without it, the video is your camera alone.
       </p>
     </Modal>
   );
@@ -85,11 +156,21 @@ export interface TimelapseBadgeProps {
   recorder: TimelapseRecorder;
   /** Stills are only taken during focus; say so on a break. */
   capturing: boolean;
+  /** Start or pick up the screen share; absent where the browser can't share a screen. */
+  onShareScreen?: () => void;
   onStop: () => void;
 }
 
-/** The top bar's "recording" pill: a dot, a tiny mirror of the camera, and a stop. */
-export function TimelapseBadge({ recorder, capturing, onStop }: TimelapseBadgeProps) {
+/**
+ * The top bar's "recording" pill: a dot, a tiny mirror of the camera, a button to share the
+ * screen when the share is waiting for a click or was stopped, and a stop.
+ */
+export function TimelapseBadge({
+  recorder,
+  capturing,
+  onShareScreen,
+  onStop,
+}: TimelapseBadgeProps) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     if (ref.current) ref.current.srcObject = recorder.stream;
@@ -99,15 +180,40 @@ export function TimelapseBadge({ recorder, capturing, onStop }: TimelapseBadgePr
       {recorder.stream && (
         <video ref={ref} className="timelapse-preview" autoPlay muted playsInline />
       )}
-      <span className={`timelapse-dot${capturing ? '' : ' is-idle'}`} aria-hidden />
+      <span
+        className={`timelapse-dot${capturing && recorder.live ? '' : ' is-idle'}`}
+        aria-hidden
+      />
       <span className="tabular">
-        {capturing ? 'Recording' : 'Waiting for focus'} · {recorder.count}
+        {!recorder.live ? 'Waiting for the screen' : capturing ? 'Recording' : 'Waiting for focus'}{' '}
+        · {recorder.count}
       </span>
+      {onShareScreen && SCREEN_OFFER.has(recorder.screenStatus) && (
+        <Button variant="ghost" size="sm" onClick={onShareScreen}>
+          <MonitorUp size={14} aria-hidden /> Share screen
+        </Button>
+      )}
       <Button variant="ghost" size="sm" icon aria-label="Stop the timelapse" onClick={onStop}>
         <Square size={12} aria-hidden />
       </Button>
     </span>
   );
+}
+
+/** The screen isn't being shared, so the pill offers to share it. */
+const SCREEN_OFFER = new Set<ScreenStatus>(['off', 'needs-click', 'ended', 'denied', 'error']);
+
+/** What happened to the screen share, in a line, when it is worth saying. */
+export function screenProblem(status: ScreenStatus): string | null {
+  const rest = ' The camera keeps recording.';
+  if (status === 'needs-click')
+    return 'Press Share screen in the top bar to add your screen to the timelapse.';
+  if (status === 'denied') return `Nothing was shared, so the screen is not being recorded.${rest}`;
+  if (status === 'ended')
+    return `Screen sharing stopped.${rest} Press Share screen to pick it up again.`;
+  if (status === 'unavailable') return 'This browser cannot share a screen.';
+  if (status === 'error') return `The screen could not be shared.${rest}`;
+  return null;
 }
 
 /** What went wrong with the camera, in a line. */
@@ -126,6 +232,8 @@ export interface TimelapseSettingsProps {
   /** Recording now, and the switch for it, when a session is running. */
   recording?: boolean;
   onRecordingChange?: (next: boolean) => void;
+  /** Offer a link to the layout editor, opening in a new tab (the focus screen). */
+  linkToLayout?: boolean;
 }
 
 /** How the timelapse is asked for and how the video comes out. */
@@ -134,6 +242,7 @@ export function TimelapseSettings({
   onChange,
   recording,
   onRecordingChange,
+  linkToLayout = false,
 }: TimelapseSettingsProps) {
   const set = (p: Partial<TimelapseSettingsValue>) => onChange({ timelapse: p });
   return (
@@ -154,26 +263,26 @@ export function TimelapseSettings({
           ]}
         />
       </div>
+      {screenSupported() && (
+        <p className="field-hint">
+          Each time a recording starts, you are asked whether to record your screen too.
+        </p>
+      )}
+      {linkToLayout && (
+        <p className="field-hint">
+          Place the screen, move, resize or remove the clocks, the task name and the progress bar,
+          and pick the video&rsquo;s shape in{' '}
+          <TimelapseSettingsLink newTab>the timelapse layout</TimelapseSettingsLink>.
+        </p>
+      )}
       <LengthFields value={value} onChange={set} />
       <SizeNote options={value} />
-      <Toggle
-        checked={value.showTimer}
-        onChange={(v) => set({ showTimer: v })}
-        label="Show time studied"
-        description="A small clock in the corner of the video."
-      />
-      <Toggle
-        checked={value.showClockTime}
-        onChange={(v) => set({ showClockTime: v })}
-        label="Show the time of day"
-        description="The time each moment was filmed, like 2:14 PM EST, in the top corner."
-      />
       <Toggle
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
       />
-      {value.recordBreaks && value.showTimer && (
+      {value.recordBreaks && value.layout.elapsed.visible && (
         <div className="field">
           <span className="field-label">During a break, the clock shows</span>
           <Segmented
@@ -212,8 +321,11 @@ export function TimelapseSettings({
  * What a recording takes up with these settings, from this webcam's measured stills, and a
  * word when that is unusually big or the disk is short.
  */
-export async function timelapseSpaceWarning(options: TimelapseOptions): Promise<string | null> {
-  const est = timelapseSizeEstimate(options, measuredStillBytes() ?? undefined);
+export async function timelapseSpaceWarning(
+  options: TimelapseOptions,
+  sources: TimelapseSources,
+): Promise<string | null> {
+  const est = timelapseSizeEstimate(options, stillBytesFor(sources));
   const free = await freeStorageBytes();
   if (free !== null && free < est.peakBytes * 2)
     return `Space is short: this timelapse needs about ${fmtBytes(est.peakBytes)} while recording and the browser has about ${fmtBytes(free)} left.`;
@@ -222,9 +334,17 @@ export async function timelapseSpaceWarning(options: TimelapseOptions): Promise<
   return null;
 }
 
-function SizeNote({ options }: { options: TimelapseOptions }) {
-  const measured = measuredStillBytes();
-  const est = timelapseSizeEstimate(options, measured ?? undefined);
+/** What one moment of the recording takes up: the camera's still, the screen's, or both. */
+function stillBytesFor(sources: TimelapseSources): number | undefined {
+  const camera = sources.camera ? (measuredStillBytes() ?? TIMELAPSE_DEFAULT_STILL_BYTES) : 0;
+  const screen = sources.screen ? (measuredScreenBytes() ?? DEFAULT_SCREEN_BYTES) : 0;
+  return camera + screen || undefined;
+}
+
+function SizeNote({ options }: { options: TimelapseSettingsValue }) {
+  // The screen is asked about each session; count it when it has a place in the layout.
+  const sources = { camera: true, screen: options.layout.screen.visible };
+  const est = timelapseSizeEstimate(options, stillBytesFor(sources));
   const [free, setFree] = useState<number | null>(null);
   useEffect(() => {
     let live = true;
@@ -361,6 +481,8 @@ export interface TimelapseExportProps {
   recording: boolean;
   /** The video was saved, so the stills behind it are safe to lose. */
   onSaved?: () => void;
+  /** The session the stills came from, so sharing can attach it to the post. */
+  sessionId?: string | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -370,20 +492,37 @@ export function TimelapseExport({
   onChange,
   recording,
   onSaved,
+  sessionId,
 }: TimelapseExportProps) {
   const { toast } = useToast();
+  const share = useCreatePost();
+  const [sharing, setSharing] = useState(false);
   // The time of day in the video reads in the account's timezone, not the computer's.
   const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
-  const [video, setVideo] = useState<{ url: string; mime: string } | null>(null);
+  const [video, setVideo] = useState<{ url: string; mime: string; blob: Blob } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
-  const span = recorder.spanSeconds();
+  // The trim, in seconds into the session; null keeps that end where the recording is.
+  const [trim, setTrim] = useState<{ from: number | null; to: number | null }>({
+    from: null,
+    to: null,
+  });
+  const all = recorder.stills();
+  // With breaks in the stills the session's running time places them, else focused time.
+  const timeKey = all.some((x) => x.breakSeconds !== null) ? 'totalSeconds' : 'workSeconds';
+  const times = all.map((x) => x[timeKey]);
+  const first = times[0] ?? 0;
+  const last = times[times.length - 1] ?? 0;
+  const [startAt, endAt] = trimIndices(times, trim.from, trim.to);
+  const kept = endAt - startAt;
+  const span = kept >= 2 ? times[endAt - 1]! - times[startAt]! : 0;
+  const trimmed = trim.from !== null || trim.to !== null;
   const plan = useMemo(
-    () => planTimelapse(count, span, value),
-    // The plan follows the count; the span only grows with it.
+    () => planTimelapse(kept, span, value),
+    // The plan follows the stills kept; the span only changes with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [count, value.lengthMode, value.lengthSeconds, value.speed, value.fps],
+    [kept, startAt, value.lengthMode, value.lengthSeconds, value.speed, value.fps],
   );
 
   useEffect(
@@ -402,13 +541,13 @@ export function TimelapseExport({
     setProgress(0);
     try {
       const { blob, mime } = await renderTimelapse(
-        recorder.stills(),
+        recorder.stills().slice(startAt, endAt),
         plan,
         { ...value, timeZone },
         setProgress,
         abort.current.signal,
       );
-      setVideo({ url: URL.createObjectURL(blob), mime });
+      setVideo({ url: URL.createObjectURL(blob), mime, blob });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
         toast(err instanceof Error ? err.message : 'Could not make the video');
@@ -426,10 +565,37 @@ export function TimelapseExport({
     onSaved?.();
   };
 
+  /** The video goes up as a post with the session's minutes, and a still as its poster. */
+  const shareToSocial = async () => {
+    if (!video) return;
+    if (video.blob.size > POST_VIDEO_MAX_BYTES)
+      return toast('Up to 5 MB can be shared. Pick a shorter length and make it again.');
+    setSharing(true);
+    try {
+      // The poster comes from the middle of what the video kept, after any trim.
+      const stills = recorder.stills().slice(startAt, endAt);
+      const middle = stills[Math.floor(stills.length / 2)];
+      const picture = middle?.blob ?? middle?.screen ?? null;
+      const poster = picture ? await posterFromImage(picture) : null;
+      await share.mutateAsync({
+        sessionId: sessionId ?? undefined,
+        media: await blobToDataUrl(video.blob),
+        poster: poster ?? undefined,
+      });
+      toast('Shared to Social.');
+      onSaved?.();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not share it');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const discard = () => {
     abort.current?.abort();
     if (video) URL.revokeObjectURL(video.url);
     setVideo(null);
+    setTrim({ from: null, to: null });
     recorder.clear();
   };
 
@@ -440,9 +606,15 @@ export function TimelapseExport({
         <h3 className="font-medium">Your timelapse</h3>
       </div>
       <p className="muted text-sm">
-        {count} stills from {fmtMinutes(span / 60)} of focus. It comes out{' '}
-        {Math.max(1, Math.round(plan.durationSeconds))} s at {plan.fps} fps
+        {kept} stills from {fmtMinutes(span / 60)} of{' '}
+        {timeKey === 'totalSeconds' ? 'the session' : 'focus'}
+        {trimmed ? ', trimmed' : ''}. It comes out {Math.max(1, Math.round(plan.durationSeconds))} s
+        at {plan.fps} fps
         {plan.short && ', shorter than asked: there are not enough stills yet'}.
+      </p>
+      <p className="field-hint">
+        It follows your <TimelapseSettingsLink newTab>timelapse layout</TimelapseSettingsLink>: the
+        shape, and where the clocks, the task name and the progress bar sit.
       </p>
       {video ? (
         <>
@@ -450,6 +622,9 @@ export function TimelapseExport({
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={download}>
               <Download size={14} aria-hidden /> Save the video
+            </Button>
+            <Button variant="secondary" onClick={() => void shareToSocial()} loading={sharing}>
+              <Share2 size={14} aria-hidden /> Share to Social
             </Button>
             <Button
               variant="ghost"
@@ -477,13 +652,27 @@ export function TimelapseExport({
         </div>
       ) : (
         <>
+          {count >= 3 && last > first && (
+            <TrimFields
+              stills={all}
+              first={first}
+              last={last}
+              from={trim.from ?? first}
+              to={trim.to ?? last}
+              startAt={startAt}
+              endAt={endAt}
+              onChange={(from, to) =>
+                setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
+              }
+            />
+          )}
           <LengthFields
             value={value}
             onChange={(p) => onChange({ timelapse: p })}
             maxFps={plan.maxFps}
           />
           <div className="flex gap-2 flex-wrap">
-            <Button variant="primary" onClick={make} disabled={recording && count < 2}>
+            <Button variant="primary" onClick={make} disabled={kept < 2}>
               Make the video
             </Button>
             <Button variant="ghost" onClick={discard}>
@@ -496,5 +685,99 @@ export function TimelapseExport({
         </>
       )}
     </section>
+  );
+}
+
+interface TrimFieldsProps {
+  stills: Still[];
+  /** The first and last still's time, seconds into the session. */
+  first: number;
+  last: number;
+  /** Where the trim stands, in the same seconds. */
+  from: number;
+  to: number;
+  /** The stills it keeps, [first, end). */
+  startAt: number;
+  endAt: number;
+  onChange: (from: number, to: number) => void;
+}
+
+/**
+ * Where the video starts and ends: two sliders over the recorded session, each with the
+ * still it lands on, so the cut can be seen before the video is made.
+ */
+function TrimFields({ stills, first, last, from, to, startAt, endAt, onChange }: TrimFieldsProps) {
+  // At least a few seconds of session between the two ends, so something is always kept.
+  const gap = Math.max(1, Math.min(10, (last - first) / 20));
+  const trimmed = from > first || to < last;
+  return (
+    <div className="field tl-trim">
+      <span className="field-label">Trim</span>
+      <div className="tl-trim-frames">
+        <TrimFrame still={stills[startAt]} label={`Starts at ${timelapseClock(from)}`} />
+        <TrimFrame
+          still={stills[Math.max(startAt, endAt - 1)]}
+          label={`Ends at ${timelapseClock(to)}`}
+        />
+      </div>
+      <label className="flex flex-col gap-1">
+        <span className="flex justify-between field-hint">
+          <span>Start</span>
+          <span className="tabular">{timelapseClock(from)}</span>
+        </span>
+        <Slider
+          min={first}
+          max={last}
+          step={1}
+          value={from}
+          aria-label="Where the video starts"
+          onChange={(v) => onChange(Math.min(Math.round(v), to - gap), to)}
+        />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="flex justify-between field-hint">
+          <span>End</span>
+          <span className="tabular">{timelapseClock(to)}</span>
+        </span>
+        <Slider
+          min={first}
+          max={last}
+          step={1}
+          value={to}
+          aria-label="Where the video ends"
+          onChange={(v) => onChange(from, Math.max(Math.round(v), from + gap))}
+        />
+      </label>
+      <span className="field-hint">
+        {trimmed
+          ? `Keeps ${timelapseClock(to - from)} of the ${timelapseClock(last - first)} recorded.`
+          : 'Move the ends to cut the start or the end of the session out of the video.'}
+      </span>
+      {trimmed && (
+        <div>
+          <Button variant="ghost" size="sm" onClick={() => onChange(first, last)}>
+            Keep it all
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** One still, as a small picture: the camera's, or the screen's when there is no camera. */
+function TrimFrame({ still, label }: { still: Still | undefined; label: string }) {
+  const blob = still?.blob ?? still?.screen ?? null;
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    if (!blob) return;
+    const u = URL.createObjectURL(blob);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [blob]);
+  return (
+    <figure className="tl-trim-frame">
+      {url && blob ? <img src={url} alt="" /> : <span className="tl-trim-empty" />}
+      <figcaption className="field-hint tabular">{label}</figcaption>
+    </figure>
   );
 }

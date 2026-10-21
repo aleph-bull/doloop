@@ -1,4 +1,5 @@
 import { UOFT_GRADE_SCALE } from './grades';
+import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
@@ -124,6 +125,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
     burstSpikeOpacity: 1,
   },
   features: { routines: true, plans: true, grades: false, calendar: true, social: true },
+  social: {
+    posts: 'everyone',
+    stats: true,
+    leaderboard: 'global',
+    requests: true,
+  },
   dashboard: { focusOnly: false },
   nav: { style: 'top' },
   focusScreen: { openOnStart: 'ask' },
@@ -139,6 +146,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
     deflicker: true,
     recordBreaks: false,
     breakClock: 'break',
+    // The camera's own shape, measured once it is seen.
+    aspect: 'camera',
+    layout: defaultTimelapseLayout(16 / 9),
   },
   dismissed: [],
 };
@@ -171,10 +181,23 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
 
   // Idle detection is gone; a row saved while it existed still carries its group.
   delete out.idle;
+  // The leaderboard choice was a yes or no for a day; those rows read as the two ends.
+  const social = out.social as { leaderboard: unknown };
+  if (social.leaderboard === true) social.leaderboard = 'global';
+  else if (social.leaderboard === false) social.leaderboard = 'off';
 
   const settings = out as unknown as UserSettings;
   settings.dismissed = asList<string>(settings.dismissed, []);
   settings.blocking.domains = asList<string>(settings.blocking.domains, []);
   settings.grading.scale = asList(settings.grading.scale, DEFAULT_SETTINGS.grading.scale);
+  // A row saved before the layout existed: its two clock switches decide those pieces.
+  const tl = settings.timelapse;
+  const savedLayout = (partial.timelapse as { layout?: unknown } | undefined)?.layout;
+  const seed = defaultTimelapseLayout(16 / 9);
+  if (savedLayout === undefined) {
+    seed.elapsed.visible = tl.showTimer !== false;
+    seed.clock.visible = tl.showClockTime !== false;
+  }
+  tl.layout = normalizeTimelapseLayout(savedLayout, seed);
   return settings;
 }

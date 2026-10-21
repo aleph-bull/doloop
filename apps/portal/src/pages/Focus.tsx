@@ -58,9 +58,11 @@ import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { SessionSummary } from '../components/SessionSummary';
 import { announceAchievements } from '../lib/achievements';
-import { cameraSupported, useTimelapseRecorder } from '../lib/timelapse';
+import { cameraSupported, screenSupported, useTimelapseRecorder } from '../lib/timelapse';
 import {
   recorderProblem,
+  ScreenPrompt,
+  screenProblem,
   TimelapseBadge,
   TimelapseExport,
   TimelapsePrompt,
@@ -149,16 +151,27 @@ export function Focus() {
 
   // Where the session stands right now, from the server's timer and the wall clock: the
   // recorder takes stills only in focus, and stamps each with the time studied.
+  // The task's name, as the focus screen shows it, for the task name drawn into the video.
+  const nodeIndex = useMemo(() => buildIndex(nodes.data?.nodes ?? []), [nodes.data]);
+  const tlTitle = session
+    ? (() => {
+        const c = focusContext(nodeIndex.byId, session.session.nodeId, session.nodeTitle);
+        return c.child ? `${c.subject} · ${c.child}` : c.subject;
+      })()
+    : null;
   const sessionRef = useRef(session);
   const settingsRef = useRef(settings);
+  const titleRef = useRef(tlTitle);
   useEffect(() => {
     sessionRef.current = session;
     settingsRef.current = settings;
+    titleRef.current = tlTitle;
   });
   const sample = useCallback(() => {
     const s = sessionRef.current;
     const st = settingsRef.current;
-    if (!s || !st) return { phase: null, workSeconds: 0, breakSeconds: null, totalSeconds: 0 };
+    if (!s || !st)
+      return { phase: null, workSeconds: 0, breakSeconds: null, totalSeconds: 0, title: null };
     const now = new Date().toISOString();
     const t = advance(s.timer, now, {
       pomodoro: s.session.pomodoroConfigSnapshot ?? st.pomodoro,
@@ -172,6 +185,7 @@ export function Focus() {
       workSeconds: v.workSeconds,
       breakSeconds: onBreak ? v.phaseElapsedSeconds : null,
       totalSeconds: v.workSeconds + v.breakSeconds,
+      title: titleRef.current,
     };
   }, []);
   const [inFocus, setInFocus] = useState(false);
@@ -196,13 +210,21 @@ export function Focus() {
     }),
     [tl?.lengthMode, tl?.lengthSeconds, tl?.speed, tl?.fps],
   );
+  // The camera is always recorded. The screen is asked about each session, the first time a
+  // recording starts in it, and the answer holds for the rest of that session.
+  const [screenOn, setScreenOn] = useState(false);
+  const [screenAskOpen, setScreenAskOpen] = useState(false);
+  const screenAskedFor = useRef<string | null>(null);
+  const screenSessionId = session?.session.id ?? null;
+  const tlSources = useMemo(() => ({ camera: true, screen: screenOn }), [screenOn]);
   const recorder = useTimelapseRecorder({
     recording,
     capturing: inFocus,
+    sources: tlSources,
     options: tlOptions,
     stamp: () => {
-      const { workSeconds, breakSeconds, totalSeconds } = sample();
-      return { workSeconds, breakSeconds, totalSeconds };
+      const { workSeconds, breakSeconds, totalSeconds, title } = sample();
+      return { workSeconds, breakSeconds, totalSeconds, title };
     },
   });
 
@@ -215,7 +237,42 @@ export function Focus() {
     if (!problem) return;
     toast(problem);
     setRecording(false);
+    setScreenAskOpen(false);
   }, [problem, toast]);
+
+  // The screen share fell short: say so once. The camera carries on either way.
+  const screenIssue = recording && screenOn ? screenProblem(recorder.screenStatus) : null;
+  useEffect(() => {
+    if (screenIssue) toast(screenIssue);
+  }, [screenIssue, toast]);
+
+  // A new session starts with the screen off, to be asked about again.
+  useEffect(() => {
+    setScreenOn(false);
+    setScreenAskOpen(false);
+  }, [screenSessionId]);
+
+  // The first recording in a session: ask about the screen.
+  useEffect(() => {
+    if (!recording || !screenSessionId || screenAskedFor.current === screenSessionId) return;
+    if (!screenSupported()) return;
+    screenAskedFor.current = screenSessionId;
+    setScreenAskOpen(true);
+  }, [recording, screenSessionId]);
+
+  /**
+   * Record the screen this session. Runs in the click, since the browser's picker needs
+   * one; a screen not yet in the layout goes in where it was last placed.
+   */
+  const shareScreen = () => {
+    setScreenAskOpen(false);
+    setScreenOn(true);
+    recorder.requestScreen();
+    if (tl && !tl.layout.screen.visible)
+      void patch({
+        timelapse: { layout: { ...tl.layout, screen: { ...tl.layout.screen, visible: true } } },
+      });
+  };
 
   // Recording started: if these settings hold an unusually large pile of stills, or the disk
   // is short, say so once per session while there is still time to change them.
@@ -225,10 +282,10 @@ export function Focus() {
     if (!recording || !spaceSessionId || tlSpaceWarnedFor.current === spaceSessionId) return;
     tlSpaceWarnedFor.current = spaceSessionId;
     // Not cancelled on re-render: it is marked as said already, so it must get said.
-    void timelapseSpaceWarning(tlOptions).then((msg) => {
+    void timelapseSpaceWarning(tlOptions, tlSources).then((msg) => {
       if (msg) toast(msg);
     });
-  }, [recording, spaceSessionId, tlOptions, toast]);
+  }, [recording, spaceSessionId, tlOptions, tlSources, toast]);
 
   // The session ended, here or elsewhere: the camera goes off and the stills wait for the video.
   useEffect(() => {
@@ -423,10 +480,11 @@ export function Focus() {
         </Link>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}
-        {recording && recorder.status === 'on' && (
+        {recording && recorder.live && (
           <TimelapseBadge
             recorder={recorder}
             capturing={inFocus}
+            onShareScreen={screenSupported() ? shareScreen : undefined}
             onStop={() => setRecording(false)}
           />
         )}
@@ -504,6 +562,7 @@ export function Focus() {
                 onChange={patch}
                 recording={recording}
                 onSaved={() => setTlSavedAt(recorder.count)}
+                sessionId={summary.session.id}
               />
             )}
             <div className="focus-actions" style={{ marginTop: 20 }}>
@@ -557,6 +616,7 @@ export function Focus() {
               <TimelapseSettings
                 value={tl}
                 onChange={patch}
+                linkToLayout
                 recording={recording}
                 onRecordingChange={
                   session && cameraSupported()
@@ -574,6 +634,7 @@ export function Focus() {
                   onChange={patch}
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
+                  sessionId={session?.session.id ?? null}
                 />
               )}
             </section>
@@ -590,6 +651,8 @@ export function Focus() {
           </section>
         </Glass>
       )}
+
+      <ScreenPrompt open={screenAskOpen} onYes={shareScreen} onNo={() => setScreenAskOpen(false)} />
 
       <TimelapsePrompt
         open={tlAskOpen}

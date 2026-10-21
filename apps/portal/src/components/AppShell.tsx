@@ -18,6 +18,7 @@ import {
   Settings as SettingsIcon,
   Trophy,
   UserRound,
+  Users,
   WifiOff,
   type LucideIcon,
   Route as RouteIcon,
@@ -58,6 +59,14 @@ const links: Array<{
     feature: 'calendar',
   },
   { to: '/analytics', label: 'Analytics', short: 'Stats', icon: ChartColumn, group: 'main' },
+  {
+    to: '/social',
+    label: 'Social',
+    short: 'Social',
+    icon: Users,
+    group: 'main',
+    feature: 'social',
+  },
   {
     to: '/routines',
     label: 'Routines',
@@ -544,7 +553,7 @@ export function AppShell() {
             <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
             {/* Your profile takes the sign-out row; signing out is on the profile itself. */}
             {profileShown && (
-              <NavLink to="/social" className="sidenav-link" title="Your profile">
+              <NavLink to="/profile" className="sidenav-link" title="Your profile">
                 <span className="sidenav-icon" aria-hidden>
                   {avatarUrl ? (
                     <img className="nav-avatar" src={avatarUrl} alt="" />
@@ -685,7 +694,7 @@ export function AppShell() {
           </NavLink>
           {profileShown && (
             <NavLink
-              to="/social"
+              to="/profile"
               className="nav-icon"
               aria-label="Your profile"
               title="Your profile"

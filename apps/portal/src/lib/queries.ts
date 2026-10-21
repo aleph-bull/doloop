@@ -8,9 +8,16 @@ import {
 } from '@tanstack/react-query';
 import {
   api,
+  type FeedComment,
+  type FeedPage,
+  type FeedPost,
+  type FeedScope,
+  type LeaderboardScope,
   type LogTrackerInput,
   type DrillInput,
+  type NewPost,
   type NodeInput,
+  type Person,
   type PlanInput,
   type PlanPatch,
   type PlanView,
@@ -52,6 +59,16 @@ export const keys = {
   plans: ['plans'] as const,
   plan: (id: string) => ['plans', id] as const,
   profile: (id: string) => ['profiles', id] as const,
+  feed: (scope: FeedScope) => ['social', 'feed', scope] as const,
+  comments: (postId: string) => ['social', 'comments', postId] as const,
+  friends: ['social', 'friends'] as const,
+  people: (q: string) => ['social', 'people', q] as const,
+  jams: ['social', 'jams', 2] as const,
+  compare: ['social', 'compare'] as const,
+  groups: ['social', 'groups', 2] as const,
+  nudges: ['social', 'nudges'] as const,
+  // Versioned: the persisted cache held older shapes of these without the per-row lines.
+  leaderboard: (scope: LeaderboardScope) => ['leaderboard', 2, scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
   avatar: ['avatar', 'me'] as const,
@@ -418,11 +435,28 @@ export function useUniversityStatus(enabled = true) {
   });
 }
 
+/* ---------- Social ---------- */
+
+/** Everything that lists posts: the feed and the profiles. */
+const POST_KEYS = [['social', 'feed'], ['profiles']] as const;
+
+export function useFeed(scope: FeedScope) {
+  return useInfiniteQuery({
+    queryKey: keys.feed(scope),
+    queryFn: ({ pageParam }) => api.feed(scope, pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last: FeedPage) => last.nextBefore,
+    staleTime: 30_000,
+  });
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: string) => api.createPost(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+    mutationFn: (input: NewPost) => api.createPost(input),
+    onSuccess: () => {
+      for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
   });
 }
 
@@ -430,7 +464,228 @@ export function useDeletePost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => api.deletePost(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['profiles'] }),
+    onSuccess: () => {
+      for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+/** Writes new counts into every cached list that holds the post, instead of refetching. */
+function patchPost(
+  qc: ReturnType<typeof useQueryClient>,
+  id: string,
+  patch: (p: FeedPost) => FeedPost,
+) {
+  const apply = (posts: FeedPost[]) => posts.map((p) => (p.id === id ? patch(p) : p));
+  qc.setQueriesData<{ pages: FeedPage[]; pageParams: unknown[] }>(
+    { queryKey: ['social', 'feed'] },
+    (data) =>
+      data && { ...data, pages: data.pages.map((pg) => ({ ...pg, posts: apply(pg.posts) })) },
+  );
+  qc.setQueriesData<{ posts: FeedPost[] }>(
+    { queryKey: ['profiles'] },
+    (data) => data && { ...data, posts: apply(data.posts) },
+  );
+}
+
+export function useLikePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
+      liked ? api.unlike(id) : api.like(id),
+    onMutate: ({ id, liked }) =>
+      patchPost(qc, id, (p) => ({ ...p, liked: !liked, likes: p.likes + (liked ? -1 : 1) })),
+    onSuccess: (counts, { id }) => patchPost(qc, id, (p) => ({ ...p, ...counts })),
+    onError: (_err, { id, liked }) =>
+      patchPost(qc, id, (p) => ({ ...p, liked, likes: p.likes + (liked ? 1 : -1) })),
+  });
+}
+
+export function useComments(postId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.comments(postId),
+    queryFn: () => api.comments(postId),
+    staleTime: 30_000,
+    enabled,
+  });
+}
+
+type CommentsData = { comments: FeedComment[]; people: Record<string, Person> };
+
+export function useAddComment(postId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: string) => api.addComment(postId, body),
+    onSuccess: ({ comment, people }) => {
+      qc.setQueryData<CommentsData>(
+        keys.comments(postId),
+        (data) =>
+          data && { comments: [...data.comments, comment], people: { ...data.people, ...people } },
+      );
+      patchPost(qc, postId, (p) => ({ ...p, comments: p.comments + 1 }));
+    },
+  });
+}
+
+export function useDeleteComment(postId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteComment(id),
+    onSuccess: (_void, id) => {
+      qc.setQueryData<CommentsData>(
+        keys.comments(postId),
+        (data) => data && { ...data, comments: data.comments.filter((c) => c.id !== id) },
+      );
+      patchPost(qc, postId, (p) => ({ ...p, comments: Math.max(0, p.comments - 1) }));
+    },
+  });
+}
+
+export function useFriends() {
+  return useQuery({ queryKey: keys.friends, queryFn: api.friends, staleTime: 30_000 });
+}
+
+export function useFindPeople(q: string) {
+  return useQuery({
+    queryKey: keys.people(q),
+    queryFn: () => api.findPeople(q),
+    enabled: q.trim().length > 0,
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Every list that says where you stand with someone. */
+const FRIEND_KEYS = [
+  keys.friends,
+  ['profiles'],
+  ['social', 'people'],
+  keys.jams,
+  ['leaderboard'],
+  ['social', 'feed'],
+] as const;
+
+function useFriendMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => {
+      for (const key of FRIEND_KEYS) void qc.invalidateQueries({ queryKey: key });
+    },
+  });
+}
+
+export function useSendFriendRequest() {
+  return useFriendMutation((userId: string) => api.sendFriendRequest(userId));
+}
+
+export function useAcceptFriendRequest() {
+  return useFriendMutation((id: string) => api.acceptFriendRequest(id));
+}
+
+export function useDeleteFriendRequest() {
+  return useFriendMutation((id: string) => api.deleteFriendRequest(id));
+}
+
+export function useRemoveFriend() {
+  return useFriendMutation((userId: string) => api.removeFriend(userId));
+}
+
+export function useJams() {
+  return useQuery({ queryKey: keys.jams, queryFn: api.jams, staleTime: 30_000 });
+}
+
+function useJamMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.jams }),
+  });
+}
+
+export function useCreateJam() {
+  return useJamMutation((input: { title?: string; days: number }) => api.createJam(input));
+}
+export function useJoinJamByCode() {
+  return useJamMutation((code: string) => api.joinJamByCode(code));
+}
+export function useJoinJam() {
+  return useJamMutation((id: string) => api.joinJam(id));
+}
+export function useLeaveJam() {
+  return useJamMutation((id: string) => api.leaveJam(id));
+}
+export function useEndJam() {
+  return useJamMutation((id: string) => api.endJam(id));
+}
+
+export function useGroups() {
+  // Live timers and nudges go stale fast: refetch while the tab is open.
+  return useQuery({
+    queryKey: keys.groups,
+    queryFn: api.groups,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+function useGroupMutation<A>(fn: (arg: A) => Promise<unknown>) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.groups }),
+  });
+}
+export function useCreateGroup() {
+  return useGroupMutation((name: string) => api.createGroup(name));
+}
+export function useJoinGroupByCode() {
+  return useGroupMutation((code: string) => api.joinGroupByCode(code));
+}
+export function useJoinGroup() {
+  return useGroupMutation((id: string) => api.joinGroup(id));
+}
+export function useLeaveGroup() {
+  return useGroupMutation((id: string) => api.leaveGroup(id));
+}
+export function useNudge() {
+  return useGroupMutation(({ userId, groupId }: { userId: string; groupId?: string }) =>
+    api.nudge(userId, groupId),
+  );
+}
+export function useNudges() {
+  return useQuery({
+    queryKey: keys.nudges,
+    queryFn: api.nudges,
+    staleTime: 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+}
+export function useNudgesSeen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.nudgesSeen(),
+    onSuccess: () => qc.setQueryData(keys.nudges, { nudges: [], people: {} }),
+  });
+}
+
+export function useCompare() {
+  return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
+}
+
+export function useLeaderboardStats() {
+  return useQuery({
+    queryKey: ['leaderboard', 'stats'],
+    queryFn: api.leaderboardStats,
+    staleTime: 60_000,
+  });
+}
+
+export function useLeaderboard(scope: LeaderboardScope) {
+  return useQuery({
+    queryKey: keys.leaderboard(scope),
+    queryFn: () => api.leaderboard(scope),
+    staleTime: 60_000,
   });
 }
 
@@ -440,7 +695,16 @@ export function useUpdateSettings() {
   return useMutation({
     mutationFn: (patch: DeepPartial<UserSettings>) => api.updateSettings(patch),
     onSuccess: () =>
-      invalidate(keys.me, keys.quote, keys.pace, keys.rewards, ['analytics'], ['profiles']),
+      invalidate(
+        keys.me,
+        keys.quote,
+        keys.pace,
+        keys.rewards,
+        ['analytics'],
+        ['profiles'],
+        ['social'],
+        ['leaderboard'],
+      ),
   });
 }
 

@@ -127,6 +127,27 @@
       "when": 1792612251624,
       "tag": "0017_profiles_university",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792613601371,
+      "tag": "0018_social_feed",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792617816991,
+      "tag": "0019_jams",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792622554891,
+      "tag": "0020_groups_nudges",
+      "breakpoints": true
     }
   ]
 }

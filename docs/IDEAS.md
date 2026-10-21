@@ -27,7 +27,9 @@ Built as a local-only first version on the focus screen; see DECISIONS.md. Shari
 - If a session is started with a task's play button, the panel drops its task selection options. The session can only run on that task.
 - Play button placement: on the left of the row, right after the tick (complete) button, with plenty of padding between them.
 
-## Social layer, Strava-style (logged 2026-10-05)
+## Social layer, Strava-style (logged 2026-10-05, built 2026-10-21)
+
+Built as the Social page: a feed of posts (a line, a shared session, a timelapse), likes and comments, friend requests, a comparison with friends, and the leaderboard. Not yet: blocking and reporting, exporting timelapses with a watermark.
 
 - Friends can see each other's study times and timelapses so they keep each other accountable. Think kudos on a run, but for a study session.
 - Decided by user (2026-10-05):

@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
 import { Spinner } from '@komogon/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
@@ -32,10 +32,17 @@ const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m
 const Extension = lazy(() => import('./pages/Extension').then((m) => ({ default: m.Extension })));
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
 const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
+const Social = lazy(() => import('./pages/Social').then((m) => ({ default: m.Social })));
 const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
 const ResetPassword = lazy(() =>
   import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })),
 );
+
+/** An old /social/:id link: the same profile at its new address. */
+function ProfileRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/profile/${id}`} replace />;
+}
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -162,9 +169,12 @@ export function App() {
             {/* The weekly review page was removed (2026-10-20); old links land on Analytics. */}
             <Route path="/analytics/review" element={<Navigate to="/analytics" replace />} />
             <Route path="/achievements" element={<Achievements />} />
-            {/* Social opens your own profile; other people's are by id (from the leaderboard). */}
-            <Route path="/social" element={<Profile />} />
-            <Route path="/social/:id" element={<Profile />} />
+            {/* Social: the feed, friends, compare and the leaderboard. Profiles are their own pages. */}
+            <Route path="/social" element={<Social />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/:id" element={<Profile />} />
+            {/* Profiles lived under /social until 2026-10-21; old links still land. */}
+            <Route path="/social/:id" element={<ProfileRedirect />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/extension" element={<Extension />} />
             <Route path="/admin" element={<Admin />} />

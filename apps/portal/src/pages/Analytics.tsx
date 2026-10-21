@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 import {
   Bars,
   DataTable,
@@ -12,7 +12,6 @@ import {
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RecapView } from '../components/recap/RecapView';
-import { Leaderboard } from '../components/Leaderboard';
 import { StatusChip } from '../components/StatusChip';
 import { fmtDate, fmtHours, fmtMinutes, pct } from '../lib/format';
 import { useAdvancedAnalytics } from '../lib/queries';
@@ -211,7 +210,7 @@ function Advanced() {
   );
 }
 
-const TABS = ['week', 'month', 'all', 'advanced', 'leaderboard'] as const;
+const TABS = ['week', 'month', 'all', 'advanced'] as const;
 type Tab = (typeof TABS)[number];
 
 export function Analytics() {
@@ -220,6 +219,8 @@ export function Analytics() {
   // "overview" was the All time tab's old name; links to it still land there.
   const named = raw === 'overview' ? 'all' : raw;
   const tab: Tab = (TABS as readonly string[]).includes(named ?? '') ? (named as Tab) : 'week';
+  // The leaderboard is a Social tab now (2026-10-21); old links follow it there.
+  if (raw === 'leaderboard') return <Navigate to="/social?tab=leaderboard" replace />;
   // How many weeks or months back, kept in the URL so a past week can be linked to.
   const ago = tab === 'week' || tab === 'month' ? Math.max(0, Number(params.get('ago')) || 0) : 0;
   const setAgo = (n: number) => {
@@ -240,17 +241,10 @@ export function Analytics() {
             { value: 'month', label: 'Month' },
             { value: 'all', label: 'All time' },
             { value: 'advanced', label: 'By task' },
-            { value: 'leaderboard', label: 'Leaderboard' },
           ]}
         />
       </div>
-      {tab === 'advanced' ? (
-        <Advanced />
-      ) : tab === 'leaderboard' ? (
-        <Leaderboard />
-      ) : (
-        <RecapView range={tab} ago={ago} onAgo={setAgo} />
-      )}
+      {tab === 'advanced' ? <Advanced /> : <RecapView range={tab} ago={ago} onAgo={setAgo} />}
     </div>
   );
 }

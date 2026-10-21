@@ -7,31 +7,20 @@ import {
   GraduationCap,
   Settings as SettingsIcon,
   Trophy,
+  Users,
 } from 'lucide-react';
 import { Button, Columns, Heatmap, Panel, Spinner } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { ProfileSettingsDialog } from '../components/ProfileSettingsDialog';
 import { SignOutButton } from '../components/SignOutButton';
+import { Avatar } from '../components/social/Avatar';
+import { FriendButton } from '../components/social/FriendButton';
+import { PostCard } from '../components/social/PostCard';
 import { ApiError, type PublicProfile } from '../lib/api';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useProfile } from '../lib/queries';
 
-/** The picture, or the first letter of the name on a tint of the accent. */
-export function Avatar({
-  name,
-  url,
-  size = 'md',
-}: {
-  name: string;
-  url: string | null;
-  size?: 'sm' | 'md';
-}) {
-  return (
-    <span className={`profile-avatar${size === 'sm' ? ' is-sm' : ''}`} aria-hidden>
-      {url ? <img src={url} alt="" /> : name.trim().charAt(0).toUpperCase() || '?'}
-    </span>
-  );
-}
+export { Avatar };
 
 function joined(iso: string): string {
   return new Intl.DateTimeFormat(undefined, { month: 'short', year: 'numeric' }).format(
@@ -62,6 +51,12 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
             <CalendarDays size={13} aria-hidden />
             Joined {joined(profile.joinedAt)}
           </span>
+          {profile.friendCount > 0 && (
+            <Link to="/social?tab=friends" className="chip chip-neutral profile-chip">
+              <Users size={13} aria-hidden />
+              {profile.friendCount} {profile.friendCount === 1 ? 'friend' : 'friends'}
+            </Link>
+          )}
         </div>
       </div>
       {profile.you ? (
@@ -78,10 +73,18 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
           <SignOutButton labelled />
         </div>
       ) : (
-        <Link to="/social" className="btn btn-ghost btn-sm profile-gear">
-          <ArrowLeft size={15} aria-hidden />
-          Your profile
-        </Link>
+        <div className="profile-actions">
+          <FriendButton
+            userId={profile.id}
+            friendship={profile.friendship}
+            acceptsRequests={profile.acceptsRequests}
+            remove
+          />
+          <Link to="/social" className="btn btn-ghost btn-sm profile-gear">
+            <ArrowLeft size={15} aria-hidden />
+            Social
+          </Link>
+        </div>
       )}
       {/* Its own row under the name, so it reads at full width on a phone too. */}
       {profile.bio && (
@@ -94,8 +97,9 @@ function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () 
 }
 
 /**
- * Someone's page on Komodon: who they are, the days they studied and their totals. Posts are
- * kept in the API for later but not shown for now. Your own has a gear for the profile settings.
+ * Someone's page on Komodon: who they are, the days they studied, their totals and what they
+ * have shared on Social. Your own has a gear for the profile settings; someone else's has
+ * the friend button.
  */
 export function Profile() {
   const { id } = useParams();
@@ -111,14 +115,14 @@ export function Profile() {
       </div>
     );
 
-  const { profile, stats, heatmap, weekday } = q.data;
+  const { profile, stats, heatmap, weekday, posts, people } = q.data;
   const you = profile.you;
-  const days = heatmap.activeDays;
-  const studied = stats.totalMinutes > 0;
+  const days = heatmap?.activeDays ?? 0;
+  const studied = (stats?.totalMinutes ?? 0) > 0;
 
   // Only what is there to show: a quiet start is not a row of zeros.
   const totals: Array<{ label: string; value: number; unit: string; note?: string }> = [];
-  if (studied) {
+  if (stats && studied) {
     totals.push({ label: 'Studied, all time', ...figure(stats.totalMinutes) });
     totals.push({
       label: 'Sessions',
@@ -131,7 +135,7 @@ export function Profile() {
       unit: stats.activeDays === 1 ? 'day' : 'days',
     });
   }
-  if (stats.streak.current > 0)
+  if (stats && stats.streak.current > 0)
     totals.push({
       label: 'Daily streak',
       value: stats.streak.current,
@@ -139,13 +143,13 @@ export function Profile() {
       note:
         stats.streak.longest > stats.streak.current ? `Best ${stats.streak.longest}` : undefined,
     });
-  else if (stats.streak.longest > 0)
+  else if (stats && stats.streak.longest > 0)
     totals.push({
       label: 'Best daily streak',
       value: stats.streak.longest,
       unit: stats.streak.longest === 1 ? 'day' : 'days',
     });
-  const weeks = stats.streak.weeks;
+  const weeks = stats?.streak.weeks;
   if (weeks && weeks.current > 0)
     totals.push({
       label: 'Weekly streak',
@@ -159,91 +163,116 @@ export function Profile() {
       value: weeks.longest,
       unit: weeks.longest === 1 ? 'week' : 'weeks',
     });
-  if (stats.longestSessionMinutes > 0)
+  if (stats && stats.longestSessionMinutes > 0)
     totals.push({ label: 'Longest session', ...figure(stats.longestSessionMinutes) });
-  if (stats.last28Minutes > 0)
+  if (stats && stats.last28Minutes > 0)
     totals.push({ label: 'Last 28 days', ...figure(stats.last28Minutes) });
 
   return (
     <div className="flex flex-col gap-6">
       <Head profile={profile} onSettings={() => setSettingsOpen(true)} />
 
-      <Panel as="section" className="rc-tile" aria-label="Study">
-        <div className="profile-study">
-          <div className="profile-study-col">
-            <div className="rc-tile-head">
-              <h2 className="rc-tile-title">Days studied</h2>
-              <p className="rc-tile-note">
-                {days === 0
-                  ? 'The last six months. Each day with a session lights up a square.'
-                  : `${days} active ${days === 1 ? 'day' : 'days'} in the last six months${
-                      heatmap.longestRun >= 2
-                        ? `, with a longest streak of ${heatmap.longestRun}`
-                        : ''
-                    }.`}
-              </p>
-            </div>
-            <div className="profile-grid">
-              <Heatmap
-                weeks={heatmap.weeks}
-                monthLabels={spacedLabels(heatmap.monthLabels)}
-                thresholds={heatmap.thresholds}
-                ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
-              />
-            </div>
-          </div>
-          {weekday.totalMinutes > 0 && (
-            <div className="profile-study-col">
+      {/* Null when they keep their study time to themselves (Settings › Social). */}
+      {!stats || !heatmap || !weekday ? (
+        <Panel as="section" className="rc-tile" aria-label="Study">
+          <p className="muted text-sm">Keeps their study time to themselves.</p>
+        </Panel>
+      ) : (
+        <>
+          <div className="profile-study">
+            <Panel as="section" className="rc-tile profile-study-col" aria-label="Days studied">
               <div className="rc-tile-head">
-                <h2 className="rc-tile-title">Strongest days</h2>
-                {weekday.peak && (
-                  <p className="rc-tile-note">{weekday.peak.label} carries the most.</p>
-                )}
+                <h2 className="rc-tile-title">Days studied</h2>
+                <p className="rc-tile-note">
+                  {days === 0
+                    ? 'The last six months. Each day with a session lights up a square.'
+                    : `${days} active ${days === 1 ? 'day' : 'days'} in the last six months${
+                        heatmap.longestRun >= 2
+                          ? `, with a longest streak of ${heatmap.longestRun}`
+                          : ''
+                      }.`}
+                </p>
               </div>
-              <Columns
-                bars={weekday.buckets.map((b) => ({
-                  label: b.label.slice(0, 3),
-                  value: b.minutes,
-                  highlight: b.label === weekday.peak?.label,
-                }))}
-                fmt={fmtHours}
-                columnName="Day"
-                ariaLabel="Study time by day of the week"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="profile-totals">
-          <div className="rc-tile-head">
-            <h2 className="rc-tile-title">Totals</h2>
-            {stats.level > 0 && (
-              <p className="rc-tile-note profile-level">
-                <Trophy size={13} aria-hidden />
-                Level {stats.level}
-              </p>
+              <div className="profile-grid">
+                <Heatmap
+                  weeks={heatmap.weeks}
+                  monthLabels={spacedLabels(heatmap.monthLabels)}
+                  thresholds={heatmap.thresholds}
+                  ariaLabel={`Study minutes per day from ${heatmap.from} to ${heatmap.to}`}
+                />
+              </div>
+            </Panel>
+            {weekday.totalMinutes > 0 && (
+              <Panel as="section" className="rc-tile profile-study-col" aria-label="Strongest days">
+                <div className="rc-tile-head">
+                  <h2 className="rc-tile-title">Strongest days</h2>
+                  {weekday.peak && (
+                    <p className="rc-tile-note">{weekday.peak.label} carries the most.</p>
+                  )}
+                </div>
+                <Columns
+                  bars={weekday.buckets.map((b) => ({
+                    label: b.label.slice(0, 3),
+                    value: b.minutes,
+                    highlight: b.label === weekday.peak?.label,
+                  }))}
+                  fmt={fmtHours}
+                  columnName="Day"
+                  ariaLabel="Study time by day of the week"
+                />
+              </Panel>
             )}
           </div>
-          {totals.length === 0 ? (
-            <p className="muted text-sm">
-              {you ? 'Your first session will start the count.' : 'No sessions yet.'}
-            </p>
+
+          <Panel as="section" className="rc-tile profile-totals" aria-label="Totals">
+            <div className="rc-tile-head">
+              <h2 className="rc-tile-title">Totals</h2>
+              {stats.level > 0 && (
+                <p className="rc-tile-note profile-level">
+                  <Trophy size={13} aria-hidden />
+                  Level {stats.level}
+                </p>
+              )}
+            </div>
+            {totals.length === 0 ? (
+              <p className="muted text-sm">
+                {you ? 'Your first session will start the count.' : 'No sessions yet.'}
+              </p>
+            ) : (
+              <dl className="days-panel-stats">
+                {totals.map((t) => (
+                  <div key={t.label}>
+                    <dt>{t.label}</dt>
+                    <dd className="tabular">
+                      {t.value}
+                      <small>{t.unit}</small>
+                    </dd>
+                    {t.note && <dd className="profile-stat-note">{t.note}</dd>}
+                  </div>
+                ))}
+              </dl>
+            )}
+          </Panel>
+        </>
+      )}
+
+      {(posts.length > 0 || you) && (
+        <section className="profile-posts-list" aria-label="Posts">
+          <div className="profile-posts-head">
+            <h2 className="rc-tile-title">Posts</h2>
+            {you && (
+              <Link to="/social" className="btn btn-ghost btn-sm">
+                Share something
+              </Link>
+            )}
+          </div>
+          {posts.length === 0 ? (
+            <p className="muted text-sm">Nothing shared yet.</p>
           ) : (
-            <dl className="days-panel-stats">
-              {totals.map((t) => (
-                <div key={t.label}>
-                  <dt>{t.label}</dt>
-                  <dd className="tabular">
-                    {t.value}
-                    <small>{t.unit}</small>
-                  </dd>
-                  {t.note && <dd className="profile-stat-note">{t.note}</dd>}
-                </div>
-              ))}
-            </dl>
+            posts.map((p) => <PostCard key={p.id} post={p} people={people} />)
           )}
-        </div>
-      </Panel>
+        </section>
+      )}
 
       {you && (
         <ProfileSettingsDialog
@@ -252,7 +281,7 @@ export function Profile() {
           profile={profile}
         />
       )}
-      {stats.bestDay && studied && (
+      {stats?.bestDay && studied && (
         <p className="sr-only">Best day {fmtDate(stats.bestDay.date)}.</p>
       )}
     </div>

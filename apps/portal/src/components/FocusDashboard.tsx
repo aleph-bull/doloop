@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { Button, Glass, Input, Spinner, Toggle } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
 import { useActiveSession, useMe, useStartSession, useUpdateSettings } from '../lib/queries';
+import { NudgesCard } from './NudgesCard';
 import { TimerCard } from './TimerCard';
 import { RewardOverlay } from './RewardOverlay';
 
@@ -63,6 +64,7 @@ export function FocusDashboard() {
           <p className="greeting-line">A little space for what you want to do.</p>
         </div>
       </div>
+      <NudgesCard />
       {active.isPending ? (
         <Spinner />
       ) : active.isError ? (

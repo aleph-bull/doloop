@@ -10,6 +10,7 @@ import {
   thinStills,
   timelapseClock,
   timelapseSizeEstimate,
+  trimIndices,
   fmtBytes,
   TIMELAPSE_DEFAULT_STILL_BYTES,
   type TimelapseOptions,
@@ -150,5 +151,20 @@ describe('timelapseSizeEstimate', () => {
   it('formats sizes', () => {
     expect(fmtBytes(45_000_000)).toBe('45 MB');
     expect(fmtBytes(1_234_000_000)).toBe('1.2 GB');
+  });
+});
+
+describe('trimIndices', () => {
+  const times = [0, 10, 20, 30, 40, 50];
+  it('keeps everything with both ends open', () => {
+    expect(trimIndices(times, null, null)).toEqual([0, 6]);
+  });
+  it('keeps the stills between two moments, inclusive', () => {
+    expect(trimIndices(times, 10, 40)).toEqual([1, 5]);
+    expect(trimIndices(times, 15, 35)).toEqual([2, 4]);
+  });
+  it('leaves nothing when the window holds no still', () => {
+    const [a, b] = trimIndices(times, 41, 49);
+    expect(b - a).toBe(0);
   });
 });

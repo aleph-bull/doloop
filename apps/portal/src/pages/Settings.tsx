@@ -49,6 +49,7 @@ import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseSettings } from '../components/focus/Timelapse';
+import { TimelapseLayoutEditor } from '../components/focus/TimelapseLayoutEditor';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
@@ -404,8 +405,8 @@ export function Settings() {
               <Toggle
                 checked={s.features.social}
                 onChange={(v) => patch({ features: { social: v } })}
-                label="Your profile"
-                description="Your profile page, with the days you studied and your totals, and other people's. It sits at the end of the nav."
+                label="Social"
+                description="The feed, friends, jams and the leaderboard, plus your profile at the end of the nav."
               />
               {/*
                * Pages holds every setting about what the screens show and how they are laid
@@ -438,6 +439,49 @@ export function Settings() {
                 onChange={(v) => patch({ quote: { appTips: v } })}
                 label="Tips about the app"
                 description="Now and then a short tip about Komodon shows under the start panel, with a link to try it."
+              />
+            </Section>
+
+            <Section id="social" title="Social">
+              <p className="field-hint">What other people get to see of you on Social.</p>
+              <div className="field">
+                <span className="field-label">Who sees your posts</span>
+                <Segmented
+                  ariaLabel="Who sees your posts"
+                  value={s.social.posts}
+                  onChange={(posts) => patch({ social: { posts } })}
+                  options={[
+                    { value: 'everyone', label: 'Everyone' },
+                    { value: 'friends', label: 'Friends only' },
+                  ]}
+                />
+              </div>
+              <Toggle
+                checked={s.social.stats}
+                onChange={(v) => patch({ social: { stats: v } })}
+                label="Study totals on your profile"
+                description="The days grid, strongest days and totals. Off, your profile shows who you are and your posts."
+              />
+              <div className="field">
+                <span className="field-label">Leaderboards</span>
+                <Segmented
+                  ariaLabel="Which leaderboards count you"
+                  value={s.social.leaderboard}
+                  onChange={(leaderboard) => patch({ social: { leaderboard } })}
+                  options={[
+                    { value: 'global', label: 'Global and friends' },
+                    { value: 'friends', label: 'Friends only' },
+                    { value: 'off', label: 'Neither' },
+                  ]}
+                />
+                <span className="field-hint">
+                  Where your focused time counts. Friends see a board of their own.
+                </span>
+              </div>
+              <Toggle
+                checked={s.social.requests}
+                onChange={(v) => patch({ social: { requests: v } })}
+                label="Take friend requests"
               />
             </Section>
 
@@ -641,9 +685,20 @@ export function Settings() {
               <div className="divider" />
               <h3 className="font-medium">Timelapse</h3>
               <p className="field-hint">
-                Records you from the camera while you focus, as a short video. The stills stay on
-                this computer.
+                What the timelapse records and how its video is laid out are in{' '}
+                <a href="#timelapse">Timelapse</a>.
               </p>
+            </Section>
+
+            <Section id="timelapse" title="Timelapse">
+              <p className="field-hint">
+                Records you from the camera, and your screen if you like, while you focus, as a
+                short video. The stills stay on this computer.
+              </p>
+              <h3 className="font-medium">Layout</h3>
+              <TimelapseLayoutEditor value={s.timelapse} onChange={patch} />
+              <div className="divider" />
+              <h3 className="font-medium">Recording</h3>
               <TimelapseSettings value={s.timelapse} onChange={patch} />
             </Section>
 

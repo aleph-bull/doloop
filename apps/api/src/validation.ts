@@ -164,6 +164,17 @@ export const gradeBand = z.object({
   points: z.number().min(0).max(10),
 });
 
+/** One piece of the timelapse layout, in fractions of the frame. */
+const timelapseBox = z
+  .object({
+    x: z.number().min(0).max(1),
+    y: z.number().min(0).max(1),
+    w: z.number().min(0).max(1),
+    h: z.number().min(0).max(1),
+    visible: z.boolean(),
+  })
+  .strict();
+
 export const settingsSchema = z
   .object({
     profile: z
@@ -319,6 +330,14 @@ export const settingsSchema = z
         social: z.boolean(),
       })
       .partial(),
+    social: z
+      .object({
+        posts: z.enum(['everyone', 'friends']),
+        stats: z.boolean(),
+        leaderboard: z.enum(['global', 'friends', 'off']),
+        requests: z.boolean(),
+      })
+      .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z
@@ -334,6 +353,20 @@ export const settingsSchema = z
         deflicker: z.boolean(),
         recordBreaks: z.boolean(),
         breakClock: z.enum(['break', 'running']),
+        aspect: z.enum(['camera', 'screen', '16:9', '9:16', '1:1', '4:5', '4:3']),
+        // Sent whole each time; the reader fills and clamps anything off.
+        layout: z
+          .object({
+            camera: timelapseBox,
+            screen: timelapseBox,
+            clock: timelapseBox,
+            elapsed: timelapseBox,
+            title: timelapseBox,
+            progress: timelapseBox,
+            watermark: timelapseBox,
+          })
+          .partial()
+          .strict(),
       })
       .partial(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),

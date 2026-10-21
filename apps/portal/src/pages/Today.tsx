@@ -26,6 +26,7 @@ import type { EndSummary } from '../lib/api';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TimerCard } from '../components/TimerCard';
 import { TipCard } from '../components/TipCard';
+import { NudgesCard } from '../components/NudgesCard';
 import { useHints } from '../lib/hints';
 import { useTip } from '../lib/use-tip';
 import { openFocusTab } from '../lib/focus-tab';
@@ -183,6 +184,7 @@ function FullDashboard() {
         />
       )}
 
+      <NudgesCard />
       <TipCard />
 
       {/* One-time hints sit with the start panel, where they are seen. Only one tip shows
