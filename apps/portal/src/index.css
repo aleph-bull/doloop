@@ -716,7 +716,9 @@
     min-width: 0;
     white-space: nowrap;
     opacity: 0;
-    transition: opacity var(--dur-fast) var(--ease-out);
+    transition:
+      opacity var(--dur-fast) var(--ease-out),
+      transform var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
   .sidenav-stat .sidenav-icon {
     flex: none;
@@ -748,16 +750,26 @@
   .sidenav.is-pinned .sidenav-stats {
     height: 40px;
   }
-  /* Open, the two share the row unevenly: the streak pill is as wide as its count needs
-     (data-digits, set in AppShell), and the level pill, with its ring, takes the rest. */
+  /* Open, the two share the row unevenly, each pill sized to its content with the same
+     padding all round. RailStats measures and sets the width and nudges; these are the
+     values for a one-digit streak and a two-digit level, for the first paint. */
   .sidenav-stats {
-    --stat-streak: 84px;
+    --stat-streak: 85px;
+    --stat-shift-a: -3px;
+    --stat-shift-b: 4px;
   }
-  .sidenav-stats[data-digits='2'] {
-    --stat-streak: 94px;
+  .sidenav-stat .sidenav-icon {
+    transition: transform var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
-  .sidenav-stats[data-digits='3'] {
-    --stat-streak: 98px;
+  .sidenav:not(.is-resting):hover .sidenav-stat:first-child > *,
+  .sidenav:has(:focus-visible) .sidenav-stat:first-child > *,
+  .sidenav.is-pinned .sidenav-stat:first-child > * {
+    transform: translateX(var(--stat-shift-a));
+  }
+  .sidenav:not(.is-resting):hover .sidenav-stat + .sidenav-stat > *,
+  .sidenav:has(:focus-visible) .sidenav-stat + .sidenav-stat > *,
+  .sidenav.is-pinned .sidenav-stat + .sidenav-stat > * {
+    transform: translateX(var(--stat-shift-b));
   }
   .sidenav:not(.is-resting):hover .sidenav-stat,
   .sidenav:has(:focus-visible) .sidenav-stat,
@@ -774,7 +786,9 @@
   .sidenav:has(:focus-visible) .sidenav-stat-text,
   .sidenav.is-pinned .sidenav-stat-text {
     opacity: 1;
-    transition: opacity var(--dur-base) var(--ease-out) calc(var(--rail-delay) + 90ms);
+    transition:
+      opacity var(--dur-base) var(--ease-out) calc(var(--rail-delay) + 90ms),
+      transform var(--dur-slow) var(--rail-ease) var(--rail-delay);
   }
   .sidenav:not(.is-resting):hover .sidenav-badge,
   .sidenav:has(:focus-visible) .sidenav-badge,
