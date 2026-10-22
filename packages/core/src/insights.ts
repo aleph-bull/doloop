@@ -106,6 +106,8 @@ export interface HeatmapCell {
   level: 0 | 1 | 2 | 3 | 4;
   /** Days after today are rendered as placeholders, not as empty study days. */
   future: boolean;
+  /** Days before the account existed (with nothing on them), drawn darker than a day off. */
+  before: boolean;
 }
 
 export interface Heatmap {
@@ -129,6 +131,8 @@ export interface HeatmapInput {
   now: ISODateTime;
   /** How many weeks back to show. */
   weeks?: number;
+  /** When the account was made; days before it are marked `before`. */
+  since?: ISODateTime;
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -170,10 +174,17 @@ export function studyHeatmap(input: HeatmapInput): Heatmap {
     return 4;
   };
 
+  const joined = input.since ? toLocalDate(input.since, tz) : null;
   const cells: HeatmapCell[] = [];
   for (const date of eachDay(from, to)) {
     const minutes = byDay.get(date) ?? 0;
-    cells.push({ date, minutes, level: levelOf(minutes), future: date > today });
+    cells.push({
+      date,
+      minutes,
+      level: levelOf(minutes),
+      future: date > today,
+      before: joined !== null && date < joined && minutes === 0,
+    });
   }
 
   const columns: HeatmapCell[][] = [];
