@@ -889,7 +889,12 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   photograph runs edge to edge behind the hero and fades out at the bottom only, into a
   light gradient page. The dashboard screenshot sits on a CSS-drawn laptop with the phone
   view in front (no island on the phone); the Track, Focus and Share sections show plain
-  screenshots of the portal. Satoshi for headings, Inter for everything else; no eyebrow
+  screenshots of the portal. Below the devices (redone 2026-10-22: the owner liked the hero
+  and devices, but called the rest bad and asked for a clean start-up look that keeps the
+  brand): each section is its heading left and paragraph right, then tightly cropped
+  screenshots with one corner, and Focus has three of the owner's own timelapses under the
+  focus screen. The closing is the logo, heading and buttons on the page, no card.
+  Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
   the devices about 1.3 s later or on the first scroll, each section as it arrives.
 - **Rejected, in order:** hand-built UI mockups ("fake"), the photo feathered on every side,
