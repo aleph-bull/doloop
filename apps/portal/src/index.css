@@ -901,10 +901,10 @@
   .sidenav-stat .sidenav-icon > svg {
     grid-area: 1 / 1;
   }
-  /* The trophy read a little right of the ring's middle, so it sits 0.5px left (owner,
-     2026-10-22; 1.5px was too far). */
+  /* The trophy read a little right of the ring's middle, so it sits 0.375px left (owner,
+     2026-10-22, tuned by eye: 1.5px and 0.5px were too far, 0.25px not far enough). */
   .sidenav-ring + svg {
-    transform: translateX(-0.5px);
+    transform: translateX(-0.375px);
   }
   .sidenav-ring {
     transform: rotate(-90deg);
