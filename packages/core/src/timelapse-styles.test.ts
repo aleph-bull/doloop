@@ -3,10 +3,9 @@ import { withDefaults } from './defaults';
 import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
 import {
   applyTimelapseStyle,
-  cleanEndText,
-  endCardFrames,
+  cleanNoteText,
   matchTimelapseStyle,
-  TIMELAPSE_END_TEXT_MAX,
+  TIMELAPSE_NOTE_MAX,
   TIMELAPSE_STYLES,
 } from './timelapse-styles';
 
@@ -70,31 +69,50 @@ describe('timelapse looks', () => {
   });
 });
 
-describe('the words at the end', () => {
-  it('are one line, trimmed and cut to length', () => {
-    expect(cleanEndText('  Day 12\n of   finals ')).toBe('Day 12 of finals');
-    expect(cleanEndText('x'.repeat(400))).toHaveLength(TIMELAPSE_END_TEXT_MAX);
-    expect(cleanEndText(42)).toBe('');
-    expect(cleanEndText(undefined)).toBe('');
+describe('your text on the video', () => {
+  it('is one line, trimmed and cut to length', () => {
+    expect(cleanNoteText('  studying for 222\n  am i   cooked ')).toBe(
+      'studying for 222 am i cooked',
+    );
+    expect(cleanNoteText('x'.repeat(400))).toHaveLength(TIMELAPSE_NOTE_MAX);
+    expect(cleanNoteText(42)).toBe('');
+    expect(cleanNoteText(undefined)).toBe('');
   });
 
-  it('add a card only when there is something to say', () => {
-    expect(endCardFrames('', 30)).toBe(0);
-    expect(endCardFrames('   ', 30)).toBe(0);
-    expect(endCardFrames(undefined, 30)).toBe(0);
-    expect(endCardFrames('Done for today', 30)).toBe(90);
-    expect(endCardFrames('Done for today', 1)).toBe(3);
+  it('has a place in every look, and stays in the layout until taken out', () => {
+    for (const s of TIMELAPSE_STYLES)
+      expect(applyTimelapseStyle(s.id, 16 / 9, defaultTimelapseLayout(16 / 9)).note.visible).toBe(
+        true,
+      );
+    // A layout saved before the text existed gets the default place for it.
+    const { note: _drop, ...old } = defaultTimelapseLayout(16 / 9);
+    expect(normalizeTimelapseLayout(old).note).toEqual(defaultTimelapseLayout(16 / 9).note);
   });
 
-  it('start empty on both presets and come back clean', () => {
+  it('starts empty on both presets and comes back clean', () => {
     const fresh = withDefaults({});
-    expect(fresh.timelapse.endText).toBe('');
-    expect(fresh.timelapsePhone.endText).toBe('');
+    expect(fresh.timelapse.noteText).toBe('');
+    expect(fresh.timelapsePhone.noteText).toBe('');
     const saved = withDefaults({
-      timelapse: { endText: '  Week 3 ' },
-      timelapsePhone: { endText: 7 as unknown as string },
+      timelapse: { noteText: '  Week 3 ' },
+      timelapsePhone: { noteText: 7 as unknown as string },
     });
-    expect(saved.timelapse.endText).toBe('Week 3');
-    expect(saved.timelapsePhone.endText).toBe('');
+    expect(saved.timelapse.noteText).toBe('Week 3');
+    expect(saved.timelapsePhone.noteText).toBe('');
+  });
+
+  it('takes over the words saved for the end card, which is gone', () => {
+    type Old = { endText?: string; noteText?: string };
+    const s = withDefaults({
+      timelapse: { endText: 'Am i cooked for 222' } as Old,
+      timelapsePhone: { endText: 'Up early' } as Old,
+    });
+    expect(s.timelapse.noteText).toBe('Am i cooked for 222');
+    expect(s.timelapsePhone.noteText).toBe('Up early');
+    expect('endText' in s.timelapse).toBe(false);
+    expect('endText' in s.timelapsePhone).toBe(false);
+    // Text of its own wins, even emptied.
+    const own = withDefaults({ timelapse: { endText: 'old', noteText: '' } as Old });
+    expect(own.timelapse.noteText).toBe('');
   });
 });

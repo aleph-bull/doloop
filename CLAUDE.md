@@ -584,17 +584,20 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
   are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
-- **Every post is previewed first** (`PostPreview.tsx`): on Social, the post as the feed
-  shows it, with a line to say and a switch for the hours (`showTime: false` posts no minutes
-  or task); elsewhere, the video with its caption (copied to paste, or written into X's
-  composer). **Words at the end** (`endText` on each preset) add a 3-second card over the
-  last frame; empty adds nothing. **Looks** (`timelapse-styles.ts`: Classic, Big timer,
-  Headline, Corner, Clean) place the pieces for any shape; `matchTimelapseStyle` reads a
-  saved layout back as its look. **"Change layout?"** beside a made video opens the layout
-  editor in a dialog over a moment of that video (`RelayoutDialog.tsx`; not the Settings
-  page, which would drop the stills) and remakes the video with what was saved. All of it:
-  DECISIONS.md, "The timelapse: a preview before posting, words at the end, looks, and
-  Change layout?".
+- **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
+  with a line to say and a switch for the hours (`showTime: false` posts no minutes or task).
+  The text box must stay quick: the post beside it follows a deferred copy of the text in a
+  memoised card, and its video doesn't play until pressed. Instagram, TikTok and X have **no
+  preview** (owner, 2026-10-22): their buttons go straight to the app or site, where the post
+  is written. **Your text** (`noteText` on each preset, the layout's `note` piece) is the
+  person's own line on the video the whole way through, like the clocks; empty, it's left
+  out. There is no end card (built, then removed the same day). **Looks**
+  (`timelapse-styles.ts`: Classic, Big timer, Headline, Corner, Clean) place the pieces for
+  any shape; `matchTimelapseStyle` reads a saved layout back as its look. **"Change
+  layout?"** beside a made video opens the layout editor in a dialog over a moment of that
+  video (`RelayoutDialog.tsx`; not the Settings page, which would drop the stills) and
+  remakes the video with what was saved. DECISIONS.md has both 2026-10-22 timelapse
+  sections.
 
 **Links.** The focus screen's controls, the "Record a timelapse?" question ("Change what it
 looks like"), the screen question and the export card link to `/settings#timelapse`. From

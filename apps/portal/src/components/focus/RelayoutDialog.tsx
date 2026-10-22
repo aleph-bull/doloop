@@ -1,7 +1,6 @@
 import {
-  cleanEndText,
-  TIMELAPSE_END_SECONDS,
-  TIMELAPSE_END_TEXT_MAX,
+  cleanNoteText,
+  TIMELAPSE_NOTE_MAX,
   type TimelapseAspect,
   type TimelapseDevice,
   type TimelapseLayout,
@@ -12,6 +11,7 @@ import { useEffect, useState } from 'react';
 import { Button, Input, Modal } from '@komogon/ui';
 import type { ComposeFrame } from '../../lib/timelapse-compose';
 import type { Still } from '../../lib/timelapse';
+import { NOTE_HINT } from './NoteField';
 import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -20,7 +20,7 @@ type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]>
 export interface Relayout {
   aspect: TimelapseAspect;
   layout: TimelapseLayout;
-  endText: string;
+  noteText: string;
 }
 
 export interface RelayoutDialogProps {
@@ -41,7 +41,7 @@ export interface RelayoutDialogProps {
 
 /**
  * "Change layout?" after a video is made: the timelapse layout editor, over a moment of that
- * video instead of the live camera, with the words at the end. Saving stores the layout (it
+ * video instead of the live camera, with the text on the video. Saving stores the layout (it
  * is the same setting as in Settings › Timelapse) and the video is made again with it.
  */
 export function RelayoutDialog({
@@ -61,12 +61,12 @@ export function RelayoutDialog({
     (t) => device === 'computer' || t.id === (orientation ?? 'upright'),
   );
   const backdrop = useStillPictures(open ? still : undefined);
-  const [endText, setEndText] = useState(preset.endText);
+  const [noteText, setNoteText] = useState(preset.noteText);
   // Opened again: start from what is saved.
   useEffect(() => {
-    if (open) setEndText(preset.endText);
-  }, [open, preset.endText]);
-  const endChanged = cleanEndText(endText) !== preset.endText;
+    if (open) setNoteText(preset.noteText);
+  }, [open, preset.noteText]);
+  const noteChanged = cleanNoteText(noteText) !== preset.noteText;
 
   return (
     <Modal open={open} onClose={onClose} title="Change the layout" className="relayout-dialog">
@@ -82,19 +82,16 @@ export function RelayoutDialog({
           screen={device === 'computer'}
           backdrop={backdrop}
           sample={sample}
+          noteText={noteText}
           footer={({ dirty, saving, save, revert }) => (
             <>
               <Input
-                label="Words at the end"
-                value={endText}
-                maxLength={TIMELAPSE_END_TEXT_MAX}
-                placeholder="Day 12 of finals"
-                onChange={(e) => setEndText(e.target.value)}
-                hint={
-                  cleanEndText(endText)
-                    ? `Shown over the last moment for ${TIMELAPSE_END_SECONDS} seconds as the video ends.`
-                    : 'Your own words on a card at the end. Leave it empty for none.'
-                }
+                label="Text on the video"
+                value={noteText}
+                maxLength={TIMELAPSE_NOTE_MAX}
+                placeholder="Week 3 of finals"
+                onChange={(e) => setNoteText(e.target.value)}
+                hint={NOTE_HINT}
               />
               <div className="modal-actions">
                 <Button
@@ -111,22 +108,22 @@ export function RelayoutDialog({
                   variant="primary"
                   loading={saving}
                   onClick={async () => {
-                    if (!dirty && !endChanged) return onClose();
+                    if (!dirty && !noteChanged) return onClose();
                     const shown = await save();
-                    const words = cleanEndText(endText);
-                    if (endChanged)
+                    const words = cleanNoteText(noteText);
+                    if (noteChanged)
                       await Promise.resolve(
                         onChange(
                           device === 'phone'
-                            ? { timelapsePhone: { endText: words } }
-                            : { timelapse: { endText: words } },
+                            ? { timelapsePhone: { noteText: words } }
+                            : { timelapse: { noteText: words } },
                         ),
                       );
-                    onRedraw({ ...shown, endText: words });
+                    onRedraw({ ...shown, noteText: words });
                     onClose();
                   }}
                 >
-                  {dirty || endChanged ? 'Save and remake the video' : 'Done'}
+                  {dirty || noteChanged ? 'Save and remake the video' : 'Done'}
                 </Button>
               </div>
             </>

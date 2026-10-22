@@ -138,6 +138,7 @@ export function PhoneTrim({
           clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
           elapsed: clockText(still, look.breakClock),
           title: still.title,
+          note: look.noteText?.trim() || null,
           progress: endAt - startAt > 1 ? (i - startAt) / (endAt - 1 - startAt) : 1,
         },
         { mark: '#ffffff' },

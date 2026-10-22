@@ -1,7 +1,7 @@
 /**
  * Ready-made looks for the timelapse, to start from instead of arranging every piece by
- * hand, and the card with the person's own words that can close the video. A look only
- * places the clocks, the task name, the progress bar and the mark; the screen stays where
+ * hand, and the person's own line of text that stays on the video. A look only places the
+ * clocks, the task name, that text, the progress bar and the mark; the screen stays where
  * the person put it.
  */
 import {
@@ -32,7 +32,7 @@ export const TIMELAPSE_STYLES: readonly TimelapseStyle[] = [
   { id: 'big-timer', name: 'Big timer', description: 'The time studied, big, under the task.' },
   { id: 'headline', name: 'Headline', description: 'The task across the top, the time under it.' },
   { id: 'corner', name: 'Corner', description: 'Everything small, in one corner.' },
-  { id: 'clean', name: 'Clean', description: 'Only the camera and the mark.' },
+  { id: 'clean', name: 'Clean', description: 'The camera, the mark and your text.' },
 ];
 
 /** The pieces a look places. */
@@ -40,6 +40,7 @@ const STYLED: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
   'title',
+  'note',
   'progress',
   'watermark',
 ];
@@ -84,24 +85,28 @@ function styledPieces(
   // A piece a look leaves out keeps the classic place, so adding it back puts it somewhere sensible.
   const off = (b: TimelapseBox): TimelapseBox => ({ ...b, visible: false });
 
+  // The person's text: a line a little smaller than the clocks.
+  const line = u * 0.8;
   if (id === 'big-timer') {
     const big = u * 2.4;
     const elapsedY = 1 - my - bar - big;
-    const small = u * 0.8;
     return {
       clock: off(classic.clock),
       elapsed: box(mx, elapsedY, full, big, true, 'center'),
-      title: box(mx, elapsedY - gap - small, full, small, true, 'center'),
+      title: box(mx, elapsedY - gap - line, full, line, true, 'center'),
+      note: box(mx, my, 0.6, line),
       progress,
       watermark: markTop,
     };
   }
   if (id === 'headline') {
     const head = u * 1.4;
+    const elapsedY = my + head + gap;
     return {
       clock: off(classic.clock),
       title: box(mx, my, full, head),
-      elapsed: box(mx, my + head + gap, 0.3, u * 0.9),
+      elapsed: box(mx, elapsedY, 0.3, u * 0.9),
+      note: box(mx, elapsedY + u * 0.9 + gap, 0.6, line),
       progress,
       watermark: markBottom,
     };
@@ -110,19 +115,22 @@ function styledPieces(
     const s = u * 0.75;
     const clockY = 1 - my - bar - s;
     const elapsedY = clockY - gap - s;
+    const titleY = elapsedY - gap - s;
     return {
       clock: box(mx, clockY, 0.4, s),
       elapsed: box(mx, elapsedY, 0.4, s),
-      title: box(mx, elapsedY - gap - s, 0.6, s),
+      title: box(mx, titleY, 0.6, s),
+      note: box(mx, titleY - gap - s, 0.6, s),
       progress,
       watermark: markTop,
     };
   }
-  // Clean: the camera and the mark.
+  // Clean: the camera and the mark, and the person's text when there is some.
   return {
     clock: off(classic.clock),
     elapsed: off(classic.elapsed),
     title: off(classic.title),
+    note: box(mx, 1 - my - line, 0.6, line),
     progress: off(classic.progress),
     watermark: classic.watermark,
   };
@@ -144,6 +152,7 @@ export function applyTimelapseStyle(
     clock: { ...pieces.clock },
     elapsed: { ...pieces.elapsed },
     title: { ...pieces.title },
+    note: { ...pieces.note },
     progress: { ...pieces.progress },
     watermark: { ...pieces.watermark },
   };
@@ -188,20 +197,13 @@ export function matchTimelapseStyle(
   return null;
 }
 
-/* ---------- the card at the end ---------- */
+/* ---------- the person's own text ---------- */
 
-/** The most the words at the end may say. */
-export const TIMELAPSE_END_TEXT_MAX = 140;
-/** How long the end card stays on screen. */
-export const TIMELAPSE_END_SECONDS = 3;
+/** The most the text on the video may say. */
+export const TIMELAPSE_NOTE_MAX = 100;
 
-/** The words at the end as stored: one line of plain text, or empty for no card. */
-export function cleanEndText(value: unknown): string {
+/** The text on the video as stored: one line of plain text, or empty to leave it out. */
+export function cleanNoteText(value: unknown): string {
   if (typeof value !== 'string') return '';
-  return value.replace(/\s+/g, ' ').trim().slice(0, TIMELAPSE_END_TEXT_MAX);
-}
-
-/** Frames the end card adds to a video at this rate: none without words. */
-export function endCardFrames(text: string | undefined, fps: number): number {
-  return cleanEndText(text) ? Math.max(1, Math.round(TIMELAPSE_END_SECONDS * fps)) : 0;
+  return value.replace(/\s+/g, ' ').trim().slice(0, TIMELAPSE_NOTE_MAX);
 }

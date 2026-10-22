@@ -333,10 +333,10 @@ export interface TimelapsePreset {
    */
   layout: TimelapseLayout;
   /**
-   * The person's own words, shown on a card for a few seconds as the video ends. Empty
-   * leaves the card out.
+   * The person's own line of text, on the video the whole way through like the clocks
+   * (the layout's `note` piece places it). Empty leaves it out.
    */
-  endText: string;
+  noteText: string;
 }
 
 export type FocusOpenMode = 'ask' | 'always' | 'never';

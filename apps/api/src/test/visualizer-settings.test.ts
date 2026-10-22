@@ -184,31 +184,39 @@ describe('settings: timelapse', () => {
     expect(offFrame.statusCode).toBe(400);
   });
 
-  it('keeps words for the end of each preset, trimmed, and empty by default', async () => {
+  it('keeps a line of text for the video on each preset, trimmed, and empty by default', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
-    expect(me.json().user.settings.timelapse.endText).toBe('');
-    expect(me.json().user.settings.timelapsePhone.endText).toBe('');
+    expect(me.json().user.settings.timelapse.noteText).toBe('');
+    expect(me.json().user.settings.timelapsePhone.noteText).toBe('');
+    expect(me.json().user.settings.timelapse.layout.note.visible).toBe(true);
     const ok = await api({
       method: 'PATCH',
       url: '/api/me/settings',
       payload: {
-        timelapse: { endText: '  Day 12 of finals ' },
-        timelapsePhone: { endText: 'Up early' },
+        timelapse: { noteText: '  studying for 222 ' },
+        timelapsePhone: { noteText: 'Up early' },
       },
     });
     expect(ok.statusCode).toBe(200);
-    expect(ok.json().settings.timelapse.endText).toBe('Day 12 of finals');
-    expect(ok.json().settings.timelapsePhone.endText).toBe('Up early');
+    expect(ok.json().settings.timelapse.noteText).toBe('studying for 222');
+    expect(ok.json().settings.timelapsePhone.noteText).toBe('Up early');
     const long = await api({
       method: 'PATCH',
       url: '/api/me/settings',
-      payload: { timelapse: { endText: 'x'.repeat(141) } },
+      payload: { timelapse: { noteText: 'x'.repeat(101) } },
     });
     expect(long.statusCode).toBe(400);
+    // An older portal still sending the end card's words is taken, not refused.
+    const old = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapsePhone: { endText: 'Done' } },
+    });
+    expect(old.statusCode).toBe(200);
     await api({
       method: 'PATCH',
       url: '/api/me/settings',
-      payload: { timelapse: { endText: '' } },
+      payload: { timelapse: { noteText: '' }, timelapsePhone: { noteText: '' } },
     });
   });
 

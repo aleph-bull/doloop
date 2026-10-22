@@ -1,7 +1,6 @@
 import {
   aspectRatio,
   deflickerGains,
-  endCardFrames,
   startIntervalMs,
   stillCap,
   thinIfFull,
@@ -16,7 +15,6 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   composeFrame,
-  drawEndCard,
   rectLuma,
   sourceSize,
   type DrawnRects,
@@ -596,8 +594,8 @@ export interface TimelapseLook {
   aspect: TimelapseAspect;
   /** Where each piece goes. */
   layout: TimelapseLayout;
-  /** Words for a card at the end; empty or absent leaves it out. */
-  endText?: string;
+  /** The person's own line of text on every frame; empty or absent leaves it out. */
+  noteText?: string;
 }
 
 /** "2:14 PM EST": the time a still was taken, in the account's timezone. */
@@ -794,6 +792,7 @@ function frameDrawer(
         clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
         elapsed: clockText(still, look.breakClock),
         title: still.title,
+        note: look.noteText?.trim() || null,
         progress: plan.frames.length > 1 ? j / (plan.frames.length - 1) : 1,
       },
       { mark },
@@ -898,26 +897,10 @@ export async function renderTimelapse(
   const mark = await watermarkTone(toneDraw, ctx, w, h, plan);
   toneDraw.dispose();
   const draw = frameDrawer(ctx, w, h, stills, plan, look, buffers);
-  // The end card holds the last frame under the words, fading in over its first half second.
-  const last = plan.frames.length - 1;
-  const ending = endCardFrames(look.endText, plan.fps);
-  const endText = look.endText?.trim() ?? '';
-  let held: HTMLCanvasElement | null = null;
   const drawFrame = async (j: number) => {
-    if (j <= last) {
-      await draw(j, mark);
-      if (j === last && ending > 0) {
-        held = document.createElement('canvas');
-        held.width = w;
-        held.height = h;
-        held.getContext('2d')?.drawImage(canvas, 0, 0);
-      }
-      return;
-    }
-    if (held) ctx.drawImage(held, 0, 0);
-    drawEndCard(ctx, w, h, endText, Math.min(1, (j - last) / Math.max(1, plan.fps * 0.5)));
+    await draw(j, mark);
   };
-  const count = plan.frames.length + ending;
+  const count = plan.frames.length;
   try {
     const config = await pickEncoderConfig(w, h, plan.fps);
     if (config)
