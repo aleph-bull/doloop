@@ -276,43 +276,59 @@ export interface UserSettings {
     /** Open the focus screen when a session starts: ask each time, always, or never. */
     openOnStart: FocusOpenMode;
   };
-  /** The camera timelapse recorded on the focus screen. Frames never leave this device. */
-  timelapse: {
-    /** When a session starts on the focus screen: ask whether to record, always record, or never (and stop asking). */
+  /**
+   * The camera timelapse recorded on the focus screen, and the computer's preset. Frames
+   * never leave this device.
+   */
+  timelapse: TimelapsePreset & {
+    /** When a session starts on the focus screen: ask whether to record, always record, or never (and stop asking). Shared by both presets. */
     record: FocusOpenMode;
-    /** How long the video comes out: auto (about 20-40 s, like a phone), a set length, or a speed. */
-    lengthMode: TimelapseLengthMode;
-    /** The set length, in seconds, for lengthMode 'length'. */
-    lengthSeconds: number;
-    /** How many times faster than real time, for lengthMode 'speed'. */
-    speed: number;
-    /** Frames per second of the video, as asked; the frames captured may support fewer. */
-    fps: number;
     /** Draw the time studied in the corner of the video. */
     showTimer: boolean;
     /** Draw the time of day each moment was filmed, in the account's timezone ("2:14 PM EST"). */
     showClockTime: boolean;
-    /** Blend the stills behind each frame together, for a softer motion. */
-    smooth: boolean;
-    /** Even out the brightness between stills, so the video does not flicker. */
-    deflicker: boolean;
-    /** Keep taking stills during breaks, not only during focus. */
-    recordBreaks: boolean;
-    /**
-     * With breaks recorded, what the corner clock shows during one: the break's own time
-     * ('break'), or the session's running time, counting on through it ('running').
-     */
-    breakClock: 'break' | 'running';
-    /** The video's shape; 'camera' follows the camera's own. */
-    aspect: TimelapseAspect;
-    /**
-     * Where each piece sits in the video and whether it is shown. The camera's and the
-     * screen's visibility also decide what is recorded. Replaces showTimer and
-     * showClockTime, which only seed it for a row saved before it existed.
-     */
-    layout: TimelapseLayout;
+  };
+  /**
+   * The phone's preset, used when the timelapse records on a phone (the camera screen).
+   * `aspect` and `layout` are for a video started with the phone upright; a video started
+   * sideways uses `sidewaysAspect` and `sidewaysLayout`. Phones never record a screen.
+   */
+  timelapsePhone: TimelapsePreset & {
+    sidewaysAspect: TimelapseAspect;
+    sidewaysLayout: TimelapseLayout;
   };
   dismissed: string[];
+}
+
+/** How one device's timelapse comes out: the computer's or the phone's. */
+export interface TimelapsePreset {
+  /** How long the video comes out: auto (about 20-40 s, like a phone), a set length, or a speed. */
+  lengthMode: TimelapseLengthMode;
+  /** The set length, in seconds, for lengthMode 'length'. */
+  lengthSeconds: number;
+  /** How many times faster than real time, for lengthMode 'speed'. */
+  speed: number;
+  /** Frames per second of the video, as asked; the frames captured may support fewer. */
+  fps: number;
+  /** Blend the stills behind each frame together, for a softer motion. */
+  smooth: boolean;
+  /** Even out the brightness between stills, so the video does not flicker. */
+  deflicker: boolean;
+  /** Keep taking stills during breaks, not only during focus. */
+  recordBreaks: boolean;
+  /**
+   * With breaks recorded, what the corner clock shows during one: the break's own time
+   * ('break'), or the session's running time, counting on through it ('running').
+   */
+  breakClock: 'break' | 'running';
+  /** The video's shape; 'camera' follows the camera's own. */
+  aspect: TimelapseAspect;
+  /**
+   * Where each piece sits in the video and whether it is shown. The camera's and the
+   * screen's visibility also decide what is recorded. Replaces showTimer and
+   * showClockTime, which only seed it for a row saved before it existed.
+   */
+  layout: TimelapseLayout;
 }
 
 export type FocusOpenMode = 'ask' | 'always' | 'never';

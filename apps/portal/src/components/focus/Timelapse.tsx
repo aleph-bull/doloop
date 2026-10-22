@@ -3,10 +3,13 @@ import {
   planTimelapse,
   TIMELAPSE_DEFAULT_STILL_BYTES,
   timelapseClock,
+  timelapseLook,
   timelapseSizeEstimate,
   trimIndices,
+  type TimelapseDevice,
   type TimelapseLengthMode,
   type TimelapseOptions,
+  type TimelapsePreset,
   type UserSettings,
 } from '@komogon/core';
 import { Download, MonitorUp, Share2, Square, Video } from 'lucide-react';
@@ -41,6 +44,7 @@ import {
   type TimelapseRecorder,
   type TimelapseSources,
 } from '../../lib/timelapse';
+import { PhoneTrim } from './PhoneTrim';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 type TimelapseSettingsValue = UserSettings['timelapse'];
@@ -50,21 +54,39 @@ const SPEEDS = [60, 120, 300, 600, 1200, 3600];
 /** Where the timelapse's own settings live, layout editor included. */
 export const TIMELAPSE_SETTINGS_PATH = '/settings#timelapse';
 
+/** The settings of one preset, opened: `/settings#timelapse-phone`. */
+export const timelapseSettingsPath = (device: TimelapseDevice) =>
+  `${TIMELAPSE_SETTINGS_PATH}-${device}`;
+
+/** A change to one device's preset, as a settings patch. */
+export function presetPatch(
+  device: TimelapseDevice,
+  p: Partial<TimelapsePreset>,
+): DeepPartial<UserSettings> {
+  return device === 'phone' ? { timelapsePhone: p } : { timelapse: p };
+}
+
+/** The preset a device records with. */
+export const presetOf = (settings: UserSettings, device: TimelapseDevice): TimelapsePreset =>
+  device === 'phone' ? settings.timelapsePhone : settings.timelapse;
+
 /**
- * A link to the timelapse settings. From the focus screen it opens in a new tab, since
- * leaving the focus screen would drop the stills; the change reaches this tab when it is
- * looked at again.
+ * A link to the timelapse settings, opened at a device's preset when given. From the focus
+ * screen it opens in a new tab, since leaving the focus screen would drop the stills; the
+ * change reaches this tab when it is looked at again.
  */
 export function TimelapseSettingsLink({
   children,
   newTab = false,
+  device,
 }: {
   children: React.ReactNode;
   newTab?: boolean;
+  device?: TimelapseDevice;
 }) {
   return (
     <Link
-      to={TIMELAPSE_SETTINGS_PATH}
+      to={device ? timelapseSettingsPath(device) : TIMELAPSE_SETTINGS_PATH}
       className="timelapse-link"
       {...(newTab ? { target: '_blank', rel: 'noopener' } : {})}
     >
@@ -81,10 +103,19 @@ export interface TimelapsePromptProps {
   onNo: () => void;
   onAlways: () => void;
   onNever: () => void;
+  /** Where it records; a phone's answer opens the camera screen. */
+  device?: TimelapseDevice;
 }
 
 /** Asked once when a session starts on the focus screen, unless told always or never. */
-export function TimelapsePrompt({ open, onYes, onNo, onAlways, onNever }: TimelapsePromptProps) {
+export function TimelapsePrompt({
+  open,
+  onYes,
+  onNo,
+  onAlways,
+  onNever,
+  device = 'computer',
+}: TimelapsePromptProps) {
   return (
     <Modal
       open={open}
@@ -106,8 +137,15 @@ export function TimelapsePrompt({ open, onYes, onNo, onAlways, onNever }: Timela
       }
     >
       <p className="muted text-sm">
-        We take stills from your computer&rsquo;s camera and give you a timelapse in the end.{' '}
-        <Link to={TIMELAPSE_SETTINGS_PATH} className="link-button" target="_blank" rel="noreferrer">
+        {device === 'phone'
+          ? 'The camera opens with your timer on it. Prop your phone up and we take stills while you focus, then give you a timelapse in the end. '
+          : 'We take stills from your computer’s camera and give you a timelapse in the end. '}
+        <Link
+          to={timelapseSettingsPath(device)}
+          className="link-button"
+          target="_blank"
+          rel="noreferrer"
+        >
           Change what it looks like
         </Link>
       </p>
@@ -226,9 +264,38 @@ export function recorderProblem(status: RecorderStatus): string | null {
 
 /* ---------- settings ---------- */
 
-export interface TimelapseSettingsProps {
-  value: TimelapseSettingsValue;
+/** When a session starts: ask, always record, or never. Both presets share it. */
+export function TimelapseRecordChoice({
+  value,
+  onChange,
+}: {
+  value: TimelapseSettingsValue['record'];
   onChange: (patch: DeepPartial<UserSettings>) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="field-label">When a session starts</span>
+      <Segmented
+        ariaLabel="When a session starts"
+        value={value}
+        onChange={(v) => onChange({ timelapse: { record: v as TimelapseSettingsValue['record'] } })}
+        options={[
+          { value: 'ask', label: 'Ask' },
+          { value: 'always', label: 'Always record' },
+          { value: 'never', label: 'Never' },
+        ]}
+      />
+    </div>
+  );
+}
+
+export interface TimelapseSettingsProps {
+  settings: UserSettings;
+  /** Whose preset: the computer's or the phone's. */
+  device: TimelapseDevice;
+  onChange: (patch: DeepPartial<UserSettings>) => void;
+  /** Show the shared "when a session starts" choice too (the focus screen's controls). */
+  withRecordChoice?: boolean;
   /** Recording now, and the switch for it, when a session is running. */
   recording?: boolean;
   onRecordingChange?: (next: boolean) => void;
@@ -236,59 +303,65 @@ export interface TimelapseSettingsProps {
   linkToLayout?: boolean;
 }
 
-/** How the timelapse is asked for and how the video comes out. */
+/** How the timelapse is asked for and how one preset's video comes out. */
 export function TimelapseSettings({
-  value,
+  settings,
+  device,
   onChange,
+  withRecordChoice = false,
   recording,
   onRecordingChange,
   linkToLayout = false,
 }: TimelapseSettingsProps) {
-  const set = (p: Partial<TimelapseSettingsValue>) => onChange({ timelapse: p });
+  const value = presetOf(settings, device);
+  const set = (p: Partial<TimelapsePreset>) => onChange(presetPatch(device, p));
+  // A phone's video has two layouts; the break clock matters if either shows the time.
+  const elapsedShown =
+    value.layout.elapsed.visible ||
+    (device === 'phone' && settings.timelapsePhone.sidewaysLayout.elapsed.visible);
   return (
     <div className="flex flex-col gap-3">
       {onRecordingChange && (
         <Toggle checked={!!recording} onChange={onRecordingChange} label="Record this session" />
       )}
-      <div className="field">
-        <span className="field-label">When a session starts</span>
-        <Segmented
-          ariaLabel="When a session starts"
-          value={value.record}
-          onChange={(v) => set({ record: v as TimelapseSettingsValue['record'] })}
-          options={[
-            { value: 'ask', label: 'Ask' },
-            { value: 'always', label: 'Always record' },
-            { value: 'never', label: 'Never' },
-          ]}
-        />
-      </div>
-      {screenSupported() && (
+      {withRecordChoice && (
+        <TimelapseRecordChoice value={settings.timelapse.record} onChange={onChange} />
+      )}
+      {device === 'computer' && screenSupported() && (
         <p className="field-hint">
           Each time a recording starts, you are asked whether to record your screen too.
         </p>
       )}
       {linkToLayout && (
         <p className="field-hint">
-          Place the screen, move, resize or remove the clocks, the task name and the progress bar,
-          and pick the video&rsquo;s shape in{' '}
-          <TimelapseSettingsLink newTab>the timelapse layout</TimelapseSettingsLink>.
+          {device === 'phone'
+            ? 'Move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape upright and sideways, in '
+            : 'Place the screen, move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape in '}
+          <TimelapseSettingsLink newTab device={device}>
+            the timelapse layout
+          </TimelapseSettingsLink>
+          .
         </p>
       )}
       <LengthFields value={value} onChange={set} />
-      <SizeNote options={value} />
+      <SizeNote options={value} screen={device === 'computer' && value.layout.screen.visible} />
       <Toggle
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
+        description={
+          device === 'phone'
+            ? 'Breaks always show on the camera screen. This decides whether they go in the video.'
+            : undefined
+        }
       />
-      {value.recordBreaks && value.layout.elapsed.visible && (
+      {value.recordBreaks && elapsedShown && (
         <div className="field">
           <span className="field-label">During a break, the clock shows</span>
           <Segmented
             ariaLabel="What the clock shows during a break"
             value={value.breakClock}
-            onChange={(v) => set({ breakClock: v as TimelapseSettingsValue['breakClock'] })}
+            onChange={(v) => set({ breakClock: v as TimelapsePreset['breakClock'] })}
             options={[
               { value: 'break', label: 'Break time' },
               { value: 'running', label: 'Keeps counting' },
@@ -341,9 +414,9 @@ function stillBytesFor(sources: TimelapseSources): number | undefined {
   return camera + screen || undefined;
 }
 
-function SizeNote({ options }: { options: TimelapseSettingsValue }) {
+function SizeNote({ options, screen }: { options: TimelapsePreset; screen: boolean }) {
   // The screen is asked about each session; count it when it has a place in the layout.
-  const sources = { camera: true, screen: options.layout.screen.visible };
+  const sources = { camera: true, screen };
   const est = timelapseSizeEstimate(options, stillBytesFor(sources));
   const [free, setFree] = useState<number | null>(null);
   useEffect(() => {
@@ -375,8 +448,8 @@ function SizeNote({ options }: { options: TimelapseSettingsValue }) {
 }
 
 interface LengthFieldsProps {
-  value: TimelapseSettingsValue;
-  onChange: (p: Partial<TimelapseSettingsValue>) => void;
+  value: TimelapsePreset;
+  onChange: (p: Partial<TimelapsePreset>) => void;
   /** The most frames per second the stills can fill, once there are some. */
   maxFps?: number;
 }
@@ -475,7 +548,9 @@ function SecondsInput({ value, onChange }: { value: number; onChange: (n: number
 
 export interface TimelapseExportProps {
   recorder: TimelapseRecorder;
-  value: TimelapseSettingsValue;
+  settings: UserSettings;
+  /** Where the stills were taken, so the video follows that preset. */
+  device: TimelapseDevice;
   onChange: (patch: DeepPartial<UserSettings>) => void;
   /** True while the camera is still on; the video can be made once it stops. */
   recording: boolean;
@@ -488,12 +563,14 @@ export interface TimelapseExportProps {
 /** The stills so far, how the video will come out, and the button that makes it. */
 export function TimelapseExport({
   recorder,
-  value,
+  settings,
+  device,
   onChange,
   recording,
   onSaved,
   sessionId,
 }: TimelapseExportProps) {
+  const value = presetOf(settings, device);
   const { toast } = useToast();
   const share = useCreatePost();
   const [sharing, setSharing] = useState(false);
@@ -524,6 +601,12 @@ export function TimelapseExport({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [kept, startAt, value.lengthMode, value.lengthSeconds, value.speed, value.fps],
   );
+  // A phone's video keeps the shape it starts in: the first kept still says which way up.
+  const upright = all[startAt]?.portrait ?? true;
+  const look = {
+    ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
+    timeZone,
+  };
 
   useEffect(
     () => () => {
@@ -543,7 +626,7 @@ export function TimelapseExport({
       const { blob, mime } = await renderTimelapse(
         recorder.stills().slice(startAt, endAt),
         plan,
-        { ...value, timeZone },
+        look,
         setProgress,
         abort.current.signal,
       );
@@ -556,8 +639,25 @@ export function TimelapseExport({
     }
   };
 
-  const download = () => {
+  const download = async () => {
     if (!video) return;
+    // On a phone the share sheet is the way into Photos ("Save Video"); a download would
+    // only land in Files. Called straight from the click, which the sheet needs.
+    if (device === 'phone') {
+      const file = new File([video.blob], timelapseFileName(video.mime), {
+        type: video.mime.split(';')[0],
+      });
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          onSaved?.();
+          return;
+        } catch (err) {
+          // Closing the sheet is not a failure; anything else falls back to a download.
+          if (err instanceof DOMException && err.name === 'AbortError') return;
+        }
+      }
+    }
     const a = document.createElement('a');
     a.href = video.url;
     a.download = timelapseFileName(video.mime);
@@ -613,14 +713,17 @@ export function TimelapseExport({
         {plan.short && ', shorter than asked: there are not enough stills yet'}.
       </p>
       <p className="field-hint">
-        It follows your <TimelapseSettingsLink newTab>timelapse layout</TimelapseSettingsLink>: the
-        shape, and where the clocks, the task name and the progress bar sit.
+        It follows your{' '}
+        <TimelapseSettingsLink newTab device={device}>
+          {device === 'phone' ? 'phone’s timelapse layout' : 'timelapse layout'}
+        </TimelapseSettingsLink>
+        : the shape, and where the clocks, the task name and the progress bar sit.
       </p>
       {video ? (
         <>
           <video className="timelapse-video" src={video.url} controls playsInline loop />
           <div className="flex gap-2 flex-wrap">
-            <Button variant="primary" onClick={download}>
+            <Button variant="primary" onClick={() => void download()}>
               <Download size={14} aria-hidden /> Save the video
             </Button>
             <Button variant="secondary" onClick={() => void shareToSocial()} loading={sharing}>
@@ -652,23 +755,41 @@ export function TimelapseExport({
         </div>
       ) : (
         <>
-          {count >= 3 && last > first && (
-            <TrimFields
-              stills={all}
-              first={first}
-              last={last}
-              from={trim.from ?? first}
-              to={trim.to ?? last}
-              startAt={startAt}
-              endAt={endAt}
-              onChange={(from, to) =>
-                setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
-              }
-            />
-          )}
+          {count >= 3 &&
+            last > first &&
+            (device === 'phone' ? (
+              <PhoneTrim
+                stills={all}
+                times={times}
+                first={first}
+                last={last}
+                from={trim.from ?? first}
+                to={trim.to ?? last}
+                startAt={startAt}
+                endAt={endAt}
+                plan={plan}
+                look={look}
+                onChange={(from, to) =>
+                  setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
+                }
+              />
+            ) : (
+              <TrimFields
+                stills={all}
+                first={first}
+                last={last}
+                from={trim.from ?? first}
+                to={trim.to ?? last}
+                startAt={startAt}
+                endAt={endAt}
+                onChange={(from, to) =>
+                  setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
+                }
+              />
+            ))}
           <LengthFields
             value={value}
-            onChange={(p) => onChange({ timelapse: p })}
+            onChange={(p) => onChange(presetPatch(device, p))}
             maxFps={plan.maxFps}
           />
           <div className="flex gap-2 flex-wrap">

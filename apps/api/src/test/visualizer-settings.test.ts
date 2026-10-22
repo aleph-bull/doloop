@@ -183,4 +183,42 @@ describe('settings: timelapse', () => {
     });
     expect(offFrame.statusCode).toBe(400);
   });
+
+  it('keeps a phone preset of its own, with a shape for each way the phone is held', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    const phone = me.json().user.settings.timelapsePhone;
+    expect(phone).toMatchObject({ aspect: 'camera', sidewaysAspect: 'camera', fps: 30 });
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: {
+        timelapsePhone: {
+          fps: 20,
+          recordBreaks: true,
+          sidewaysAspect: '4:3',
+          // A screen can't be placed on a phone's layout; it comes back out.
+          layout: { ...phone.layout, screen: { ...phone.layout.screen, visible: true } },
+        },
+      },
+    });
+    expect(ok.statusCode).toBe(200);
+    const saved = ok.json().settings;
+    expect(saved.timelapsePhone).toMatchObject({
+      fps: 20,
+      recordBreaks: true,
+      sidewaysAspect: '4:3',
+    });
+    expect(saved.timelapsePhone.layout.screen.visible).toBe(false);
+    // The computer's preset is untouched by the phone's.
+    expect(saved.timelapse.fps).toBe(me.json().user.settings.timelapse.fps);
+    // An upright phone video is never wide, nor a sideways one tall.
+    for (const bad of [{ aspect: '16:9' }, { sidewaysAspect: '9:16' }, { aspect: 'screen' }]) {
+      const res = await api({
+        method: 'PATCH',
+        url: '/api/me/settings',
+        payload: { timelapsePhone: bad },
+      });
+      expect(res.statusCode).toBe(400);
+    }
+  });
 });
