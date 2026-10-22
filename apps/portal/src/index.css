@@ -4077,6 +4077,52 @@
   font-weight: 600;
   color: var(--fg-muted);
 }
+/* A section that folds away from its heading; the heading is the whole button. */
+.focus-sheet-section.is-fold {
+  gap: 0;
+}
+.focus-sheet-fold-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.focus-sheet-fold-head:hover {
+  color: var(--fg);
+}
+.focus-sheet-fold-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.focus-sheet-chevron {
+  flex: none;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.focus-sheet-section.is-open .focus-sheet-chevron {
+  transform: rotate(180deg);
+}
+/* The fold clips what it holds, so it reaches 4px past the sides to keep focus rings whole. */
+.focus-sheet-fold {
+  margin: 0 -4px;
+}
+.focus-sheet-fold.is-open {
+  margin-bottom: -4px;
+}
+.focus-sheet-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 4px 4px;
+}
 .vis-layers {
   display: flex;
   flex-direction: column;

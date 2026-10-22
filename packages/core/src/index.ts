@@ -37,6 +37,7 @@ export * from './session-edit';
 export * from './timelapse';
 export * from './timelapse-layout';
 export * from './timelapse-presets';
+export * from './post-elsewhere';
 export * from './study-plan';
 export * from './universities';
 export * from './study-list';

@@ -1906,3 +1906,21 @@ The owner asked to move four settings. Each keeps what it does, its labels and h
 - **Social** (who sees your posts, study totals, leaderboards, friend requests, showing friends when you're studying) is a group in Account, above Data and privacy. The owner typed "more social"; they meant "move".
 
 The three sections left empty are gone from the settings bar, and their search words joined the section that holds them now ("confetti" moved from Appearance to Timer with its switch). Old links still land: `/settings#social`, `#review` and `#rest-days` open the section that holds them and scroll to the group's heading (`MOVED_SECTIONS` and `GroupHead` in `Settings.tsx`), so the feed's "What you share" link, Today's rest-day button and the rest-day tip needed no change.
+
+## Posting the timelapse on Instagram, TikTok and X, 2026-10-22 (user request)
+
+The owner asked for a way to take the timelapse and post it on Instagram, TikTok and X.
+
+- **Where:** the "Your timelapse" card, once the video is made. Under its buttons, a "Post it on" row with Instagram, TikTok and X, each with the site's own mark in one colour (paths from Simple Icons, CC0, in `PlatformMark.tsx`; lucide has no brand icons).
+- **No accounts are connected, on purpose.** Posting for someone through the sites' own APIs needs a developer app registered with each site and approved by it (Instagram's posts only for business and creator accounts; TikTok keeps an unapproved app's posts private), plus a sign-in to each site for every person. Without that, a web page can't hand a file to another site, so the buttons hand the video over instead:
+  - **On a phone** (the same rule as "Save the video": the recording was made on a phone and the browser can share files), each button opens the share sheet with the video, where Instagram, TikTok and X sit when they're installed. A page can't open the sheet at one app, so all three open the same sheet, and the line under them says to pick the app there.
+  - **On a computer** (and on a phone that can't share files), the video downloads and the site opens in a new tab: Instagram's home page (its Create dialog has no address of its own), TikTok Studio's upload page (`tiktok.com/tiktokstudio/upload`), and X's documented web intent (`x.com/intent/tweet`, its composer). A toast gives the next step there for 8 seconds, and the line under the buttons says what will happen before the click.
+- **Checks, said under the buttons, never blocking:** a WebM (what a browser that can't make an MP4 makes) can't go on Instagram or X, and X takes up to 2 min 20 s without Premium (X's help centre), so a longer video says so. Instagram's and TikTok's length limits run to many minutes, vary by account and are published differently by different sources, so they aren't checked. The length is the one the player reads from the file, or the planned one until it has.
+- No caption field: each site's own composer takes the caption, and nothing is copied to the clipboard.
+- A post counts as saving the video, like "Save the video" (the focus screen stops asking before it closes).
+- The sites, their links and the checks are in `packages/core/src/post-elsewhere.ts` (tests beside it); the buttons are `postTo` in `TimelapseExport`.
+
+## The focus screen's controls: Timelapse first, both sections fold, 2026-10-22 (user request)
+
+- The controls sheet (the gear on the focus screen) now has Timelapse first and the visualizer last of the two; "Exit focus" and the key hints stay at the bottom.
+- Both sections fold from their heading (a chevron, `SheetFold` in `Focus.tsx`, using `Reveal`). Both start open. What is folded is kept in this browser (`komogon.focus.folded`), so the sheet opens the way it was left. A folded Timelapse hides its "Your timelapse" card too; the end-of-session screen still shows it on its own.

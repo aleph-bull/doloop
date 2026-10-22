@@ -1,11 +1,15 @@
 import {
   fmtBytes,
   planTimelapse,
+  POST_PLATFORM_INFO,
+  POST_PLATFORMS,
+  postElsewhereNote,
   TIMELAPSE_DEFAULT_STILL_BYTES,
   timelapseClock,
   timelapseLook,
   timelapseSizeEstimate,
   trimIndices,
+  type PostPlatform,
   type TimelapseDevice,
   type TimelapseLengthMode,
   type TimelapseOptions,
@@ -29,6 +33,7 @@ import {
 import { fmtMinutes } from '../../lib/format';
 import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
 import { useCreatePost, useMe, useMediaLimits } from '../../lib/queries';
+import { PlatformMark } from '../PlatformMark';
 import { CompressOffer } from '../social/CompressOffer';
 import {
   DEFAULT_SCREEN_BYTES,
@@ -581,7 +586,14 @@ export function TimelapseExport({
   // The time of day in the video reads in the account's timezone, not the computer's.
   const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
-  const [video, setVideo] = useState<{ url: string; mime: string; blob: Blob } | null>(null);
+  // `seconds` is the planned length; `played` is the length the player reads from the file.
+  const [video, setVideo] = useState<{
+    url: string;
+    mime: string;
+    blob: Blob;
+    seconds: number;
+  } | null>(null);
+  const [played, setPlayed] = useState<{ url: string; seconds: number } | null>(null);
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
   // The trim, in seconds into the session; null keeps that end where the recording is.
@@ -620,6 +632,12 @@ export function TimelapseExport({
     [video],
   );
 
+  // On a phone the share sheet takes the video to the apps, when this browser can share files.
+  const shareSheet = useMemo(
+    () => device === 'phone' && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
+    [device, video],
+  );
+
   if (count === 0) return null;
 
   const make = async () => {
@@ -634,7 +652,7 @@ export function TimelapseExport({
         setProgress,
         abort.current.signal,
       );
-      setVideo({ url: URL.createObjectURL(blob), mime, blob });
+      setVideo({ url: URL.createObjectURL(blob), mime, blob, seconds: plan.durationSeconds });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
         toast(err instanceof Error ? err.message : 'Could not make the video');
@@ -648,9 +666,7 @@ export function TimelapseExport({
     // On a phone the share sheet is the way into Photos ("Save Video"); a download would
     // only land in Files. Called straight from the click, which the sheet needs.
     if (device === 'phone') {
-      const file = new File([video.blob], timelapseFileName(video.mime), {
-        type: video.mime.split(';')[0],
-      });
+      const file = videoFile(video);
       if (navigator.canShare?.({ files: [file] })) {
         try {
           await navigator.share({ files: [file] });
@@ -662,11 +678,33 @@ export function TimelapseExport({
         }
       }
     }
-    const a = document.createElement('a');
-    a.href = video.url;
-    a.download = timelapseFileName(video.mime);
-    a.click();
+    downloadVideo(video);
     onSaved?.();
+  };
+
+  /**
+   * Hand the video to Instagram, TikTok or X. On a phone the share sheet holds the apps and
+   * takes the video along. A page can't pass a file to another site, so elsewhere the video
+   * downloads, the site opens in a new tab, and a toast says what to do there. Called
+   * straight from the click, which the sheet and the new tab both need.
+   */
+  const postTo = async (platform: PostPlatform) => {
+    if (!video) return;
+    const site = POST_PLATFORM_INFO[platform];
+    if (shareSheet) {
+      try {
+        await navigator.share({ files: [videoFile(video)] });
+        onSaved?.();
+        return;
+      } catch (err) {
+        // Closing the sheet is not a failure; anything else falls back to a download.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+    downloadVideo(video);
+    window.open(site.uploadUrl, '_blank', 'noopener,noreferrer');
+    onSaved?.();
+    toast(`The video is in your downloads. ${site.nextStep}`, { durationMs: 8000 });
   };
 
   /**
@@ -707,6 +745,13 @@ export function TimelapseExport({
     recorder.clear();
   };
 
+  const postNote =
+    video &&
+    postElsewhereNote({
+      seconds: played?.url === video.url ? played.seconds : video.seconds,
+      mime: video.mime,
+    });
+
   return (
     <section className="timelapse-export" aria-label="Timelapse">
       <div className="flex items-center gap-2">
@@ -729,7 +774,18 @@ export function TimelapseExport({
       </p>
       {video ? (
         <>
-          <video className="timelapse-video" src={video.url} controls playsInline loop />
+          <video
+            className="timelapse-video"
+            src={video.url}
+            controls
+            playsInline
+            loop
+            onLoadedMetadata={(e) => {
+              // A recorded WebM reads as endless; the planned length stands then.
+              const seconds = e.currentTarget.duration;
+              if (Number.isFinite(seconds) && seconds > 0) setPlayed({ url: video.url, seconds });
+            }}
+          />
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={() => void download()}>
               <Download size={14} aria-hidden /> Save the video
@@ -761,6 +817,28 @@ export function TimelapseExport({
               onCancel={() => setOversize(false)}
             />
           )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="muted text-sm">Post it on</span>
+            {/* The three stay on one line, under the words when there's no room beside them. */}
+            <div className="flex gap-2">
+              {POST_PLATFORMS.map((p) => (
+                <Button
+                  key={p}
+                  size="sm"
+                  onClick={() => void postTo(p)}
+                  aria-label={`Post it on ${POST_PLATFORM_INFO[p].name}`}
+                >
+                  <PlatformMark platform={p} /> {POST_PLATFORM_INFO[p].name}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <p className="field-hint">
+            {shareSheet
+              ? 'They open your phone’s share menu. Pick the app there.'
+              : 'The video downloads and the site opens in a new tab.'}
+            {postNote && ` ${postNote}`}
+          </p>
         </>
       ) : progress !== null ? (
         <div className="flex flex-col gap-2">
@@ -826,6 +904,21 @@ export function TimelapseExport({
       )}
     </section>
   );
+}
+
+/** The made video as a file named by the day, for the share sheet. */
+function videoFile(video: { blob: Blob; mime: string }): File {
+  return new File([video.blob], timelapseFileName(video.mime), {
+    type: video.mime.split(';')[0],
+  });
+}
+
+/** Download the made video: an anchor's click, so it needs nothing awaited first. */
+function downloadVideo(video: { url: string; mime: string }) {
+  const a = document.createElement('a');
+  a.href = video.url;
+  a.download = timelapseFileName(video.mime);
+  a.click();
 }
 
 interface TrimFieldsProps {

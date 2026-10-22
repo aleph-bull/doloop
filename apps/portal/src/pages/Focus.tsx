@@ -13,6 +13,7 @@ import {
 } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  ChevronDown,
   Eye,
   EyeOff,
   Pause,
@@ -90,6 +91,63 @@ const STILL_SECONDS = 4;
 /** How long after the timer appears the audio prompt shows, so it never lands on a blank screen. */
 const PROMPT_DELAY_MS = 900;
 
+/** The controls' sections that fold away from their heading. */
+type SheetPart = 'timelapse' | 'visualizer';
+/** Which of them are folded, kept in this browser so they stay as they were left. */
+const FOLDED_KEY = 'komogon.focus.folded';
+
+function readFolded(): SheetPart[] {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(FOLDED_KEY) ?? '[]');
+    return Array.isArray(stored)
+      ? stored.filter((p): p is SheetPart => p === 'timelapse' || p === 'visualizer')
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+/** One of the controls' sections, folded away or opened from its heading. */
+function SheetFold({
+  part,
+  title,
+  folded,
+  onToggle,
+  children,
+}: {
+  part: SheetPart;
+  title: string;
+  folded: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  const bodyId = `focus-sheet-${part}`;
+  return (
+    <section
+      className={`focus-sheet-section is-fold${folded ? '' : ' is-open'}`}
+      aria-label={title}
+    >
+      <h3 className="focus-sheet-title">
+        <button
+          type="button"
+          className="focus-sheet-fold-head"
+          aria-expanded={!folded}
+          aria-controls={bodyId}
+          onClick={onToggle}
+        >
+          {title}
+          <ChevronDown size={16} aria-hidden className="focus-sheet-chevron" />
+        </button>
+      </h3>
+      <Reveal open={!folded} className="focus-sheet-fold">
+        <div id={bodyId} className="focus-sheet-fold-body">
+          {children}
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
 /** Controls appear on any input and fade once the hands are still. */
 function useStillness(): boolean {
   const [visible, setVisible] = useState(true);
@@ -136,6 +194,17 @@ export function Focus() {
   const appearance = useAppearance(settings);
   const chromeVisible = useStillness();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [folded, setFolded] = useState<SheetPart[]>(readFolded);
+  const toggleFold = (part: SheetPart) =>
+    setFolded((f) => {
+      const next = f.includes(part) ? f.filter((p) => p !== part) : [...f, part];
+      try {
+        localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+      } catch {
+        /* storage off: the fold lasts until the page closes */
+      }
+      return next;
+    });
   const [summary, setSummary] = useState<EndSummary | null>(null);
   const [startOpen, setStartOpen] = useState(false);
 
@@ -654,13 +723,13 @@ export function Focus() {
               <X size={16} aria-hidden />
             </Button>
           </div>
-          <section className="focus-sheet-section" aria-label="Visualizer">
-            <h3 className="focus-sheet-title">Visualizer</h3>
-            {vis && <VisualizerSettings value={vis} onChange={patch} audio={audio} />}
-          </section>
           {tl && (
-            <section className="focus-sheet-section" aria-label="Timelapse">
-              <h3 className="focus-sheet-title">Timelapse</h3>
+            <SheetFold
+              part="timelapse"
+              title="Timelapse"
+              folded={folded.includes('timelapse')}
+              onToggle={() => toggleFold('timelapse')}
+            >
               <TimelapseSettings
                 settings={settings}
                 device={device}
@@ -688,8 +757,16 @@ export function Focus() {
                   sessionId={session?.session.id ?? null}
                 />
               )}
-            </section>
+            </SheetFold>
           )}
+          <SheetFold
+            part="visualizer"
+            title="Visualizer"
+            folded={folded.includes('visualizer')}
+            onToggle={() => toggleFold('visualizer')}
+          >
+            {vis && <VisualizerSettings value={vis} onChange={patch} audio={audio} />}
+          </SheetFold>
           <section className="focus-sheet-section">
             <Button variant="secondary" onClick={leave}>
               Exit focus
