@@ -786,7 +786,8 @@ Every block is a `PlannedBlock` from `/api/planned-blocks` for the visible range
 
 Free/busy times from Google or Outlook (`/api/calendar/busy`) are plain grey bands behind
 everything. Anything that crosses midnight is split per day. Colours come from the task's own
-colour or the nearest ancestor's (`effectiveColor`); the subtitle is the root course or plan.
+colour or the nearest ancestor's (`effectiveColor`; only tasks coloured before 2026-10-22 have one,
+since the setting was removed); the subtitle is the root course or plan.
 Blocks mix the colour into `--glass-solid` (the theme's opaque surface) rather than into
 transparency, so hour lines never show through them, and text uses `--ink`. Overlapping
 blocks sit side by side (`layoutLanes`) and get a warning-coloured right edge: overlaps are

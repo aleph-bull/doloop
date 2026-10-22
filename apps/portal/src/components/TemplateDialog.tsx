@@ -40,7 +40,6 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
   const [dueTime, setDueTime] = useState('');
   const [unit, setUnit] = useState('');
   const [unitLabel, setUnitLabel] = useState('');
-  const [color, setColor] = useState('');
 
   useEffect(() => {
     if (!open) return;
@@ -50,7 +49,6 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
     setDueTime(t?.dueTime ?? '');
     setUnit(t?.countUnit ?? '');
     setUnitLabel(t?.countUnitLabel ?? '');
-    setColor(t?.color ?? '');
   }, [open, node]);
 
   if (!node) return null;
@@ -74,7 +72,8 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
       dueTime: dueTime || null,
       countUnit: (unit || null) as NodeTemplate['countUnit'],
       countUnitLabel: unit === 'custom' ? unitLabel.trim() || null : null,
-      color: color || null,
+      // Task colours can't be set any more (2026-10-22); saving drops an old default.
+      color: null,
     };
     void save(isEmptyTemplate(template) ? null : template);
   };
@@ -141,15 +140,6 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
             onChange={(e) => setDueTime(e.target.value)}
             hint="Used once a due date is picked"
           />
-          <Input
-            label="Colour"
-            type="color"
-            value={color || '#6366f1'}
-            onChange={(e) => setColor(e.target.value)}
-            hint={color ? 'Set' : 'None set. Items under this use the colour above it.'}
-          />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Count activities as"
             value={unit}
@@ -171,11 +161,6 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
             />
           )}
         </div>
-        {color && (
-          <button type="button" className="link-button self-start" onClick={() => setColor('')}>
-            Remove the colour default
-          </button>
-        )}
         <button type="submit" className="sr-only">
           Save
         </button>

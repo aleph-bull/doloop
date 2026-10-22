@@ -60,7 +60,6 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
   const [dueTime, setDueTime] = useState('23:59');
   const [unit, setUnit] = useState<string>('');
   const [unitLabel, setUnitLabel] = useState('');
-  const [color, setColor] = useState('');
 
   /** Which parent the new item was last filled in for; see the effect below. */
   const openedUnder = useRef<string | null>(parentId ?? null);
@@ -73,7 +72,6 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
     setDueTime(t?.dueTime ?? '23:59');
     setUnit(t?.countUnit ?? '');
     setUnitLabel(t?.countUnitLabel ?? '');
-    setColor(t?.color ?? '');
   };
 
   useEffect(() => {
@@ -87,7 +85,6 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
       setDueTime(node.dueAt ? isoToLocalTime(node.dueAt) : '23:59');
       setUnit(node.countUnit ?? '');
       setUnitLabel(node.countUnitLabel ?? '');
-      setColor(node.color ?? '');
     } else {
       // A new item opens as the nearest template up the tree says it should.
       openedUnder.current = parentId ?? null;
@@ -121,7 +118,6 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
       dueAt: dueDate ? localToIso(dueDate, dueTime || '23:59') : null,
       countUnit: (unit || null) as StudyNode['countUnit'],
       countUnitLabel: unit === 'custom' ? unitLabel.trim() || null : null,
-      color: color || null,
     };
     if (!payload.title) return toast('Give it a title');
     try {
@@ -232,7 +228,7 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
             disabled={!dueDate}
           />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Select
             label="Count activities as"
             value={unit}
@@ -253,13 +249,6 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
               placeholder="e.g. essays"
             />
           )}
-          <Input
-            label="Colour"
-            type="color"
-            value={color || '#6366f1'}
-            onChange={(e) => setColor(e.target.value)}
-            hint="Optional, inherited by children"
-          />
         </div>
         <button type="submit" className="sr-only">
           Save

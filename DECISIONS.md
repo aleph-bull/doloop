@@ -2032,3 +2032,10 @@ The owner saw "1 h on Slides Review" on a post and asked for the course too: "RS
   - Colour and weight go through the Backdrop (`chooseGlass` in contrast.ts, `applyChosenGlass`), which knows the photo behind. A chosen colour tints the top bar and sidebar too, because all glass shares one text colour: when a colour wants the other text (light glass in dark mode, say), the text on all glass turns round together, and on a gradient the page's own text is pinned to the theme's.
   - Dragging shows on the page at once; letting go saves. Saved looks keep the glass; looks saved before it keep whatever glass is set. The group hides in Matte, which has no glass.
   - Accounts keep any settings already stored, so everyone without their own glass gets 11px and 100%.
+
+## The task colour setting is gone, 2026-10-22 (owner request)
+
+"Remove the task colour setting, no idea what that is or does." It was a colour picker in the task dialog ("Optional, inherited by children") that only tinted the task's blocks on the calendar and put a dot beside it on Tasks, and the same colour as a default in "Template for items under…".
+
+- Both pickers are removed. The task dialog no longer sends a colour, so saving a task leaves whatever it had; a template saved from now on drops its old colour default, and new items don't take one any more.
+- Nothing is deleted: tasks coloured before keep their colour on the calendar and their dot on Tasks (`effectiveColor`, the `nodes.color` column and the API field all stay). Everything else on the calendar uses the accent, as uncoloured tasks always did.
