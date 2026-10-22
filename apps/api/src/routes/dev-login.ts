@@ -5,6 +5,7 @@ import type { Db } from '../db/client';
 import { HttpError } from '../errors';
 import { accountSession } from '../services/account-session';
 import { createDevAccount, DEV_ACCOUNT_LIFE_SECONDS, DEV_KINDS } from '../services/dev-accounts';
+import type { MediaStore } from '../services/media-store';
 import { checkPassword } from '../services/passwords';
 import { RateLimiter, checkLimits, type Limit } from '../services/rate-limit';
 
@@ -14,6 +15,8 @@ export interface DevLoginOptions {
   /** scrypt hash of the dev password (`DEV_PASSWORD_HASH`). */
   passwordHash: string;
   clock: () => string;
+  /** R2, so expired dev accounts' post files are deleted with them. */
+  store?: MediaStore | null;
   /** Wrong passwords and new accounts per address; null turns them off (tests). */
   limits?: { wrong: Limit; made: Limit; now?: () => number } | null;
 }
@@ -55,6 +58,8 @@ export function devLoginRoutes(app: FastifyInstance, db: Db, opts: DevLoginOptio
       kind,
       typeof tz === 'string' && isValidTimezone(tz) ? tz : null,
       opts.clock(),
+      opts.store ?? null,
+      req.log,
     );
     return accountSession(db, opts.secret, identity, DEV_ACCOUNT_LIFE_SECONDS);
   });

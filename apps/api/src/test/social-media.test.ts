@@ -1,9 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { TimerState } from '@komogon/core';
 import { eq } from 'drizzle-orm';
-import { postMedia, sessions } from '../db/schema';
+import { postMedia, posts, sessions, users } from '../db/schema';
+import { sweepDevAccounts } from '../services/dev-accounts';
 import { createR2Store, type MediaStore } from '../services/media-store';
-import { createTestApp, USER_A, USER_B, type TestApp } from './helpers';
+import { BUCKET_FULL, BUCKET_MAX_BYTES } from '../services/upload-quota';
+import { advanceClock, createTestApp, USER_A, USER_B, type TestApp } from './helpers';
 
 /** R2 kept in a Map. A read link is a data URL, so the pass-through route can fetch it. */
 function memoryStore() {
@@ -27,10 +29,16 @@ function memoryStore() {
     remove: async (key) => {
       files.delete(key);
     },
+    usage: async () => {
+      if (bucket.fail) throw new Error('R2 LIST failed (403)');
+      return bucket.extra + [...files.values()].reduce((n, f) => n + f.bytes.length, 0);
+    },
   };
+  /** `extra` bytes the bucket pretends to hold; `fail` makes measuring it fail. */
+  const bucket = { extra: 0, fail: false };
   /** What the browser's PUT would leave behind. */
   const put = (key: string, mime: string, bytes: Buffer) => files.set(key, { mime, bytes });
-  return { store, files, put };
+  return { store, files, put, bucket };
 }
 
 const finished = (userId: string, startedAt: string, workSeconds: number) => ({
@@ -340,5 +348,141 @@ describe('the R2 client', () => {
   it('says nothing is there on a 404', async () => {
     vi.stubGlobal('fetch', async () => new Response(null, { status: 404 }));
     expect(await r2.head('nope')).toBeNull();
+  });
+
+  it('measures the bucket by listing every page of files', async () => {
+    const seen: URL[] = [];
+    vi.stubGlobal('fetch', async (input: Request) => {
+      const url = new URL(input.url);
+      seen.push(url);
+      const xml = url.searchParams.has('continuation-token')
+        ? '<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Size>5</Size></Contents></ListBucketResult>'
+        : '<ListBucketResult><IsTruncated>true</IsTruncated><Contents><Key>a</Key><Size>100</Size></Contents><Contents><Size>20</Size></Contents><NextContinuationToken>t/1+x&amp;y</NextContinuationToken></ListBucketResult>';
+      return new Response(xml, { status: 200 });
+    });
+    expect(await r2.usage()).toBe(125);
+    expect(seen.map((u) => u.pathname)).toEqual(['/komodon-media', '/komodon-media']);
+    expect(seen[0]!.searchParams.get('list-type')).toBe('2');
+    expect(seen[1]!.searchParams.get('continuation-token')).toBe('t/1+x&y');
+  });
+});
+
+describe('upload limits', () => {
+  const r2 = memoryStore();
+  let t: TestApp;
+  beforeAll(async () => {
+    t = await createTestApp('2026-09-23T14:00:00.000Z', { mediaStore: r2.store });
+    for (const token of [t.tokenA, t.tokenB]) await t.api({ method: 'GET', url: '/api/me', token });
+  });
+  afterAll(() => t.close());
+
+  const ask = (bytes: number, token = t.tokenA) =>
+    t.api({
+      method: 'POST',
+      url: '/api/social/uploads',
+      token,
+      payload: { mime: 'video/mp4', bytes },
+    });
+
+  it('gives each account 250 MB of upload links a day', async () => {
+    for (let i = 0; i < 6; i++) expect((await ask(40 * MB)).statusCode).toBe(200);
+    const over = await ask(40 * MB);
+    expect(over.statusCode).toBe(429);
+    expect(over.json().error).toBe(
+      'You can upload 250 MB a day. This one fits again in about 24 hours.',
+    );
+    expect(Number(over.headers['retry-after'])).toBe(24 * 60 * 60);
+    // What's left of the day still fits.
+    expect((await ask(10 * MB)).statusCode).toBe(200);
+    expect((await ask(1)).statusCode).toBe(429);
+    // Someone else's day is their own.
+    expect((await ask(40 * MB, t.tokenB)).statusCode).toBe(200);
+
+    advanceClock(t, 23 * 60 + 30);
+    expect((await ask(40 * MB)).json().error).toMatch(/fits again in 30 minutes\.$/);
+    advanceClock(t, 31);
+    expect((await ask(40 * MB)).statusCode).toBe(200);
+  });
+
+  it('stops every upload once the bucket would pass 10 GB, posts without a file still go', async () => {
+    advanceClock(t, 25 * 60); // a fresh day, and a fresh measurement
+    r2.bucket.extra = BUCKET_MAX_BYTES - 30 * MB;
+    expect((await ask(20 * MB)).statusCode).toBe(200);
+    // That link counts too, though the bucket was measured before it.
+    const full = await ask(20 * MB, t.tokenB);
+    expect(full.statusCode).toBe(503);
+    expect(full.json().error).toBe(BUCKET_FULL);
+
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_B.id, '2026-09-25T10:00:00Z', 1800))
+      .returning();
+    const post = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      token: t.tokenB,
+      payload: { sessionId: s!.id, body: 'Words only' },
+    });
+    expect(post.statusCode).toBe(201);
+
+    // Files deleted: the next measurement, ten minutes on, lets uploads through again.
+    r2.bucket.extra = 0;
+    expect((await ask(20 * MB, t.tokenB)).statusCode).toBe(503);
+    advanceClock(t, 10);
+    expect((await ask(20 * MB, t.tokenB)).statusCode).toBe(200);
+  });
+
+  it('counts from the database when R2 will not list the bucket', async () => {
+    advanceClock(t, 25 * 60);
+    r2.bucket.fail = true;
+    expect((await ask(MB)).statusCode).toBe(200);
+    // Posted files filling the whole bucket (a row holds at most 2 GB, so five of them).
+    for (let i = 0; i < 5; i++) {
+      const [p] = await t.db.insert(posts).values({ userId: USER_A.id, body: '' }).returning();
+      await t.db
+        .insert(postMedia)
+        .values({ postId: p!.id, mime: 'video/mp4', key: `posts/${i}.mp4`, bytes: 2 ** 31 - 1 });
+    }
+    advanceClock(t, 10);
+    expect((await ask(MB)).statusCode).toBe(503);
+    r2.bucket.fail = false;
+  });
+});
+
+describe('dev accounts running out', () => {
+  const r2 = memoryStore();
+  let t: TestApp;
+  beforeAll(async () => {
+    t = await createTestApp('2026-09-23T14:00:00.000Z', { mediaStore: r2.store });
+    await t.api({ method: 'GET', url: '/api/me' });
+  });
+  afterAll(() => t.close());
+
+  it('take their R2 files with them', async () => {
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_A.id, '2026-09-23T10:00:00Z', 3600))
+      .returning();
+    const { key } = (
+      await t.api({
+        method: 'POST',
+        url: '/api/social/uploads',
+        payload: { mime: 'image/png', bytes: 3 },
+      })
+    ).json() as { key: string };
+    r2.put(key, 'image/png', Buffer.from('png'));
+    const post = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: s!.id, upload: key },
+    });
+    expect(post.statusCode).toBe(201);
+    await t.db
+      .update(users)
+      .set({ devAccount: true, devExpiresAt: new Date('2026-09-23T13:00:00Z') })
+      .where(eq(users.id, USER_A.id));
+
+    expect(await sweepDevAccounts(t.db, t.clock.now, r2.store)).toBe(1);
+    expect(r2.files.size).toBe(0);
   });
 });

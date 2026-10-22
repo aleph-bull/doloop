@@ -435,6 +435,27 @@ export const postMedia = pgTable('post_media', {
   bytes: integer('bytes').notNull(),
 });
 
+/**
+ * Every R2 upload link handed out, with the size it was signed for, kept two days: what
+ * each account sent in the last day, and what the bucket may have taken since it was last
+ * measured (services/upload-quota.ts).
+ */
+export const mediaUploads = pgTable(
+  'media_uploads',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    bytes: integer('bytes').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    index('media_uploads_user_created_idx').on(t.userId, t.createdAt),
+    index('media_uploads_created_idx').on(t.createdAt),
+  ],
+);
+
 export const postLikes = pgTable(
   'post_likes',
   {
@@ -935,6 +956,7 @@ export const schema = {
   userAssets,
   posts,
   postMedia,
+  mediaUploads,
   postLikes,
   postComments,
   friendships,
