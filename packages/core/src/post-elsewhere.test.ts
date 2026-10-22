@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  appLink,
   POST_PLATFORM_INFO,
   POST_PLATFORMS,
   postElsewhereNote,
@@ -34,6 +35,17 @@ describe('posting a timelapse elsewhere', () => {
     for (const p of POST_PLATFORMS) {
       expect(new URL(POST_PLATFORM_INFO[p].uploadUrl).protocol).toBe('https:');
     }
+  });
+
+  it('opens the app, not the site, on a phone', () => {
+    for (const p of POST_PLATFORMS) {
+      expect(appLink(p, 'ios')).not.toMatch(/^https?:/);
+      expect(appLink(p, 'android')).toMatch(/^intent:\/\/.+#Intent;scheme=https;package=.+;end$/);
+    }
+    expect(appLink('instagram', 'ios')).toBe('instagram://app');
+    expect(appLink('instagram', 'android')).toBe(
+      'intent://www.instagram.com/#Intent;scheme=https;package=com.instagram.android;end',
+    );
   });
 });
 
