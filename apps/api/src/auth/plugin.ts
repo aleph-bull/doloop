@@ -7,6 +7,7 @@ import { ensureUser } from '../services/users';
 import { AuthError, type Verifier } from './verify';
 import { isLocalTestEmail, requireLocalTestRequest } from '../services/local-test-accounts';
 import { isEmailBlocked, SUSPENDED } from '../services/moderation';
+import { DEV_OFF_LIMITS, devOffLimits, isDevEmail } from '../services/dev-accounts';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 
@@ -67,8 +68,11 @@ export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOption
         if (!existing)
           return reply.code(401).send({ error: 'Test account was reset. Sign in again.' });
       }
+      // A dev account is gone after a day; its token must not bring it back as a real one.
+      if (!existing && isDevEmail(auth.email))
+        return reply.code(401).send({ error: 'That dev account has expired. Sign in again.' });
       // Checked before ensureUser, so an uninvited sign-in never creates an account row.
-      if (!isInvited(auth.email, opts.allowedEmails))
+      if (!existing?.devAccount && !isInvited(auth.email, opts.allowedEmails))
         return reply.code(403).send({ error: 'invite_only' });
       // Suspended by an admin, or a new account for a blocked address.
       if (existing ? existing.bannedAt : await isEmailBlocked(opts.db, auth.email))
@@ -77,6 +81,8 @@ export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOption
       const tz = typeof tzHeader === 'string' && isValidTimezone(tzHeader) ? tzHeader : null;
       req.authUserId = auth.id;
       req.user = await ensureUser(opts.db, auth, tz);
+      if (req.user.devAccount && devOffLimits(req))
+        return reply.code(403).send({ error: DEV_OFF_LIMITS });
     } catch (err) {
       if (err instanceof AuthError) return reply.code(401).send({ error: err.message });
       throw err;

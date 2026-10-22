@@ -7,6 +7,7 @@ import { createGoogleClient } from './services/google';
 import { createGoogleTokenVerifier } from './services/google-signin';
 import type { CalendarDeps } from './services/calendar-sync';
 import { createOutlookClient } from './services/outlook';
+import { DEV_PASSWORD_HASH } from './services/dev-accounts';
 import { allowLocalTestAccounts } from './services/local-test-accounts';
 import { createLocalMailer, createResendMailer } from './services/mailer';
 import { mediaStoreFromEnv } from './services/media-store';
@@ -91,6 +92,7 @@ const app = await buildServer({
   trustProxyHops: env.trustProxyHops,
   allowedEmails: env.allowedEmails,
   adminEmails: env.adminEmails,
+  devLogin: env.devLogin ? { passwordHash: DEV_PASSWORD_HASH } : null,
   passwordAuth:
     !env.supabaseUrl && env.authSecret
       ? {

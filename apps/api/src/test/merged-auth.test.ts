@@ -52,7 +52,7 @@ it('joins a code-verified password account through Google and revokes both sessi
   expect(google.statusCode, google.body).toBe(200);
   const passwordUser = (await me(verified.json().token)).json().user;
   expect((await me(google.json().token)).json().user.id).toBe(passwordUser.id);
-  expect(passwordUser.settings.nav.style).toBe('top');
+  expect(passwordUser.settings.nav.style).toBe('sidebar');
   now = '2026-10-21T12:02:00.000Z';
   const reset = await post('/api/auth/password/request-reset', { email });
   expect(reset.statusCode, reset.body).toBe(200);
