@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, Play, ThumbsUp, Timer, Trash2, X } from 'lucide-react';
@@ -28,44 +28,71 @@ function figure(minutes: number): { value: string; unit: string } {
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };
 }
 
-/** A picture on a post, fetched with the token like the videos are. */
-function PostImage({ post }: { post: FeedPost }) {
-  const media = useQuery({
+/**
+ * Where a post's file plays from: a short-lived R2 link straight into `src`, or, for a file
+ * the API keeps, the bytes fetched with the token and played from a blob. `retry` asks for
+ * a fresh link when one has run out.
+ */
+function usePostFile(post: FeedPost, enabled: boolean) {
+  const link = useQuery({
+    queryKey: ['social', 'media-url', post.id],
+    queryFn: () => api.postMediaUrl(post.id),
+    enabled,
+    // Links last an hour; ask again well before that.
+    staleTime: 45 * 60_000,
+    gcTime: 50 * 60_000,
+  });
+  const inApi = link.data !== undefined && link.data.url === null;
+  const bytes = useQuery({
     queryKey: ['social', 'media', post.id],
     queryFn: () => api.postMedia(post.id),
+    enabled: enabled && inApi,
     staleTime: Infinity,
   });
-  const [url, setUrl] = useState<string | null>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   useEffect(() => {
-    if (!media.data) return;
-    const next = URL.createObjectURL(media.data);
-    setUrl(next);
+    if (!bytes.data) return;
+    const next = URL.createObjectURL(bytes.data);
+    setBlobUrl(next);
     return () => URL.revokeObjectURL(next);
-  }, [media.data]);
-  if (media.isError) return <p className="muted text-sm">Could not load the picture.</p>;
-  if (!url) return <div className="post-image is-loading" aria-hidden />;
-  return <img className="post-image" src={url} alt="" />;
+  }, [bytes.data]);
+  const retried = useRef(false);
+  return {
+    src: link.data?.url ?? blobUrl,
+    isError: link.isError || bytes.isError,
+    retry: () => {
+      if (retried.current || !link.data?.url) return;
+      retried.current = true;
+      void link.refetch();
+    },
+  };
 }
 
-/** The poster until it is asked to play; then the video, fetched with the token. */
+/** A picture on a post. */
+function PostImage({ post }: { post: FeedPost }) {
+  const file = usePostFile(post, true);
+  if (file.isError) return <p className="muted text-sm">Could not load the picture.</p>;
+  if (!file.src) return <div className="post-image is-loading" aria-hidden />;
+  return <img className="post-image" src={file.src} alt="" onError={file.retry} />;
+}
+
+/** The poster until it is asked to play; then the video. */
 function PostVideo({ post }: { post: FeedPost }) {
   const [playing, setPlaying] = useState(false);
-  const media = useQuery({
-    queryKey: ['social', 'media', post.id],
-    queryFn: () => api.postMedia(post.id),
-    enabled: playing,
-    staleTime: Infinity,
-  });
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!media.data) return;
-    const next = URL.createObjectURL(media.data);
-    setUrl(next);
-    return () => URL.revokeObjectURL(next);
-  }, [media.data]);
+  const file = usePostFile(post, playing);
 
-  if (playing && url)
-    return <video className="post-video" src={url} controls autoPlay loop playsInline />;
+  if (playing && file.src)
+    return (
+      <video
+        className="post-video"
+        src={file.src}
+        controls
+        autoPlay
+        loop
+        playsInline
+        onError={file.retry}
+      />
+    );
   return (
     <button
       type="button"
@@ -77,7 +104,7 @@ function PostVideo({ post }: { post: FeedPost }) {
       <span className="post-play" aria-hidden>
         {playing ? <Spinner /> : <Play size={22} fill="currentColor" />}
       </span>
-      {media.isError && <span className="post-video-error">Could not load the video.</span>}
+      {file.isError && <span className="post-video-error">Could not load the video.</span>}
     </button>
   );
 }

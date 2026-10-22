@@ -2,9 +2,29 @@ import { useMemo, useRef, useState } from 'react';
 import { Image as ImageIcon, Timer, Video, X } from 'lucide-react';
 import { Button, Panel, useToast } from '@komogon/ui';
 import { fmtDate, fmtMinutes } from '../../lib/format';
-import { blobToDataUrl, isVideo, mediaProblem, posterFromVideo } from '../../lib/post-media';
-import { useAvatar, useCreatePost, useMe, useNodes, useSessions } from '../../lib/queries';
+import {
+  FALLBACK_LIMITS,
+  isVideo,
+  mediaProblem,
+  posterFromVideo,
+  sendMedia,
+} from '../../lib/post-media';
+import {
+  useAvatar,
+  useCreatePost,
+  useMe,
+  useMediaLimits,
+  useNodes,
+  useSessions,
+} from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { CompressOffer } from './CompressOffer';
+
+/** The compressed copy keeps the name, with the extension of what it now is. */
+const renamed = (name: string, blob: Blob) =>
+  `${name.replace(/\.[^.]+$/, '')}.${
+    blob.type === 'video/webm' ? 'webm' : blob.type.startsWith('video/') ? 'mp4' : 'jpg'
+  }`;
 
 const MAX = 500;
 
@@ -17,8 +37,12 @@ export function Composer() {
   const [text, setText] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [video, setVideo] = useState<File | null>(null);
+  /** A file over the limit, waiting on "Compress it". */
+  const [oversize, setOversize] = useState<{ file: File; maxBytes: number } | null>(null);
+  const [uploaded, setUploaded] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
 
   const sessions = useSessions(undefined, 15).data?.sessions;
   const nodes = useNodes().data?.nodes;
@@ -39,10 +63,18 @@ export function Composer() {
       }));
   }, [sessions, nodes]);
 
+  const clearFile = () => {
+    setVideo(null);
+    setOversize(null);
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
   const pick = (file: File | null) => {
     if (!file) return;
-    const problem = mediaProblem(file);
-    if (problem) return toast(problem);
+    const problem = mediaProblem(file, limits);
+    if (problem?.kind === 'type') return toast(problem.message);
+    if (problem?.kind === 'size') return setOversize({ file, maxBytes: problem.maxBytes });
+    setOversize(null);
     setVideo(file);
   };
 
@@ -53,18 +85,18 @@ export function Composer() {
     if (!canPost) return;
     setBusy(true);
     try {
-      const media = video ? await blobToDataUrl(video) : undefined;
       const poster =
         video && isVideo(video) ? ((await posterFromVideo(video)) ?? undefined) : undefined;
-      await create.mutateAsync({ body: text.trim() || undefined, sessionId, media, poster });
+      const file = video ? await sendMedia(video, limits, setUploaded) : {};
+      await create.mutateAsync({ body: text.trim() || undefined, sessionId, ...file, poster });
       setText('');
       setSessionId('');
-      setVideo(null);
-      if (fileRef.current) fileRef.current.value = '';
+      clearFile();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not post it');
     } finally {
       setBusy(false);
+      setUploaded(null);
     }
   };
 
@@ -116,10 +148,7 @@ export function Composer() {
                 type="button"
                 className="composer-file-x"
                 aria-label="Remove the file"
-                onClick={() => {
-                  setVideo(null);
-                  if (fileRef.current) fileRef.current.value = '';
-                }}
+                onClick={clearFile}
               >
                 <X size={12} aria-hidden />
               </button>
@@ -144,9 +173,21 @@ export function Composer() {
           loading={busy}
           onClick={() => void submit()}
         >
-          Post
+          {uploaded === null ? 'Post' : `Uploading ${Math.round(uploaded * 100)}%`}
         </Button>
       </div>
+      {oversize && (
+        <CompressOffer
+          key={`${oversize.file.name}-${oversize.file.size}`}
+          file={oversize.file}
+          maxBytes={oversize.maxBytes}
+          onDone={(blob) => {
+            setVideo(new File([blob], renamed(oversize.file.name, blob), { type: blob.type }));
+            setOversize(null);
+          }}
+          onCancel={clearFile}
+        />
+      )}
     </Panel>
   );
 }

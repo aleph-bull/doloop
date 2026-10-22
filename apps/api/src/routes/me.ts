@@ -21,10 +21,16 @@ import {
 } from '../services/users';
 import { settingsSchema, updateMeSchema } from '../validation';
 import { exportUserData } from '../services/export';
-import { and, eq } from 'drizzle-orm';
-import { userAssets } from '../db/schema';
+import { and, eq, isNotNull } from 'drizzle-orm';
+import { postMedia, posts, userAssets } from '../db/schema';
+import { removeAll, type MediaStore } from '../services/media-store';
 
-export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function meRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  store: MediaStore | null = null,
+) {
   app.get('/api/me', async (req) => {
     const now = clock();
     const streak = await syncStreak(db, req.user, now);
@@ -114,7 +120,21 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   });
 
   app.delete('/api/me', async (req, reply) => {
+    // The rows go with the account; the files in R2 have to be deleted by name.
+    const files = store
+      ? await db
+          .select({ key: postMedia.key })
+          .from(postMedia)
+          .innerJoin(posts, eq(posts.id, postMedia.postId))
+          .where(and(eq(posts.userId, req.user.id), isNotNull(postMedia.key)))
+      : [];
     await deleteUser(db, req.user.id);
+    if (store && files.length)
+      await removeAll(
+        store,
+        files.map((f) => f.key!),
+        req.log,
+      );
     return reply.code(204).send();
   });
 }

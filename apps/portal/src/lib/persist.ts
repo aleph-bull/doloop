@@ -35,11 +35,13 @@ const USER_KEY_STORAGE = 'komogon.user';
  * Queries that must never come back from disk:
  *  - the active session carries the running timer, which only the server can be right about;
  *  - the custom background is a multi-megabyte data URL, far too large to rewrite on every
- *    cache change.
+ *    cache change;
+ *  - links to post files in R2 expire within the hour, so one from disk is likely dead.
  */
 const VOLATILE_PREFIXES: readonly (readonly unknown[])[] = [
   ['sessions', 'active'],
   ['me', 'background'],
+  ['social', 'media-url'],
 ];
 
 const isVolatile = (key: readonly unknown[]): boolean =>

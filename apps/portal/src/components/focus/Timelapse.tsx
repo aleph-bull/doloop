@@ -24,8 +24,9 @@ import {
   useToast,
 } from '@komogon/ui';
 import { fmtMinutes } from '../../lib/format';
-import { blobToDataUrl, POST_VIDEO_MAX_BYTES, posterFromImage } from '../../lib/post-media';
-import { useCreatePost, useMe } from '../../lib/queries';
+import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
+import { useCreatePost, useMe, useMediaLimits } from '../../lib/queries';
+import { CompressOffer } from '../social/CompressOffer';
 import {
   DEFAULT_SCREEN_BYTES,
   freeStorageBytes,
@@ -497,6 +498,9 @@ export function TimelapseExport({
   const { toast } = useToast();
   const share = useCreatePost();
   const [sharing, setSharing] = useState(false);
+  const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
+  /** The video is over the post limit; the offer to compress it is showing. */
+  const [oversize, setOversize] = useState(false);
   // The time of day in the video reads in the account's timezone, not the computer's.
   const timeZone = useMe().data?.user.timezone;
   const [progress, setProgress] = useState<number | null>(null);
@@ -565,11 +569,14 @@ export function TimelapseExport({
     onSaved?.();
   };
 
-  /** The video goes up as a post with the session's minutes, and a still as its poster. */
-  const shareToSocial = async () => {
-    if (!video) return;
-    if (video.blob.size > POST_VIDEO_MAX_BYTES)
-      return toast('Up to 5 MB can be shared. Pick a shorter length and make it again.');
+  /**
+   * The video goes up as a post with the session's minutes, and a still as its poster. Over
+   * the limit, it offers to compress first; `blob` is then the compressed copy.
+   */
+  const shareToSocial = async (blob = video?.blob) => {
+    if (!video || !blob) return;
+    if (blob.size > limits.videoMaxBytes) return setOversize(true);
+    setOversize(false);
     setSharing(true);
     try {
       // The poster comes from the middle of what the video kept, after any trim.
@@ -579,7 +586,7 @@ export function TimelapseExport({
       const poster = picture ? await posterFromImage(picture) : null;
       await share.mutateAsync({
         sessionId: sessionId ?? undefined,
-        media: await blobToDataUrl(video.blob),
+        ...(await sendMedia(blob, limits)),
         poster: poster ?? undefined,
       });
       toast('Shared to Social.');
@@ -595,6 +602,7 @@ export function TimelapseExport({
     abort.current?.abort();
     if (video) URL.revokeObjectURL(video.url);
     setVideo(null);
+    setOversize(false);
     setTrim({ from: null, to: null });
     recorder.clear();
   };
@@ -631,6 +639,7 @@ export function TimelapseExport({
               onClick={() => {
                 URL.revokeObjectURL(video.url);
                 setVideo(null);
+                setOversize(false);
               }}
             >
               Change it
@@ -639,6 +648,16 @@ export function TimelapseExport({
               Throw it away
             </Button>
           </div>
+          {oversize && (
+            <CompressOffer
+              key={video.url}
+              file={video.blob}
+              maxBytes={limits.videoMaxBytes}
+              actionLabel="Compress and share"
+              onDone={(blob) => void shareToSocial(blob)}
+              onCancel={() => setOversize(false)}
+            />
+          )}
         </>
       ) : progress !== null ? (
         <div className="flex flex-col gap-2">

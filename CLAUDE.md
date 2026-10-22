@@ -29,8 +29,8 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 ## Where it runs
 
 1. **Hosted alpha** at https://komogon.app: portal on Vercel (root `apps/portal`, config in
-   `apps/portal/vercel.json`), API on Render (`render.yaml`), data in Neon Postgres, domain
-   on Cloudflare. A push to `main` on GitHub (`aleph-bull/doloop`) redeploys both.
+   `apps/portal/vercel.json`), API on Render (`render.yaml`), data in Neon Postgres, post
+   videos and pictures in Cloudflare R2 ([docs/R2.md](docs/R2.md)), domain on Cloudflare. A push to `main` on GitHub (`aleph-bull/doloop`) redeploys both.
    cron-job.org pings `/api/health` every 10 minutes so Render's free plan doesn't sleep.
 2. **The always-on copy is gone** (removed 2026-10-21 at the owner's request; they study on
    komogon.app now). It was a frozen build on localhost:5173 and :8787 started at sign-in.
@@ -328,12 +328,17 @@ The owner called the first version "massive"; don't let it grow back.
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and the task's title
 as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
-(500 characters) and one file: a video (MP4/WebM under 5 MB, with a JPEG poster the portal
-makes from a frame) or a picture (JPEG/PNG/WebP under 2 MB). The bytes live in `post_media`
-as base64; `GET /api/posts/:id/media` serves them, and the portal fetches with the token and
-plays or shows a blob URL, because a plain `<video src>` cannot send the header. The focus
-screen's timelapse export has "Share to Social", which posts the video with the session
-attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+(500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
+makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
+R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
+[docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
+the bytes never pass through Render. Without R2, and for posts made before it, the bytes are
+in `post_media.data` as base64 (videos capped at 5 MB) and the portal fetches them with the
+token into a blob URL. `GET /api/social/uploads` tells the portal which applies. A file over
+the limit is not refused: the composer and "Share to Social" offer to compress it in the
+browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule, and go
+when their post or account does. The focus screen's timelapse export has "Share to Social",
+which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
 author deletes a post. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).

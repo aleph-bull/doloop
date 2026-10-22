@@ -381,13 +381,18 @@ export const posts = pgTable(
   ],
 );
 
-/** The video behind a post, kept apart from the post so listing the feed never reads it. */
+/**
+ * The video or picture behind a post, kept apart from the post so listing the feed never
+ * reads it. Either the bytes are here (`data`, without R2) or in the R2 bucket (`key`).
+ */
 export const postMedia = pgTable('post_media', {
   postId: uuid('post_id')
     .primaryKey()
     .references(() => posts.id, { onDelete: 'cascade' }),
   mime: text('mime').notNull(),
-  data: text('data').notNull(), // base64
+  data: text('data'), // base64
+  /** Where the file is in the R2 bucket (`posts/<user>/<id>.<ext>`). */
+  key: text('key'),
   bytes: integer('bytes').notNull(),
 });
 

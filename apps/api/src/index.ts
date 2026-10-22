@@ -9,6 +9,7 @@ import type { CalendarDeps } from './services/calendar-sync';
 import { createOutlookClient } from './services/outlook';
 import { allowLocalTestAccounts } from './services/local-test-accounts';
 import { createLocalMailer, createResendMailer } from './services/mailer';
+import { mediaStoreFromEnv } from './services/media-store';
 
 const env = loadEnv();
 const localTestAccounts = allowLocalTestAccounts({
@@ -70,7 +71,12 @@ if (env.google.clientId && env.google.clientSecret && env.tokenEncryptionKey) {
   );
 }
 
+const mediaStore = mediaStoreFromEnv(env.r2);
+if (!mediaStore)
+  console.warn('[api] R2 not set up; post videos stay in Postgres, up to 5 MB (set R2_*).');
+
 const app = await buildServer({
+  mediaStore,
   mailer: localTestAccounts
     ? createLocalMailer()
     : env.resendApiKey

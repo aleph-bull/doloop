@@ -1712,3 +1712,14 @@ The owner called the old page "a mess, ugly and useless" and asked for the best 
 - **Start from a block.** A planned block today that hasn't ended gets a play button; the start dialog opens on that task with the minutes left in the block.
 - **Month is the deadline overview.** Due chips on each day (assessments carry a flag), studied time on days gone by and planned time on days ahead, rest days shaded; a click on a day opens its week. Beside it, "Due this month" lists the deadlines a week at a time ("This week", "Next week"), so a crunch shows before it arrives. A click on any deadline opens the task.
 - The block and free/busy queries keep the last range on screen while the next loads, so moving between weeks doesn't flash a spinner.
+
+## Post files on Cloudflare R2, 40 MB videos, and compressing what's too big, 2026-10-21 (user request)
+
+The owner asked what hosting videos for Social would cost and whether it could be free. Kept in Postgres and served through the API, a video costs Neon storage (about 150 fit in the free 1 GB) and Render bandwidth on every play (the free 5 GB a month is about 1,000 plays, then Render suspends the API or bills $0.15/GB). They chose Cloudflare R2 (10 GB free, downloads never charged), then asked for the video limit to go to 40 MB and for files over it to be accepted and compressed rather than refused.
+
+- **R2 behind signed links.** The browser uploads straight to the bucket through a 15-minute link the API signs for that exact type and size, and plays from one-hour links. Nothing passes through Render either way. The bucket stays private; a post kept to friends gives no link to anyone else (the bytes route now checks this too).
+- **Uploads land under `uploads/`, posts live under `posts/`.** Making the post copies the file across inside the bucket; a lifecycle rule empties `uploads/` after a day, so a file nobody posted never stays. Deleting a post or an account deletes its files.
+- **Postgres stays the fallback.** Without the `R2_*` variables, files go with the post as before and videos stay at 5 MB (base64 in a database row). Posts made before R2 keep playing from Postgres; there is no migration of old files.
+- **40 MB for videos with R2**, 2 MB for pictures as before.
+- **Over the limit, it offers to compress.** "This video is 62 MB, and posts take up to 40 MB." with Compress it and Cancel, in the composer and under "Share to Social". Videos are re-encoded in the browser (mediabunny over WebCodecs): the bitrate comes from the length, the size and frame rate drop when the bitrate is low, sound is kept, and it tries once more if the result still comes out too big. Pictures are redrawn as JPEG. A video too long to fit even at a low bitrate is refused with "A shorter clip would."
+- Setup steps and how to check them: docs/R2.md (`node scripts/r2-check.mjs https://komogon.app`).

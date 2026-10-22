@@ -50,3 +50,13 @@ services:
       # Admins: the Admin page (every account, its data, setting a new password)
       - key: ADMIN_EMAILS
         value: zachzhao2015@gmail.com
+      # Cloudflare R2 for post videos and pictures (docs/R2.md). Without all four, they stay
+      # in Postgres and videos are capped at 5 MB.
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
