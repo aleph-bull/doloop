@@ -212,6 +212,10 @@ Keep the owner's own wording verbatim, "!" included.
 
 ## Recent changes (2026-10-20)
 
+- Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
+  `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table
+  (`components/Tags.tsx`), tags on the dashboard task cards, and a play button on courses.
+  There is no colour sort on purpose. See DECISIONS.md.
 - Timelapse on phones (2026-10-21): recording on a phone turns the focus screen into the
   camera, and Settings › Timelapse has a Phone and a Computer preset; see "The timelapse"
   below.

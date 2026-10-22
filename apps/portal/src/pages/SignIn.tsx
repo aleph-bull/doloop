@@ -133,6 +133,17 @@ export function SignIn() {
               >
                 Resend code
               </Button>
+              {/* Back to the signup form, email and password kept, to fix a mistyped address. */}
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  setSent(null);
+                  setCode('');
+                }}
+              >
+                Go back
+              </Button>
               <LocalMailInbox email={auth.pendingVerification.email} />
             </form>
           ) : sent ? (

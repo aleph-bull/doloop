@@ -1,5 +1,7 @@
 import {
+  inheritedTagIds,
   standsInForChildren,
+  tagsOf,
   type NodePace,
   type RoutineOccurrence,
   type Session,
@@ -13,6 +15,7 @@ import { DashboardStats } from '../components/DashboardStats';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { FocusDashboard } from '../components/FocusDashboard';
+import { GetStarted } from '../components/GetStarted';
 import { Hint } from '../components/Hint';
 import { NamePrompt } from '../components/NamePrompt';
 import { NodeCard } from '../components/NodeCard';
@@ -32,7 +35,7 @@ import { useTip } from '../lib/use-tip';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
-import { useActiveSession, useMe, useNodes, usePace, useSessions } from '../lib/queries';
+import { useActiveSession, useMe, useNodes, usePace, useSessions, useTags } from '../lib/queries';
 
 // Stable empty references, so the greeting is not recomputed on every render while the
 // queries are still in flight.
@@ -42,13 +45,18 @@ const EMPTY_PACE: Record<string, NodePace> = {};
 
 export function Today() {
   const me = useMe();
-  return me.data?.user.settings.dashboard.focusOnly ? <FocusDashboard /> : <FullDashboard />;
+  const nodes = useNodes();
+  // The simplified screen is only for an empty account: the first course or item, however
+  // it arrives (by hand, pasted, from a calendar), brings up the full dashboard.
+  const simple = me.data?.user.settings.dashboard.focusOnly && nodes.data?.nodes.length === 0;
+  return simple ? <FocusDashboard /> : <FullDashboard />;
 }
 
 function FullDashboard() {
   const me = useMe();
   const nodes = useNodes();
   const pace = usePace();
+  const tags = useTags();
   const active = useActiveSession();
   const sessions = useSessions(undefined, 50);
   const [startFor, setStartFor] = useState<{
@@ -88,6 +96,10 @@ function FullDashboard() {
   const nodesById = useMemo(
     () => new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n])),
     [nodes.data],
+  );
+  const tagsById = useMemo(
+    () => new Map((tags.data?.tags ?? []).map((t) => [t.id, t])),
+    [tags.data],
   );
   const settings = me.data?.user.settings;
   const sessionCount = sessions.data?.sessions.filter((s) => s.endedAt).length ?? 0;
@@ -220,15 +232,12 @@ function FullDashboard() {
           </Hint>,
         ].find((h) => h.props.when && !isDismissed(h.props.id))}
 
-      {/* A first visit: the one thing to do comes before any numbers. */}
+      {/* A first visit: the ways to bring courses in come before any numbers. */}
       {roots.length === 0 && (
-        <Glass className="dash-first">
-          <h2 className="section-title">Nothing to study yet</h2>
-          <p className="muted">Add a course and what's due in it, and Today plans your day.</p>
-          <Link to="/tasks" className="btn btn-primary btn-lg">
-            Add your first course
-          </Link>
-        </Glass>
+        <GetStarted
+          title="Nothing to study yet"
+          line="Add a course and what's due in it, and Today plans your day."
+        />
       )}
 
       <DashboardStats />
@@ -257,6 +266,7 @@ function FullDashboard() {
               pace={pace.data.pace[n.id]}
               plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
               courseTitle={courseOf(n)}
+              tags={tagsOf(inheritedTagIds(n.id, nodesById), tagsById)}
               onStart={(node) => setStartFor({ node, minutes: null })}
             />
           ))}

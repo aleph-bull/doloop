@@ -417,6 +417,11 @@ export interface StudyNode {
   gradeCredits: number | null;
   /** Defaults for new items added under this node. Null when none are set. */
   childDefaults: NodeTemplate | null;
+  /**
+   * The node's tags (ids into the user's tag list), in the order added. Optional because the
+   * portal's offline cache can hold a node from before tags existed.
+   */
+  tagIds?: string[];
 }
 
 export interface SessionReview {

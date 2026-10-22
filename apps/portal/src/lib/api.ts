@@ -5,6 +5,8 @@ import type {
   RestDayPolicy,
   Session,
   StudyNode,
+  Tag,
+  TagColor,
   TimerState,
   TimerView,
   User,
@@ -235,6 +237,19 @@ export interface ReviewInput {
   note?: string | null;
 }
 
+/** A pasted list of courses and items, as `POST /api/nodes/import` takes it. */
+export interface ImportNodesInput {
+  courses: Array<{
+    title: string;
+    items: Array<{
+      title: string;
+      kind: 'assessment' | 'task';
+      dueAt: string | null;
+      estimatedMinutes: number | null;
+    }>;
+  }>;
+}
+
 export interface NodeInput {
   parentId?: string | null;
   title?: string;
@@ -253,6 +268,8 @@ export interface NodeInput {
   gradeCredits?: number | null;
   /** The template for items added under this node; null clears it. */
   childDefaults?: StudyNode['childDefaults'];
+  /** The node's tags, in order; null clears them. */
+  tagIds?: string[] | null;
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -538,6 +555,19 @@ export const api = {
   archiveNode: (id: string) =>
     request<{ archivedIds: string[] }>('POST', `/api/nodes/${id}/archive`),
   deleteNode: (id: string) => request<void>('DELETE', `/api/nodes/${id}`),
+  tags: () => request<{ tags: Tag[] }>('GET', '/api/tags'),
+  createTag: (input: { name: string; color?: TagColor }) =>
+    request<{ tag: Tag }>('POST', '/api/tags', input),
+  updateTag: (id: string, patch: { name?: string; color?: TagColor; sortOrder?: number }) =>
+    request<{ tag: Tag }>('PATCH', `/api/tags/${id}`, patch),
+  deleteTag: (id: string) => request<void>('DELETE', `/api/tags/${id}`),
+
+  importNodes: (input: ImportNodesInput) =>
+    request<{ courses: number; items: number; skipped: number }>(
+      'POST',
+      '/api/nodes/import',
+      input,
+    ),
   pace: () =>
     request<{
       now: string;

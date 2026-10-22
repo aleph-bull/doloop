@@ -1,51 +1,23 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Button, Glass, Input, Spinner, Toggle } from '@komogon/ui';
+import { Button, Spinner } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
-import { useActiveSession, useMe, useStartSession, useUpdateSettings } from '../lib/queries';
+import { useActiveSession, useMe, useUpdateSettings } from '../lib/queries';
+import { GetStarted } from './GetStarted';
 import { NudgesCard } from './NudgesCard';
 import { TimerCard } from './TimerCard';
 import { RewardOverlay } from './RewardOverlay';
 
-/** A session can begin here without a task, a tour or a setup dialog. */
+/**
+ * The dashboard of an account with nothing in Tasks yet: ways to bring courses in, a running
+ * session's timer, and the way to the full dashboard.
+ */
 export function FocusDashboard() {
   const me = useMe();
   const active = useActiveSession();
-  const start = useStartSession();
   const update = useUpdateSettings();
-  const navigate = useNavigate();
   const settings = me.data!.user.settings;
-  const [pomodoro, setPomodoro] = useState(false);
-  const [workMin, setWorkMin] = useState(String(settings.pomodoro.workMin));
-  const [breakMin, setBreakMin] = useState(String(settings.pomodoro.shortBreakMin));
-  const [timelapse, setTimelapse] = useState(settings.timelapse.record === 'always');
-  const [showTimer, setShowTimer] = useState(settings.pomodoro.showTimerByDefault);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<EndSummary | null>(null);
-
-  const begin = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await update.mutateAsync({
-        ...(pomodoro
-          ? { pomodoro: { workMin: Number(workMin), shortBreakMin: Number(breakMin) } }
-          : {}),
-        timelapse: { record: timelapse ? 'always' : 'never' },
-      });
-      // The focus screen must see this choice before it decides whether to record.
-      await me.refetch();
-      await start.mutateAsync({ mode: pomodoro ? 'pomodoro' : 'unlimited', showTimer });
-      // Recording lives on the focus screen. Use this tab, with no extra question.
-      if (timelapse) navigate('/focus');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not start. Please try again.');
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const showMore = async () => {
     setError(null);
@@ -79,66 +51,20 @@ export function FocusDashboard() {
           nodes={[]}
           onEnded={setSummary}
         />
-      ) : (
-        <Glass className="focus-start p-6" strong>
-          <form onSubmit={(event) => void begin(event)} className="flex flex-col gap-6">
-            <h2 className="section-title">Your session</h2>
-            <Toggle
-              checked={pomodoro}
-              onChange={setPomodoro}
-              label="Pomodoro"
-              description="Alternate focus time with breaks."
-              disabled={busy}
-            />
-            {pomodoro && (
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Focus minutes"
-                  type="number"
-                  min={1}
-                  step={1}
-                  required
-                  value={workMin}
-                  onChange={(e) => setWorkMin(e.target.value)}
-                  disabled={busy}
-                />
-                <Input
-                  label="Break minutes"
-                  type="number"
-                  min={1}
-                  step={1}
-                  required
-                  value={breakMin}
-                  onChange={(e) => setBreakMin(e.target.value)}
-                  disabled={busy}
-                />
-              </div>
-            )}
-            <Toggle
-              checked={timelapse}
-              onChange={setTimelapse}
-              label="Timelapse"
-              description="Record with your camera on the focus screen. The video stays on this device."
-              disabled={busy}
-            />
-            <Toggle
-              checked={showTimer}
-              onChange={setShowTimer}
-              label="Show the timer"
-              disabled={busy}
-            />
-            <Button type="submit" variant="primary" size="lg" loading={busy}>
-              Start
-            </Button>
-          </form>
-        </Glass>
-      )}
+      ) : null}
       {error && (
         <p role="alert" className="text-sm">
           {error}
         </p>
       )}
-      <Button variant="ghost" onClick={() => void showMore()} disabled={busy || update.isPending}>
+      {/* Once anything is added, Today swaps this screen for the full dashboard. */}
+      {!active.data?.active && (
+        <GetStarted
+          title="Got a lot due?"
+          line="Bring it in all at once, and Komodon plans each day."
+        />
+      )}
+      <Button variant="ghost" onClick={() => void showMore()} disabled={update.isPending}>
         Show full dashboard
       </Button>
       <RewardOverlay

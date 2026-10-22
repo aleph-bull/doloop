@@ -5,6 +5,7 @@ import type {
   SessionReview,
   SleepGap,
   StreakState,
+  TagColor,
   TimerState,
   UserSettings,
   Vacation,
@@ -144,10 +145,28 @@ export const nodes = pgTable(
     gradeCredits: real('grade_credits'),
     /** Defaults for the items added under this node; null when none are set. */
     childDefaults: jsonb('child_defaults').$type<NodeTemplate | null>(),
+    /** Ids into `tags`, in the order added. A deleted tag is taken out of every list. */
+    tagIds: jsonb('tag_ids').$type<string[]>().notNull().default([]),
     createdAt: ts('created_at').notNull().defaultNow(),
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [index('nodes_user_idx').on(t.userId), index('nodes_parent_idx').on(t.parentId)],
+);
+
+/** The user's tags for tasks: a name and a palette colour (`TAG_COLORS` in core). */
+export const tags = pgTable(
+  'tags',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    color: text('color').$type<TagColor>().notNull(),
+    sortOrder: real('sort_order').notNull().default(0),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [index('tags_user_idx').on(t.userId)],
 );
 
 export const sessions = pgTable(
@@ -890,6 +909,7 @@ export const schema = {
   blockedEmails,
   passwordAccounts,
   nodes,
+  tags,
   sessions,
   plannedBlocks,
   restDayPolicies,
@@ -929,6 +949,7 @@ export const schema = {
 
 export type UserRow = typeof users.$inferSelect;
 export type NodeRow = typeof nodes.$inferSelect;
+export type TagRow = typeof tags.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type PlannedBlockRow = typeof plannedBlocks.$inferSelect;
 export type RestDayPolicyRow = typeof restDayPolicies.$inferSelect;

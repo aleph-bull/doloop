@@ -6,6 +6,8 @@ import {
   REWARDS,
   SOUND_PRESETS,
   STREAK_DAY_START,
+  STUDY_LIST,
+  TAG_COLORS,
   WEEK_STREAK_DAYS,
 } from '@komogon/core';
 import { z } from 'zod';
@@ -54,6 +56,8 @@ const nodeFields = z.object({
   gradeCredits: z.number().min(0).max(100).nullable().optional(),
   /** The template for items added under this node; null clears it. */
   childDefaults: nodeTemplateSchema.nullable().optional(),
+  /** The node's tags, in order; null clears them. */
+  tagIds: z.array(uuid).max(20).nullable().optional(),
 });
 
 export const createNodeSchema = nodeFields.extend({ kind: nodeKind.default('task') });
@@ -66,6 +70,50 @@ export const updateNodeSchema = nodeFields
     outcomeRating: z.number().int().min(1).max(5).nullable().optional(),
   })
   .strict();
+
+export const tagColor = z.enum(TAG_COLORS);
+
+export const createTagSchema = z
+  .object({
+    name: z.string().trim().min(1).max(40),
+    /** Left out, the tag takes the next colour no tag has yet. */
+    color: tagColor.optional(),
+  })
+  .strict();
+
+export const updateTagSchema = z
+  .object({
+    name: z.string().trim().min(1).max(40).optional(),
+    color: tagColor.optional(),
+    sortOrder: z.number().optional(),
+  })
+  .strict();
+
+/** A pasted list of courses and what's due in them, added in one go (`POST /api/nodes/import`). */
+export const importNodesSchema = z
+  .object({
+    courses: z
+      .array(
+        z.object({
+          title: z.string().trim().min(1).max(200),
+          items: z
+            .array(
+              z.object({
+                title: z.string().trim().min(1).max(200),
+                kind: z.enum(['assessment', 'task']),
+                dueAt: isoDateTime.nullable().optional(),
+                estimatedMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+              }),
+            )
+            .max(STUDY_LIST.MAX_ITEMS),
+        }),
+      )
+      .min(1)
+      .max(STUDY_LIST.MAX_COURSES),
+  })
+  .refine((v) => v.courses.reduce((n, c) => n + c.items.length, 0) <= STUDY_LIST.MAX_ITEMS, {
+    message: `One list can add up to ${STUDY_LIST.MAX_ITEMS} items`,
+  });
 
 export const sessionMode = z.enum(['pomodoro', 'unlimited', 'scheduled']);
 

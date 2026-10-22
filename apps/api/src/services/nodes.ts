@@ -1,11 +1,13 @@
-import type { StudyNode } from '@komogon/core';
+import { randomUUID } from 'node:crypto';
+import { studyKey, type StudyNode } from '@komogon/core';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';
 import { estimateChanges, nodes, type NodeRow } from '../db/schema';
 import { badRequest, notFound } from '../errors';
-import type { createNodeSchema, updateNodeSchema } from '../validation';
+import type { createNodeSchema, importNodesSchema, updateNodeSchema } from '../validation';
 import { dt, dtn, toNode } from './sessions-mapper';
+import { checkTagIds } from './tags';
 
 export async function listNodes(
   db: Db,
@@ -84,6 +86,7 @@ export async function createNode(
       gradeOverall: input.gradeOverall ?? null,
       gradeCredits: input.gradeCredits ?? null,
       childDefaults: input.childDefaults ?? null,
+      tagIds: input.tagIds ? await checkTagIds(db, userId, input.tagIds) : [],
       createdAt: dt(now),
       updatedAt: dt(now),
     })
@@ -146,6 +149,7 @@ export async function updateNode(
   }
   if (patch.outcomeRating !== undefined && patch.outcomeRating !== null)
     set.outcomeAskedAt = dt(now);
+  if (patch.tagIds !== undefined) set.tagIds = await checkTagIds(db, userId, patch.tagIds ?? []);
   const [row] = await db.update(nodes).set(set).where(eq(nodes.id, id)).returning();
   if (set.completedAt !== undefined)
     await cascadeCompletion(db, userId, id, current.completedAt, set.completedAt, now);
@@ -220,6 +224,104 @@ export async function archiveNode(
 }
 
 /** Hard delete (sessions cascade). Only for nodes the user explicitly wants gone. */
+/**
+ * Add a pasted list of courses and items in one transaction. A course that already exists
+ * at the top level (matched as the calendar import matches, so "ECO 101" is ECO101) gets
+ * the new items; an item already under it with the same title and due date is skipped, so
+ * pasting the same list twice adds nothing the second time.
+ */
+export async function importNodes(
+  db: Db,
+  userId: string,
+  input: z.infer<typeof importNodesSchema>,
+  now: string,
+): Promise<{ courses: number; items: number; skipped: number }> {
+  return db.transaction(async (tx) => {
+    const live = await tx.query.nodes.findMany({
+      where: and(eq(nodes.userId, userId), eq(nodes.archived, false)),
+    });
+    // A real course wins over a top-level task that happens to share its name.
+    const roots = live
+      .filter((n) => !n.parentId)
+      .sort((a, b) => Number(b.kind === 'course') - Number(a.kind === 'course'));
+    const courseIds = new Map<string, string>();
+    for (const r of roots) {
+      const key = studyKey(r.title);
+      if (!courseIds.has(key)) courseIds.set(key, r.id);
+    }
+    let nextRoot = live.reduce((m, n) => Math.max(m, n.sortOrder), 0) + 1;
+    /** Per course: what is already under it (title and due date), and the next sort order. */
+    const under = new Map<string, { have: Set<string>; next: number }>();
+    const result = { courses: 0, items: 0, skipped: 0 };
+    const newNodes: Array<typeof nodes.$inferInsert> = [];
+    const estimates: Array<typeof estimateChanges.$inferInsert> = [];
+
+    for (const course of input.courses) {
+      let courseId = courseIds.get(studyKey(course.title));
+      if (!courseId) {
+        courseId = randomUUID();
+        courseIds.set(studyKey(course.title), courseId);
+        newNodes.push({
+          id: courseId,
+          userId,
+          title: course.title,
+          kind: 'course',
+          sortOrder: nextRoot++,
+          createdAt: dt(now),
+          updatedAt: dt(now),
+        });
+        result.courses++;
+      }
+      let slot = under.get(courseId);
+      if (!slot) {
+        const siblings = live.filter((n) => n.parentId === courseId);
+        slot = {
+          have: new Set(siblings.map((n) => `${studyKey(n.title)}|${toNode(n).dueAt ?? ''}`)),
+          next: siblings.reduce((m, n) => Math.max(m, n.sortOrder), 0) + 1,
+        };
+        under.set(courseId, slot);
+      }
+      for (const item of course.items) {
+        const dueAt = item.dueAt ? new Date(item.dueAt).toISOString() : null;
+        const key = `${studyKey(item.title)}|${dueAt ?? ''}`;
+        if (slot.have.has(key)) {
+          result.skipped++;
+          continue;
+        }
+        slot.have.add(key);
+        const id = randomUUID();
+        newNodes.push({
+          id,
+          userId,
+          parentId: courseId,
+          title: item.title,
+          kind: item.kind,
+          estimatedMinutes: item.estimatedMinutes ?? null,
+          dueAt: dtn(dueAt),
+          sortOrder: slot.next++,
+          createdAt: dt(now),
+          updatedAt: dt(now),
+        });
+        if (item.estimatedMinutes != null)
+          estimates.push({
+            userId,
+            nodeId: id,
+            at: dt(now),
+            fromMinutes: null,
+            toMinutes: item.estimatedMinutes,
+            source: 'edit',
+          });
+        result.items++;
+      }
+    }
+
+    // Courses go in ahead of their items, so every parent exists before its children.
+    if (newNodes.length) await tx.insert(nodes).values(newNodes);
+    if (estimates.length) await tx.insert(estimateChanges).values(estimates);
+    return result;
+  });
+}
+
 export async function deleteNode(db: Db, userId: string, id: string): Promise<void> {
   await getNodeRow(db, userId, id);
   await db.delete(nodes).where(and(eq(nodes.id, id), eq(nodes.userId, userId)));

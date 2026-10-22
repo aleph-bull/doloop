@@ -16,6 +16,7 @@ import {
   sessions,
   streakEvents,
   studyPlans,
+  tags,
   trackerEntries,
   trackers,
   weeklyReviews,
@@ -44,7 +45,7 @@ function plain(row: Record<string, unknown>): Record<string, unknown> {
  * and so is an uploaded background image, which is a picture rather than information.
  */
 export async function exportUserData(db: Db, user: UserRow) {
-  const [rt, rc, tr, te, gc, sp, pt, dr, di, cr, se] = await Promise.all([
+  const [rt, rc, tr, te, gc, sp, pt, dr, di, cr, se, tg] = await Promise.all([
     db.query.routines.findMany({ where: eq(routines.userId, user.id) }),
     db.query.routineCompletions.findMany({ where: eq(routineCompletions.userId, user.id) }),
     db.query.trackers.findMany({ where: eq(trackers.userId, user.id) }),
@@ -56,6 +57,7 @@ export async function exportUserData(db: Db, user: UserRow) {
     db.query.drillItems.findMany({ where: eq(drillItems.userId, user.id) }),
     db.query.customRewards.findMany({ where: eq(customRewards.userId, user.id) }),
     db.query.streakEvents.findMany({ where: eq(streakEvents.userId, user.id) }),
+    db.query.tags.findMany({ where: eq(tags.userId, user.id) }),
   ]);
   const more = {
     socialProfile: await db.query.socialProfiles
@@ -72,6 +74,7 @@ export async function exportUserData(db: Db, user: UserRow) {
     drillItems: di.map(plain),
     rewards: cr.map(plain),
     streakEvents: se.map(plain),
+    tags: tg.map(plain),
   };
   const [n, s, b, a, x, e, w, q, policy] = await Promise.all([
     db.query.nodes.findMany({ where: eq(nodes.userId, user.id) }),
