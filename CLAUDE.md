@@ -311,6 +311,12 @@ reasons. What to keep doing:
   takes the first tap (so it can't hit Stop) and, while recording, dims by the preset's
   `dim`. The camera screen is a grid inside the safe area; its picture can be made small
   (`komogon.focus.camera`) without stopping the camera.
+- **The bar** (2026-10-22): Home, Tasks, Start, Social and You (`phoneTabs` in AppShell), with
+  Start a round button in the middle. The other pages live inside Tasks (Calendar, Routines,
+  Plans) and You (your profile, Stats, Grades, Settings; Achievements through the Level pill),
+  switched by a row of pills at the top of the page (`PhoneSwitcher`). A new page goes in
+  `PHONE_TASKS` or `PHONE_YOU` as well as `links`. A phone held sideways is still a phone
+  (`PHONE_QUERY` in `lib/media.ts`: touch and under 600px tall), so it never gets the sidebar.
 - **Safe areas**: the page is `viewport-fit=cover`, so anything fixed to an edge keeps to
   `env(safe-area-inset-*)`.
 

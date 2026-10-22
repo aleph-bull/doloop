@@ -2048,3 +2048,16 @@ The owner saw "1 h on Slides Review" on a post and asked for the course too: "RS
 - **A phone is a phone either way up.** `PHONE_QUERY` in `lib/media.ts` (phone-width, or a touch screen under 600px tall) decides the nav: on a phone AppShell leaves the sidebar out whatever Settings says, and shows the top bar and the bottom bar. index.css uses the same query for the phone's top bar, so it keeps clear of the notch sideways.
 - Held sideways, the bottom bar is the computer's centred pill (up to 560px), not the full width.
 - Upright phones and computers are unchanged; tablets (taller than 600px sideways) still count as computers.
+
+## The phone bar: five places with Start in the middle, 2026-10-22 (owner's choice)
+
+"On the phone there's too much on nav", "4-5 icons maximum". Of three ideas (this one, keeping five pages and folding the rest in, or picking your own five), the owner chose the one modelled on Strava. It replaces the 2026-10-21 phone bar that showed every page as an icon.
+
+- **Home, Tasks, Start, Social, You** (`phoneTabs` in AppShell). Start is a round accent button in the middle, like a running app's Record: it opens the start screen, or goes back to a running session. Two tabs sit each side in equal halves, so Start never moves when the open tab widens to show its name.
+- **The other pages live inside Tasks and You** (`PHONE_TASKS`, `PHONE_YOU`), switched by a row of pills at the top of the page (`PhoneSwitcher`, the Social tabs' look): Tasks, Calendar, Routines, Plans; and Profile, Stats, Grades, Settings. A page turned off in Settings › Pages drops out of its row. Someone else's profile belongs to Social.
+- **Settings is a pill, not a gear**: your profile card already has its own gear (profile settings), and two gears side by side read as the same thing.
+- **Achievements has no pill**, as it has no tab anywhere: the Level pill in the top bar opens it, and the You tab stays lit there.
+- **The top bar on a phone** keeps the logo, streak and level (and Admin, feedback and a dev account's Sign out); Settings and the profile picture moved into You.
+- Routines were already a card on Home; the page itself is under Tasks.
+- Computers are unchanged: the sidebar or top bar still lists every page, and a crowded top bar still turns into the all-pages icon bar.
+- Still no "More" menu: every page is two taps away at most, inside the place it belongs to.

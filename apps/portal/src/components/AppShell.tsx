@@ -1,5 +1,5 @@
 ﻿import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { levelProgress, type UserSettings } from '@komogon/core';
 import {
   CalendarDays,
@@ -13,9 +13,11 @@ import {
   MessageSquareText,
   PanelLeftClose,
   PanelLeftOpen,
+  Play,
   ShieldCheck,
   Repeat,
   Settings as SettingsIcon,
+  Timer,
   Trophy,
   UserRound,
   Users,
@@ -23,20 +25,22 @@ import {
   type LucideIcon,
   Route as RouteIcon,
 } from 'lucide-react';
-import { Backdrop, Glass, LogoMark, Spinner } from '@komogon/ui';
+import { Backdrop, Glass, LogoMark, Spinner, useToast } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
+import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
 import { PHONE_QUERY, useMediaQuery } from '../lib/media';
 import { preloadPage, preloadPages } from '../lib/page-loaders';
-import { useAvatar, useMe } from '../lib/queries';
+import { useActiveSession, useAvatar, useMe, useNodes } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 import { SignOutButton } from './SignOutButton';
+import { StartSessionDialog } from './StartSessionDialog';
 
 /**
  * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
@@ -101,6 +105,60 @@ const PIN_KEY = 'komogon.rail.pinned';
 /** True when `path` is the page `to` or somewhere under it; the dashboard only matches itself. */
 function isUnder(path: string, to: string): boolean {
   return to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`);
+}
+
+/**
+ * A phone's bar has four places with Start in the middle, like a running app's Record. The
+ * other pages live inside Tasks and You, switched from a row at the top of the page.
+ */
+type PhonePlace = 'home' | 'tasks' | 'social' | 'you';
+const PHONE_TASKS = ['/tasks', '/calendar', '/routines', '/plans'];
+const PHONE_YOU = ['/analytics', '/achievements', '/grades', '/settings'];
+
+/** Which place on the phone's bar a page belongs to, if any. */
+function phonePlace(path: string): PhonePlace | null {
+  if (path === '/') return 'home';
+  if (PHONE_TASKS.some((to) => isUnder(path, to))) return 'tasks';
+  // Your own profile is You; someone else's is reached from Social.
+  if (path === '/profile' || PHONE_YOU.some((to) => isUnder(path, to))) return 'you';
+  if (isUnder(path, '/social') || isUnder(path, '/profile')) return 'social';
+  return null;
+}
+
+/**
+ * The row at the top of a phone's page that moves between the pages sharing its place on the
+ * bar: the same pills as the Social page's tabs. Achievements is in You too but has no pill,
+ * as it has no tab anywhere: the Level pill in the top bar opens it.
+ */
+function PhoneSwitcher({
+  label,
+  pages,
+  target,
+  onGo,
+}: {
+  label: string;
+  pages: Array<{ to: string; label: string }>;
+  target: string;
+  onGo: (to: string, event: React.MouseEvent) => void;
+}) {
+  return (
+    <nav className="phone-switch" aria-label={label}>
+      <div className="segmented">
+        {pages.map((p) => (
+          <Link
+            key={p.to}
+            to={p.to}
+            className="segmented-item"
+            aria-current={isUnder(target, p.to) ? 'page' : undefined}
+            onPointerDown={() => preloadPage(p.to)}
+            onClick={(e) => onGo(p.to, e)}
+          >
+            {p.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
 }
 
 /**
@@ -362,6 +420,72 @@ export function AppShell() {
   };
   const location = useLocation();
   const { target, go } = useNavTarget();
+
+  // The phone's bar and the switchers for the pages inside its places.
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const nodes = useNodes();
+  const active = useActiveSession();
+  const running = Boolean(active.data?.active);
+  const [starting, setStarting] = useState(false);
+  const here = phonePlace(target);
+  const has = (to: string) => shown.some((l) => l.to === to);
+  const phoneTabs: Array<{
+    place: PhonePlace;
+    to: string;
+    label: string;
+    short: string;
+    icon: LucideIcon;
+  }> = [
+    { place: 'home', to: '/', label: 'Dashboard', short: 'Home', icon: House },
+    { place: 'tasks', to: '/tasks', label: 'Tasks', short: 'Tasks', icon: ListChecks },
+    ...(has('/social')
+      ? [{ place: 'social' as const, to: '/social', label: 'Social', short: 'Social', icon: Users }]
+      : []),
+    {
+      place: 'you',
+      to: profileShown ? '/profile' : '/analytics',
+      label: 'You',
+      short: 'You',
+      icon: UserRound,
+    },
+  ];
+  const taskPages = shown.filter((l) => PHONE_TASKS.includes(l.to));
+  const youPages = [
+    ...(profileShown ? [{ to: '/profile', label: 'Profile' }] : []),
+    { to: '/analytics', label: 'Stats' },
+    ...(has('/grades') ? [{ to: '/grades', label: 'Grades' }] : []),
+    { to: '/settings', label: 'Settings' },
+  ];
+  const phoneTab = (t: (typeof phoneTabs)[number]) => (
+    <Link
+      key={t.place}
+      to={t.to}
+      className="tabbar-link"
+      aria-label={t.label}
+      aria-current={here === t.place ? 'page' : undefined}
+      onPointerDown={() => preloadPage(t.to)}
+      onClick={(e) => go(t.to, e)}
+    >
+      <span className="tabbar-icon" aria-hidden>
+        {t.place === 'you' && avatarUrl ? (
+          <img className="tabbar-avatar" src={avatarUrl} alt="" />
+        ) : (
+          <t.icon size={21} strokeWidth={1.9} />
+        )}
+      </span>
+      <span className="tabbar-label" aria-hidden>
+        <span>{t.short}</span>
+      </span>
+    </Link>
+  );
+  // Start asks what to study; with a session running it goes back to it instead.
+  const onStart = () => {
+    if (!running) return setStarting(true);
+    const result = openFocusTab();
+    if (result === 'here') navigate(FOCUS_PATH);
+    if (result === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
+  };
 
   // Warm up the nav's pages once things are quiet, so a tap rarely waits for a download.
   const shownKey = shown.map((l) => l.to).join(' ');
@@ -777,11 +901,14 @@ export function AppShell() {
               <MessageSquareText size={18} aria-hidden />
             </a>
           )}
-          <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
-            <SettingsIcon size={18} aria-hidden />
-          </NavLink>
+          {/* On a phone, Settings and your profile are inside You on the bottom bar. */}
+          {!phone && (
+            <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
+              <SettingsIcon size={18} aria-hidden />
+            </NavLink>
+          )}
           {signOutShown && <SignOutButton />}
-          {profileShown && (
+          {profileShown && !phone && (
             <NavLink
               to="/profile"
               className="nav-icon"
@@ -798,28 +925,60 @@ export function AppShell() {
         </div>
       </header>
 
-      {/* Phones, and a crowded top bar: every page as an icon, and the one you are on widens
-          to show its name. The tap moves the highlight straight away; the page follows. */}
-      <nav ref={tabbarRef} className="tabbar chrome" aria-label="Primary">
-        {shown.map((l) => (
-          <Link
-            key={l.to}
-            to={l.to}
-            className="tabbar-link"
-            aria-label={l.label}
-            aria-current={isUnder(target, l.to) ? 'page' : undefined}
-            onPointerDown={() => preloadPage(l.to)}
-            onClick={(e) => go(l.to, e)}
-          >
-            <span className="tabbar-icon" aria-hidden>
-              <l.icon size={21} strokeWidth={1.9} />
-            </span>
-            <span className="tabbar-label" aria-hidden>
-              <span>{l.short}</span>
-            </span>
-          </Link>
-        ))}
+      {/* A phone: Home, Tasks, Start, Social and You. A crowded top bar on a computer: every
+          page as an icon. Either way the one you are on widens to show its name, and the tap
+          moves the highlight straight away; the page follows. */}
+      <nav
+        ref={tabbarRef}
+        className={`tabbar chrome${phone ? ' is-phone' : ''}`}
+        aria-label="Primary"
+      >
+        {phone ? (
+          <>
+            {/* Two tabs each side, so Start stays in the middle whichever one is open. */}
+            <div className="tabbar-half">{phoneTabs.slice(0, 2).map(phoneTab)}</div>
+            <button
+              type="button"
+              className="tabbar-start"
+              aria-label={running ? 'Back to your session' : 'Start a session'}
+              onClick={onStart}
+            >
+              {running ? (
+                <Timer size={22} strokeWidth={2} aria-hidden />
+              ) : (
+                <Play size={20} fill="currentColor" aria-hidden />
+              )}
+            </button>
+            <div className="tabbar-half">{phoneTabs.slice(2).map(phoneTab)}</div>
+          </>
+        ) : (
+          shown.map((l) => (
+            <Link
+              key={l.to}
+              to={l.to}
+              className="tabbar-link"
+              aria-label={l.label}
+              aria-current={isUnder(target, l.to) ? 'page' : undefined}
+              onPointerDown={() => preloadPage(l.to)}
+              onClick={(e) => go(l.to, e)}
+            >
+              <span className="tabbar-icon" aria-hidden>
+                <l.icon size={21} strokeWidth={1.9} />
+              </span>
+              <span className="tabbar-label" aria-hidden>
+                <span>{l.short}</span>
+              </span>
+            </Link>
+          ))
+        )}
       </nav>
+      {phone && (
+        <StartSessionDialog
+          open={starting}
+          onClose={() => setStarting(false)}
+          nodes={nodes.data?.nodes ?? []}
+        />
+      )}
 
       <main id="main" className="page on-backdrop" tabIndex={-1}>
         {!online && (
@@ -827,6 +986,12 @@ export function AppShell() {
             <WifiOff size={16} aria-hidden />
             <span>You're currently offline. Stats will update when you reconnect.</span>
           </Glass>
+        )}
+        {phone && here === 'tasks' && taskPages.length > 1 && (
+          <PhoneSwitcher label="Planning pages" pages={taskPages} target={target} onGo={go} />
+        )}
+        {phone && here === 'you' && (
+          <PhoneSwitcher label="Your pages" pages={youPages} target={target} onGo={go} />
         )}
         <ErrorBoundary>
           {/* Keyed by route so each page rises in as it arrives. A page whose code is still
