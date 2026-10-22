@@ -162,6 +162,12 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
+- **Never put a JavaScript `Date` inside a hand-written Drizzle `sql` template.** The hosted
+  API talks to Neon through postgres.js, and Drizzle switches off postgres.js's date
+  conversion, so a raw `Date` there fails the whole query. Tests and sandboxes run on PGlite,
+  which takes the `Date` happily, so nothing catches it before komogon.app (it broke the Jams
+  tab, found 2026-10-21). Use Drizzle's own comparisons (`gt(jams.endsAt, now)`, `lte`,
+  `or`), which convert through the column, or pass `date.toISOString()`.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.

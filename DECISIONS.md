@@ -1713,6 +1713,11 @@ The owner called the old page "a mess, ugly and useless" and asked for the best 
 - **Month is the deadline overview.** Due chips on each day (assessments carry a flag), studied time on days gone by and planned time on days ahead, rest days shaded; a click on a day opens its week. Beside it, "Due this month" lists the deadlines a week at a time ("This week", "Next week"), so a crunch shows before it arrives. A click on any deadline opens the task.
 - The block and free/busy queries keep the last range on screen while the next loads, so moving between weeks doesn't flash a spinner.
 
+## A tab from before a deploy reloads itself, and Jams works on the hosted site, 2026-10-21 (user request)
+
+- **"Failed to fetch dynamically imported module".** Each page is its own file, renamed on every build. A tab opened before a deploy asks for the old name, Vercel answers with the app's HTML, and the page can't load ("Try again" asks for the same missing file). Now the error boundary reloads the tab once to pick up the new build, showing nothing in the meantime. If that tab already reloaded for this in the last minute, it says "Komodon was just updated. Refresh the page to load the new version." with a Refresh button instead, so it can never loop. Only page loads do this, and never while offline. A running session is kept by the server, so it carries on through the reload (checked in a sandbox with a deploy mid-session), and the focus screen loads nothing after it opens, so it never reloads under a timer or a recording.
+- **"Could not load the jams."** on komogon.app: the jams list compared a column with a JavaScript `Date` inside hand-written SQL. The hosted database driver (postgres.js under Drizzle) can't send a raw `Date` there, while PGlite in tests and sandboxes can, so it only failed live. Now it uses Drizzle's `gt`/`lte`/`or`. The email-code rate limiter had the same mistake (it would have broken sign-up codes and password resets once email is switched on) and now passes the times as text. CLAUDE.md has the trap.
+
 ## Admin tools: onboarding again, study time, suspending and deleting, 2026-10-21 (user request)
 
 The owner asked for dev tools such as starting onboarding again without losing data, adding or deleting other people's hours, and deleting or banning emails and accounts, all on the admin page for admins only.
