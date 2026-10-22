@@ -153,6 +153,8 @@ export function useBlocks(from?: string, to?: string) {
     queryKey: keys.blocks(from, to),
     queryFn: () => api.plannedBlocks(from, to),
     staleTime: 15_000,
+    // Moving to another week keeps this one drawn until the next arrives.
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -161,6 +163,7 @@ export function useBusy(from: string, to: string) {
     queryKey: keys.busy(from, to),
     queryFn: () => api.busy(from, to),
     staleTime: 5 * 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 

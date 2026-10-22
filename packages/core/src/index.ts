@@ -19,6 +19,7 @@ export * from './highlights-thresholds';
 export * from './highlights';
 export * from './analytics';
 export * from './scheduler';
+export * from './week-planner';
 export * from './badges';
 export * from './insights';
 export * from './trackers';

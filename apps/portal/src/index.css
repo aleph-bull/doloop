@@ -2189,61 +2189,6 @@
 .node-card-play:active {
   transform: scale(0.92);
 }
-/* ---------- Calendar blocks ---------- */
-.cal-block {
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  border-radius: var(--radius-md);
-  padding: 2px 8px;
-  text-align: left;
-  font-size: var(--text-xs);
-  overflow: hidden;
-  color: #fff;
-  border: none;
-}
-/*
- * A commitment is somebody else's claim on the time: drawn as a hatched, muted band that
- * reads as "taken" rather than as a study block, and not clickable, because there is
- * nothing in Komodon to edit about it.
- */
-.cal-block-commitment {
-  background: repeating-linear-gradient(135deg, var(--border-strong) 0 5px, transparent 5px 11px);
-  border: 1px solid var(--border-strong);
-  color: var(--fg-muted);
-  cursor: default;
-}
-/* A due date set on a task, shown under the day it falls on. */
-.cal-due {
-  margin: 4px 4px 0;
-  padding: 2px 6px;
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--status-warn);
-  background: var(--accent-soft);
-  color: var(--fg);
-  font-size: var(--text-xs);
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.cal-due-done {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-/* Study that already happened, as opposed to time still set aside. */
-.cal-block-done {
-  opacity: 0.85;
-  border: 1px solid rgb(255 255 255 / 0.35);
-}
-/*
- * Overlaps are allowed - the app never stops you double-booking yourself - so this only
- * makes it visible. No warning, no confirmation, just a marked edge.
- */
-.cal-block-clash {
-  box-shadow: inset 3px 0 0 var(--status-warn);
-}
-
 .swatch {
   width: 36px;
   height: 36px;
@@ -5391,71 +5336,6 @@
 }
 :root[data-panel='glass'] .badge-card:not(.is-earned) {
   background: color-mix(in srgb, var(--glass-fill) 80%, transparent);
-}
-
-/* ---------- Calendar: planned against needed ---------- */
-.plan-list {
-  display: flex;
-  flex-direction: column;
-}
-.plan-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(80px, 160px) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-}
-.plan-row:last-child {
-  border-bottom: 0;
-}
-.plan-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--status-ok);
-}
-.plan-row.is-short .plan-dot {
-  background: var(--status-warn);
-}
-.plan-title {
-  font-weight: 560;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.plan-bar {
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--fg) 10%, transparent);
-  overflow: hidden;
-}
-.plan-bar span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--status-ok);
-}
-.plan-row.is-short .plan-bar span {
-  background: var(--status-warn);
-}
-.plan-figures {
-  min-width: 9em;
-  text-align: right;
-  font-weight: 400;
-}
-.plan-figures span {
-  font-weight: 400;
-  color: var(--fg-muted);
-}
-@media (max-width: 560px) {
-  .plan-row {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-  .plan-bar {
-    display: none;
-  }
 }
 
 /* The streak's flame: the same line icon as the top bar, on a soft tile. No emoji. */

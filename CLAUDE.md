@@ -191,6 +191,7 @@ Keep the owner's own wording verbatim, "!" included.
 
 ## Recent changes (2026-10-20)
 
+- Calendar (2026-10-21): rebuilt from scratch; see "The calendar" below.
 - Social (2026-10-21, later the same day): `/social` is a page tab with `?tab=` views: Feed
   (`components/social/Feed.tsx`, posts with a shared session, a video and likes and
   comments), Friends (requests, friends, search by name), Compare (you beside your friends,
@@ -260,6 +261,185 @@ Keep the owner's own wording verbatim, "!" included.
   (they used to sit in Pace and streaks).
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
+
+## The calendar (`/calendar`, rebuilt 2026-10-21)
+
+The owner called the old page "a mess, ugly and useless" and asked for the best calendar we
+could make. Asked first, they chose: a **week planner** and a **deadline overview** (they turned
+down a running-app "training log"); **finished sessions, rest days and study-plan topics** on it
+(not routines); and every way of planning offered: **drag to move and resize, Plan my week,
+start from a block, a one-day view on phones**. They disliked all of the old page: useless,
+an ugly grid, a cluttered header, and the "Planned vs needed" list (now gone). The decisions
+are in DECISIONS.md under "The calendar, rebuilt".
+
+### Files
+
+- `apps/portal/src/pages/Calendar.tsx`: the page. Reads the view and date from the address,
+  loads the data, works out the To plan list and Plan my week, and owns every dialog (plan a
+  block, start a session, edit a task). Also the phone's day strip (`DayStrip`).
+- `apps/portal/src/components/calendar/TimeGrid.tsx`: the time grid for a week (7 columns) or
+  a phone's day (1 column). Draws the day names, the "Due" row, hours, blocks, busy bands, the
+  now line, and handles every drag on the grid. Exposes `hit(x, y)` through a ref so the page
+  can drop To plan items onto it. Also exports `DueChip`.
+- `components/calendar/MonthGrid.tsx`: the month. `SidePanels.tsx`: `PlanTray` (To plan, beside
+  the week) and `DueList` (Due this month, beside the month). `calendar.css`: all the styles
+  (imported by the page; the old `.cal-block` and `.plan-row` rules were removed from index.css).
+- `apps/portal/src/lib/calendar.ts`: pure helpers. Time maths (`isoAt`, `minutesOf`, both
+  wall-clock and DST-safe), labels (`periodLabel`, `timeRange`, `hourLabel`), `buildItems` (what
+  sits in each day column), `deadlinesByDay`, `restByDay`, `totals`, `minutesByDay`, and
+  `trayItems` (the To plan maths).
+- `packages/core/src/week-planner.ts`: `planWeek` (Plan my week) and `layoutLanes` (side-by-side
+  overlap layout). Tested in `week-planner.test.ts`.
+- `lib/queries.ts`: `useBlocks` and `useBusy` keep the previous range on screen
+  (`placeholderData: keepPreviousData`) so changing week doesn't flash a spinner. Only the
+  calendar uses them.
+
+No API or database change was made: it uses the existing planned-blocks, busy, pace, plans,
+rest-days, nodes and active-session endpoints.
+
+### Views and navigation
+
+- `?view=month` switches to the month; `?date=YYYY-MM-DD` picks the day (week = its Monday
+  week). Both are dropped from the address when they're the defaults, and navigation replaces
+  the history entry rather than adding one.
+- Keys (ignored in text fields and while a dialog is open): ← → move a week, a month or (phone)
+  a day; T today; W week; M month.
+- Phones (`max-width: 767px`, the same breakpoint as AppShell) get one day: "Week" is labelled
+  "Day", the week is a strip of days above the grid with dots (grey = something due, accent =
+  something planned), and a quick sideways flick (under 350 ms, so it never collides with a
+  long-press drag) changes day. The month shows dots and flags instead of names.
+- The header is the title, then one line: the period ("Oct 19 – 25", "October 2026",
+  "Wednesday, Oct 21") and the totals for exactly that period: planned, studied, due (from today
+  on). A total of zero is left out. On phones the totals wrap under the period.
+- The side panel sits beside the grid from 1100 px wide and under it below that.
+
+### What sits in a day column (`buildItems`)
+
+Every block is a `PlannedBlock` from `/api/planned-blocks` for the visible range. Its
+`source` and timing decide its kind, and the kind decides its look (`.cal-ev.is-<kind>`):
+
+- **planned**: `source: 'app'`, still ahead. Light tint of the course colour, coloured left edge.
+- **kept**: an app block with a session on the same task overlapping it (the same rule the API
+  uses for "kept to the plan"). Not drawn as a block: it's a dashed outline (`.cal-kept`) behind
+  the session, so a plan of 9:00 against a session from 9:15 shows the difference by itself.
+  Kept outlines are left out of the lane layout.
+- **missed**: an app block that has ended with no session in it. Faint, never flagged in
+  warning colours (the app never guilt-trips).
+- **session**: `source: 'session'`, the record the API writes for every finished session
+  (setting `calendar.logSessions`, on by default; with it off, no history shows). Stronger fill
+  and a check. A routine session has no task, so its title comes from the block's `title`.
+- **commitment**: `source: 'google' | 'outlook'`, an imported event. Neutral grey, not
+  clickable, never linked to a task.
+- **proposal**: a Plan my week suggestion, held only in page state until kept. Dashed outline,
+  with keep (✓) and drop (✕) buttons.
+- **live**: the running session (`useActiveSession`), drawn from its start to now.
+
+Free/busy times from Google or Outlook (`/api/calendar/busy`) are plain grey bands behind
+everything. Anything that crosses midnight is split per day. Colours come from the task's own
+colour or the nearest ancestor's (`effectiveColor`); the subtitle is the root course or plan.
+Blocks mix the colour into `--glass-solid` (the theme's opaque surface) rather than into
+transparency, so hour lines never show through them, and text uses `--ink`. Overlapping
+blocks sit side by side (`layoutLanes`) and get a warning-coloured right edge: overlaps are
+shown, never refused (an older decision). Days in the rest-day policy are shaded and labelled
+"Rest day" (or "Time off" for a vacation). Due dates come from the tasks themselves
+(`deadlinesByDay`: anything with `dueAt` that isn't a course); clicking one opens the task.
+
+The grid scrolls inside its panel and opens at 7:00, or earlier if something starts earlier,
+or (on today's week) about five hours before now so the evening is in view.
+
+### Planning by hand (TimeGrid gestures)
+
+All with pointer events on `.cal-cols`; `hit(x, y)` turns a point into a day and minutes.
+
+- Drag over empty time: make a block (snaps to 15 min; the block dialog opens to confirm).
+  A plain click or tap on empty time opens the dialog for an hour there.
+- Drag a planned block or a suggestion: move it, to another day too. Drag the strip at its
+  bottom (`.cal-ev-resize`, hidden on touch screens): change its length. History, imported
+  events and the live session don't move.
+- A mouse drag starts after 4 px of movement. On touch, a press held for 380 ms starts the
+  drag; moving earlier is treated as a scroll and cancels it. Once a touch drag has started, a
+  non-passive `touchmove` listener stops the page scrolling. Holding near the top or bottom
+  edge scrolls the grid.
+- After a drag, the click that follows is swallowed (`suppressClick`) so it doesn't open the
+  dialog; a click without dragging opens the edit dialog (keyboard users get the same through
+  the block's button).
+- A moved block is drawn at its new place at once (the page's `moved` overrides) and saved
+  with `useUpdateBlock`, which records the inverse for Ctrl+Z. The override is dropped when the
+  server's copy agrees, or on error with a toast. Don't patch the query cache for this instead:
+  `useUpdateBlock` reads the cached block to build its undo, and a patched cache makes the undo
+  restore the new times.
+
+### To plan (`trayItems`)
+
+What still wants time in the visible week, from now on (a past week shows "This week is
+over"). Two kinds:
+
+- **Tasks** from the pace daily plan (`/api/pace` `plan`), skipping study-plan topics and
+  anything without a due date. Its need for the week = the minutes per study day its pace asks
+  for (`requiredPerDay`) × the study days left in the week up to its due day, less what is
+  already planned in the week, and never more than is left on it (`remainingMinutes` −
+  `plannedMinutes`, where planned means future app blocks). Overdue tasks need everything left.
+- **Study plans** (`/api/plans`): the weekly budget less what was studied this week
+  (`pacing.thisWeekMinutes`) and what is planned this week on its topics (the plan node's
+  children), planned against `upNext`.
+
+Needs are rounded down to 15 minutes. Something fully covered stays listed as "Set aside"
+(wins only, no warning colours). Dragging an item onto the grid (mouse and pen; the page
+listens on window and asks the grid's `hit`) makes a block straight away, one block long
+(45 to 120 min from the pace suggestion; 60 for a plan). Clicking one opens the block dialog on
+the first free slot, found with `planWeek` for just that item. The "Connect Google or Outlook"
+link at the foot shows only while neither is connected and the server can connect one.
+
+### Plan my week (`planWeek`)
+
+Takes every To plan item needing 30 minutes or more and returns blocks to propose:
+
+- Window: from now (or the week's start, for a future week) to the end of the week, between
+  8:00 and 22:00 (`PLAN_DAY_START`/`PLAN_DAY_END`, the same hours as the old suggester).
+- Never on rest days; never over imported events, Google/Outlook busy times, existing blocks
+  or the running session, keeping 15 minutes' gap either side; at most 4 h of planned study a
+  day counting what's already there; nothing shorter than 30 minutes.
+- Order: overdue first (a past deadline sorts first), then soonest deadline, then no deadline.
+  Each block goes on the lightest day before its deadline that the task has no block on yet
+  (loads within half an hour count as even, so earlier days win); overdue work takes the first
+  day with room instead. A task only doubles up on a day once every other day is used or full.
+  Within a day it takes the first free stretch, trying shorter lengths down to 30 minutes.
+- The result is shown as dashed suggestions with a bar ("3 suggested blocks · 2 h", Discard,
+  Add all). They can be moved, then kept one by one or all at once. Nothing is saved until
+  kept, and they're cleared when the week or view changes.
+
+### Start from a block
+
+A planned block today that hasn't ended, on a task, gets a round play button when no session
+is running. It opens `StartSessionDialog` locked to that task with the minutes left in the
+block as a "for a while" length.
+
+### Month and Due this month
+
+`MonthGrid` shows whole Monday-first weeks covering the month. Each day: due chips (up to 3,
+then "N more"; assessments carry a flag), the time studied on days gone by (with a check), the
+time planned on days ahead, both on today, and rest-day shading. Days outside the month are
+dimmed. Clicking a day opens its week. `DueList` beside it lists the month's deadlines grouped
+by week ("This week", "Next week", "Last week", or the dates).
+
+### Checking it
+
+- Sandbox launch configs in the parent folder's `.claude/launch.json` (untracked):
+  `calendar-sandbox-api` (8806, data in `apps/api/.pglite-sandbox-calendar`) and
+  `calendar-sandbox` (5193). They run from the `Documents/Doloop/calendar` worktree folder;
+  point them at another checkout if that worktree is gone.
+- Sample data: `apps/api/seed-calendar-demo.tmp.ts` (untracked, kept in the main checkout's
+  `apps/api` like the other seeds). Stop the sandbox API, run `npx tsx seed-calendar-demo.tmp.ts`
+  from `apps/api` (it rebuilds `.pglite-sandbox-calendar` with three courses, tasks due around
+  this week, a study plan, finished sessions and planned blocks, Saturday as a rest day), start
+  the API again and sign in as cal@komogon.test. It's written for Toronto time.
+- The preview shrinks wide layouts into a corner: check the side-by-side layout (1100 px and
+  up) by measuring with JavaScript, and look at the page at the pane's own width. Drags can be
+  tried with the preview's click-and-drag.
+- Lint traps hit while building it (React's newer hook rules): don't write `ref.current`
+  during render (update "latest props" refs in an effect), keep `useMemo` dependencies plain
+  variables (memoise derived arrays rather than writing `days.join()` in the list), and
+  `--ring` is a box-shadow value, not a colour, so focus outlines use `--accent`.
 
 ## The homepage (`apps/site`, 2026-10-21)
 

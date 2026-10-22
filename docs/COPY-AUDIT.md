@@ -26,6 +26,8 @@ open. Pick it up when the owner asks; don't change any of it unasked.
 - Batches 1 to 3 (items 1 to 49) cover the dashboard, starting and running a session, and
   after a session. They shipped as 874b09f, 4ee5dc0 and 9ae2113. DECISIONS.md has what
   changed.
+- The Calendar items (the "commitment" line under the title, the "Could not suggest" toast)
+  went with the calendar rebuild on 2026-10-21; that page's copy is new.
 - The owner **kept these on purpose**:
   - the start panel's "About 33 min across 1 item today"
   - the quirky greetings ("The timer missed you.", "Long time no see!", "Locked in.", "You
@@ -186,10 +188,6 @@ open. Pick it up when the owner asks; don't change any of it unasked.
 - Plans.tsx:
   - "…Topics, hours and drills, tracked like training." (a tagline)
   - "…Sessions on a topic count toward it, and drills tell you when it is actually learned."
-- Calendar:
-  - "Drag on the grid to plan a block. Anything imported from your calendar is shown as a
-    commitment, so you can plan around it." ("commitment" is jargon)
-  - the toast "Could not suggest"
 - Routines:
   - the empty state "…Give each one an estimate, then tick it off — or start it as a timed
     session and tick it off at the end."

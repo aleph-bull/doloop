@@ -1,56 +1,292 @@
-import { addDays, startOfWeekMonday, toLocalDate, type PlannedBlock } from '@komogon/core';
-import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router';
-import { Button, Panel, Spinner, useToast } from '@komogon/ui';
+import '../components/calendar/calendar.css';
+import {
+  addDays,
+  isValidDate,
+  planWeek,
+  startOfWeekMonday,
+  toLocalDate,
+  type PlannedBlock,
+  type StudyNode,
+} from '@komogon/core';
+import { useQuery } from '@tanstack/react-query';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type TouchEvent as ReactTouchEvent,
+} from 'react';
+import { useSearchParams } from 'react-router';
+import { Button, Panel, Segmented, Spinner, useToast } from '@komogon/ui';
 import { BlockDialog } from '../components/BlockDialog';
 import { ErrorPanel } from '../components/ErrorState';
+import { NodeDialog } from '../components/NodeDialog';
+import { StartSessionDialog } from '../components/StartSessionDialog';
+import { MonthGrid } from '../components/calendar/MonthGrid';
+import { DueList, PlanTray } from '../components/calendar/SidePanels';
+import { TimeGrid, type GridHit, type TimeGridHandle } from '../components/calendar/TimeGrid';
 import { api } from '../lib/api';
-import { fmtDate, fmtMinutes, fmtTime } from '../lib/format';
-import { useBlocks, useBusy, useCreateBlock, useMe, useNodes, usePace } from '../lib/queries';
+import {
+  buildItems,
+  busyByDay,
+  dayRange,
+  deadlinesByDay,
+  isoAt,
+  localTz,
+  minutesByDay,
+  nodeLookup,
+  periodLabel,
+  PLAN_DAY_END,
+  PLAN_DAY_START,
+  restByDay,
+  snap,
+  totals,
+  trayItems,
+  type CalItem,
+  type Deadline,
+  type Proposal,
+  type TrayItem,
+} from '../lib/calendar';
+import { fmtMinutes } from '../lib/format';
+import {
+  useActiveSession,
+  useBlocks,
+  useBusy,
+  useCreateBlock,
+  useGoogleStatus,
+  useMe,
+  useNodes,
+  usePace,
+  usePlans,
+  useRestDays,
+  useUpdateBlock,
+} from '../lib/queries';
 
-const HOUR_START = 6;
-const HOUR_END = 24;
-const HOUR_PX = 44;
-const SNAP_MIN = 15;
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+type View = 'week' | 'month';
 
-function localDayStart(date: string): Date {
-  return new Date(`${date}T00:00:00`);
+function useMedia(query: string): boolean {
+  const [match, setMatch] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setMatch(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return match;
 }
 
-/** Minutes since local midnight for an ISO instant, clamped to the visible range. */
-function minutesInto(iso: string, date: string): number {
-  const ms = Date.parse(iso) - localDayStart(date).getTime();
-  return ms / 60_000;
+/** Whole Monday-first weeks covering the month a day is in. */
+function monthWeeks(day: string): string[][] {
+  const first = `${day.slice(0, 7)}-01`;
+  const [y, m] = first.split('-').map(Number);
+  const last = toLocalDate(new Date(y!, m!, 0, 12), localTz());
+  const weeks: string[][] = [];
+  for (let w = startOfWeekMonday(first); w <= last; w = addDays(w, 7))
+    weeks.push(dayRange(w, addDays(w, 6)));
+  return weeks;
+}
+
+function shiftMonth(day: string, by: number): string {
+  const [y, m] = day.split('-').map(Number);
+  return toLocalDate(new Date(y!, m! - 1 + by, 1, 12), localTz());
 }
 
 export function Calendar() {
   const me = useMe();
   const nodes = useNodes();
   const pace = usePace();
+  const plans = usePlans();
+  const restDays = useRestDays();
+  const active = useActiveSession();
+  const google = useGoogleStatus();
+  const outlook = useQuery({
+    queryKey: ['calendar', 'outlook'],
+    queryFn: api.outlookStatus,
+    staleTime: 60_000,
+  });
   const create = useCreateBlock();
+  const update = useUpdateBlock();
   const { toast } = useToast();
-  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const today = toLocalDate(new Date(), tz);
-  const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(today));
-  const days = useMemo(
-    () => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)),
-    [weekStart],
-  );
-  const from = localDayStart(days[0]!).toISOString();
-  const to = new Date(localDayStart(days[6]!).getTime() + 86_400_000).toISOString();
-  const blocks = useBlocks(from, to);
-  const busy = useBusy(from, to);
-  const [dialog, setDialog] = useState<{
+  const phone = useMedia('(max-width: 767px)');
+  const tz = localTz();
+
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(t);
+  }, []);
+  const today = toLocalDate(new Date(now), tz);
+
+  const [params, setParams] = useSearchParams();
+  const view: View = params.get('view') === 'month' ? 'month' : 'week';
+  const dateParam = params.get('date');
+  const anchor = dateParam && isValidDate(dateParam) ? dateParam : today;
+  const go = (date: string, next: View = view) =>
+    setParams(
+      (p) => {
+        const q = new URLSearchParams(p);
+        if (date === today) q.delete('date');
+        else q.set('date', date);
+        if (next === 'week') q.delete('view');
+        else q.set('view', next);
+        return q;
+      },
+      { replace: true },
+    );
+
+  const weekStart = startOfWeekMonday(anchor);
+  const weekDays = useMemo(() => dayRange(weekStart, addDays(weekStart, 6)), [weekStart]);
+  const weeks = useMemo(() => monthWeeks(anchor), [anchor]);
+  const monthGrid = useMemo(() => weeks.flat(), [weeks]);
+  const phoneDay = useMemo(() => [anchor], [anchor]);
+  const gridDays = view === 'month' ? monthGrid : phone ? phoneDay : weekDays;
+  const rangeDays = view === 'month' ? monthGrid : weekDays;
+  const from = rangeDays[0]!;
+  const to = rangeDays[rangeDays.length - 1]!;
+  const blocks = useBlocks(isoAt(from, 0), isoAt(addDays(to, 1), 0));
+  const busy = useBusy(isoAt(from, 0), isoAt(addDays(to, 1), 0));
+
+  const [proposals, setProposals] = useState<Proposal[] | null>(null);
+  const [moved, setMoved] = useState<Record<string, { startAt: string; endAt: string }>>({});
+  const [blockDialog, setBlockDialog] = useState<{
     block?: PlannedBlock | null;
     draft?: { startAt: string; endAt: string; nodeId?: string | null } | null;
   } | null>(null);
-  const [drag, setDrag] = useState<{ day: string; from: number; to: number } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [startFor, setStartFor] = useState<{ node: StudyNode; minutes: number } | null>(null);
+  const [editNode, setEditNode] = useState<StudyNode | null>(null);
+  const [trayDrag, setTrayDrag] = useState<{
+    item: TrayItem;
+    len: number;
+    x: number;
+    y: number;
+    hit: GridHit | null;
+  } | null>(null);
+  const trayClickBlocked = useRef(false);
+  const gridRef = useRef<TimeGridHandle>(null);
 
-  const failed = [nodes, blocks, me].find((q) => q.isError);
-  if (failed && (!nodes.data || !blocks.data || !me.data))
+  // Suggestions belong to the week they were made for.
+  useEffect(() => setProposals(null), [weekStart, view]);
+
+  // A moved block is drawn where it was dropped until the server's copy agrees.
+  useEffect(() => {
+    if (!blocks.data || Object.keys(moved).length === 0) return;
+    const settled = Object.entries(moved).filter(([id, at]) => {
+      const b = blocks.data.blocks.find((x) => x.id === id);
+      return !b || (b.startAt === at.startAt && b.endAt === at.endAt);
+    });
+    if (settled.length)
+      setMoved((m) => {
+        const next = { ...m };
+        for (const [id] of settled) delete next[id];
+        return next;
+      });
+  }, [blocks.data, moved]);
+
+  const list = useMemo(() => nodes.data?.nodes ?? [], [nodes.data]);
+  const lookup = useMemo(() => nodeLookup(list), [list]);
+  const policy = restDays.data?.policy ?? null;
+  const allBlocks = useMemo(
+    () => (blocks.data?.blocks ?? []).map((b) => (moved[b.id] ? { ...b, ...moved[b.id] } : b)),
+    [blocks.data, moved],
+  );
+  const running = active.data?.active ?? null;
+
+  const items = useMemo(
+    () =>
+      buildItems(gridDays, {
+        blocks: allBlocks,
+        proposals: proposals ?? [],
+        live: running
+          ? {
+              nodeId: running.session.nodeId,
+              title: running.nodeTitle,
+              startAt: running.session.startedAt,
+            }
+          : null,
+        lookup,
+        now,
+      }),
+    [gridDays, allBlocks, proposals, running, lookup, now],
+  );
+  const deadlines = useMemo(() => deadlinesByDay(list, lookup, from, to), [list, lookup, from, to]);
+  const rest = useMemo(() => restByDay(policy, rangeDays), [policy, rangeDays]);
+  const busyDays = useMemo(() => busyByDay(gridDays, busy.data?.busy ?? []), [gridDays, busy.data]);
+  const tray = useMemo(
+    () =>
+      pace.data
+        ? trayItems({
+            nodes: list,
+            lookup,
+            pace: pace.data,
+            plans: plans.data?.plans ?? [],
+            blocks: allBlocks,
+            policy,
+            today,
+            from: weekDays[0]!,
+            to: weekDays[6]!,
+            now,
+          })
+        : [],
+    [pace.data, plans.data, list, lookup, allBlocks, policy, today, weekDays, now],
+  );
+
+  /* ---------- keyboard ---------- */
+
+  const step = (dir: 1 | -1) => {
+    if (view === 'month') go(shiftMonth(anchor, dir));
+    else go(addDays(anchor, phone ? dir : dir * 7));
+  };
+  // The listener is added once; it reads this render's step, go and anchor through the ref.
+  const keys = useRef({ step, go, anchor });
+  useEffect(() => {
+    keys.current = { step, go, anchor };
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('dialog[open]')) return;
+      const k = keys.current;
+      if (e.key === 'ArrowLeft') k.step(-1);
+      else if (e.key === 'ArrowRight') k.step(1);
+      else if (e.key === 't') k.go(toLocalDate(new Date(), localTz()));
+      else if (e.key === 'w') k.go(k.anchor, 'week');
+      else if (e.key === 'm') k.go(k.anchor, 'month');
+      else return;
+      e.preventDefault();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  /* ---------- swipe between days on a phone ---------- */
+
+  const swipe = useRef<{ x: number; y: number; t: number } | null>(null);
+  const onTouchStart = (e: ReactTouchEvent) => {
+    const t = e.touches[0];
+    swipe.current =
+      t && e.touches.length === 1 ? { x: t.clientX, y: t.clientY, t: Date.now() } : null;
+  };
+  const onTouchEnd = (e: ReactTouchEvent) => {
+    const s = swipe.current;
+    const t = e.changedTouches[0];
+    swipe.current = null;
+    if (!s || !t || !phone || view !== 'week') return;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    // A quick flick only: a held finger is a drag on the grid, not a swipe.
+    if (Date.now() - s.t < 350 && Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 2)
+      step(dx < 0 ? 1 : -1);
+  };
+
+  /* ---------- loading ---------- */
+
+  const failed = [nodes, me].find((q) => q.isError);
+  if (failed && (!nodes.data || !me.data))
     return (
       <ErrorPanel
         message={
@@ -58,357 +294,528 @@ export function Calendar() {
         }
         onRetry={() => {
           void nodes.refetch();
-          void blocks.refetch();
           void me.refetch();
+          void blocks.refetch();
         }}
       />
     );
-  if (!nodes.data || !blocks.data || !me.data)
+  if (!nodes.data || !me.data)
     return (
       <div className="flex justify-center p-12">
         <Spinner />
       </div>
     );
 
-  const list = nodes.data.nodes;
+  /* ---------- actions ---------- */
+
   const byId = new Map(list.map((n) => [n.id, n]));
-  /** Tasks and assessments due on a day, as set on the task. Done ones stay, struck through. */
-  const dueOn = (day: string) =>
-    list.filter((n) => !n.archived && n.dueAt && toLocalDate(n.dueAt, tz) === day);
-  const planTop = pace.data?.plan[0];
+  const firstNeed = tray.find((t) => t.need > 0)?.nodeId ?? pace.data?.plan[0]?.nodeId ?? null;
+  const weekOver = weekDays[6]! < today;
 
-  /** Non-cancelled blocks that start on this day, in start order. */
-  const dayBlocks = (day: string) =>
-    blocks
-      .data!.blocks.filter((b) => !b.cancelled && toLocalDate(b.startAt, tz) === day)
-      .sort((a, b) => Date.parse(a.startAt) - Date.parse(b.startAt));
+  const openDraft = (day: string, start: number, end: number, nodeId = firstNeed) =>
+    setBlockDialog({ draft: { startAt: isoAt(day, start), endAt: isoAt(day, end), nodeId } });
 
-  /**
-   * Lay a day out in lanes.
-   *
-   * Overlapping is allowed and never blocked - sometimes you do intend to study through a
-   * lecture you have decided to skip - so nothing here warns or refuses. It only makes the
-   * overlap visible: blocks that share time sit side by side instead of on top of each
-   * other, so you can see what you are double-booking against, and each one gets a marked
-   * edge.
-   */
-  const laidOut = (day: string) => {
-    const items = dayBlocks(day);
-    const lanes: PlannedBlock[][] = [];
-    const placed = items.map((b) => {
-      const start = Date.parse(b.startAt);
-      const end = Date.parse(b.endAt);
-      const overlaps = items.some(
-        (o) => o.id !== b.id && Date.parse(o.startAt) < end && Date.parse(o.endAt) > start,
+  const moveTo = async (item: CalItem, day: string, start: number, end: number) => {
+    const startAt = isoAt(day, start);
+    const endAt = isoAt(day, end);
+    if (item.kind === 'proposal') {
+      setProposals((ps) =>
+        (ps ?? []).map((p) => (p.key === item.proposalKey ? { ...p, startAt, endAt } : p)),
       );
-      // First lane whose last block has already finished.
-      let lane = lanes.findIndex((l) => Date.parse(l[l.length - 1]!.endAt) <= start);
-      if (lane === -1) {
-        lane = lanes.length;
-        lanes.push([]);
-      }
-      lanes[lane]!.push(b);
-      return { block: b, lane, overlaps };
-    });
-    // A block only shares the width of the cluster it actually collides with.
-    return placed.map((p) => {
-      const start = Date.parse(p.block.startAt);
-      const end = Date.parse(p.block.endAt);
-      const cluster = placed.filter(
-        (o) => Date.parse(o.block.startAt) < end && Date.parse(o.block.endAt) > start,
-      );
-      const width = Math.max(...cluster.map((o) => o.lane)) + 1;
-      return { ...p, lane: p.lane, width };
-    });
-  };
-
-  const minutesFromEvent = (e: React.MouseEvent, col: HTMLElement) => {
-    const rect = col.getBoundingClientRect();
-    const raw = HOUR_START * 60 + ((e.clientY - rect.top) / HOUR_PX) * 60;
-    return Math.max(
-      HOUR_START * 60,
-      Math.min(HOUR_END * 60, Math.round(raw / SNAP_MIN) * SNAP_MIN),
-    );
-  };
-
-  const onMouseDown = (day: string) => (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('[data-block]')) return;
-    const m = minutesFromEvent(e, e.currentTarget);
-    setDrag({ day, from: m, to: m + 60 });
-  };
-  const onMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!drag) return;
-    const m = minutesFromEvent(e, e.currentTarget);
-    setDrag({ ...drag, to: Math.max(drag.from + SNAP_MIN, m) });
-  };
-  const onMouseUp = () => {
-    if (!drag) return;
-    const startAt = new Date(localDayStart(drag.day).getTime() + drag.from * 60_000).toISOString();
-    const endAt = new Date(localDayStart(drag.day).getTime() + drag.to * 60_000).toISOString();
-    setDrag(null);
-    setDialog({ draft: { startAt, endAt, nodeId: planTop?.nodeId ?? null } });
-  };
-
-  const suggest = async () => {
-    if (!planTop) return toast('Nothing to plan yet. Add a task with an estimate and due date.');
+      return;
+    }
+    const block = item.block;
+    if (!block) return;
+    setMoved((m) => ({ ...m, [block.id]: { startAt, endAt } }));
     try {
-      const r = await api.suggestSlots(planTop.suggestedMinutes, new Date().toISOString(), 7);
-      const slot = r.slots[0];
-      if (!slot) return toast('No free slot found in the next week.');
-      await create.mutateAsync({ nodeId: planTop.nodeId, startAt: slot.start, endAt: slot.end });
-      toast(`Planned ${planTop.title} for ${fmtDate(slot.start)} at ${fmtTime(slot.start)}`, {
-        tone: 'ok',
-      });
-      setWeekStart(startOfWeekMonday(toLocalDate(slot.start, tz)));
+      await update.mutateAsync({ id: block.id, patch: { startAt, endAt } });
     } catch (err) {
-      toast(err instanceof Error ? err.message : 'Could not suggest');
+      setMoved((m) => {
+        const next = { ...m };
+        delete next[block.id];
+        return next;
+      });
+      toast(err instanceof Error ? err.message : 'Could not move that block.');
     }
   };
 
+  /** Free time for some needs in this week from now on, around everything already there. */
+  const fit = (needs: TrayItem[]) => {
+    const all = allBlocks.filter((b) => !b.cancelled);
+    const startMs = Math.max(now, Date.parse(isoAt(weekDays[0]!, 0)));
+    const runningUntil = running
+      ? (running.session.plannedEndAt ?? new Date(now + 30 * 60_000).toISOString())
+      : null;
+    return planWeek({
+      from: new Date(startMs).toISOString(),
+      to: isoAt(addDays(weekDays[6]!, 1), 0),
+      needs: needs.map((n) => ({
+        nodeId: n.nodeId,
+        minutes: n.need,
+        deadline: n.deadline,
+        blockMinutes: n.blockMinutes,
+      })),
+      busy: [
+        ...(busy.data?.busy ?? []),
+        ...all
+          .filter((b) => b.source === 'google' || b.source === 'outlook')
+          .map((b) => ({ start: b.startAt, end: b.endAt })),
+        ...(runningUntil ? [{ start: new Date(now).toISOString(), end: runningUntil }] : []),
+      ],
+      planned: all
+        .filter((b) => b.source === 'app')
+        .map((b) => ({ start: b.startAt, end: b.endAt })),
+      timezone: tz,
+      policy: policy ?? {
+        userId: '',
+        weeklyRestDays: [],
+        pendingWeeklyRestDays: null,
+        vacations: [],
+        breakDays: [],
+        changeLog: [],
+      },
+      dayStartHour: PLAN_DAY_START,
+      dayEndHour: PLAN_DAY_END,
+    });
+  };
+
+  const planMyWeek = () => {
+    const needs = tray.filter((t) => t.need >= 30);
+    if (needs.length === 0) return toast('Nothing needs more time this week.');
+    const out = fit(needs);
+    if (out.length === 0) return toast('No free time left this week to fit anything in.');
+    setProposals(
+      out.map((p, i) => ({
+        key: `${i}-${p.nodeId}`,
+        nodeId: p.nodeId,
+        startAt: p.start,
+        endAt: p.end,
+      })),
+    );
+    if (phone) go(toLocalDate(out[0]!.start, tz));
+  };
+
+  const accept = async (key: string) => {
+    const p = proposals?.find((x) => x.key === key);
+    if (!p) return;
+    setProposals((ps) => {
+      const next = (ps ?? []).filter((x) => x.key !== key);
+      return next.length ? next : null;
+    });
+    try {
+      await create.mutateAsync({ nodeId: p.nodeId, startAt: p.startAt, endAt: p.endAt });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not add that block.');
+    }
+  };
+
+  const acceptAll = async () => {
+    const all = proposals ?? [];
+    setProposals(null);
+    let added = 0;
+    for (const p of all) {
+      try {
+        await create.mutateAsync({ nodeId: p.nodeId, startAt: p.startAt, endAt: p.endAt });
+        added++;
+      } catch {
+        /* reported below */
+      }
+    }
+    if (added < all.length) toast(`Added ${added} of ${all.length}. The rest could not be saved.`);
+    else toast(added === 1 ? 'Added 1 block.' : `Added ${added} blocks.`, { tone: 'ok' });
+  };
+
+  const pickTray = (item: TrayItem) => {
+    if (trayClickBlocked.current) return;
+    const minutes = item.need >= 30 ? Math.min(item.need, item.blockMinutes) : item.blockMinutes;
+    const [slot] = fit([{ ...item, need: minutes, blockMinutes: minutes }]);
+    if (slot) {
+      setBlockDialog({ draft: { startAt: slot.start, endAt: slot.end, nodeId: item.nodeId } });
+      if (phone) go(toLocalDate(slot.start, tz));
+    } else {
+      toast('No free time left this week for that. Pick a time yourself.');
+      const start = Math.ceil((new Date(now).getHours() * 60 + 60) / 30) * 30;
+      openDraft(today, Math.min(start, 22 * 60), Math.min(start, 22 * 60) + minutes, item.nodeId);
+    }
+  };
+
+  /** Dragging a To plan item onto the grid makes a block where it lands. Mouse and pen only. */
+  const grabTray = (item: TrayItem, e: ReactPointerEvent<HTMLButtonElement>) => {
+    if (e.pointerType === 'touch' || e.button !== 0 || view !== 'week' || weekOver) return;
+    const len = item.need >= 30 ? Math.min(item.need, item.blockMinutes) : item.blockMinutes;
+    const sx = e.clientX;
+    const sy = e.clientY;
+    let on = false;
+    const move = (ev: PointerEvent) => {
+      if (!on && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+      on = true;
+      const hit = gridRef.current?.hit(ev.clientX, ev.clientY) ?? null;
+      setTrayDrag({ item, len, x: ev.clientX, y: ev.clientY, hit });
+    };
+    const up = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      setTrayDrag(null);
+      if (!on) return;
+      trayClickBlocked.current = true;
+      window.setTimeout(() => (trayClickBlocked.current = false), 0);
+      const hit =
+        ev.type === 'pointerup' ? (gridRef.current?.hit(ev.clientX, ev.clientY) ?? null) : null;
+      if (!hit) return;
+      const start = landingMinutes(hit, len);
+      create
+        .mutateAsync({
+          nodeId: item.nodeId,
+          startAt: isoAt(hit.day, start),
+          endAt: isoAt(hit.day, start + len),
+        })
+        .catch((err: unknown) =>
+          toast(err instanceof Error ? err.message : 'Could not plan that block.'),
+        );
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  };
+
+  const canPlay = (item: CalItem) =>
+    !running &&
+    item.kind === 'planned' &&
+    Boolean(item.nodeId && byId.has(item.nodeId)) &&
+    item.day === today &&
+    Date.parse(item.endAt) > now;
+
+  const play = (item: CalItem) => {
+    const node = item.nodeId ? byId.get(item.nodeId) : null;
+    if (!node) return;
+    const minutes = Math.round(
+      (Date.parse(item.endAt) - Math.max(now, Date.parse(item.startAt))) / 60_000,
+    );
+    setStartFor({ node, minutes: Math.max(5, minutes) });
+  };
+
+  const openDeadline = (d: Deadline) => setEditNode(byId.get(d.node.id) ?? d.node);
+
+  /* ---------- drawing ---------- */
+
+  // The figures under the title cover what the title names: the month, the week, or the day.
+  const monthDays = rangeDays.filter((d) => d.startsWith(anchor.slice(0, 7)));
+  const [periodFrom, periodTo] =
+    view === 'month'
+      ? [monthDays[0]!, monthDays[monthDays.length - 1]!]
+      : phone
+        ? [anchor, anchor]
+        : [weekDays[0]!, weekDays[6]!];
+  const sum = totals(allBlocks, periodFrom, periodTo);
+  const dueCount = [...deadlines.values()]
+    .flat()
+    .filter((d) => !d.done && d.day >= today && d.day >= periodFrom && d.day <= periodTo).length;
+  const label =
+    view === 'month'
+      ? periodLabel('month', anchor, anchor)
+      : phone
+        ? periodLabel('day', anchor, anchor)
+        : periodLabel('week', weekDays[0]!, weekDays[6]!);
+  const unit = view === 'month' ? 'month' : phone ? 'day' : 'week';
+  const connected = Boolean(google.data?.connected || outlook.data?.connected);
+  const proposalMinutes = (proposals ?? []).reduce(
+    (a, p) => a + (Date.parse(p.endAt) - Date.parse(p.startAt)) / 60_000,
+    0,
+  );
+  const previewStart = trayDrag?.hit ? landingMinutes(trayDrag.hit, trayDrag.len) : 0;
+  const preview =
+    trayDrag?.hit && view === 'week'
+      ? {
+          day: trayDrag.hit.day,
+          start: previewStart,
+          end: previewStart + trayDrag.len,
+          title: lookupTitle(trayDrag.item),
+          color: trayDrag.item.color,
+        }
+      : null;
+
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-end justify-between gap-3 flex-wrap">
-        <div>
+    <div className="cal-page flex flex-col gap-4">
+      <div className="page-head cal-page-head">
+        <div className="min-w-0">
           <h1 className="page-title">Calendar</h1>
-          <p className="muted text-sm mt-1">
-            Drag on the grid to plan a block. Anything imported from your calendar is shown as a
-            commitment, so you can plan around it.
-          </p>
-          <Link className="section-link" to="/settings#calendar">
-            Connect Google or Outlook
-          </Link>
+          <div className="cal-period">
+            <span className="cal-period-label">{label}</span>
+            {(sum.planned >= 1 || sum.studied >= 1 || dueCount > 0) && (
+              <span className="cal-stats">
+                {sum.planned >= 1 && (
+                  <span className="cal-stat tabular">{fmtMinutes(sum.planned)} planned</span>
+                )}
+                {sum.studied >= 1 && (
+                  <span className="cal-stat tabular">{fmtMinutes(sum.studied)} studied</span>
+                )}
+                {dueCount > 0 && <span className="cal-stat tabular">{dueCount} due</span>}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="cal-controls">
+          <Segmented
+            ariaLabel="View"
+            value={view}
+            onChange={(v) => go(anchor, v)}
+            options={[
+              { value: 'week', label: phone ? 'Day' : 'Week' },
+              { value: 'month', label: 'Month' },
+            ]}
+          />
+          <div className="cal-nav">
+            <Button
+              size="sm"
+              variant="ghost"
+              icon
+              aria-label={`Previous ${unit}`}
+              onClick={() => step(-1)}
+            >
+              <ChevronLeft size={16} aria-hidden />
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => go(today)} disabled={anchor === today}>
+              Today
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon
+              aria-label={`Next ${unit}`}
+              onClick={() => step(1)}
+            >
+              <ChevronRight size={16} aria-hidden />
+            </Button>
+          </div>
           <Button
             size="sm"
-            icon
-            aria-label="Previous week"
-            onClick={() => setWeekStart(addDays(weekStart, -7))}
+            onClick={() => setBlockDialog({ draft: null })}
+            aria-label="New block"
+            icon={phone}
           >
-            <ChevronLeft size={16} aria-hidden />
+            <Plus size={15} aria-hidden />
+            {!phone && 'New block'}
           </Button>
-          <Button size="sm" onClick={() => setWeekStart(startOfWeekMonday(today))}>
-            This week
-          </Button>
-          <Button
-            size="sm"
-            icon
-            aria-label="Next week"
-            onClick={() => setWeekStart(addDays(weekStart, 7))}
-          >
-            <ChevronRight size={16} aria-hidden />
-          </Button>
-          <Button size="sm" onClick={() => setDialog({ draft: null })}>
-            New block
-          </Button>
-          <Button size="sm" variant="primary" onClick={suggest} loading={create.isPending}>
-            <Sparkles size={14} aria-hidden /> Suggest a block
-          </Button>
+          {view === 'week' && (
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={planMyWeek}
+              disabled={weekOver}
+              title={
+                weekOver ? 'That week is over' : 'Fit what still needs time into your free time'
+              }
+            >
+              Plan my week
+            </Button>
+          )}
         </div>
       </div>
 
-      <Panel className="p-3 overflow-x-auto">
-        <div
-          className="grid"
-          style={{ gridTemplateColumns: '48px repeat(7, minmax(110px, 1fr))', minWidth: 820 }}
-        >
-          <div />
-          {days.map((d, i) => (
-            <div
-              key={d}
-              className="text-center text-sm pb-2"
-              style={{ color: d === today ? 'var(--accent)' : 'var(--fg-muted)' }}
-            >
-              <div className="font-medium">{DAYS[i]}</div>
-              <div className="tabular text-xs">{fmtDate(`${d}T12:00:00`)}</div>
-              {dueOn(d).map((n) => (
-                <div
-                  key={n.id}
-                  className={`cal-due${n.completedAt ? ' cal-due-done' : ''}`}
-                  title={`${n.kind === 'assessment' ? 'Assessment' : 'Due'}: ${n.title}`}
-                  style={{ borderColor: n.color ?? 'var(--status-warn)' }}
-                >
-                  {n.kind === 'assessment' ? '' : 'Due · '}
-                  {n.title}
-                </div>
-              ))}
-            </div>
-          ))}
-          <div className="relative" style={{ height: (HOUR_END - HOUR_START) * HOUR_PX }}>
-            {Array.from({ length: HOUR_END - HOUR_START }, (_, i) => (
-              <div
-                key={i}
-                className="absolute right-2 text-xs subtle tabular"
-                style={{ top: i * HOUR_PX - 7 }}
+      <div className={`cal-layout${view === 'month' ? ' is-month' : ''}`}>
+        <Panel className="cal-main" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+          {proposals && proposals.length > 0 && view === 'week' && (
+            <div className="cal-proposals" role="status">
+              <span className="cal-proposals-text">
+                {proposals.length === 1
+                  ? '1 suggested block'
+                  : `${proposals.length} suggested blocks`}
+                <span className="tabular"> · {fmtMinutes(proposalMinutes)}</span>
+              </span>
+              <span className="cal-proposals-hint">
+                Move them around, then keep the ones you want.
+              </span>
+              <span className="flex-1" />
+              <Button size="sm" variant="ghost" onClick={() => setProposals(null)}>
+                Discard
+              </Button>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={() => void acceptAll()}
+                loading={create.isPending}
               >
-                {`${HOUR_START + i}:00`}
-              </div>
-            ))}
-          </div>
-          {days.map((d) => (
-            <div
-              key={d}
-              ref={gridRef}
-              className="relative select-none"
-              style={{
-                height: (HOUR_END - HOUR_START) * HOUR_PX,
-                borderLeft: '1px solid var(--border)',
-                cursor: 'crosshair',
-              }}
-              onMouseDown={onMouseDown(d)}
-              onMouseMove={onMouseMove}
-              onMouseUp={onMouseUp}
-              onMouseLeave={() => drag && drag.day === d && onMouseUp()}
-              role="presentation"
-            >
-              {Array.from({ length: HOUR_END - HOUR_START }, (_, i) => (
-                <div
-                  key={i}
-                  className="absolute left-0 right-0"
-                  style={{ top: i * HOUR_PX, borderTop: '1px solid var(--border)' }}
-                />
-              ))}
-              {(busy.data?.busy ?? [])
-                .filter((b) => toLocalDate(b.start, tz) === d || toLocalDate(b.end, tz) === d)
-                .map((b, i) => {
-                  const top = Math.max(0, minutesInto(b.start, d) - HOUR_START * 60);
-                  const bottom = Math.min(
-                    (HOUR_END - HOUR_START) * 60,
-                    minutesInto(b.end, d) - HOUR_START * 60,
-                  );
-                  if (bottom <= top) return null;
-                  return (
-                    <div
-                      key={i}
-                      className="absolute left-1 right-1 rounded-md"
-                      title="Busy (Google Calendar)"
-                      style={{
-                        top: (top / 60) * HOUR_PX,
-                        height: ((bottom - top) / 60) * HOUR_PX,
-                        background:
-                          'repeating-linear-gradient(135deg, var(--border) 0 4px, transparent 4px 10px)',
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  );
-                })}
-              {laidOut(d).map(({ block: b, lane, width, overlaps: clash }) => {
-                const top = Math.max(0, minutesInto(b.startAt, d) - HOUR_START * 60);
-                const bottom = Math.min(
-                  (HOUR_END - HOUR_START) * 60,
-                  minutesInto(b.endAt, d) - HOUR_START * 60,
-                );
-                const node = b.nodeId ? byId.get(b.nodeId) : null;
-                const commitment = b.source === 'google' || b.source === 'outlook';
-                const done = b.source === 'session';
-                const label = commitment
-                  ? (b.title ?? 'Busy')
-                  : (node?.title ?? b.title ?? 'Study');
-                return (
-                  <button
-                    key={b.id}
-                    type="button"
-                    data-block
-                    className={`cal-block${commitment ? ' cal-block-commitment' : ''}${
-                      done ? ' cal-block-done' : ''
-                    }${clash ? ' cal-block-clash' : ''}`}
-                    style={{
-                      top: (top / 60) * HOUR_PX,
-                      height: Math.max(18, ((bottom - top) / 60) * HOUR_PX - 2),
-                      // Lanes split the column's inner width, with a 2px gap between them.
-                      left: `calc(4px + ${lane} * (100% - 8px) / ${width})`,
-                      width: `calc((100% - 8px) / ${width} - ${width > 1 ? 2 : 0}px)`,
-                      right: 'auto',
-                      ...(commitment ? {} : { background: node?.color ?? 'var(--accent)' }),
-                    }}
-                    onClick={() => !commitment && setDialog({ block: b })}
-                    aria-disabled={commitment || undefined}
-                    aria-label={
-                      `${commitment ? 'Commitment' : done ? 'Studied' : 'Planned'}: ${label}, ` +
-                      `${fmtTime(b.startAt)} to ${fmtTime(b.endAt)}` +
-                      (clash ? ', overlapping something else' : '')
-                    }
-                  >
-                    <div className="font-medium truncate">{label}</div>
-                    {/* A shared lane is too narrow for the times; they stay in the label. */}
-                    {width < 3 && (
-                      <div className="opacity-80 tabular truncate">
-                        {fmtTime(b.startAt)}–{fmtTime(b.endAt)}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-              {drag && drag.day === d && (
-                <div
-                  className="absolute left-1 right-1 rounded-md"
-                  style={{
-                    top: ((drag.from - HOUR_START * 60) / 60) * HOUR_PX,
-                    height: ((drag.to - drag.from) / 60) * HOUR_PX,
-                    background: 'var(--accent-soft)',
-                    border: '1px dashed var(--accent)',
-                    pointerEvents: 'none',
-                  }}
-                />
-              )}
+                Add all
+              </Button>
             </div>
-          ))}
-        </div>
-      </Panel>
-
-      {pace.data && (
-        <Panel as="section" className="dash-card" aria-label="Planned vs needed">
-          <h2 className="card-title">Planned vs needed</h2>
-          <ul className="plan-list">
-            {list
-              .filter(
-                (n) =>
-                  n.kind !== 'course' &&
-                  !n.completedAt &&
-                  pace.data!.pace[n.id]?.remainingMinutes != null,
-              )
-              .slice(0, 12)
-              .map((n) => {
-                const p = pace.data!.pace[n.id]!;
-                const planned = pace.data!.plannedMinutes[n.id] ?? 0;
-                const short = (p.remainingMinutes ?? 0) > planned;
-                const needed = p.remainingMinutes ?? 0;
-                return (
-                  <li
-                    key={n.id}
-                    className={`plan-row${short ? ' is-short' : ''}`}
-                    title={`${n.title}: planned ${fmtMinutes(planned)}, need ${fmtMinutes(p.remainingMinutes)}`}
-                  >
-                    <span className="plan-dot" aria-hidden />
-                    <span className="plan-title">{n.title}</span>
-                    <span className="plan-bar" aria-hidden>
-                      <span
-                        style={{
-                          width: `${needed > 0 ? Math.min(100, (planned / needed) * 100) : 100}%`,
-                        }}
-                      />
-                    </span>
-                    <span className="plan-figures tabular">
-                      {fmtMinutes(planned)} <span>of {fmtMinutes(p.remainingMinutes)}</span>
-                    </span>
-                  </li>
-                );
-              })}
-          </ul>
-          <p className="muted text-sm">
-            Connect Google or Outlook Calendar in <Link to="/settings#calendar">Settings</Link> to
-            import courses, deadlines and events. Google also syncs your planned study blocks.
-          </p>
+          )}
+          {view === 'week' && phone && (
+            <DayStrip
+              days={weekDays}
+              selected={anchor}
+              today={today}
+              deadlines={deadlines}
+              blocks={allBlocks}
+              onPick={(d) => go(d)}
+            />
+          )}
+          {view === 'week' ? (
+            <TimeGrid
+              ref={gridRef}
+              days={gridDays}
+              today={today}
+              now={now}
+              hourPx={phone ? 52 : 48}
+              items={items}
+              busy={busyDays}
+              deadlines={deadlines}
+              rest={rest}
+              hideHead={phone}
+              preview={preview}
+              scrollKey={`${gridDays[0]}-${gridDays.length}`}
+              canPlay={canPlay}
+              onCreate={(day, start, end) => openDraft(day, start, end)}
+              onOpen={(item) => {
+                if (item.kind === 'proposal') return;
+                if (item.block) setBlockDialog({ block: item.block });
+              }}
+              onMove={(item, day, start, end) => void moveTo(item, day, start, end)}
+              onAccept={(key) => void accept(key)}
+              onDiscard={(key) =>
+                setProposals((ps) => {
+                  const next = (ps ?? []).filter((p) => p.key !== key);
+                  return next.length ? next : null;
+                })
+              }
+              onPlay={play}
+              onOpenDeadline={openDeadline}
+            />
+          ) : (
+            <MonthGrid
+              weeks={weeks}
+              month={anchor.slice(0, 7)}
+              today={today}
+              deadlines={deadlines}
+              minutes={minutesByDay(allBlocks, rangeDays)}
+              rest={rest}
+              onPickDay={(d) => go(d, 'week')}
+              onOpenDeadline={openDeadline}
+            />
+          )}
         </Panel>
+        {view === 'week' ? (
+          <PlanTray
+            items={tray}
+            today={today}
+            open={!weekOver}
+            // Only where this server can connect one; otherwise the link leads nowhere.
+            showConnect={!connected && Boolean(google.data?.available || outlook.data?.available)}
+            onGrab={grabTray}
+            onPick={pickTray}
+          />
+        ) : (
+          <DueList
+            deadlines={[...deadlines.entries()]
+              .filter(([d]) => d.startsWith(anchor.slice(0, 7)))
+              .sort(([a], [b]) => (a < b ? -1 : 1))
+              .flatMap(([, l]) => l)}
+            today={today}
+            onOpen={openDeadline}
+          />
+        )}
+      </div>
+
+      {trayDrag && (
+        <div
+          className="cal-drag-chip"
+          style={
+            {
+              left: trayDrag.x + 14,
+              top: trayDrag.y + 10,
+              '--ev': trayDrag.item.color ?? undefined,
+            } as CSSProperties
+          }
+          aria-hidden
+        >
+          {lookupTitle(trayDrag.item)} · {fmtMinutes(trayDrag.len)}
+        </div>
       )}
 
       <BlockDialog
-        open={dialog !== null}
-        onClose={() => setDialog(null)}
+        open={blockDialog !== null}
+        onClose={() => setBlockDialog(null)}
         nodes={list}
-        block={dialog?.block ?? null}
-        draft={dialog?.draft ?? null}
+        block={blockDialog?.block ?? null}
+        draft={blockDialog?.draft ?? null}
       />
+      <StartSessionDialog
+        open={startFor !== null}
+        onClose={() => setStartFor(null)}
+        nodes={list}
+        node={startFor?.node ?? null}
+        suggestedMinutes={startFor?.minutes ?? null}
+        lockSubject
+      />
+      <NodeDialog
+        open={editNode !== null}
+        onClose={() => setEditNode(null)}
+        node={editNode}
+        nodes={list.filter((n) => !n.archived)}
+      />
+    </div>
+  );
+}
+
+/** Where a block dragged in from the list starts: the pointer sits a little way into it. */
+function landingMinutes(hit: GridHit, len: number): number {
+  return Math.max(0, Math.min(24 * 60 - len, snap(hit.minutes - 15)));
+}
+
+/** A study plan is planned against its next topic; a task against itself. */
+function lookupTitle(item: TrayItem): string {
+  return item.kind === 'plan' && item.sub ? item.sub.replace(/ next$/, '') : item.title;
+}
+
+/** The week as a row of days on a phone, with a dot where something is due or planned. */
+function DayStrip({
+  days,
+  selected,
+  today,
+  deadlines,
+  blocks,
+  onPick,
+}: {
+  days: string[];
+  selected: string;
+  today: string;
+  deadlines: Map<string, Deadline[]>;
+  blocks: PlannedBlock[];
+  onPick: (day: string) => void;
+}) {
+  const tz = localTz();
+  return (
+    <div className="cal-strip" role="group" aria-label="Day">
+      {days.map((d) => {
+        const date = new Date(`${d}T12:00:00`);
+        const due = (deadlines.get(d) ?? []).some((x) => !x.done);
+        const planned = blocks.some(
+          (b) => !b.cancelled && b.source === 'app' && toLocalDate(b.startAt, tz) === d,
+        );
+        return (
+          <button
+            key={d}
+            type="button"
+            className={`cal-strip-day${d === selected ? ' is-selected' : ''}${d === today ? ' is-today' : ''}`}
+            aria-pressed={d === selected}
+            aria-label={new Intl.DateTimeFormat(undefined, {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric',
+            }).format(date)}
+            onClick={() => onPick(d)}
+          >
+            <span className="cal-strip-name">
+              {new Intl.DateTimeFormat(undefined, { weekday: 'narrow' }).format(date)}
+            </span>
+            <span className="cal-strip-num tabular">{date.getDate()}</span>
+            <span className="cal-strip-dots" aria-hidden>
+              {due && <span className="is-due" />}
+              {planned && <span className="is-planned" />}
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
