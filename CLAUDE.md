@@ -32,11 +32,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
    `apps/portal/vercel.json`), API on Render (`render.yaml`), data in Neon Postgres, domain
    on Cloudflare. A push to `main` on GitHub (`aleph-bull/doloop`) redeploys both.
    cron-job.org pings `/api/health` every 10 minutes so Render's free plan doesn't sleep.
-2. **The owner's always-on copy** on their own PC: a frozen build on localhost:5173 and :8787
-   with their real data in `~/.komogon/pglite`. **Do not stop, restart or update it
-   (`pnpm local:stop|start|update`) without asking first.** They study on it, sometimes
-   while you are working. To read its data, copy the folder or use a backup in
-   `~/.komogon/backups`; never point scripts or tests at the live folder.
+2. **The always-on copy is gone** (removed 2026-10-21 at the owner's request; they study on
+   komogon.app now). It was a frozen build on localhost:5173 and :8787 started at sign-in.
+   Its data is still in `~/.komogon/pglite` with backups in `~/.komogon/backups`, and the
+   `pnpm local:*` scripts are still in the repo. Don't start it again unless the owner asks,
+   and don't delete that folder: it is their study history from before the move.
 3. **Sandboxes** for checking changes in a browser, with throwaway data (launch configs in
    `.claude/launch.json`): `sandbox-api`/`sandbox` (8797/5183, dev sign-in),
    `sandbox-2-api`/`sandbox-2` (8798/5184), `sandbox-password-api`/`sandbox-password`
@@ -143,8 +143,8 @@ Keep the owner's own wording verbatim, "!" included.
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
-  local scripts, the startup shortcut and the komogon.app domain. Renaming them would drop
-  saved browser state or break the always-on copy. Only the name people see is Komodon.
+  local scripts and the komogon.app domain. Renaming them would drop saved browser state.
+  Only the name people see is Komodon.
 
 ## Checks and traps
 
@@ -153,8 +153,6 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
-- Never pipe `pnpm local:start|update` output: the servers inherit the pipe and the command
-  never returns.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
