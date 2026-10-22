@@ -1817,6 +1817,73 @@ The owner: onboarding had "too much friction"; a busy student has to add their c
 - **The "Your session" card is off the first screen** (its Pomodoro, Timelapse and Show the timer toggles and Start), replaced by "Got a lot due?" at the owner's request ("remove this card and replace it with the other card"). The greeting line stays "A little space for what you want to do."
 - **The simplified first screen shows only while Tasks is empty.** The owner, on an earlier build: "this should never appear. when i add my first task or import things it should just show full dashboard". So `Today` shows `FocusDashboard` only when "Simplify the dashboard" is on and the account has no courses or items; the first one, added by hand, pasted or from a calendar, brings up the full dashboard on every device. The setting's description says so. A session can still be started from the full dashboard or the focus screen.
 
+## The profile's day grid darkens the days before the account existed, 2026-10-21 (user request)
+
+The owner asked for the days on the profile's "Days studied" grid from before the account existed to be darkened, so a new account's six months don't read as months of days off. (They briefly asked for "until the first session" instead, then went back to the join date.) `studyHeatmap` takes an optional `since` (the account's `created_at`) and marks each earlier day `before`, worked out in the account's own timezone; a day that has study on it is never marked, in case time was added from before the account began. The grid draws those squares like the days still to come (the empty-day colour, faded) but a little darker: 35% opacity against the future days' 45%. A first try in solid black at 24% was "too dark". They read "before joining" on hover and can't be selected. Only the profile passes `since`; the Analytics and recap grids are unchanged.
+
+## "I'm a dev": throwaway accounts, fresh or Jerry, 2026-10-21 (user request)
+
+The owner asked for a quick way for them and the agents to see and test changes on the hosted app: an "I'm a dev" link on the sign-in page, paste the dev password, and get an account that isn't a real one, has no admin powers and isn't connected to the rest of the app. Little security needed; it's a debug account. Then: two choices before signing in, a fresh account or Jerry, a long-time user with friends and stats, both on the app's defaults; a way to sign out; and the link small and greyed out.
+
+- **The link.** Small grey "I'm a dev" text at the foot of the sign-in card (server mode, shown when `GET /api/auth/dev` says it's on). It opens "Dev password" with two buttons, **Fresh account** and **Jerry**. `POST /api/auth/dev` takes `{ password, kind }` and answers a token like any sign-in.
+- **Fresh account:** a new account starting exactly as a new person's does, default settings and all.
+- **Jerry:** sixteen weeks of study across STATS203, ECO220 and CSC148 (tags Midterms, Econ, CS), finished tasks behind the open ones, a six-day streak and a seventeen-day best, XP, a level and the badges they bring, sessions on the calendar and a few planned blocks ahead. Five friends: Noah, Priya and Leo accepted, Sofia asking him, Ethan asked by him. Posts with kudos and comments, the "Study group" with Noah, Priya and Leo, a running jam, a friend's jam to join and a finished one, a nudge from Noah this morning, and Noah and Priya studying right now. Built in `services/dev-world.ts` straight into the database in batches (about a second), with fixed randomness so Jerry always looks the same apart from the dates. Everyone's streak is judged while building it, and the resets found in old history are dropped, so Jerry isn't greeted with "Your streak ended".
+- **A world of their own.** Each dev sign-in makes a world (`users.dev_world`): a fresh account alone, or Jerry and his friends. Real people (no world) and dev worlds never see each other: the feed, a post's files, kudos and comments, people search, friend requests, profiles, both leaderboards and their averages, and joining a jam or group by code all check it (`inWorldOf`, `ownerInWorldOf`, `sameWorld` in `services/dev-accounts.ts`). Everything else in Social (friends, groups, live, nudges, Compare) follows friendships, so it stays inside too. Two Jerrys made a minute apart don't see each other either.
+- **Not real accounts.** Addresses like `dev-1a2b3c@dev.komodon.invalid` (`.invalid` can never receive mail), no password, never an admin, left out of the admin list, and turned away from university email checks, account email and password changes, and admin (403 "Dev accounts can't use this."). An invite list (`ALLOWED_EMAILS`) doesn't stop them. Each world has `users.dev_expires_at` a day after it was made (Jerry's `created_at` is months back, so it can't be used for this); expired dev accounts are deleted with everything in them whenever a new one is made, and a token for a deleted one is refused ("That dev account has expired. Sign in again.").
+- **The password is only ever a hash in the code** (`DEV_PASSWORD_HASH`, scrypt like `password_accounts`): the repository is public. Ten wrong tries in 15 minutes from one address get a wait; thirty new dev accounts an hour per address. `DEV_LOGIN=off` on the API turns it off. It needs `AUTH_SECRET` to sign its tokens, so try it in a sandbox run with `AUTH_SECRET` set and the portal's `VITE_DEV_AUTH_SECRET` empty.
+- **Signing out.** A dev account has Sign out in the top bar and the sidebar, and so does anyone with Social off (no profile, where Sign out lives). For a dev account the question says it can't be signed back into: the next dev sign-in makes a new one.
+- **Signed out with a reason.** A 401 on `/api/me` (an expired dev account, any ended session) now signs out and says so on the sign-in page instead of "Could not reach the Komodon API". The reason travels in session storage (`komogon.signin.notice`), because the redirect after signing out dropped the router state; that also fixes the suspended-account message, which was lost the same way.
+- **Migration** `0025_dev_accounts` (`dev_account`, `dev_world`, `dev_expires_at` on users).
+
+## The sidebar is the default, 2026-10-21 (user request)
+
+The owner asked for the sidebar as the default. `DEFAULT_SETTINGS.nav.style` is now `'sidebar'`, so new accounts, and anyone who never picked one in Settings, get the sidebar on a computer. Phones keep the bottom bar. This replaces "Top bar stays the default" from earlier; Settings still offers both.
+
+## Prettier "Good to know" cards on Analytics, 2026-10-21 (user request)
+
+The owner asked for the Analytics "Good to know" cards to look nicer.
+
+- **Each card has an icon** in a small accent-tinted tile, picked by the insight behind it (`INSIGHT_ICONS` in `RecapView.tsx`): a target for the forecast, an hourglass for progress through a task, a list of ticks for tasks done, a brain for a focused run, and so on. Lucide icons, no emoji: the forecast sentence ends in a target emoji, which the card drops since its icon says the same.
+- **Two cards get a progress bar** on the card's floor: "You're 88% through Unit 1" (the highlight's own progress) and the forecast (all-time hours against the hours it names). The other cards stay text only.
+- Lines wrap with `text-wrap: pretty` so a headline doesn't leave one word on its last line. On a phone the cards are one a row with the icon beside the words, so each stays short.
+- **Same surface as every other card on the page.** The owner found them off in colour and opacity. They had their own near-solid fill (`--glass-solid` at 78%, from when they were "text over the photo") and were Glass cards with its top sheen; they are now Panels with no override, like the chart tiles, so they match the tiles and trophies in every panel style.
+
+## Every card is the same card, 2026-10-21 (user request)
+
+- **The ask:** "proper consistency with every card with exceptions (nav bar, side bar, setting
+  bar etc). Same rounded edges and allat". An audit of every card on every page found the
+  corners, border, shadow and blur already matched; the padding and two fills did not.
+- **20px padding on every card** (`--card-pad`), the roomy ones included: the dashboard hero
+  (was 28-32px), start panel, timer card, note, "Days focused", the Analytics hero (40-48px),
+  streaks, tiles, equivalents (14px) and trophies, the Achievements hero and reward cards,
+  the profile header and tiles, "Got a lot due?", the plan cards and plan page, and the
+  empty and error states (24-32px).
+- **The hint banner is a card too:** the 22px corner (was 14px) and 20px padding, and its
+  lightbulb is centred on the row ("tip icon is too high make it centred"); the tip card's
+  lightbulb and close button are centred the same way.
+- **Locked badges are on the same surface** as earned ones; they had a lighter fill and no
+  shadow. The lock icon and the muted name still say locked.
+- **Kept as they are:** the Tasks table and the calendar grid run edge to edge (their text
+  stays 20px in); the nav bar, sidebar and settings bar, toasts, menus, dialogs, the focus
+  screen and the sign-in card are not cards.
+- **The glass blur stays at 28px.** It was lowered to 16px when the owner found the cards
+  "too frosted", and put back when they preferred the colour from before.
+- **Tried and undone the same night: making every card frost without exception.** The
+  Achievements badges (under the fold's mask) and cards inside fading wrappers (a page
+  arriving, Analytics loading or rising in, "See all", dialogs) show the background unblurred,
+  because a mask or opacity on an ancestor turns the blur off. Moving the masks and fades onto
+  the cards fixed that, but the owner didn't like the look and asked for it reverted. Leave
+  those as they are unless the owner asks again.
+
+## Coming up and the task cards, trimmed, 2026-10-21 (user request)
+
+The owner found the dashboard's task cards and Coming up "too much text" and asked what "Estimate met" means: you have studied as long as you estimated, but haven't ticked the task off (ticked ones already leave Coming up).
+
+- **Task cards lose "Planned X of Y needed".** The card ends at the due line and "Need N per day". `NodeCard` no longer takes `plannedMinutes`.
+- **"Estimate met" stays, in blue** (`info` tone) instead of green, so it no longer looks like "On track". The Tasks table's dot for it is blue too.
+- **Coming up says what was studied.** A row with its estimate met reads "Studied 1 h 35 min" where the others read "35 min left".
+- **Coming up is laid out as columns**: when, title, time, status, every column left-aligned (the owner tried the times and then the tags right-aligned, and settled on everything left). The tags have 40px of room before them, which pulls the times a little closer to the titles. When the card is narrow (phones, or beside Routines) each row takes two lines: title and status, then when and the time under the status.
+
 ## The profile: feed-sized posts, top badges, the study clock, streak tiles, 2026-10-21 (user request)
 
 The owner: the posts on a profile were "too big" (they ran the page's full width, about 1060px, with a video as tall as the screen) and should be "the same size as the posts in social"; on the side, the person's "top 4 badges in terms of xp gain" and the "When you study" ring from Analytics. Then: make the daily and weekly streaks on Totals "more apparent", "add an icon", "maybe add back that fire animation", "dont make it too monotonous", and an XP bar next to the level.

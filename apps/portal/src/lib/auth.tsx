@@ -66,6 +66,8 @@ interface AuthApi extends AuthState {
   signInWithGoogle: () => Promise<void>;
   /** Server mode: sign in with the ID token from Google's sign-in button. */
   signInWithGoogleCredential: (credential: string) => Promise<void>;
+  /** Server mode: "I'm a dev", a throwaway account (fresh, or Jerry) for the dev password. */
+  signInAsDev: (password: string, kind: 'fresh' | 'jerry') => Promise<void>;
   signInDev: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -78,8 +80,11 @@ export const EMAIL_KEY = authMode === 'dev' ? 'komogon.dev.email' : 'komogon.ema
 
 /** POST to the API's own account routes; answers the token and email, or throws its error. */
 async function serverAuth(
-  path: 'signin' | 'signup' | 'google',
-  body: { email: string; password: string } | { credential: string },
+  path: 'signin' | 'signup' | 'google' | 'dev',
+  body:
+    | { email: string; password: string }
+    | { credential: string }
+    | { password: string; kind: 'fresh' | 'jerry' },
 ): Promise<{
   token?: string;
   email: string;
@@ -113,6 +118,47 @@ async function serverAuth(
     verificationRequired: data.verificationRequired,
     challengeId: data.challengeId,
   };
+}
+
+const NOTICE_KEY = 'komogon.signin.notice';
+
+/**
+ * Why the app just signed someone out, for the sign-in page. Kept in session storage
+ * because signing out sends the app through two redirects, and router state doesn't
+ * survive the second.
+ */
+export function leaveSignInNotice(message: string): void {
+  try {
+    sessionStorage.setItem(NOTICE_KEY, message);
+  } catch {
+    /* Blocked storage: the page just won't say why. */
+  }
+}
+
+export function readSignInNotice(): string | null {
+  try {
+    return sessionStorage.getItem(NOTICE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function clearSignInNotice(): void {
+  try {
+    sessionStorage.removeItem(NOTICE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Server mode: whether the API offers "I'm a dev" throwaway accounts. */
+export async function serverDevLogin(): Promise<boolean> {
+  try {
+    const res = await fetch(`${apiBaseUrl(true)}/api/auth/dev`);
+    return res.ok && ((await res.json()) as { enabled?: boolean }).enabled === true;
+  } catch {
+    return false;
+  }
 }
 
 /** Server mode: the Google client id when the API offers "Continue with Google", else null. */
@@ -283,6 +329,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [keepToken],
   );
 
+  const signInAsDev = useCallback(
+    async (password: string, kind: 'fresh' | 'jerry') => {
+      const r = await serverAuth('dev', { password, kind });
+      if (!r.token) throw new Error('Could not start a dev account.');
+      keepToken(r.token, r.email);
+    },
+    [keepToken],
+  );
+
   const signInDev = useCallback(
     async (email: string) => {
       keepToken(await mintDevToken(email), email);
@@ -313,6 +368,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithPassword,
       signInWithGoogle,
       signInWithGoogleCredential,
+      signInAsDev,
       signInDev,
       signOut,
     }),
@@ -326,6 +382,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithPassword,
       signInWithGoogle,
       signInWithGoogleCredential,
+      signInAsDev,
       signInDev,
       signOut,
     ],

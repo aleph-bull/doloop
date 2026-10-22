@@ -1,14 +1,33 @@
-import { dayOfWeek, type RangeRecap } from '@komogon/core';
+import { dayOfWeek, type HighlightKey, type RangeRecap } from '@komogon/core';
 import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  Award,
+  BellOff,
+  Brain,
   CalendarCheck,
+  CheckCheck,
   ChevronLeft,
   ChevronRight,
+  Clock,
+  Crosshair,
   Download,
+  FastForward,
   Flame as FlameIcon,
+  Footprints,
+  Hourglass,
+  Layers,
+  ListChecks,
+  ShieldCheck,
+  Smile,
   Sparkles,
+  Target,
+  Timer,
+  TrendingUp,
+  Trophy,
+  Zap,
+  type LucideIcon,
 } from 'lucide-react';
 import { cloneElement, useState, type ReactElement, type ReactNode } from 'react';
 import {
@@ -671,15 +690,55 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
 
 /* ---------- insights ---------- */
 
+/** Each card's icon, by the highlight behind it; the forecast is the page's own card. */
+const INSIGHT_ICONS: Record<HighlightKey | 'forecast', LucideIcon> = {
+  'hours-total': Clock,
+  'hours-up': TrendingUp,
+  'sessions-up': Layers,
+  'throughput-up': Zap,
+  'accuracy-up': Crosshair,
+  'mood-up': Smile,
+  'preparedness-up': ShieldCheck,
+  'focus-streak': Brain,
+  'distraction-down': BellOff,
+  'tasks-all-done': CheckCheck,
+  'tasks-done-count': ListChecks,
+  'goal-progress': Hourglass,
+  'on-pace': Footprints,
+  'planned-kept': CalendarCheck,
+  'estimate-beat': Timer,
+  streak: FlameIcon,
+  'best-day': Award,
+  'early-finish': FastForward,
+  'best-week': Trophy,
+  forecast: Target,
+};
+
+interface InsightLine {
+  key: HighlightKey | 'forecast';
+  headline: string;
+  detail: string;
+  /** 0..1 for the cards that are about getting through something; they get a bar. */
+  progress?: number;
+}
+
 function Insights({ data }: { data: RecapResponse }) {
-  const lines = [
-    ...data.insights.map((h) => ({ key: h.key, headline: h.headline, detail: h.detail })),
+  const lines: InsightLine[] = [
+    ...data.insights.map((h) => ({
+      key: h.key,
+      headline: h.headline,
+      detail: h.detail,
+      // A highlight's magnitude is its progress for this one card.
+      progress: h.key === 'goal-progress' ? h.magnitude : undefined,
+    })),
     ...(data.forecast && data.period
       ? [
           {
-            key: 'forecast',
-            headline: data.forecast.text,
+            key: 'forecast' as const,
+            // The card's target icon says what the emoji at the end of the sentence does.
+            headline: data.forecast.text.replace(/\s*🎯$/u, ''),
             detail: 'Based on your last four weeks.',
+            progress: data.totals.minutes / (data.forecast.hours * 60),
           },
         ]
       : []),
@@ -691,12 +750,21 @@ function Insights({ data }: { data: RecapResponse }) {
         Good to know
       </h2>
       <div className="rc-insights">
-        {lines.map((l) => (
-          <Glass key={l.key} as="article" className="rc-insight">
-            <p className="rc-insight-head">{l.headline}</p>
-            <p className="muted text-sm">{l.detail}</p>
-          </Glass>
-        ))}
+        {lines.map((l) => {
+          const Icon = INSIGHT_ICONS[l.key] ?? Sparkles;
+          return (
+            <Panel key={l.key} as="article" className="rc-insight">
+              <span className="rc-insight-icon" aria-hidden>
+                <Icon size={20} strokeWidth={2} />
+              </span>
+              <p className="rc-insight-head">{l.headline}</p>
+              <p className="rc-insight-detail">{l.detail}</p>
+              {l.progress !== undefined && (
+                <ProgressBar value={l.progress} label={l.headline} className="rc-insight-bar" />
+              )}
+            </Panel>
+          );
+        })}
       </div>
     </section>
   );

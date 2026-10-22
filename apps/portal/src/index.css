@@ -860,7 +860,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 24px 26px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 /* What the clock is doing, with a dot that breathes while it runs. */
@@ -1199,6 +1199,9 @@
   height: 7px;
   border-radius: 50%;
   background: var(--status-ok);
+}
+.tt-status-word.is-done .tt-dot {
+  background: var(--status-info);
 }
 .tt-status-word.is-behind .tt-dot {
   background: var(--status-warn);
@@ -1811,7 +1814,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
 }
 .start-panel-main {
   display: flex;
@@ -1840,9 +1843,6 @@
   min-width: 196px;
 }
 @media (max-width: 560px) {
-  .start-panel {
-    padding: 20px;
-  }
   .start-panel-actions {
     width: 100%;
     flex-direction: column-reverse;
@@ -2370,7 +2370,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 20px 40px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
 }
 .days-panel-grid {
   flex: 1 1 360px;
@@ -2516,14 +2516,18 @@
 }
 
 /* ---------- Upcoming due dates ---------- */
+/* A table in all but name: when, title, time, status, each a column every row shares. */
 .due-list {
-  display: flex;
-  flex-direction: column;
+  container-type: inline-size;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  column-gap: 12px;
 }
 .due-row {
-  display: flex;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid var(--border);
   font-size: var(--text-sm);
@@ -2533,22 +2537,52 @@
   padding-bottom: 0;
 }
 .due-when {
-  flex: none;
-  min-width: 9ch;
   color: var(--fg-muted);
   font-size: var(--text-xs);
   font-weight: 400;
+  white-space: nowrap;
 }
 .due-when[data-overdue] {
   color: color-mix(in srgb, var(--status-bad) 60%, var(--fg));
 }
 .due-title {
-  flex: 1;
   min-width: 0;
   font-weight: 450;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.due-time {
+  white-space: nowrap;
+}
+/* The extra room before the tags pulls the time column a little left, closer to the titles. */
+.due-status {
+  display: flex;
+  padding-left: 40px;
+}
+/* Too narrow for one line (phones, or beside Routines): two lines, the title and its status,
+   then when it's due and the time, under the status. */
+@container (max-width: 460px) {
+  .due-row {
+    row-gap: 4px;
+  }
+  .due-title {
+    grid-row: 1;
+    grid-column: 1 / 4;
+  }
+  .due-status {
+    grid-row: 1;
+    grid-column: 4;
+    padding-left: 0;
+  }
+  .due-when {
+    grid-row: 2;
+    grid-column: 1 / 4;
+  }
+  .due-time {
+    grid-row: 2;
+    grid-column: 4;
+  }
 }
 
 /* ---------- Task cards (dashboard rail) ---------- */
@@ -2842,6 +2876,22 @@
   text-decoration: underline;
   cursor: pointer;
 }
+/* "I'm a dev" on the sign-in page: there for the owner, quiet for everyone else. */
+.dev-link {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  opacity: 0.7;
+  cursor: pointer;
+}
+.dev-link:hover,
+.dev-link:focus-visible {
+  opacity: 1;
+}
 
 /* ---------- background picker ---------- */
 
@@ -2979,7 +3029,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .reward-card-head {
   display: flex;
@@ -3384,16 +3434,15 @@
 
 .hint {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 12px 10px 12px 16px;
+  padding: var(--card-pad);
   font-size: var(--text-sm);
   color: var(--fg-muted);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 .hint-icon {
   flex: none;
-  margin-top: 2px;
   color: var(--accent-text);
 }
 .hint-body {
@@ -4381,7 +4430,7 @@
   align-items: center;
   /* The headline card is the one place on the page that gets to breathe. */
   gap: 40px;
-  padding: 40px 48px;
+  padding: var(--card-pad);
   flex-wrap: wrap;
 }
 .rc-hero-main {
@@ -4572,7 +4621,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
   min-width: 0;
   transition: transform var(--dur-slow) var(--ease-out);
 }
@@ -4620,7 +4669,6 @@
 @media (max-width: 640px) {
   .rc-hero {
     gap: 28px;
-    padding: 28px 24px;
   }
   .rc-hero-side {
     width: 100%;
@@ -4929,7 +4977,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px;
+  padding: var(--card-pad);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
   border: 1px solid var(--border);
@@ -4969,7 +5017,7 @@
 
 /* Streaks: the flame, the week in dots, and thirty days as a ring. */
 .rc-streaks {
-  padding: 22px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -5070,7 +5118,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 20px 12px 16px;
+  padding: var(--card-pad);
   text-align: center;
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--panel-fill) 72%, transparent);
@@ -5140,15 +5188,61 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
 }
+/* Each card: an accent icon tile, the line, its detail, and a bar when it's about progress. */
 .rc-insight {
   padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+.rc-insight-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
 .rc-insight-head {
   font-weight: 600;
   line-height: 1.35;
+  text-wrap: pretty;
+}
+.rc-insight-detail {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+/* Sits on the card's floor, so bars line up across a row of cards of different text. */
+.rc-insight-detail:has(+ .rc-insight-bar) {
+  margin-bottom: 14px;
+}
+.rc-insight-bar {
+  margin-top: auto;
+}
+/* One card a row on a phone: the icon moves beside the words so each card stays short. */
+@media (max-width: 520px) {
+  .rc-insight {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    column-gap: 14px;
+    row-gap: 4px;
+  }
+  .rc-insight-icon {
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+  .rc-insight > :not(.rc-insight-icon) {
+    grid-column: 2;
+  }
+  .rc-insight-detail:has(+ .rc-insight-bar) {
+    margin-bottom: 8px;
+  }
 }
 .rc-grades {
   display: flex;
@@ -5233,9 +5327,9 @@
 }
 .tip-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .tip-card p {
   line-height: 1.45;
@@ -5256,7 +5350,7 @@
   flex: none;
   width: 30px;
   height: 30px;
-  margin: -4px -6px 0 0;
+  margin-right: -6px;
   border-radius: 50%;
   color: var(--fg-muted);
   transition:
@@ -5323,7 +5417,7 @@
   }
 }
 .dash-note {
-  padding: 14px 18px;
+  padding: var(--card-pad);
   font-size: var(--text-sm);
 }
 /* Coming up and Routines, side by side when there is room, full width when alone. */
@@ -5338,7 +5432,7 @@
 }
 /* A card's own heading row, inside it. */
 .dash-card {
-  padding: 20px 22px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -5354,7 +5448,7 @@
 /* Nothing in Tasks yet: the quick ways in. Rows in a narrow card, side by side in a wide one. */
 .get-started {
   container-type: inline-size;
-  padding: 28px 32px 32px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -5489,7 +5583,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 28px 48px;
-  padding: 28px 32px 24px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 .dash-label {
@@ -5715,7 +5809,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 24px 28px;
+  padding: var(--card-pad);
 }
 .dash-empty > div {
   display: flex;
@@ -5735,7 +5829,6 @@
 @media (max-width: 760px) {
   .dash-hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: 22px 20px 20px;
     gap: 24px;
   }
   .dash-days-cols {
@@ -5891,7 +5984,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 26px 28px 22px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 .ach-hero-top {
@@ -6091,13 +6184,6 @@
   font-size: var(--text-xs);
   font-weight: 400;
   color: var(--fg-muted);
-}
-.badge-card:not(.is-earned) {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
-}
-:root[data-panel='glass'] .badge-card:not(.is-earned) {
-  background: color-mix(in srgb, var(--glass-fill) 80%, transparent);
 }
 
 /* The streak's flame: the same line icon as the top bar, on a soft tile. No emoji. */
@@ -6417,11 +6503,6 @@
   color: color-mix(in srgb, var(--status-warn) 70%, var(--fg));
 }
 
-/* Good to know: text cards over the photo, so mostly solid. */
-.glass.rc-insight {
-  background: color-mix(in srgb, var(--glass-solid) 78%, transparent);
-}
-
 /* Saved looks: a preview of each, its background with a little card in its panel style. */
 .preset-grid {
   display: grid;
@@ -6579,7 +6660,7 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px 20px;
-  padding: 24px;
+  padding: var(--card-pad);
 }
 .profile-avatar {
   flex: none;

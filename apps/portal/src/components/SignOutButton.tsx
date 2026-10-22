@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../lib/auth';
+import { useMe } from '../lib/queries';
 
 /**
  * Sign out, as the top bar's icon, a row of the sidebar, or a labelled button in Settings.
@@ -19,6 +20,8 @@ export function SignOutButton({
 }) {
   const auth = useAuth();
   const navigate = useNavigate();
+  // A dev account can't be signed back into: the next dev sign-in makes a new one.
+  const dev = useMe().data?.user.devAccount === true;
   const [asking, setAsking] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -81,8 +84,9 @@ export function SignOutButton({
         }
       >
         <p>
-          You can sign back in any time. Your data stays in your account; only the copy kept in this
-          browser is cleared.
+          {dev
+            ? "This is a dev account, so you won't get back into it. The next dev sign-in starts a fresh one."
+            : 'You can sign back in any time. Your data stays in your account; only the copy kept in this browser is cleared.'}
         </p>
       </Modal>
     </>

@@ -59,6 +59,15 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   `TRUST_PROXY_HOPS` (1 on Render); never set `trustProxy: true`, it trusts forged headers.
 - Dev sign-in (`DEV_AUTH_SECRET` / `VITE_DEV_AUTH_SECRET`) is local only and must never be
   set on Vercel or Render.
+- **"I'm a dev"** (2026-10-21) is different and does run on komogon.app: small grey text on
+  the sign-in page takes the shared dev password (the owner has it; the code keeps only its
+  scrypt hash, `DEV_PASSWORD_HASH`) and makes a throwaway **Fresh account** or **Jerry** (a
+  long-time user with friends, posts, a group and jams, `services/dev-world.ts`). Each lives in
+  its own world (`users.dev_world`): dev worlds and real people never see each other, and any
+  new Social query that shows other people must use `inWorldOf` / `ownerInWorldOf` /
+  `sameWorld` from `services/dev-accounts.ts`. No email, no admin, deleted after a day
+  (`dev_expires_at`). Tests: `dev-login.test.ts`. `DEV_LOGIN=off` turns it off. Agents use it
+  in a local sandbox run with `AUTH_SECRET`; signing in to the live site is the owner's to do.
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
   data, and setting a new password. Testers are told on the sign-in page that the owner can
   see accounts and study data, and are asked not to reuse a personal password.
@@ -135,6 +144,12 @@ Keep the owner's own wording verbatim, "!" included.
   edge to edge (the calendar, the Tasks table) keeps its text 20px in from the sides and top
   instead. A card's header that might not fit wraps (`flex-wrap`) rather than running past
   the edge.
+- **Every card is the same card** (the owner, 2026-10-21: "proper consistency with every
+  card"): the 22px corner, exactly `--card-pad` (never roomier either: heroes, empty states
+  and banners like the hint included), and the Panels setting's one surface (no lighter
+  fill for a locked or quiet card; say that with the text and an icon). Not cards: the
+  nav bar, sidebar and settings bar, toasts, menus and dialogs, the focus screen, and the
+  sign-in card.
 - Never black text on buttons or the logo; accent buttons keep white labels and the fill
   deepens instead. Solid accent fills are muted (saturation capped at 45%).
 - No all-caps labels (except on the focus screen); labels are in sentence case.
@@ -237,8 +252,8 @@ Keep the owner's own wording verbatim, "!" included.
   shows it; with neither, the route answers 503).
   One address can verify only one account (checked in the route and by a partial unique
   index).
-- Navigation (2026-10-21): the top bar is the default; Settings › Appearance › Navigation
-  can switch a computer to a sidebar (`.sidenav` in AppShell; `.rail` is the dashboard card
+- Navigation (2026-10-21): the sidebar is the default (since the night of 2026-10-21; the top
+  bar was before); Settings › Appearance › Navigation can switch a computer to the top bar (`.sidenav` in AppShell; `.rail` is the dashboard card
   row, not the nav). New pages go in the `links` list (`group: 'more'` puts them under the
   sidebar's divider). The top bar always shows page names; when they don't fit, the tabs
   scroll with an arrow on each side that hides one. With under 480px of room for tabs that

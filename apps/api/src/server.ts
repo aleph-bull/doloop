@@ -24,6 +24,7 @@ import { gradeRoutes } from './routes/grades';
 import { planRoutes } from './routes/plans';
 import { recapRoutes } from './routes/recap';
 import { passwordAuthRoutes, type PasswordAuthOptions } from './routes/auth';
+import { devLoginRoutes, type DevLoginOptions } from './routes/dev-login';
 import { adminRoutes } from './routes/admin';
 import { leaderboardRoutes } from './routes/leaderboard';
 import { profileRoutes } from './routes/profiles';
@@ -58,6 +59,11 @@ export interface BuildOptions {
   trustProxyHops?: number;
   /** Who can see every account and its data (`ADMIN_EMAILS`). */
   adminEmails?: string[];
+  /**
+   * "I'm a dev" throwaway accounts on the sign-in page (needs `passwordAuth` for its
+   * secret); null or left out turns them off.
+   */
+  devLogin?: Pick<DevLoginOptions, 'passwordHash' | 'limits'> | null;
   localTestAccounts?: boolean;
   mailer?: Mailer | null;
   requireEmailVerification?: boolean;
@@ -135,6 +141,8 @@ export async function buildServer(opts: BuildOptions) {
       clock,
       google: opts.passwordAuth.google,
     });
+  if (opts.passwordAuth && opts.devLogin)
+    devLoginRoutes(app, opts.db, { ...opts.devLogin, secret: opts.passwordAuth.secret, clock });
 
   await app.register(authPlugin, {
     db: opts.db,

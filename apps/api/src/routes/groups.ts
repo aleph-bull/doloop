@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, notInArray } from 
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { groupMembers, groups, nodes, nudges, routines, sessions, users } from '../db/schema';
+import { sameWorld } from '../services/dev-accounts';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
@@ -339,7 +340,14 @@ export function groupRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.post('/api/social/groups/join', async (req) => {
     const { code } = z.object({ code: z.string().trim().toUpperCase().length(6) }).parse(req.body);
     const row = await db.query.groups.findFirst({ where: eq(groups.code, code) });
-    if (!row) throw notFound('No group with that code');
+    const host =
+      row &&
+      (await db.query.users.findFirst({
+        where: eq(users.id, row.hostId),
+        columns: { devWorld: true },
+      }));
+    // A code from the other side (real people, or a dev world) reads as no group at all.
+    if (!row || !sameWorld(req.user, host)) throw notFound('No group with that code');
     return join(row, req.user.id, req.user.timezone);
   });
 

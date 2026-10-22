@@ -21,6 +21,7 @@ import { listAchievements } from '../services/achievements';
 import { loadCompletedSessions } from '../services/pace';
 import type { Person } from '../services/people';
 import { settingsOf } from '../services/users';
+import { sameWorld } from '../services/dev-accounts';
 import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
 import { liveAmong, type LiveMember } from './groups';
@@ -110,8 +111,10 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       userId === req.user.id
         ? req.user
         : await db.query.users.findFirst({ where: eq(users.id, userId) });
-    // An account that never finished onboarding has nothing to show, and no name to show it under.
-    if (!row || row.onboardedAt === null) throw notFound('No such profile');
+    // An account that never finished onboarding has nothing to show, and no name to show it
+    // under. Real people and dev accounts can't see each other.
+    if (!row || row.onboardedAt === null || !sameWorld(req.user, row))
+      throw notFound('No such profile');
     const now = clock();
     const settings = settingsOf(row);
     const you = row.id === req.user.id;
@@ -170,7 +173,13 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
           }
         : null,
       heatmap: showStats
-        ? studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS })
+        ? studyHeatmap({
+            sessions,
+            timezone: tz,
+            now,
+            weeks: PROFILE_HEATMAP_WEEKS,
+            since: row.createdAt.toISOString(),
+          })
         : null,
       weekday: showStats ? weekdayProfile(sessions, tz) : null,
       badges: showStats ? topBadges(held) : null,
