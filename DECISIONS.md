@@ -2077,6 +2077,22 @@ Two changes from the owner: of "Text on the video", "this should be after the se
 - Computers are unchanged: the sidebar or top bar still lists every page, and a crowded top bar still turns into the all-pages icon bar.
 - Still no "More" menu: every page is two taps away at most, inside the place it belongs to.
 
+## The timelapse comes out compressed, with a resolution slider, 2026-10-22 (owner request)
+
+"Auto compress video after processing then also add option to reduce resolution of video", then: "use percentages to reduce resolution", "a slider but just have the minimum be something reasonable and stop at that depending on their camera", "have a minimum height and length ... dont have anything unreasonable", and "make these rules hidden ... just stop the slider at a minimum and say they reached the minimum compression".
+
+- **Every video is compressed.** It used to be encoded at 8 Mbps, about 1 MB for each second (a 30 s video near 30 MB). It is now encoded at the bitrate its size needs, `timelapseBitrate` in core: 2.5 Mbps at 1280 × 720 and 30 fps, less for a smaller picture (not in step with its pixels, since a small picture needs more bits for each one), a little more at a higher frame rate, never under 300 kbps. Measured in the sandbox: 2.9 Mbps at full size (a third of before), 1.0 Mbps at 640 × 360.
+  - It is done in the one encode rather than a second pass after the video is made: the same smaller file without encoding twice, so it is quicker and loses nothing to a second round of compression. The MediaRecorder fallback records at the same rate.
+  - The size note in Settings and on the focus screen ("The video ends up around ...") follows: about 13 MB for an auto-length video, from 40.
+  - Under the made video, its size in pixels and its weight: "1280 × 720 · 9 MB".
+  - The Social preview's "Compress and post" stays for a video that is still over the limit.
+- **Resolution, in percent.** A Resolution slider under frames per second, on the "Your timelapse" card and in both presets in Settings › Timelapse, saved on the preset like the length and frame rate (`resolution`, 1-100, 100 by default; the API takes whole percents). Beside it, the percent and the size it makes: "75% · 960 × 540". 100% is today's 1280 px on the long side.
+- **The floor, never explained.** The slider stops at the smallest the video may be and says only "That's as small as it goes." The rules, in `minTimelapseResolution`, stay out of the app's words, as asked:
+  - Both sides keep a minimum for the video's shape: 360 px on the short side and 640 on the long. For 16:9 and 9:16 that is 50% (640 × 360, 360 × 640); a very wide screen shape may stop higher.
+  - When this browser remembers the camera's size (now kept beside its shape, `komogon.timelapse.cameraWidth` / `cameraHeight`, whenever the camera starts) and the camera records smaller than the minimum, the floor drops to the camera's own size, never below it: a 320 × 180 camera can go to 25%. A camera that hasn't been seen leaves the plain minimum.
+  - The render clamps the same way, so a percentage saved on another device or for another shape can't make anything smaller.
+- Checked in the sandbox with a fake 1280 × 720 camera: the card's slider (100% to 50%, the line at the stop, saved), videos made at 100% (1280 × 720, 1.0 MB for 2.8 s) and 50% (640 × 360, 373 KB), a remembered 320 × 180 camera moving the stop to 25% (320 × 180, 134 KB), and both presets in Settings.
+
 ## Our own "Continue with Google" button, 2026-10-22 (owner's request)
 
 "When it goes continue with zachary or whatever it looks ugly, just make your own button", with a screenshot of a light grey pill as the look. Google's ready-made button (Identity Services) can't be restyled, turns into "Continue as <name>" with a picture once Google knows you, and on our dark page sat in a white box.

@@ -1,8 +1,10 @@
 import {
   applyTimelapseStyle,
   aspectRatio,
+  clampTimelapseResolution,
   cleanNoteText,
   fmtBytes,
+  minTimelapseResolution,
   LIVE_CLIP_MAX_SECONDS,
   phoneAspectRatio,
   planTimelapse,
@@ -11,12 +13,16 @@ import {
   postElsewhereNote,
   TIMELAPSE_DEFAULT_STILL_BYTES,
   timelapseLook,
+  timelapseOutputSize,
   timelapseSizeEstimate,
   trimIndices,
+  type CameraSize,
   type PostPlatform,
+  type TimelapseAspect,
   type TimelapseDevice,
   type TimelapseLengthMode,
   type TimelapseOptions,
+  type TimelapseOrientation,
   type TimelapsePreset,
   type UserSettings,
 } from '@komogon/core';
@@ -52,6 +58,7 @@ import {
   freeStorageBytes,
   isClipStill,
   knownCameraRatio,
+  knownCameraSize,
   liveMarks,
   knownScreenRatio,
   measuredScreenBytes,
@@ -98,6 +105,18 @@ export function presetPatch(
 /** The preset a device records with. */
 export const presetOf = (settings: UserSettings, device: TimelapseDevice): TimelapsePreset =>
   device === 'phone' ? settings.timelapsePhone : settings.timelapse;
+
+/** The shape a video of this aspect comes out in, from what this browser knows of the camera. */
+function videoRatio(
+  aspect: TimelapseAspect,
+  device: TimelapseDevice,
+  o: TimelapseOrientation = 'upright',
+): number {
+  const camera = knownCameraRatio();
+  return device === 'phone'
+    ? phoneAspectRatio(aspect, o, camera)
+    : aspectRatio(aspect, camera, knownScreenRatio());
+}
 
 /**
  * A link to the timelapse settings, opened at a device's preset when given. From the focus
@@ -453,7 +472,12 @@ export function TimelapseSettings({
         </p>
       )}
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
-      <LengthFields value={value} onChange={set} />
+      <LengthFields
+        value={value}
+        onChange={set}
+        ratio={videoRatio(value.aspect, device)}
+        camera={knownCameraSize()}
+      />
       <SizeNote options={value} screen={device === 'computer' && value.layout.screen.visible} />
       <Toggle
         checked={value.recordBreaks}
@@ -611,10 +635,16 @@ interface LengthFieldsProps {
   onChange: (p: Partial<TimelapsePreset>) => void;
   /** The most frames per second the stills can fill, once there are some. */
   maxFps?: number;
+  /** The video's shape and the camera's size, which decide how small it can be made. */
+  ratio: number;
+  camera: CameraSize | null;
 }
 
-/** Auto, a set length, or a speed, and the frame rate. Shared by the settings and the export. */
-function LengthFields({ value, onChange, maxFps = 60 }: LengthFieldsProps) {
+/**
+ * Auto, a set length, or a speed, the frame rate and the resolution. Shared by the settings
+ * and the export.
+ */
+function LengthFields({ value, onChange, maxFps = 60, ratio, camera }: LengthFieldsProps) {
   const fpsMax = Math.max(1, Math.min(60, maxFps));
   return (
     <>
@@ -673,7 +703,74 @@ function LengthFields({ value, onChange, maxFps = 60 }: LengthFieldsProps) {
           onChange={(v) => onChange({ fps: Math.round(v) })}
         />
       </label>
+      <ResolutionField
+        value={value.resolution}
+        ratio={ratio}
+        camera={camera}
+        onChange={(resolution) => onChange({ resolution })}
+      />
     </>
+  );
+}
+
+/**
+ * How big the video is made, in percent of full size, with the size in pixels. The slider
+ * stops at the smallest the video's shape and camera allow (`minTimelapseResolution`) and
+ * says so, without saying why (owner, 2026-10-22). It answers at once; the setting is saved
+ * once it settles.
+ */
+function ResolutionField({
+  value,
+  ratio,
+  camera,
+  onChange,
+}: {
+  value: number;
+  ratio: number;
+  camera: CameraSize | null;
+  onChange: (percent: number) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  const dirty = useRef(false);
+  // A change from elsewhere (the other tab, a refetch) shows unless this one is mid-drag.
+  useEffect(() => {
+    if (!dirty.current) setDraft(value);
+  }, [value]);
+  useEffect(() => {
+    if (!dirty.current) return;
+    const id = window.setTimeout(() => {
+      dirty.current = false;
+      if (draft !== value) onChange(draft);
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [draft, value, onChange]);
+  const min = minTimelapseResolution(ratio, camera);
+  const shown = clampTimelapseResolution(draft, ratio, camera);
+  const { w, h } = timelapseOutputSize(ratio, shown, camera);
+  const labelId = useId();
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="flex justify-between field-hint">
+        <span id={labelId}>Resolution</span>
+        <span className="tabular">
+          {shown}% · {w} × {h}
+        </span>
+      </span>
+      <Slider
+        min={min}
+        max={100}
+        step={1}
+        value={shown}
+        disabled={min >= 100}
+        aria-labelledby={labelId}
+        aria-valuetext={`${shown}%, ${w} by ${h}`}
+        onChange={(v) => {
+          dirty.current = true;
+          setDraft(Math.round(v));
+        }}
+      />
+      {shown <= min && <span className="field-hint">That’s as small as it goes.</span>}
+    </div>
   );
 }
 
@@ -749,6 +846,8 @@ export function TimelapseExport({
     mime: string;
     blob: Blob;
     seconds: number;
+    w: number;
+    h: number;
   } | null>(null);
   const [played, setPlayed] = useState<{ url: string; seconds: number } | null>(null);
   const abort = useRef<AbortController | null>(null);
@@ -837,7 +936,7 @@ export function TimelapseExport({
     setProgress(0);
     const using = { ...look, ...changes };
     try {
-      const { blob, mime } = await renderTimelapse(
+      const { blob, mime, w, h } = await renderTimelapse(
         recorder.stills().slice(startAt, endAt),
         plan,
         using,
@@ -849,6 +948,8 @@ export function TimelapseExport({
         mime,
         blob,
         seconds: plan.durationSeconds,
+        w,
+        h,
       });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
@@ -1000,6 +1101,9 @@ export function TimelapseExport({
               if (Number.isFinite(seconds) && seconds > 0) setPlayed({ url: video.url, seconds });
             }}
           />
+          <p className="field-hint tabular">
+            {video.w} × {video.h} · {fmtBytes(video.blob.size)}
+          </p>
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={() => void download()}>
               <Download size={14} aria-hidden /> Save the video
@@ -1088,6 +1192,8 @@ export function TimelapseExport({
             value={value}
             onChange={(p) => onChange(presetPatch(device, p))}
             maxFps={plan.maxFps}
+            ratio={videoRatio(look.aspect, device, upright ? 'upright' : 'sideways')}
+            camera={knownCameraSize()}
           />
           {/* Written after the session, so only once the recording has stopped. */}
           {!recording && <NoteField value={noteText} onChange={setNoteText} />}

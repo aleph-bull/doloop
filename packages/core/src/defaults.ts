@@ -155,6 +155,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     breakClock: 'break',
     // The camera's own shape, measured once it is seen.
     aspect: 'camera',
+    resolution: 100,
     dim: 0.5,
     layout: defaultTimelapseLayout(16 / 9),
     noteText: '',

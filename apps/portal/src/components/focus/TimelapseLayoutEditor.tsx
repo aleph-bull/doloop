@@ -45,7 +45,7 @@ import {
   knownCameraRatio,
   knownFacing,
   knownScreenRatio,
-  rememberCameraRatio,
+  rememberCamera,
   timeOfDayText,
 } from '../../lib/timelapse';
 import {
@@ -411,7 +411,7 @@ export function TimelapseLayoutEditor({
       setCameraState('idle');
       const r = video.videoWidth && video.videoHeight ? video.videoWidth / video.videoHeight : null;
       if (r) {
-        rememberCameraRatio(video.videoWidth, video.videoHeight);
+        rememberCamera(video.videoWidth, video.videoHeight);
         setCameraRatio(r);
       }
       return r;

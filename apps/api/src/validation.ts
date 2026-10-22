@@ -249,6 +249,8 @@ const timelapsePreset = {
   deflicker: z.boolean(),
   recordBreaks: z.boolean(),
   breakClock: z.enum(['break', 'running']),
+  // Percent of full size; the portal stops it higher for the video's shape and camera.
+  resolution: z.number().int().min(1).max(100),
   dim: z.number().min(0).max(0.9),
   layout: timelapseLayout,
   // TIMELAPSE_NOTE_MAX in core; empty leaves the text off the video.

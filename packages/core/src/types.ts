@@ -335,6 +335,11 @@ export interface TimelapsePreset {
   /** The video's shape; 'camera' follows the camera's own. */
   aspect: TimelapseAspect;
   /**
+   * How big the video is made, in percent of the full size (1280 px on its long side). It
+   * is never made smaller than its shape allows (`clampTimelapseResolution`).
+   */
+  resolution: number;
+  /**
    * How far the focus screen darkens while it records and nobody is touching it, 0 (not at
    * all) to 0.9. A black layer over the page, not the display's own brightness, which a web
    * page can't change; never in the video.

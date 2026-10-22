@@ -605,8 +605,9 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   the frame is pushed back in.
 - **Add back:** removed pieces wait as chips under the preview. The screen starts there.
 - **Shape:** Match camera (the default), Match screen, 16:9, 9:16, 1:1, 4:5, 4:3. The video
-  is 1280 px on its long side. The camera's and screen's shapes are remembered in
-  localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`); the screen falls back to
+  is 1280 px on its long side at full size (see Resolution below). The camera's and screen's
+  shapes are remembered in localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`;
+  the camera's size too, `cameraWidth` / `cameraHeight`); the screen falls back to
   the monitor's shape (`window.screen`), which needs no permission. The screen box keeps the
   screen's shape, refits when the video's shape changes, and has "Fit the screen to its
   shape". A layout still at a shape's starting places moves to the new shape's defaults; an
@@ -625,6 +626,14 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   strip of stills with a handle at each end, a playhead and play; "Keep it all" to undo),
   the length settings, the text on the video (once the recording has stopped), then Make
   the video.
+- **Resolution and compression** (2026-10-22, `timelapse-output.ts` in core): a
+  Resolution slider (percent of full size, `resolution` on each preset) sits under frames
+  per second, on the card and in Settings, and the made video shows its size and weight
+  under it. The slider stops at a floor it never explains (owner's rule): 360 px on the
+  short side and 640 on the long, lowered to the camera's own size when the remembered
+  camera records smaller (`minTimelapseResolution`). The render clamps the same way. Every
+  video is encoded compressed in one pass at `timelapseBitrate` for its size (2.5 Mbps at
+  1280 × 720 and 30 fps, was 8 Mbps), rather than made big and re-encoded after.
 - The trim is held in session seconds, not still indices, because thinning halves the
   stills while recording; an end never moved follows the recording as it grows. The viewer
   keeps its decoded stills by still for the same reason.
@@ -632,7 +641,7 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
   the frame. The mark is black or white, picked from the brightness behind it on frame 30.
   Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
-  elsewhere MediaRecorder records the canvas in real time. The person can download it,
+  elsewhere MediaRecorder records the canvas in real time; both at `timelapseBitrate`. The person can download it,
   "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still), or post it
   on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone the share sheet carries the
   video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
