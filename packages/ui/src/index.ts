@@ -4,7 +4,7 @@ export { Button, type ButtonProps, type ButtonVariant } from './components/Butto
 export { Field, Input, Select, Textarea } from './components/Field';
 export { Toggle } from './components/Toggle';
 export { Reveal, type RevealProps } from './components/Reveal';
-export { Modal, type ModalProps } from './components/Modal';
+export { Modal, type ModalProps, useVisualViewportFit } from './components/Modal';
 export {
   Chip,
   EmptyState,

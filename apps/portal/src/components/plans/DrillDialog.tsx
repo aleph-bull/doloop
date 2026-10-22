@@ -73,6 +73,7 @@ export function DrillDialog({ open, onClose, topicTitle, busy, onLog }: DrillDia
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title={`Drill: ${topicTitle}`}

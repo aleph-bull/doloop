@@ -184,6 +184,26 @@ describe('settings: timelapse', () => {
     expect(offFrame.statusCode).toBe(400);
   });
 
+  it('dims each preset by its own amount, no further than 90%', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.timelapse.dim).toBe(0.5);
+    expect(me.json().user.settings.timelapsePhone.dim).toBe(0.7);
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { dim: 0 }, timelapsePhone: { dim: 0.85 } },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().settings.timelapse.dim).toBe(0);
+    expect(ok.json().settings.timelapsePhone.dim).toBe(0.85);
+    const tooDark = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapsePhone: { dim: 1 } },
+    });
+    expect(tooDark.statusCode).toBe(400);
+  });
+
   it('keeps a phone preset of its own, with a shape for each way the phone is held', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
     const phone = me.json().user.settings.timelapsePhone;

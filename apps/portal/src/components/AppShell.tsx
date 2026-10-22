@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+﻿import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { levelProgress, type UserSettings } from '@komogon/core';
 import {
@@ -23,12 +23,13 @@ import {
   type LucideIcon,
   Route as RouteIcon,
 } from 'lucide-react';
-import { Backdrop, Glass, LogoMark } from '@komogon/ui';
+import { Backdrop, Glass, LogoMark, Spinner } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
+import { preloadPage, preloadPages } from '../lib/page-loaders';
 import { useAvatar, useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
@@ -96,6 +97,32 @@ const links: Array<{
 
 const PIN_KEY = 'komogon.rail.pinned';
 
+/** True when `path` is the page `to` or somewhere under it; the dashboard only matches itself. */
+function isUnder(path: string, to: string): boolean {
+  return to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`);
+}
+
+/**
+ * Where the nav says you are. A navigation is a React transition, so the location only
+ * moves once the next page has rendered; until then a tapped tab would sit there as if the
+ * tap had missed. The tap is shown at once instead: `go` records it, and it holds until the
+ * location moves.
+ */
+function useNavTarget(): { target: string; go: (to: string, event: React.MouseEvent) => void } {
+  const { pathname } = useLocation();
+  const [pending, setPending] = useState<{ from: string; to: string } | null>(null);
+  const go = useCallback(
+    (to: string, event: React.MouseEvent) => {
+      const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+      if (event.button !== 0 || modified) return;
+      setPending({ from: pathname, to });
+    },
+    [pathname],
+  );
+  const target = pending && pending.from === pathname ? pending.to : pathname;
+  return { target, go };
+}
+
 /** Whether the sidebar is pinned open, remembered in this browser only. */
 function usePinnedRail(): [boolean, (v: boolean) => void] {
   const [pinned, set] = useState(() => {
@@ -155,23 +182,38 @@ function RailLink({
   to,
   label,
   icon: Icon,
-  end,
-  children,
+  active,
+  onGo,
 }: {
   to: string;
   label: string;
   icon: LucideIcon;
-  end?: boolean;
-  children?: React.ReactNode;
+  active: boolean;
+  onGo: (to: string, event: React.MouseEvent) => void;
 }) {
   return (
-    <NavLink to={to} end={end} className="sidenav-link" title={label}>
+    <Link
+      to={to}
+      className="sidenav-link"
+      title={label}
+      aria-current={active ? 'page' : undefined}
+      onPointerDown={() => preloadPage(to)}
+      onClick={(e) => onGo(to, e)}
+    >
       <span className="sidenav-icon" aria-hidden>
         <Icon size={19} strokeWidth={1.9} />
       </span>
       <span className="sidenav-label">{label}</span>
-      {children}
-    </NavLink>
+    </Link>
+  );
+}
+
+/** A page whose code is still loading: nothing for a moment, so a quick load never flashes a spinner. */
+function PageLoading() {
+  return (
+    <div className="page-loading" role="status" aria-label="Loading">
+      <Spinner />
+    </div>
   );
 }
 
@@ -316,6 +358,11 @@ export function AppShell() {
     if (pinned && event.currentTarget.closest('.sidenav')?.matches(':hover')) setResting(true);
   };
   const location = useLocation();
+  const { target, go } = useNavTarget();
+
+  // Warm up the nav's pages once things are quiet, so a tap rarely waits for a download.
+  const shownKey = shown.map((l) => l.to).join(' ');
+  useEffect(() => preloadPages([...shownKey.split(' '), '/settings', '/profile']), [shownKey]);
 
   // The page's left margin follows the sidebar, so the layout reads it from the root.
   useEffect(() => {
@@ -356,12 +403,13 @@ export function AppShell() {
   // Move on the click itself: waiting for the route to commit would stall the slide
   // behind however long the next page takes to render.
   const onNavClick = useCallback(
-    (event: React.MouseEvent<HTMLAnchorElement>) => {
+    (to: string, event: React.MouseEvent<HTMLAnchorElement>) => {
+      go(to, event);
       const modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
       if (event.button !== 0 || modified) return;
       placeIndicator(event.currentTarget);
     },
-    [placeIndicator],
+    [go, placeIndicator],
   );
 
   // When the bar is too narrow for every tab, the tabs scroll sideways, with an arrow on
@@ -446,18 +494,23 @@ export function AppShell() {
   ]);
 
   // The bars firm up as the page scrolls under them, so text passing behind stays legible;
-  // at the top they keep their usual glass. 0 at the top, 1 after the first 80px.
+  // at the top they keep their usual glass. 0 at the top, 1 after the first 80px. Written on
+  // the bars themselves: on the root, every scrolled frame restyled the whole page.
+  const headerRef = useRef<HTMLElement | null>(null);
+  const tabbarRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    const root = document.documentElement;
+    let last = '';
     // Scroll events already arrive once per frame, so this writes straight through.
-    const update = () =>
-      root.style.setProperty('--scroll-fade', String(Math.min(1, window.scrollY / 80)));
+    const update = () => {
+      const fade = String(Math.round(Math.min(1, window.scrollY / 80) * 100) / 100);
+      if (fade === last) return;
+      last = fade;
+      headerRef.current?.style.setProperty('--scroll-fade', fade);
+      tabbarRef.current?.style.setProperty('--scroll-fade', fade);
+    };
     update();
     window.addEventListener('scroll', update, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', update);
-      root.style.removeProperty('--scroll-fade');
-    };
+    return () => window.removeEventListener('scroll', update);
   }, []);
 
   useEffect(() => {
@@ -515,7 +568,14 @@ export function AppShell() {
           </NavLink>
           <nav className="sidenav-group">
             {main.map((l) => (
-              <RailLink key={l.to} to={l.to} label={l.label} icon={l.icon} end={l.to === '/'} />
+              <RailLink
+                key={l.to}
+                to={l.to}
+                label={l.label}
+                icon={l.icon}
+                active={isUnder(target, l.to)}
+                onGo={go}
+              />
             ))}
           </nav>
           {more.length > 0 && (
@@ -523,7 +583,14 @@ export function AppShell() {
               <div className="sidenav-divider" aria-hidden />
               <nav className="sidenav-group" aria-label="More pages">
                 {more.map((l) => (
-                  <RailLink key={l.to} to={l.to} label={l.label} icon={l.icon} />
+                  <RailLink
+                    key={l.to}
+                    to={l.to}
+                    label={l.label}
+                    icon={l.icon}
+                    active={isUnder(target, l.to)}
+                    onGo={go}
+                  />
                 ))}
               </nav>
             </>
@@ -539,7 +606,15 @@ export function AppShell() {
                 toNext={lp?.toNext ?? 0}
               />
             )}
-            {isAdmin && <RailLink to="/admin" label="Admin" icon={ShieldCheck} />}
+            {isAdmin && (
+              <RailLink
+                to="/admin"
+                label="Admin"
+                icon={ShieldCheck}
+                active={isUnder(target, '/admin')}
+                onGo={go}
+              />
+            )}
             {FEEDBACK_URL && (
               <a
                 href={FEEDBACK_URL}
@@ -554,7 +629,13 @@ export function AppShell() {
                 <span className="sidenav-label">Send feedback</span>
               </a>
             )}
-            <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
+            <RailLink
+              to="/settings"
+              label="Settings"
+              icon={SettingsIcon}
+              active={isUnder(target, '/settings')}
+              onGo={go}
+            />
             {/*
               Your profile takes the sign-out row; signing out is on the profile itself. With
               Social off there is no profile, so Sign out is back (and always for a dev account).
@@ -598,7 +679,7 @@ export function AppShell() {
         </aside>
       )}
 
-      <header className="nav chrome">
+      <header ref={headerRef} className="nav chrome">
         <div className="nav-inner">
           <NavLink to="/" className="brand" aria-label="Komodon home">
             <span className="brand-logo" aria-hidden>
@@ -638,15 +719,16 @@ export function AppShell() {
                 aria-hidden
               />
               {shown.map((l) => (
-                <NavLink
+                <Link
                   key={l.to}
                   to={l.to}
-                  end={l.to === '/'}
                   className="nav-link"
-                  onClick={onNavClick}
+                  aria-current={isUnder(target, l.to) ? 'page' : undefined}
+                  onPointerDown={() => preloadPage(l.to)}
+                  onClick={(e) => onNavClick(l.to, e)}
                 >
                   {l.label}
-                </NavLink>
+                </Link>
               ))}
             </nav>
             {overflow.right && (
@@ -719,23 +801,25 @@ export function AppShell() {
       </header>
 
       {/* Phones, and a crowded top bar: every page as an icon, and the one you are on widens
-          to show its name. */}
-      <nav className="tabbar chrome" aria-label="Primary">
+          to show its name. The tap moves the highlight straight away; the page follows. */}
+      <nav ref={tabbarRef} className="tabbar chrome" aria-label="Primary">
         {shown.map((l) => (
-          <NavLink
+          <Link
             key={l.to}
             to={l.to}
-            end={l.to === '/'}
             className="tabbar-link"
             aria-label={l.label}
+            aria-current={isUnder(target, l.to) ? 'page' : undefined}
+            onPointerDown={() => preloadPage(l.to)}
+            onClick={(e) => go(l.to, e)}
           >
             <span className="tabbar-icon" aria-hidden>
               <l.icon size={21} strokeWidth={1.9} />
             </span>
             <span className="tabbar-label" aria-hidden>
-              {l.short}
+              <span>{l.short}</span>
             </span>
-          </NavLink>
+          </Link>
         ))}
       </nav>
 
@@ -747,9 +831,13 @@ export function AppShell() {
           </Glass>
         )}
         <ErrorBoundary>
-          {/* Keyed by route so each page rises in as it arrives. */}
+          {/* Keyed by route so each page rises in as it arrives. A page whose code is still
+              on its way shows a quiet spinner here, inside the shell, rather than holding the
+              old page on screen. */}
           <div key={location.pathname} className="route-in">
-            <Outlet />
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
           </div>
         </ErrorBoundary>
       </main>

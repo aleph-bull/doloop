@@ -7,6 +7,36 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  /* Phones: no grey flash on every tap (controls have their own pressed look), and no text
+     inflating when the phone turns sideways. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* No double-tap zoom on controls, so quick taps on a stepper or a tab never zoom the page. */
+a,
+button,
+input,
+select,
+textarea,
+label,
+summary,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/*
+ * A text field under 16px makes iOS Safari zoom the page in when it gets focus, and the page
+ * stays zoomed after (the new-session sheet ran off the side of the phone that way). On
+ * touch screens every field is at least 16px.
+ */
+@media (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
 }
 
 body {
@@ -28,6 +58,13 @@ textarea {
   font: inherit;
   color: inherit;
   letter-spacing: inherit;
+}
+/* A field in a row gives way like anything else, rather than holding its built-in width
+   (which grows with the font, and pushed a row's button out of its card on phones). */
+input,
+select,
+textarea {
+  min-width: 0;
 }
 
 h1,
@@ -760,6 +797,20 @@ a:hover {
   margin-top: var(--space-6);
   flex-wrap: wrap;
 }
+/* A full-screen sheet on a computer: the same card, with its title in a row. */
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.modal-head .modal-title {
+  flex: 1;
+  min-width: 0;
+}
+.modal-close {
+  display: none;
+}
+
 /* On a phone the sheet rises from the bottom edge, as wide as the screen. */
 @media (max-width: 560px) {
   .modal {
@@ -770,10 +821,12 @@ a:hover {
   }
   .modal-body {
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    padding: var(--space-5) var(--space-5) calc(var(--space-6) + env(safe-area-inset-bottom));
+    padding: var(--space-5) max(var(--space-5), env(safe-area-inset-right))
+      calc(var(--space-6) + env(safe-area-inset-bottom))
+      max(var(--space-5), env(safe-area-inset-left));
     border-bottom: none;
   }
-  .modal-body::after {
+  .modal:not(.modal-full) .modal-body::after {
     content: '';
     position: absolute;
     top: 7px;
@@ -796,6 +849,112 @@ a:hover {
     }
   }
   @keyframes modal-out {
+    to {
+      transform: translateY(100%);
+    }
+  }
+  /* Sliding up, a spring would overshoot and show a gap under the sheet: ease like iOS does. */
+  .modal[open] {
+    animation-duration: 380ms;
+    animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .modal[open].is-closing {
+    animation-duration: 260ms;
+    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  /*
+   * A full-screen sheet: a page of its own over the app. The title bar and the actions stay
+   * put and only the middle scrolls. It fits the visible part of the screen (--vv-height,
+   * set while open), so with the keyboard up the actions ride just above it.
+   */
+  .modal.modal-full {
+    width: 100%;
+    max-width: none;
+    height: var(--vv-height, 100dvh);
+    max-height: none;
+    margin: 0;
+    transform: translateY(var(--vv-top, 0px));
+    border-radius: 0;
+    overflow: hidden;
+  }
+  .modal.modal-full[open] {
+    animation-name: modal-full-in;
+  }
+  .modal.modal-full[open].is-closing {
+    animation-name: modal-full-out;
+  }
+  .modal-full .modal-body {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    /* It covers the whole screen, so nothing shows through to blur. */
+    background: var(--glass-solid);
+    backdrop-filter: none;
+  }
+  .modal-full .modal-head {
+    flex: none;
+    min-height: 56px;
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 8px
+      max(20px, env(safe-area-inset-left));
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-full .modal-title {
+    margin: 0;
+    font-size: var(--text-lg);
+    line-height: 1.25;
+  }
+  .modal-close {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--fg) 8%, transparent);
+    color: var(--fg);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+  }
+  .modal-close:active {
+    background: color-mix(in srgb, var(--fg) 16%, transparent);
+  }
+  .modal-full .modal-content {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: var(--space-5) max(var(--space-5), env(safe-area-inset-right)) var(--space-6)
+      max(var(--space-5), env(safe-area-inset-left));
+  }
+  .modal-full .modal-actions {
+    flex: none;
+    margin: 0;
+    padding: 12px max(var(--space-5), env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom)) max(var(--space-5), env(safe-area-inset-left));
+    border-top: 1px solid var(--border);
+  }
+  .modal-full .modal-actions > .btn {
+    min-height: 48px;
+  }
+  @keyframes modal-full-in {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(var(--vv-top, 0px));
+    }
+  }
+  @keyframes modal-full-out {
+    from {
+      transform: translateY(var(--vv-top, 0px));
+    }
     to {
       transform: translateY(100%);
     }

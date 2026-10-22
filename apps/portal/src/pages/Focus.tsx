@@ -23,7 +23,7 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
   accentHexFor,
@@ -70,7 +70,8 @@ import {
   type CameraFacing,
   type TimelapseRecorder,
 } from '../lib/timelapse';
-import { PhoneCamera } from '../components/focus/PhoneCamera';
+import { FocusWake } from '../components/focus/FocusWake';
+import { PhoneCamera, type CameraView } from '../components/focus/PhoneCamera';
 import {
   presetOf,
   recorderProblem,
@@ -90,16 +91,19 @@ const STILL_SECONDS = 4;
 /** How long after the timer appears the audio prompt shows, so it never lands on a blank screen. */
 const PROMPT_DELAY_MS = 900;
 
-/** Controls appear on any input and fade once the hands are still. */
-function useStillness(): boolean {
+/**
+ * Controls appear on any input and fade once the hands are still. `wake` brings them back
+ * from code too, for a moment worth seeing (a break starting).
+ */
+function useStillness(): [visible: boolean, wake: () => void] {
   const [visible, setVisible] = useState(true);
   const lastMove = useRef(0);
+  const wake = useCallback(() => {
+    lastMove.current = Date.now();
+    setVisible(true);
+  }, []);
   useEffect(() => {
     lastMove.current = Date.now();
-    const wake = () => {
-      lastMove.current = Date.now();
-      setVisible(true);
-    };
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel'] as const;
     for (const ev of events) window.addEventListener(ev, wake, { passive: true });
     const id = window.setInterval(() => {
@@ -109,8 +113,30 @@ function useStillness(): boolean {
       for (const ev of events) window.removeEventListener(ev, wake);
       window.clearInterval(id);
     };
+  }, [wake]);
+  return [visible, wake];
+}
+
+const CAMERA_VIEW_KEY = 'komogon.focus.camera';
+
+/** The camera screen's view, the whole picture or a small circle, kept for next time. */
+function useCameraView(): [CameraView, (v: CameraView) => void] {
+  const [view, setView] = useState<CameraView>(() => {
+    try {
+      return localStorage.getItem(CAMERA_VIEW_KEY) === 'mini' ? 'mini' : 'full';
+    } catch {
+      return 'full';
+    }
+  });
+  const change = useCallback((v: CameraView) => {
+    setView(v);
+    try {
+      localStorage.setItem(CAMERA_VIEW_KEY, v);
+    } catch {
+      /* a convenience only */
+    }
   }, []);
-  return visible;
+  return [view, change];
 }
 
 /**
@@ -134,7 +160,8 @@ export function Focus() {
 
   const settings = me.data?.user.settings;
   const appearance = useAppearance(settings);
-  const chromeVisible = useStillness();
+  const [chromeVisible, wake] = useStillness();
+  const [cameraView, setCameraView] = useCameraView();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [summary, setSummary] = useState<EndSummary | null>(null);
   const [startOpen, setStartOpen] = useState(false);
@@ -332,8 +359,19 @@ export function Focus() {
 
   // Once per session, after the audio question if there is one: record, ask, or nothing.
   const sessionId = session?.session.id ?? null;
+  // On a phone the answer decides what the whole screen is, so it is settled before the
+  // first paint: "always" opens straight onto the camera, and "ask" puts the question up at
+  // once over the focus screen, rather than showing a layout for a second and then swapping
+  // it out from under the user. A phone has no audio question to wait for.
+  useLayoutEffect(() => {
+    if (!phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
+    if (!cameraSupported() || tlPending) return;
+    tlAskedFor.current = sessionId;
+    if (tl.record === 'always') setRecording(true);
+    else if (tl.record === 'ask') setTlAskOpen(true);
+  }, [phone, tl, sessionId, tlPending]);
   useEffect(() => {
-    if (!tl || !sessionId || tlAskedFor.current === sessionId) return;
+    if (phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
     if (askOpen || audio.state === 'requesting' || !cameraSupported()) return;
     // Last session's stills are still waiting to be saved; they come first.
     if (tlPending) return;
@@ -347,7 +385,14 @@ export function Focus() {
       else setTlAskOpen(true);
     }, PROMPT_DELAY_MS * 1.6);
     return () => window.clearTimeout(id);
-  }, [tl, sessionId, askOpen, audio.state, tlPending]);
+  }, [phone, tl, sessionId, askOpen, audio.state, tlPending]);
+
+  // A break starting or ending while it records: the screen wakes for a moment to show it.
+  useEffect(() => {
+    if (recording) wake();
+  }, [recording, inFocus, wake]);
+  /** How dark the resting screen goes: the preset's dim while a timelapse is recording. */
+  const restingDim = recording && recorder.live ? (preset?.dim ?? 0) : 0;
 
   // Unsaved stills live only in this tab: ask before it closes.
   useEffect(() => {
@@ -518,7 +563,8 @@ export function Focus() {
         </Link>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}
-        {recording && recorder.live && (
+        {/* Under the camera screen the camera has its own status; no second live preview. */}
+        {recording && recorder.live && !cameraScreen && (
           <TimelapseBadge
             recorder={recorder}
             capturing={inFocus}
@@ -585,6 +631,8 @@ export function Focus() {
                   facing,
                   onFlip: twoCameras ? flipCamera : undefined,
                   onStopRecording: () => setRecording(false),
+                  view: cameraView,
+                  onViewChange: setCameraView,
                 }
               : null
           }
@@ -640,6 +688,19 @@ export function Focus() {
         </main>
       )}
 
+      {/* Resting: the first touch only wakes the screen, and a recording dims it. */}
+      <FocusWake asleep={!chromeVisible && !sheetOpen} dim={restingDim} onWake={wake} />
+
+      {sheetOpen && (
+        // On a phone the controls rise as a sheet; a tap above it puts them away.
+        <button
+          type="button"
+          className="focus-sheet-scrim"
+          aria-label="Close controls"
+          tabIndex={-1}
+          onClick={() => setSheetOpen(false)}
+        />
+      )}
       {sheetOpen && (
         <Glass className="focus-sheet" strong role="dialog" aria-label="Focus screen controls">
           <div className="focus-sheet-head">
@@ -756,6 +817,8 @@ interface FocusSessionProps {
     facing: CameraFacing;
     onFlip?: () => void;
     onStopRecording: () => void;
+    view: CameraView;
+    onViewChange: (view: CameraView) => void;
   } | null;
   onEnded: (summary: EndSummary) => void;
 }

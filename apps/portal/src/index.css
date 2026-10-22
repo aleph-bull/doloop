@@ -30,26 +30,28 @@
 #root {
   overflow-x: clip;
 }
+/* The page reaches the screen's edges (viewport-fit=cover), so a phone held sideways keeps
+   its content clear of the notch through the safe-area insets. */
 .page {
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  padding: 28px 16px 96px;
+  padding: 28px max(16px, env(safe-area-inset-right)) 96px max(16px, env(safe-area-inset-left));
 }
 @media (min-width: 768px) {
   .page {
-    padding: 40px 28px 112px;
+    padding: 40px max(28px, env(safe-area-inset-right)) 112px max(28px, env(safe-area-inset-left));
   }
 }
 
-/* Each page rises in as it arrives. */
+/* Each page rises in as it arrives: quick, so a tab change never feels like it waits. */
 .route-in {
-  animation: route-in 420ms var(--ease-out) both;
+  animation: route-in 240ms var(--ease-out) both;
 }
 @keyframes route-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -406,9 +408,9 @@
 }
 @media (max-width: 767px) {
   .nav {
-    top: 8px;
-    margin-top: 8px;
-    width: calc(100% - 16px);
+    top: max(8px, env(safe-area-inset-top));
+    margin-top: max(8px, env(safe-area-inset-top));
+    width: calc(100% - 16px - env(safe-area-inset-left) - env(safe-area-inset-right));
   }
   .nav-inner {
     min-height: 52px;
@@ -420,7 +422,7 @@
  * tabs (data-tabbar, set in AppShell). Then the top bar keeps only the brand and controls.
  */
 :root[data-tabbar] {
-  --tabbar-clearance: 76px;
+  --tabbar-clearance: calc(76px + max(0px, env(safe-area-inset-bottom) - 18px));
 }
 :root[data-tabbar] .page {
   padding-bottom: calc(120px + env(safe-area-inset-bottom));
@@ -434,9 +436,10 @@
 :root[data-tabbar] .tabbar {
   position: fixed;
   z-index: 45;
-  left: 8px;
-  right: 8px;
-  bottom: calc(8px + env(safe-area-inset-bottom));
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  /* Clear of the home indicator without floating a whole inset above it. */
+  bottom: max(8px, calc(env(safe-area-inset-bottom) - 10px));
   display: flex;
   gap: 2px;
   padding: 5px;
@@ -455,47 +458,71 @@
     display: none;
   }
 }
-/* Every page is an icon; the current one widens into a pill with its name beside it. */
+/*
+ * Every page is an icon; the current one widens into a pill with its name beside it. Each tab
+ * is as wide as what it shows plus an equal share of the rest, so as the name slides open
+ * (its column going from 0fr to 1fr) the other tabs give way in step, with no jump. The
+ * highlight moves on the tap itself (AppShell's useNavTarget), before the page has rendered.
+ */
+:root[data-tabbar] .tabbar {
+  --tab-ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
 :root[data-tabbar] .tabbar-link {
   display: flex;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   align-items: center;
   justify-content: center;
-  gap: 7px;
   min-width: 0;
   height: 46px;
   padding: 0 6px;
   border-radius: 24px;
   color: var(--fg-muted);
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
   transition:
-    background var(--dur-base) var(--ease-out),
-    color var(--dur-fast) var(--ease-out);
+    background-color 260ms var(--ease-out),
+    color 160ms var(--ease-out),
+    padding 340ms var(--tab-ease);
 }
-/* The current page sizes to its name; the others share what is left. */
 :root[data-tabbar] .tabbar-link[aria-current='page'] {
-  flex: 0 0 auto;
   padding: 0 14px 0 12px;
+  color: var(--accent-text);
+  background-color: color-mix(in srgb, var(--fg) 10%, transparent);
 }
 :root[data-tabbar] .tabbar-link:hover {
   text-decoration: none;
 }
-:root[data-tabbar] .tabbar-link:active .tabbar-icon {
-  transform: scale(0.86);
+:root[data-tabbar] .tabbar-link:hover:not([aria-current='page']) {
+  color: var(--fg);
 }
-:root[data-tabbar] .tabbar-link[aria-current='page'] {
-  color: var(--accent-text);
-  background: color-mix(in srgb, var(--fg) 10%, transparent);
+:root[data-tabbar] .tabbar-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 :root[data-tabbar] .tabbar-icon {
   display: grid;
   place-items: center;
-  transition: transform var(--dur-base) var(--ease-spring);
+  flex: none;
+  transition: transform 180ms var(--ease-out);
+}
+/* Pressed: the icon gives a little under the finger, straight away. */
+:root[data-tabbar] .tabbar-link:active .tabbar-icon {
+  transform: scale(0.86);
+  transition-duration: 60ms;
 }
 :root[data-tabbar] .tabbar-label {
-  display: none;
+  display: grid;
+  grid-template-columns: 0fr;
+  min-width: 0;
+  opacity: 0;
+  transition:
+    grid-template-columns 340ms var(--tab-ease),
+    opacity 200ms var(--ease-out);
+}
+:root[data-tabbar] .tabbar-label > span {
   min-width: 0;
   overflow: hidden;
+  padding-left: 7px;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-sm);
@@ -503,7 +530,33 @@
   letter-spacing: 0;
 }
 :root[data-tabbar] .tabbar-link[aria-current='page'] .tabbar-label {
-  display: block;
+  grid-template-columns: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-columns 340ms var(--tab-ease),
+    opacity 260ms var(--ease-out) 60ms;
+}
+:root[data-motion='off'] .tabbar-link,
+:root[data-motion='off'] .tabbar-label,
+:root[data-motion='off'] .tabbar-link[aria-current='page'] .tabbar-label,
+:root[data-motion='off'] .tabbar-icon {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .tabbar-link,
+  :root:not([data-motion='on']) .tabbar-label,
+  :root:not([data-motion='on']) .tabbar-link[aria-current='page'] .tabbar-label,
+  :root:not([data-motion='on']) .tabbar-icon {
+    transition: none;
+  }
+}
+
+/* A page whose code is still on its way: a spinner, but only if it takes a moment. */
+.page-loading {
+  display: flex;
+  justify-content: center;
+  padding: 72px 0;
+  animation: fade-in 200ms var(--ease-out) 320ms both;
 }
 @media (max-width: 400px) {
   .brand > span:last-child {
@@ -1526,10 +1579,15 @@
   border-color: var(--accent);
 }
 @media (max-width: 520px) {
-  .tag-manager-new,
+  /* The row takes the card's width and the field whatever the button leaves: a field's own
+     width (wider at a phone's 16px) pushed the button past the card's edge. */
+  .tag-manager-new {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
   .tag-manager-input {
-    flex: 1 1 auto;
-    width: auto;
+    flex: 1 1 0;
+    width: 0;
   }
 }
 /* The tag menu: floats over the page beside the cell that opened it. */
@@ -1542,6 +1600,54 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   color: var(--fg);
+}
+/*
+ * On a phone, a sheet along the bottom of what is visible: above the keyboard while it is
+ * up (--vv-*, written by useVisualViewportFit), over a scrim that closes it.
+ */
+.tag-pop-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  background: var(--overlay-scrim);
+  animation: fade-in var(--dur-base) var(--ease-out);
+}
+.glass.tag-pop.is-sheet {
+  z-index: 47;
+  left: 0;
+  right: 0;
+  top: calc(var(--vv-top, 0px) + var(--vv-height, 100dvh));
+  transform: translateY(-100%);
+  max-height: min(70dvh, calc(var(--vv-height, 100dvh) - 48px));
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: tag-sheet-up 320ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.tag-pop.is-sheet .tag-pop-field {
+  min-height: 52px;
+  padding: 12px 16px;
+}
+.tag-pop.is-sheet .tag-pop-option {
+  min-height: 48px;
+}
+.tag-pop.is-sheet .tag-pop-more {
+  width: 38px;
+  height: 38px;
+}
+@keyframes tag-sheet-up {
+  from {
+    transform: translateY(0);
+  }
+}
+:root[data-motion='off'] .tag-pop.is-sheet,
+:root[data-motion='off'] .tag-pop-scrim {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .tag-pop.is-sheet,
+  :root:not([data-motion='on']) .tag-pop-scrim {
+    animation: none;
+  }
 }
 .tag-pop-field {
   display: flex;
@@ -2223,6 +2329,394 @@
   margin: auto 0;
   font-size: var(--text-sm);
   color: var(--fg-muted);
+}
+
+/*
+ * ---------- Starting a session on a phone ----------
+ * A screen of its own (Modal phone="full"): what to study as one large row, then how and
+ * how long, then Start pinned at the bottom. The row pushes a picker page over the screen,
+ * a list like the Settings app's, one level at a time.
+ */
+.ss-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ss-subject {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 14px 14px 18px;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ss-subject.is-empty {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.ss-subject:active:not(.is-locked) {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.ss-subject.is-locked {
+  cursor: default;
+}
+.ss-subject-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ss-subject-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.ss-subject-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ss-subject.is-empty .ss-subject-title {
+  color: var(--accent-text);
+  font-weight: 500;
+}
+.ss-subject-where {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-subject-chevron {
+  flex: none;
+  color: var(--fg-muted);
+}
+/* Choices fill the row in equal parts, tall enough for a thumb, and never scroll sideways. */
+.segmented.ss-seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  width: 100%;
+  overflow: visible;
+}
+.ss-seg .segmented-item {
+  min-height: 42px;
+  padding: 4px 6px;
+  font-size: var(--text-sm);
+  line-height: 1.15;
+  white-space: normal;
+}
+.ss-stepper {
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  align-items: center;
+  height: 56px;
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.ss-step {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ss-step:active:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+.ss-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ss-step-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+.ss-step-input {
+  width: 4ch;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font-size: 1.375rem;
+  font-weight: 600;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.ss-step-input::-webkit-inner-spin-button,
+.ss-step-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ss-step-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 6px;
+}
+.ss-step-unit {
+  margin-left: 0.3em;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.input.ss-time {
+  height: 52px;
+  font-size: 1.25rem;
+  text-align: center;
+}
+.ss-actions {
+  display: flex;
+  width: 100%;
+}
+.btn.ss-start {
+  flex: 1;
+  height: 52px;
+  font-size: var(--text-base);
+}
+
+/* The picker page slides in over the whole screen from the right, and back out the same way. */
+.ss-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--glass-solid);
+  transform: translateX(100%);
+  visibility: hidden;
+  transition:
+    transform 360ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s linear 360ms;
+}
+.ss-cover.is-open {
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 360ms cubic-bezier(0.32, 0.72, 0, 1),
+    visibility 0s;
+}
+.ss-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.ss-page-head {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  min-height: 56px;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px
+    max(6px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--border);
+}
+.ss-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  justify-self: start;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 8px 0 2px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+.ss-back:active {
+  opacity: 0.6;
+}
+.ss-page-title {
+  max-width: 52vw;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-align: center;
+}
+.ss-page-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+.ss-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.ss-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.ss-search-input {
+  width: 100%;
+  height: 42px;
+  padding: 0 40px 0 38px;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+  font: inherit;
+}
+.ss-search-input::placeholder {
+  color: var(--fg-subtle);
+}
+.ss-search-input:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent);
+}
+.ss-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.ss-search-clear {
+  position: absolute;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+/* One group of rows, hairlines between them, like a grouped table on iOS. */
+.ss-list {
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.ss-list > li + li {
+  border-top: 1px solid var(--border);
+}
+.ss-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 54px;
+  padding: 10px 14px 10px 16px;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ss-row:active {
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+.ss-row:focus-visible {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.ss-row-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--accent-text);
+}
+.ss-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ss-row-title {
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+}
+.ss-row.is-chosen .ss-row-title {
+  font-weight: 600;
+}
+.ss-row-sub {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ss-row-count {
+  flex: none;
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+.ss-row-chevron {
+  flex: none;
+  margin-left: -6px;
+  color: var(--fg-subtle);
+}
+.ss-row-check {
+  flex: none;
+  color: var(--accent-text);
+}
+.ss-empty {
+  padding: 18px 16px;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+/* A level opening slides in from the right; going back, the level above slides in from the left. */
+.ss-level[data-dir='in'] {
+  animation: ss-from-right 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.ss-level[data-dir='out'] {
+  animation: ss-from-left 300ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+@keyframes ss-from-right {
+  from {
+    transform: translateX(24%);
+    opacity: 0;
+  }
+}
+@keyframes ss-from-left {
+  from {
+    transform: translateX(-24%);
+    opacity: 0;
+  }
+}
+:root[data-motion='off'] .ss-cover,
+:root[data-motion='off'] .ss-cover.is-open {
+  transition: none;
+}
+:root[data-motion='off'] .ss-level {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .ss-cover,
+  :root:not([data-motion='on']) .ss-cover.is-open {
+    transition: none;
+  }
+  :root:not([data-motion='on']) .ss-level {
+    animation: none;
+  }
 }
 
 .settings-section {
@@ -3607,11 +4101,15 @@
  * light on it rather than a second product.
  */
 .focus-screen {
+  --focus-pad: clamp(14px, 3vw, 36px);
   position: fixed;
   inset: 0;
   display: flex;
   flex-direction: column;
-  padding: clamp(14px, 3vw, 36px);
+  padding: max(var(--focus-pad), env(safe-area-inset-top))
+    max(var(--focus-pad), env(safe-area-inset-right))
+    max(var(--focus-pad), env(safe-area-inset-bottom))
+    max(var(--focus-pad), env(safe-area-inset-left));
   color: var(--fg);
   overflow: hidden;
 }
@@ -3643,6 +4141,9 @@
   font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: 0.22em;
+  /* Letter spacing also trails the last letter, which pushed the centred word left of the
+     clock under it; the negative margin takes that trailing space back. */
+  margin-right: -0.22em;
   text-transform: uppercase;
   color: var(--fg-muted);
 }
@@ -3831,6 +4332,7 @@
 .focus-centre.is-bare .focus-phase {
   font-size: var(--text-base);
   letter-spacing: 0.28em;
+  margin-right: -0.28em;
 }
 .focus-link {
   display: inline-flex;
@@ -4047,17 +4549,77 @@
 /* The controls sheet, anchored under the gear. */
 .focus-sheet {
   position: absolute;
-  top: calc(clamp(14px, 3vw, 36px) + 44px);
-  right: clamp(14px, 3vw, 36px);
+  top: calc(max(var(--focus-pad), env(safe-area-inset-top)) + 44px);
+  right: max(var(--focus-pad), env(safe-area-inset-right));
   z-index: 3;
-  width: min(380px, calc(100vw - 2 * clamp(14px, 3vw, 36px)));
-  max-height: calc(100vh - clamp(14px, 3vw, 36px) * 2 - 52px);
+  width: min(380px, calc(100vw - 2 * var(--focus-pad)));
+  max-height: calc(100dvh - var(--focus-pad) * 2 - 52px);
   overflow: auto;
+  overscroll-behavior: contain;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   animation: fade-in var(--dur-slow) var(--ease-out);
+}
+.focus-sheet-scrim {
+  display: none;
+}
+/*
+ * On a phone the controls rise from the bottom edge as a sheet, within reach of a thumb,
+ * over a scrim that closes them. A popover under the gear would sit at the far top corner.
+ */
+@media (max-width: 560px) {
+  .focus-sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    border: none;
+    padding: 0;
+    background: var(--overlay-scrim);
+    animation: fade-in var(--dur-base) var(--ease-out);
+  }
+  .focus-sheet {
+    position: fixed;
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: min(82dvh, 720px);
+    padding: 22px max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom))
+      max(20px, env(safe-area-inset-left));
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    border-bottom: none;
+    animation: focus-sheet-up 360ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .focus-sheet::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    width: 36px;
+    height: 5px;
+    margin-left: -18px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--fg) 22%, transparent);
+  }
+}
+@keyframes focus-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+:root[data-motion='off'] .focus-sheet,
+:root[data-motion='off'] .focus-sheet-scrim {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .focus-sheet,
+  :root:not([data-motion='on']) .focus-sheet-scrim {
+    animation: none;
+  }
 }
 .focus-sheet-head {
   display: flex;
@@ -5516,8 +6078,10 @@
 }
 
 /* The paste dialog: the list as it will be added, under the box it came from. */
-.paste-dialog {
-  max-width: min(680px, calc(100vw - 32px));
+@media (min-width: 561px) {
+  .paste-dialog {
+    max-width: min(680px, calc(100vw - 32px));
+  }
 }
 .paste-preview {
   display: flex;
@@ -6319,8 +6883,12 @@
  * Like saving a workout: what you did, big, then a few one-tap questions. Chips, not number
  * keys; a graded question fills its chips up to the one chosen.
  */
-.save-sheet {
-  max-width: min(600px, calc(100vw - 32px));
+/* Wider than a plain sheet on a computer. Not on a phone, where every sheet is the screen's
+   full width: a narrower one sat flush left with a gap down its right side. */
+@media (min-width: 561px) {
+  .save-sheet {
+    max-width: min(600px, calc(100vw - 32px));
+  }
 }
 .save {
   display: flex;
@@ -7107,11 +7675,20 @@
  * The camera screen: on a phone recording a timelapse, the focus screen is the live camera
  * with the timer on it. Always light text on the dark-ish picture, whatever the theme, and
  * it turns with the phone: controls along the bottom upright, down the right side sideways.
+ * A grid, not offsets: the top bar, then room, then the clock and the controls, each in its
+ * own row inside the safe area, so they can never run into each other on a small phone.
  */
 .pcam {
   position: fixed;
   inset: 0;
   z-index: 55;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto auto;
+  grid-template-areas: 'top' '.' 'info' 'dock';
+  row-gap: 22px;
+  padding: max(14px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right))
+    max(22px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
   overflow: hidden;
   background: #000;
   color: #fff;
@@ -7124,9 +7701,15 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.pcam-video.is-showing {
+  opacity: 1;
 }
 /* The front camera shows as a mirror, like the Camera app; the stills are not mirrored. */
-.pcam[data-facing='user'] .pcam-video {
+.pcam[data-facing='user'] .pcam-video,
+.pcam[data-facing='user'] .pcam-thumb video {
   transform: scaleX(-1);
 }
 /* A little darker while focus runs, back up for breaks and pauses. Never in the stills. */
@@ -7141,27 +7724,52 @@
 .pcam-dim.is-on {
   opacity: 1;
 }
-.pcam-top {
+/* The small view: a plain dark screen over the picture, which keeps playing under it. */
+.pcam-cover {
   position: absolute;
-  top: max(14px, env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
-  right: max(14px, env(safe-area-inset-right));
+  inset: 0;
+  background: #07080b;
+  opacity: 0;
+  transition: opacity 220ms var(--ease-out);
+  pointer-events: none;
+}
+.pcam.is-mini .pcam-cover {
+  opacity: 1;
+  transition-duration: 320ms;
+}
+.pcam-top {
+  grid-area: top;
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 .pcam-top-actions {
   display: inline-flex;
+  flex: none;
   gap: 8px;
+  margin-left: auto;
 }
 .pcam-rec {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 14px 7px 12px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 14px 0 12px;
   border-radius: var(--radius-pill);
   background: rgb(0 0 0 / 0.45);
   font-size: var(--text-sm);
+}
+.pcam-rec .timelapse-dot {
+  flex: none;
+}
+.pcam-rec-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pcam-rec .timelapse-dot.is-idle {
   background: rgb(255 255 255 / 0.55);
@@ -7169,7 +7777,8 @@
 .pcam-round,
 .pcam-shutter,
 .pcam-pill,
-.pcam-restart {
+.pcam-restart,
+.pcam-thumb {
   border: none;
   font: inherit;
   color: #fff;
@@ -7184,6 +7793,16 @@
   height: 46px;
   border-radius: 50%;
   background: rgb(0 0 0 / 0.42);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.pcam.is-mini .pcam-round:not(.is-stop) {
+  background: rgb(255 255 255 / 0.1);
+}
+.pcam-round:active:not(:disabled),
+.pcam-thumb:active {
+  transform: scale(0.92);
 }
 .pcam-round.is-stop {
   background: color-mix(in srgb, var(--status-bad) 72%, rgb(0 0 0 / 0.5));
@@ -7192,6 +7811,14 @@
 .pcam-shutter:disabled {
   opacity: 0.5;
   cursor: default;
+}
+.pcam-round:focus-visible,
+.pcam-shutter:focus-visible,
+.pcam-pill:focus-visible,
+.pcam-thumb:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  box-shadow: none;
 }
 /* The big round button where the Camera app has its shutter: pause and resume. */
 .pcam-shutter {
@@ -7207,18 +7834,44 @@
 .pcam-shutter:active {
   background: rgb(255 255 255 / 0.3);
 }
+/* The camera, small: a live circle in the left slot. A tap opens it again. */
+.pcam-thumb {
+  position: relative;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #000;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.85);
+  transition: transform var(--dur-fast) var(--ease-out);
+  animation: pcam-thumb-in 260ms var(--ease-out);
+}
+.pcam-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+@keyframes pcam-thumb-in {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
 .pcam-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 14px;
+  min-height: 38px;
+  padding: 0 14px;
   border-radius: var(--radius-pill);
   background: rgb(0 0 0 / 0.42);
   font-size: var(--text-sm);
 }
 .pcam-restart {
   position: absolute;
-  top: calc(max(14px, env(safe-area-inset-top)) + 64px);
+  top: calc(max(14px, env(safe-area-inset-top)) + 58px);
   left: 50%;
   transform: translateX(-50%);
   width: min(320px, calc(100% - 32px));
@@ -7229,14 +7882,13 @@
   line-height: 1.4;
 }
 .pcam-info {
-  position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 150px);
+  grid-area: info;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  min-width: 0;
   text-align: center;
   text-shadow: 0 1px 12px rgb(0 0 0 / 0.35);
   pointer-events: none;
@@ -7258,10 +7910,8 @@
   color: rgb(255 255 255 / 0.78);
 }
 .pcam-dock {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: max(22px, env(safe-area-inset-bottom));
+  grid-area: dock;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7269,23 +7919,31 @@
 }
 .pcam-extra {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
 }
+/* Three equal columns, so the shutter sits dead centre whatever is either side of it. */
 .pcam-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: center;
-  gap: 40px;
+  justify-items: center;
+  width: min(100%, 300px);
+}
+.pcam-controls > :first-child {
+  justify-self: center;
 }
 @media (orientation: landscape) {
-  /* The top buttons stand clear of the control column down the right side. */
-  .pcam-top {
-    right: calc(max(18px, env(safe-area-inset-right)) + 96px);
+  /* Sideways: the controls make a column at the right edge, the clock sits bottom left. */
+  .pcam {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas: 'top dock' '. dock' 'info dock';
+    column-gap: 24px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
   .pcam-info {
-    left: max(24px, env(safe-area-inset-left));
-    right: 140px;
-    bottom: max(20px, env(safe-area-inset-bottom));
     align-items: flex-start;
     text-align: left;
   }
@@ -7293,21 +7951,114 @@
     font-size: clamp(3.5rem, 15vh, 6rem);
   }
   .pcam-dock {
-    top: 0;
-    bottom: 0;
-    left: auto;
-    right: max(18px, env(safe-area-inset-right));
-    /* Skip break and +15 min sit to the left of the column, which stays at the edge. */
     flex-direction: row;
-    justify-content: center;
+    align-self: center;
   }
   .pcam-extra {
     flex-direction: column;
   }
   .pcam-controls {
-    flex-direction: column-reverse;
-    gap: 28px;
+    grid-template-columns: none;
+    grid-template-rows: 1fr auto 1fr;
+    width: auto;
+    height: min(100%, 300px);
+    row-gap: 24px;
   }
+  .pcam-controls > :first-child {
+    order: 3;
+  }
+  .pcam-controls > :last-child {
+    order: 1;
+  }
+  .pcam-controls > .pcam-shutter {
+    order: 2;
+  }
+}
+:root[data-motion='off'] .pcam-video,
+:root[data-motion='off'] .pcam-cover,
+:root[data-motion='off'] .pcam-thumb {
+  transition: none;
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .pcam-video,
+  :root:not([data-motion='on']) .pcam-cover,
+  :root:not([data-motion='on']) .pcam-thumb {
+    transition: none;
+    animation: none;
+  }
+}
+
+/*
+ * The resting focus screen. Once the controls fade, a layer over everything takes the first
+ * tap and only wakes the screen, so a touch on a dark screen never lands on Stop. While a
+ * timelapse records it also darkens the screen by the preset's dim. A black layer, since a
+ * page can't turn the display itself down; the camera's stills never see it.
+ */
+.focus-wake {
+  position: fixed;
+  inset: 0;
+  z-index: 57;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 260ms var(--ease-out);
+}
+.focus-wake.is-catching {
+  pointer-events: auto;
+  cursor: none;
+}
+.focus-wake.is-dim {
+  opacity: var(--focus-dim, 0);
+  transition: opacity 1200ms var(--ease-out);
+}
+:root[data-motion='off'] .focus-wake {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .focus-wake {
+    transition: none;
+  }
+}
+
+/* The dimming setting: a small clock beside the slider dims the same amount as it moves. */
+.dim-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.dim-row .slider {
+  flex: 1;
+  min-width: 0;
+}
+.dim-preview {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 56px;
+  height: 36px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #1d2030;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.dim-preview-time {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.dim-preview-shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+}
+.dim-value {
+  flex: none;
+  width: 3.2em;
+  text-align: right;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
 }
 
 /* The phone's trim, like the Photos app's: a viewer, then a strip of stills with handles. */

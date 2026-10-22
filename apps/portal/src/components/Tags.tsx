@@ -9,7 +9,8 @@ import {
 import { Check, ChevronLeft, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Button, Panel, useToast } from '@komogon/ui';
+import { Button, Panel, useToast, useVisualViewportFit } from '@komogon/ui';
+import { NARROW_QUERY, useMediaQuery } from '../lib/media';
 import { useCreateTag, useDeleteTag, useSetNodeTags, useTags, useUpdateTag } from '../lib/queries';
 
 const COLOR_NAME: Record<TagColor, string> = {
@@ -86,6 +87,11 @@ export function TagPicker({
   const [editing, setEditing] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
+  // On a phone it is a sheet along the bottom, above the keyboard when that is up, rather
+  // than a menu pinned beside a cell the keyboard may have scrolled away.
+  const sheet = useMediaQuery(NARROW_QUERY);
+  const touch = useMediaQuery('(pointer: coarse)');
+  useVisualViewportFit(box, sheet);
   // Under the anchor, or above it when there is no room below; never off the sides.
   const place = (h: number) => {
     const r = anchor.getBoundingClientRect();
@@ -104,10 +110,11 @@ export function TagPicker({
     return () => ro.disconnect();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchor]);
-  // The search box takes the keys on opening and on coming back from editing a tag.
+  // The search box takes the keys on opening and on coming back from editing a tag. Not on
+  // a touch screen, where that would throw the keyboard up before anything was tapped.
   useEffect(() => {
-    if (!editing) input.current?.focus();
-  }, [editing]);
+    if (!editing && !touch) input.current?.focus();
+  }, [editing, touch]);
 
   // Clicking away, Escape, or the page moving under it closes the menu.
   useEffect(() => {
@@ -127,15 +134,19 @@ export function TagPicker({
     };
     document.addEventListener('mousedown', away);
     document.addEventListener('keydown', key);
-    window.addEventListener('scroll', away, true);
-    window.addEventListener('resize', onClose);
+    // A menu pinned to its cell goes when the page moves under it. The phone's sheet isn't
+    // pinned to anything, and its keyboard scrolls and resizes the page as it comes up.
+    if (!sheet) {
+      window.addEventListener('scroll', away, true);
+      window.addEventListener('resize', onClose);
+    }
     return () => {
       document.removeEventListener('mousedown', away);
       document.removeEventListener('keydown', key);
       window.removeEventListener('scroll', away, true);
       window.removeEventListener('resize', onClose);
     };
-  }, [anchor, onClose, editing]);
+  }, [anchor, onClose, editing, sheet]);
 
   const q = query.trim();
   const options: Option[] = [
@@ -170,102 +181,108 @@ export function TagPicker({
   const editingTag = editing ? byId.get(editing) : undefined;
 
   return createPortal(
-    <div
-      ref={box}
-      className="glass glass-strong tag-pop"
-      role="dialog"
-      aria-label={`Tags for ${title}`}
-      style={{ top: pos.top, left: pos.left, width: pos.width }}
-    >
-      {editingTag ? (
-        <TagEditor tag={editingTag} onBack={() => setEditing(null)} />
-      ) : (
-        <>
-          <div className="tag-pop-field" onClick={() => input.current?.focus()}>
-            {chosen.map((t) => (
-              <TagChip key={t.id} tag={t} onRemove={() => toggle(t.id)} />
-            ))}
-            <input
-              ref={input}
-              className="tag-pop-input"
-              value={query}
-              aria-label="Search or make a tag"
-              placeholder={chosen.length ? '' : 'Search or make a tag'}
-              maxLength={40}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setActive(0);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  if (!options.length) return;
-                  const step = e.key === 'ArrowDown' ? 1 : -1;
-                  setActive((current + step + options.length) % options.length);
-                } else if (e.key === 'Enter') {
-                  e.preventDefault();
-                  const o = options[current];
-                  if (o) void choose(o);
-                } else if (e.key === 'Backspace' && !query && selected.length) {
-                  save(selected.slice(0, -1));
-                }
-              }}
-            />
-          </div>
-          <div className="tag-pop-list" role="listbox" aria-label="Tags">
-            {options.length > 0 && (
-              <div className="tag-pop-hint">
-                {all.length ? 'Pick a tag or make one' : 'Type a name to make your first tag'}
-              </div>
-            )}
-            {options.map((o, i) =>
-              o.kind === 'tag' ? (
-                <div
-                  key={o.tag.id}
-                  className={`tag-pop-option${i === current ? ' is-active' : ''}`}
-                  role="option"
-                  aria-selected={selected.includes(o.tag.id)}
-                  onMouseEnter={() => setActive(i)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => void choose(o)}
-                >
-                  <TagChip tag={o.tag} />
-                  <span className="tag-pop-check" aria-hidden>
-                    {selected.includes(o.tag.id) && <Check size={14} />}
-                  </span>
-                  <button
-                    type="button"
-                    className="tag-pop-more"
-                    aria-label={`Edit the ${o.tag.name} tag`}
-                    title="Rename, colour, delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditing(o.tag.id);
-                    }}
+    <>
+      {/* The sheet's scrim takes the tap that closes it, so nothing under it is hit. */}
+      {sheet && <div className="tag-pop-scrim" aria-hidden />}
+      <div
+        ref={box}
+        className={`glass glass-strong tag-pop${sheet ? ' is-sheet' : ''}`}
+        role="dialog"
+        aria-label={`Tags for ${title}`}
+        style={sheet ? undefined : { top: pos.top, left: pos.left, width: pos.width }}
+      >
+        {editingTag ? (
+          <TagEditor tag={editingTag} onBack={() => setEditing(null)} />
+        ) : (
+          <>
+            <div className="tag-pop-field" onClick={() => input.current?.focus()}>
+              {chosen.map((t) => (
+                <TagChip key={t.id} tag={t} onRemove={() => toggle(t.id)} />
+              ))}
+              <input
+                ref={input}
+                className="tag-pop-input"
+                value={query}
+                aria-label="Search or make a tag"
+                placeholder={chosen.length ? '' : 'Search or make a tag'}
+                maxLength={40}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActive(0);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (!options.length) return;
+                    const step = e.key === 'ArrowDown' ? 1 : -1;
+                    setActive((current + step + options.length) % options.length);
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const o = options[current];
+                    if (o) void choose(o);
+                  } else if (e.key === 'Backspace' && !query && selected.length) {
+                    save(selected.slice(0, -1));
+                  }
+                }}
+              />
+            </div>
+            <div className="tag-pop-list" role="listbox" aria-label="Tags">
+              {options.length > 0 && (
+                <div className="tag-pop-hint">
+                  {all.length ? 'Pick a tag or make one' : 'Type a name to make your first tag'}
+                </div>
+              )}
+              {options.map((o, i) =>
+                o.kind === 'tag' ? (
+                  <div
+                    key={o.tag.id}
+                    className={`tag-pop-option${i === current ? ' is-active' : ''}`}
+                    role="option"
+                    aria-selected={selected.includes(o.tag.id)}
+                    onMouseEnter={() => setActive(i)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => void choose(o)}
                   >
-                    <MoreHorizontal size={15} aria-hidden />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  key="create"
-                  className={`tag-pop-option${i === current ? ' is-active' : ''}`}
-                  role="option"
-                  aria-selected={false}
-                  onMouseEnter={() => setActive(i)}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => void choose(o)}
-                >
-                  <span className="tag-pop-create">Make</span>
-                  <TagChip tag={{ id: '', name: o.name, color: nextTagColor(all), sortOrder: 0 }} />
-                </div>
-              ),
-            )}
-            {!options.length && !q && <div className="tag-pop-hint">No tags yet</div>}
-          </div>
-        </>
-      )}
-    </div>,
+                    <TagChip tag={o.tag} />
+                    <span className="tag-pop-check" aria-hidden>
+                      {selected.includes(o.tag.id) && <Check size={14} />}
+                    </span>
+                    <button
+                      type="button"
+                      className="tag-pop-more"
+                      aria-label={`Edit the ${o.tag.name} tag`}
+                      title="Rename, colour, delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing(o.tag.id);
+                      }}
+                    >
+                      <MoreHorizontal size={15} aria-hidden />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    key="create"
+                    className={`tag-pop-option${i === current ? ' is-active' : ''}`}
+                    role="option"
+                    aria-selected={false}
+                    onMouseEnter={() => setActive(i)}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => void choose(o)}
+                  >
+                    <span className="tag-pop-create">Make</span>
+                    <TagChip
+                      tag={{ id: '', name: o.name, color: nextTagColor(all), sortOrder: 0 }}
+                    />
+                  </div>
+                ),
+              )}
+              {!options.length && !q && <div className="tag-pop-hint">No tags yet</div>}
+            </div>
+          </>
+        )}
+      </div>
+    </>,
     document.body,
   );
 }

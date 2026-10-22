@@ -248,6 +248,7 @@ const timelapsePreset = {
   deflicker: z.boolean(),
   recordBreaks: z.boolean(),
   breakClock: z.enum(['break', 'running']),
+  dim: z.number().min(0).max(0.9),
   layout: timelapseLayout,
 };
 

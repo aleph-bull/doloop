@@ -45,6 +45,7 @@ export function TopicDialog({ open, onClose, topic, busy, onSave, onDelete }: To
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title={topic ? `Edit ${topic.topic.title}` : 'New topic'}

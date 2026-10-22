@@ -100,6 +100,7 @@ export function PasteListDialog({ open, onClose, onAdded }: PasteListDialogProps
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title="Paste your deadlines"

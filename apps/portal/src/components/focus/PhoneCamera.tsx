@@ -3,19 +3,23 @@ import {
   Eye,
   EyeOff,
   Pause,
+  PictureInPicture2,
   Play,
   SkipForward,
   Square,
   SwitchCamera,
   VideoOff,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@komogon/ui';
 import { isUpright } from '../../lib/device';
 import type { SessionController } from '../../lib/session-controller';
 import type { CameraFacing, TimelapseRecorder } from '../../lib/timelapse';
 import { TaskContext } from './TaskContext';
 import { TimerDisplay } from './TimerDisplay';
+
+/** How the camera shows on the camera screen: the whole picture, or a small circle. */
+export type CameraView = 'full' | 'mini';
 
 export interface PhoneCameraProps {
   ctl: SessionController;
@@ -34,6 +38,16 @@ export interface PhoneCameraProps {
   onFlip?: () => void;
   /** Stop the timelapse and go back to the focus screen, keeping the stills. */
   onStopRecording: () => void;
+  /** The whole picture, or the camera tucked into a small circle. */
+  view: CameraView;
+  onViewChange: (view: CameraView) => void;
+}
+
+/** A live picture of the camera, in whatever element is given; the front camera mirrored by CSS. */
+function useStreamIn(ref: React.RefObject<HTMLVideoElement | null>, stream: MediaStream | null) {
+  useEffect(() => {
+    if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream;
+  });
 }
 
 /**
@@ -43,6 +57,11 @@ export interface PhoneCameraProps {
  * runs and comes back up for breaks and pauses. Breaks always show here; whether they are
  * filmed is the phone preset's "Record breaks too". The dimming is only on the screen, never
  * in the stills.
+ *
+ * The picture can also be tucked away into a small live circle beside the pause button, for
+ * when the camera shouldn't be the thing on screen. That only covers the picture: the camera
+ * keeps filming (the stills come from the recorder's own player, not this one), and the
+ * circle opens it again at once.
  */
 export function PhoneCamera({
   ctl,
@@ -55,16 +74,25 @@ export function PhoneCamera({
   facing,
   onFlip,
   onStopRecording,
+  view,
+  onViewChange,
 }: PhoneCameraProps) {
   const { toast } = useToast();
   const { timer } = ctl;
   const videoRef = useRef<HTMLVideoElement>(null);
+  const thumbRef = useRef<HTMLVideoElement>(null);
+  useStreamIn(videoRef, recorder.stream);
+  useStreamIn(thumbRef, view === 'mini' ? recorder.stream : null);
+  // The picture fades in once the camera sends its first frame, rather than popping in over
+  // the black of a camera still starting.
+  const [showing, setShowing] = useState(false);
   useEffect(() => {
-    if (videoRef.current) videoRef.current.srcObject = recorder.stream;
+    if (!recorder.stream) setShowing(false);
   }, [recorder.stream]);
 
   const onBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
   const stopped = recorder.status === 'ended';
+  const mini = view === 'mini';
 
   // The camera stopped while the page was away (the screen locked): start it again on return.
   const recorderRef = useRef(recorder);
@@ -116,10 +144,22 @@ export function PhoneCamera({
                 ? 'Paused'
                 : 'Waiting for focus';
 
+  const chrome = `focus-chrome${chromeVisible ? '' : ' is-hidden'}`;
+
   return (
-    <div className="pcam" data-facing={facing}>
-      <video ref={videoRef} className="pcam-video" autoPlay muted playsInline aria-hidden />
+    <div className={`pcam${mini ? ' is-mini' : ''}`} data-facing={facing}>
+      <video
+        ref={videoRef}
+        className={`pcam-video${showing ? ' is-showing' : ''}`}
+        autoPlay
+        muted
+        playsInline
+        aria-hidden
+        onPlaying={() => setShowing(true)}
+      />
       <div className={`pcam-dim${timer.phase === 'work' ? ' is-on' : ''}`} aria-hidden />
+      {/* Covers the picture in the small view; the video underneath keeps playing. */}
+      <div className="pcam-cover" aria-hidden />
 
       <div className="pcam-top">
         <span className="pcam-rec" role="status">
@@ -127,16 +167,22 @@ export function PhoneCamera({
             className={`timelapse-dot${filming && recorder.live ? '' : ' is-idle'}`}
             aria-hidden
           />
-          {status}
+          <span className="pcam-rec-text">{status}</span>
         </span>
-        <span className="flex-1" />
-        <span className={`pcam-top-actions focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
+        <span className={`pcam-top-actions ${chrome}`}>
+          <button
+            type="button"
+            className="pcam-round"
+            aria-label={hidden ? 'Show the clock and task' : 'Hide the clock and task'}
+            onClick={() => void ctl.toggleTimerVisibility()}
+          >
+            {hidden ? <Eye size={20} aria-hidden /> : <EyeOff size={20} aria-hidden />}
+          </button>
           {onFlip && (
             <button
               type="button"
               className="pcam-round"
               aria-label={facing === 'user' ? 'Use the back camera' : 'Use the front camera'}
-              title="Swap cameras"
               onClick={onFlip}
             >
               <SwitchCamera size={20} aria-hidden />
@@ -146,7 +192,6 @@ export function PhoneCamera({
             type="button"
             className="pcam-round"
             aria-label="Stop recording"
-            title="Stop recording"
             onClick={onStopRecording}
           >
             <VideoOff size={20} aria-hidden />
@@ -173,7 +218,7 @@ export function PhoneCamera({
         )}
       </div>
 
-      <div className={`pcam-dock focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
+      <div className={`pcam-dock ${chrome}`}>
         {(ctl.canSkip || (timer.mode === 'scheduled' && timer.plannedEndAt)) && (
           <div className="pcam-extra">
             {ctl.canSkip && (
@@ -193,14 +238,26 @@ export function PhoneCamera({
           </div>
         )}
         <div className="pcam-controls">
-          <button
-            type="button"
-            className="pcam-round"
-            aria-label={hidden ? 'Show the clock and task' : 'Hide the clock and task'}
-            onClick={() => void ctl.toggleTimerVisibility()}
-          >
-            {hidden ? <Eye size={20} aria-hidden /> : <EyeOff size={20} aria-hidden />}
-          </button>
+          {/* Where the Camera app keeps its last photo: the camera, small or whole. */}
+          {mini ? (
+            <button
+              type="button"
+              className="pcam-thumb"
+              aria-label="Show the camera"
+              onClick={() => onViewChange('full')}
+            >
+              <video ref={thumbRef} autoPlay muted playsInline aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pcam-round"
+              aria-label="Make the camera small"
+              onClick={() => onViewChange('mini')}
+            >
+              <PictureInPicture2 size={20} aria-hidden />
+            </button>
+          )}
           <button
             type="button"
             className="pcam-shutter"

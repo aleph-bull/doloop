@@ -80,6 +80,7 @@ export function RewardDialog({ open, reward, limits, onClose, onSave }: RewardDi
   if (!open) return null;
   return (
     <Modal
+      phone="full"
       open
       onClose={onClose}
       title={reward ? 'Edit reward' : 'New reward'}

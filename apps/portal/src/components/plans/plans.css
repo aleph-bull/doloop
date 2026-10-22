@@ -372,8 +372,10 @@
   margin-right: 6px;
 }
 
-.plan-dialog {
-  max-width: 720px;
+@media (min-width: 561px) {
+  .plan-dialog {
+    max-width: min(720px, calc(100vw - 32px));
+  }
 }
 .plan-dialog-pair {
   display: grid;

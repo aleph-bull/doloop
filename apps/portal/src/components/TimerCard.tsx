@@ -1,9 +1,10 @@
 import { formatClock, type StudyNode, type UserSettings } from '@komogon/core';
 import { Eye, EyeOff, Maximize2, Pause, Play, SkipForward, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { Button, Chip, Glass, useToast } from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
-import { openFocusTab, useFocusTabPresent } from '../lib/focus-tab';
+import { FOCUS_PATH, openFocusTab, useFocusTabPresent } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import { PHASE_LABEL, useSessionController } from '../lib/session-controller';
 
@@ -28,8 +29,10 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
   const ctl = useSessionController({ active, settings, nodes, onEnded, muteAlerts: focusOpen });
   const { timer, view } = ctl;
 
+  const navigate = useNavigate();
   const focus = () => {
     const result = openFocusTab();
+    if (result === 'here') navigate(FOCUS_PATH);
     if (result === 'blocked')
       toast('The browser blocked the focus tab. Allow pop-ups and try again.');
     if (result === 'focused') toast('The focus screen is open in another tab.');

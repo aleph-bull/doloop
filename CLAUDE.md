@@ -278,6 +278,32 @@ Keep the owner's own wording verbatim, "!" included.
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
 
+## On a phone (2026-10-22)
+
+The phone layout is designed for the phone, not the computer's shrunk; DECISIONS.md has the
+reasons. What to keep doing:
+
+- **Dialogs**: a question or short form is a sheet from the bottom (the default); a form with
+  more than a few fields passes `phone="full"` to `Modal` and becomes a screen of its own
+  (title bar with close, actions pinned at the bottom, sized above the keyboard). Phone width
+  is `NARROW_QUERY` (560px) in `lib/media.ts`, the same as the sheets' CSS. A dialog's own
+  `max-width` goes inside `@media (min-width: 561px)`, or the phone sheet comes out narrower
+  than the screen, flush left.
+- **No keyboard before a tap**: never focus a text field on open on a touch screen (`Modal`
+  already doesn't). Fields are at least 16px on touch screens, or iOS zooms the page in.
+- **Starting a session** on a phone is its own screen with a pushed picker
+  (`StartSessionDialog`'s phone branch, `SubjectPages`); the computer keeps the card.
+- **The nav** shows a tap at once (`useNavTarget` in AppShell), because navigations are
+  transitions; the pages it links to load through `lib/page-loaders.ts`, so they can be
+  warmed up. A new nav page gets a loader there.
+- **The focus screen** on a phone opens in the same tab (`openFocusTab` returns `'here'`), and
+  whether it is the camera is settled before the first paint. While it rests, `FocusWake`
+  takes the first tap (so it can't hit Stop) and, while recording, dims by the preset's
+  `dim`. The camera screen is a grid inside the safe area; its picture can be made small
+  (`komogon.focus.camera`) without stopping the camera.
+- **Safe areas**: the page is `viewport-fit=cover`, so anything fixed to an edge keeps to
+  `env(safe-area-inset-*)`.
+
 ## Streaks: how they work (weekly streak added 2026-10-21)
 
 There are two streaks, a daily one and a weekly one, and both count the same thing: **streak

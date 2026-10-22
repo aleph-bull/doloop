@@ -255,6 +255,7 @@ export function AddCalendarDialog({
 
   return (
     <Modal
+      phone="full"
       open
       onClose={onClose}
       title="Add a calendar"

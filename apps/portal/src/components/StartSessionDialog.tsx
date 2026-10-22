@@ -6,11 +6,14 @@ import type {
 } from '@komogon/core';
 import { buildIndex, describeCut, modeForPlan, pathLabel, pomodoroCut } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
+import { ChevronRight, Minus, Plus } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button, Input, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
 import { api, ApiError } from '../lib/api';
-import { openFocusTab } from '../lib/focus-tab';
+import { isPhone } from '../lib/device';
+import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
+import { NARROW_QUERY, useMediaQuery } from '../lib/media';
 import {
   keys,
   useActiveSession,
@@ -106,13 +109,62 @@ function minutesUntilLocal(time: string): number {
   return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
 }
 
-import { nodeKey, routineKey, SubjectPicker } from './SubjectPicker';
+import { SubjectPages } from './SubjectPages';
+import {
+  describeSubject,
+  nodeKey,
+  routineKey,
+  SubjectPicker,
+  useSubjectIndex,
+} from './SubjectPicker';
 
 function fmtLength(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
+/** The phone's minutes control: steps of 5 under an hour and 15 from there, or type a number. */
+function MinutesStepper({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const n = Math.max(0, Math.round(Number(value) || 0));
+  const down = n > 60 ? 15 : 5;
+  const up = n >= 60 ? 15 : 5;
+  return (
+    <div className="ss-stepper" role="group" aria-label="Minutes">
+      <button
+        type="button"
+        className="ss-step"
+        aria-label={`${down} minutes less`}
+        disabled={n <= 5}
+        onClick={() => onChange(String(Math.max(5, n - down)))}
+      >
+        <Minus size={18} aria-hidden />
+      </button>
+      <label className="ss-step-value">
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={1440}
+          className="ss-step-input tabular"
+          aria-label="Minutes"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <span className="ss-step-unit">min</span>
+      </label>
+      <button
+        type="button"
+        className="ss-step"
+        aria-label={`${up} minutes more`}
+        disabled={n >= 1440}
+        onClick={() => onChange(String(Math.min(1440, n + up)))}
+      >
+        <Plus size={18} aria-hidden />
+      </button>
+    </div>
+  );
 }
 
 export function StartSessionDialog({
@@ -148,6 +200,22 @@ export function StartSessionDialog({
   /** The "still running" question, asked when another session is going. */
   const [askReplace, setAskReplace] = useState(false);
   const [replacing, setReplacing] = useState(false);
+  /**
+   * On a phone the session is a screen of its own, and what to study is a page pushed over
+   * it; on a computer it stays the card with the picker inside.
+   */
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const phone = useMemo(() => isPhone(), []);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const subjectRowRef = useRef<HTMLButtonElement>(null);
+  const subjectIndex = useSubjectIndex(nodes);
+  // Back from the picker, focus returns to the row that opened it, once the form is no
+  // longer inert under the page.
+  const pickerWasOpen = useRef(false);
+  useEffect(() => {
+    if (pickerWasOpen.current && !pickerOpen) subjectRowRef.current?.focus({ preventScroll: true });
+    pickerWasOpen.current = pickerOpen;
+  }, [pickerOpen]);
 
   // Fill the form once each time the dialog opens. Reading the props through a ref keeps a
   // background refetch (new task list, saved settings) from wiping what the user picked.
@@ -181,6 +249,7 @@ export function StartSessionDialog({
     setShowTimer(settings?.pomodoro.showTimerByDefault ?? true);
     setConfirmCut(null);
     setAskReplace(false);
+    setPickerOpen(false);
   }, [open]);
 
   // Outstanding occurrences; the preselected one stays listed even if the query lags.
@@ -243,8 +312,7 @@ export function StartSessionDialog({
           setAskFocus(true);
         } else {
           // Still within the Start click's activation, which is what lets a tab open.
-          if (mode === 'always') openAndReport();
-          navigate('/');
+          navigate(mode === 'always' ? openAndReport() : '/');
         }
       }
     } catch (err) {
@@ -257,22 +325,26 @@ export function StartSessionDialog({
     }
   };
 
-  /** Open the focus tab on the click itself, which is what lets a tab open at all. */
-  const openAndReport = () => {
+  /**
+   * Open the focus screen: on a computer its own tab, opened on the click itself (which is
+   * what lets a tab open at all); on a phone this tab. Returns where this tab goes next.
+   */
+  const openAndReport = (): string => {
     const r = openFocusTab();
     if (r === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
     if (r === 'focused') toast('The focus screen is open in another tab.');
+    return r === 'here' ? FOCUS_PATH : '/';
   };
 
   /** The prompt's answer: open this time or not, and optionally make that the rule. */
   const answerFocus = (open: boolean, remember?: 'always' | 'never') => {
     setAskFocus(false);
-    if (open) openAndReport();
+    const next = open ? openAndReport() : '/';
     if (remember)
       void update
         .mutateAsync({ focusScreen: { openOnStart: remember } })
         .catch(() => toast('Could not save that. Change it in Settings.'));
-    navigate('/');
+    navigate(next);
   };
 
   const go = () => {
@@ -321,6 +393,188 @@ export function StartSessionDialog({
 
   const durationHelp = duration === 'unlimited' ? 'Runs until you stop it.' : '';
 
+  const styleField = (
+    <div className="field">
+      <span className="field-label">How you work</span>
+      <Segmented
+        ariaLabel="Session style"
+        className={narrow ? 'ss-seg' : undefined}
+        value={style}
+        onChange={(v) => {
+          setStyle(v as SessionStyle);
+          setConfirmCut(null);
+        }}
+        options={[
+          { value: 'pomodoro', label: 'Pomodoro' },
+          { value: 'continuous', label: 'Continuous' },
+        ]}
+      />
+      <span className="field-hint">
+        {styleHelp}
+        {style === 'pomodoro' && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => {
+                // The lengths live in Settings, under Timer; the dialog closes on the way.
+                onClose();
+                navigate('/settings#timer');
+              }}
+            >
+              Change these
+            </button>
+          </>
+        )}
+      </span>
+    </div>
+  );
+
+  const lengthChoice = (
+    <Segmented
+      ariaLabel="Session length"
+      className={narrow ? 'ss-seg' : undefined}
+      value={duration}
+      onChange={(v) => {
+        setDuration(v as SessionDurationKind);
+        setConfirmCut(null);
+      }}
+      options={[
+        { value: 'unlimited', label: 'Unlimited' },
+        { value: 'for', label: 'For a while' },
+        { value: 'until', label: 'Until a time' },
+      ]}
+    />
+  );
+
+  const untilHint =
+    plannedMinutes && plannedMinutes > 0
+      ? isTomorrow(endTime)
+        ? `Tomorrow, ${fmtLength(plannedMinutes)} from now.`
+        : `${fmtLength(plannedMinutes)} from now`
+      : undefined;
+
+  const cutLine = cutMessage && (
+    <p className="cut-warning" role="alert">
+      {cutMessage}
+      {cut && cut.previousBoundaryMinutes > 0 && (
+        <>
+          {' '}
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => {
+              // Snap to the clean length just below.
+              setDuration('for');
+              setMinutes(String(cut.previousBoundaryMinutes));
+              setConfirmCut(null);
+            }}
+          >
+            Use {fmtLength(cut.previousBoundaryMinutes)} instead
+          </button>
+        </>
+      )}
+    </p>
+  );
+
+  const chosen = describeSubject(subject, subjectIndex, routineOptions);
+
+  /** Back from the picker page to the session. */
+  const closePicker = () => setPickerOpen(false);
+
+  // On a phone, Escape and the system back gesture step back out of the picker first.
+  const closeSheet = () => (narrow && pickerOpen ? closePicker() : onClose());
+
+  const phoneForm = (
+    <div className="ss-form" inert={pickerOpen}>
+      {lockSubject && node ? (
+        <div className="ss-subject is-locked">
+          <span className="ss-subject-text">
+            <span className="ss-subject-label">Studying</span>
+            <span className="ss-subject-title">{node.title}</span>
+            {lockedPath && <span className="ss-subject-where">{lockedPath}</span>}
+          </span>
+        </div>
+      ) : (
+        <button
+          ref={subjectRowRef}
+          type="button"
+          className={`ss-subject${chosen ? '' : ' is-empty'}`}
+          onClick={() => setPickerOpen(true)}
+          aria-haspopup="dialog"
+        >
+          <span className="ss-subject-text">
+            <span className="ss-subject-label">Studying</span>
+            <span className="ss-subject-title">{chosen?.title ?? 'Choose what to study'}</span>
+            {chosen?.where && <span className="ss-subject-where">{chosen.where}</span>}
+          </span>
+          <ChevronRight size={20} aria-hidden className="ss-subject-chevron" />
+        </button>
+      )}
+
+      {styleField}
+
+      <div className="field">
+        <span className="field-label">How long</span>
+        {lengthChoice}
+        {duration === 'unlimited' && <span className="field-hint">{durationHelp}</span>}
+        {duration === 'for' && (
+          <>
+            <MinutesStepper
+              value={minutes}
+              onChange={(v) => {
+                setMinutes(v);
+                setConfirmCut(null);
+              }}
+            />
+            {/* Over an hour, the length in hours too; "60 min" already says "1 h". */}
+            {plannedMinutes && plannedMinutes > 60 ? (
+              <span className="field-hint">{fmtLength(plannedMinutes)}</span>
+            ) : null}
+          </>
+        )}
+        {duration === 'until' && (
+          <>
+            <input
+              type="time"
+              className="input ss-time"
+              aria-label="Stop at"
+              value={endTime}
+              onChange={(e) => {
+                setEndTime(e.target.value);
+                setConfirmCut(null);
+              }}
+            />
+            {untilHint && <span className="field-hint">{untilHint}</span>}
+          </>
+        )}
+      </div>
+
+      {cutLine}
+
+      <Toggle checked={showTimer} onChange={setShowTimer} label="Show the timer" />
+    </div>
+  );
+
+  const phonePicker = !lockSubject && (
+    <div className={`ss-cover${pickerOpen ? ' is-open' : ''}`} inert={!pickerOpen}>
+      <SubjectPages
+        index={subjectIndex}
+        routines={routineOptions}
+        today={today}
+        value={subject}
+        onPick={(v) => {
+          setSubject(v);
+          setConfirmCut(null);
+          closePicker();
+        }}
+        onBack={closePicker}
+        active={pickerOpen}
+      />
+    </div>
+  );
+
   return (
     <>
       <Modal
@@ -342,156 +596,114 @@ export function StartSessionDialog({
           </>
         }
       >
-        <p className="muted">Opens a new tab with a focus screen that just has the timer.</p>
+        <p className="muted">
+          {phone
+            ? 'A screen with just the timer.'
+            : 'Opens a new tab with a focus screen that just has the timer.'}
+        </p>
       </Modal>
-      <Modal
-        open={open}
-        onClose={onClose}
-        title="Start a session"
-        actions={
-          <>
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={go} loading={start.isPending} disabled={!subject}>
-              {confirmCut ? 'Start anyway' : 'Start'}
-            </Button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-4">
-          {lockSubject && node ? (
-            <div className="field">
-              <span className="field-label">Studying</span>
-              <div className="start-locked-subject">
-                <strong>{node.title}</strong>
-                {lockedPath && <span className="muted">{lockedPath}</span>}
-              </div>
+      {narrow ? (
+        <Modal
+          open={open}
+          onClose={closeSheet}
+          title="Start a session"
+          phone="full"
+          className="ss-sheet"
+          cover={phonePicker}
+          actions={
+            <div className="ss-actions" inert={pickerOpen}>
+              <Button
+                variant="primary"
+                onClick={go}
+                loading={start.isPending}
+                disabled={!subject}
+                className="ss-start"
+              >
+                {confirmCut ? 'Start anyway' : 'Start'}
+              </Button>
             </div>
-          ) : (
-            <SubjectPicker
-              nodes={nodes}
-              routines={routineOptions}
-              today={today}
-              value={subject}
-              onChange={setSubject}
-            />
-          )}
+          }
+        >
+          {phoneForm}
+        </Modal>
+      ) : (
+        <Modal
+          open={open}
+          onClose={onClose}
+          title="Start a session"
+          actions={
+            <>
+              <Button variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={go} loading={start.isPending} disabled={!subject}>
+                {confirmCut ? 'Start anyway' : 'Start'}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4">
+            {lockSubject && node ? (
+              <div className="field">
+                <span className="field-label">Studying</span>
+                <div className="start-locked-subject">
+                  <strong>{node.title}</strong>
+                  {lockedPath && <span className="muted">{lockedPath}</span>}
+                </div>
+              </div>
+            ) : (
+              <SubjectPicker
+                nodes={nodes}
+                routines={routineOptions}
+                today={today}
+                value={subject}
+                onChange={setSubject}
+              />
+            )}
 
-          <div className="field">
-            <span className="field-label">How you work</span>
-            <Segmented
-              ariaLabel="Session style"
-              value={style}
-              onChange={(v) => {
-                setStyle(v as SessionStyle);
-                setConfirmCut(null);
-              }}
-              options={[
-                { value: 'pomodoro', label: 'Pomodoro' },
-                { value: 'continuous', label: 'Continuous' },
-              ]}
-            />
-            <span className="field-hint">
-              {styleHelp}
-              {style === 'pomodoro' && (
-                <>
-                  {' '}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() => {
-                      // The lengths live in Settings, under Timer; the dialog closes on the way.
-                      onClose();
-                      navigate('/settings#timer');
-                    }}
-                  >
-                    Change these
-                  </button>
-                </>
-              )}
-            </span>
+            {styleField}
+
+            <div className="field">
+              <span className="field-label">How long</span>
+              {lengthChoice}
+              <span className="field-hint">{durationHelp}</span>
+            </div>
+
+            {duration === 'for' && (
+              <Input
+                label="Minutes"
+                type="number"
+                min={1}
+                max={1440}
+                step={5}
+                value={minutes}
+                onChange={(e) => {
+                  setMinutes(e.target.value);
+                  setConfirmCut(null);
+                }}
+                hint={plannedMinutes ? fmtLength(plannedMinutes) : undefined}
+              />
+            )}
+
+            {duration === 'until' && (
+              <Input
+                label="Stop at"
+                type="time"
+                value={endTime}
+                onChange={(e) => {
+                  setEndTime(e.target.value);
+                  setConfirmCut(null);
+                }}
+                hint={untilHint}
+              />
+            )}
+
+            {cutLine}
+
+            <Toggle checked={showTimer} onChange={setShowTimer} label="Show the timer" />
           </div>
-
-          <div className="field">
-            <span className="field-label">How long</span>
-            <Segmented
-              ariaLabel="Session length"
-              value={duration}
-              onChange={(v) => {
-                setDuration(v as SessionDurationKind);
-                setConfirmCut(null);
-              }}
-              options={[
-                { value: 'unlimited', label: 'Unlimited' },
-                { value: 'for', label: 'For a while' },
-                { value: 'until', label: 'Until a time' },
-              ]}
-            />
-            <span className="field-hint">{durationHelp}</span>
-          </div>
-
-          {duration === 'for' && (
-            <Input
-              label="Minutes"
-              type="number"
-              min={1}
-              max={1440}
-              step={5}
-              value={minutes}
-              onChange={(e) => {
-                setMinutes(e.target.value);
-                setConfirmCut(null);
-              }}
-              hint={plannedMinutes ? fmtLength(plannedMinutes) : undefined}
-            />
-          )}
-
-          {duration === 'until' && (
-            <Input
-              label="Stop at"
-              type="time"
-              value={endTime}
-              onChange={(e) => {
-                setEndTime(e.target.value);
-                setConfirmCut(null);
-              }}
-              hint={
-                plannedMinutes && plannedMinutes > 0
-                  ? isTomorrow(endTime)
-                    ? `Tomorrow, ${fmtLength(plannedMinutes)} from now.`
-                    : `${fmtLength(plannedMinutes)} from now`
-                  : undefined
-              }
-            />
-          )}
-
-          {cutMessage && (
-            <p className="cut-warning" role="alert">
-              {cutMessage}
-              {cut && cut.previousBoundaryMinutes > 0 && (
-                <>
-                  {' '}
-                  <button
-                    type="button"
-                    className="link-button"
-                    onClick={() => {
-                      // Snap to the clean length just below.
-                      setDuration('for');
-                      setMinutes(String(cut.previousBoundaryMinutes));
-                      setConfirmCut(null);
-                    }}
-                  >
-                    Use {fmtLength(cut.previousBoundaryMinutes)} instead
-                  </button>
-                </>
-              )}
-            </p>
-          )}
-
-          <Toggle checked={showTimer} onChange={setShowTimer} label="Show the timer" />
-        </div>
-      </Modal>
+        </Modal>
+      )}
       <Modal
         open={open && askReplace}
         onClose={() => setAskReplace(false)}

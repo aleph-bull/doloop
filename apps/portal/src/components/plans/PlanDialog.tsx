@@ -160,6 +160,7 @@ export function PlanDialog({ open, onClose, onCreate, busy }: PlanDialogProps) {
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title="New study plan"

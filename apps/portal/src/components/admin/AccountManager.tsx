@@ -25,6 +25,7 @@ export function AccountManager({
   }, [account]);
   return (
     <Modal
+      phone="full"
       open={!!account}
       onClose={onClose}
       title={shown?.email}

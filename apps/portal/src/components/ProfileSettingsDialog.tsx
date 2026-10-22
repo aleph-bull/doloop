@@ -48,6 +48,7 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title="Your profile"

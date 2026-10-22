@@ -60,6 +60,7 @@ export function BlockDialog({ open, onClose, nodes, block, draft }: BlockDialogP
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title={

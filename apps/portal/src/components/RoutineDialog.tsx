@@ -90,6 +90,7 @@ export function RoutineDialog({
   if (!open) return null;
   return (
     <Modal
+      phone="full"
       open
       onClose={onClose}
       title={routine ? 'Edit routine' : 'New routine'}

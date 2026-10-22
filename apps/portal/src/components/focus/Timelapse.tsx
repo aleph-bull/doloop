@@ -13,7 +13,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import { Download, MonitorUp, Share2, Square, Video } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Button,
@@ -290,6 +290,57 @@ export function TimelapseRecordChoice({
   );
 }
 
+/**
+ * How far the focus screen darkens while it records. The slider answers at once, with a
+ * small clock beside it dimming the same amount; the setting is saved once it settles.
+ */
+export function DimField({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [draft, setDraft] = useState(value);
+  const dirty = useRef(false);
+  // A change from elsewhere (the other tab, a refetch) shows unless this one is mid-drag.
+  useEffect(() => {
+    if (!dirty.current) setDraft(value);
+  }, [value]);
+  useEffect(() => {
+    if (!dirty.current) return;
+    const id = window.setTimeout(() => {
+      dirty.current = false;
+      if (draft !== value) onChange(draft);
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [draft, value, onChange]);
+  const pct = Math.round(draft * 100);
+  const words = pct === 0 ? 'Off' : `${pct}%`;
+  const labelId = useId();
+  return (
+    <div className="field">
+      <span className="field-label" id={labelId}>
+        Dim the screen while recording
+      </span>
+      <div className="dim-row">
+        <span className="dim-preview" aria-hidden>
+          <span className="dim-preview-time tabular">25:00</span>
+          <span className="dim-preview-shade" style={{ opacity: draft }} />
+        </span>
+        <Slider
+          min={0}
+          max={90}
+          step={5}
+          value={pct}
+          aria-labelledby={labelId}
+          aria-valuetext={pct === 0 ? 'Off' : `${pct}% darker`}
+          onChange={(v) => {
+            dirty.current = true;
+            setDraft(v / 100);
+          }}
+        />
+        <span className="dim-value tabular">{words}</span>
+      </div>
+      <span className="field-hint">Tap the screen to brighten it for a moment.</span>
+    </div>
+  );
+}
+
 export interface TimelapseSettingsProps {
   settings: UserSettings;
   /** Whose preset: the computer's or the phone's. */
@@ -328,6 +379,7 @@ export function TimelapseSettings({
       {withRecordChoice && (
         <TimelapseRecordChoice value={settings.timelapse.record} onChange={onChange} />
       )}
+      <DimField value={value.dim} onChange={(dim) => set({ dim })} />
       {device === 'computer' && screenSupported() && (
         <p className="field-hint">
           Each time a recording starts, you are asked whether to record your screen too.

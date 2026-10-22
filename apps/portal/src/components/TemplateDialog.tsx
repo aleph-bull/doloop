@@ -81,6 +81,7 @@ export function TemplateDialog({ open, onClose, node }: TemplateDialogProps) {
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title={`Template for items under ${node.title}`}

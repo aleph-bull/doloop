@@ -61,6 +61,7 @@ export function IcsImportDialog({ open, onClose, onImport }: IcsImportDialogProp
   if (!open) return null;
   return (
     <Modal
+      phone="full"
       open
       onClose={close}
       title="Import from a calendar"

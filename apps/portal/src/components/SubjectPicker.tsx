@@ -10,7 +10,84 @@ export const routineKey = (o: Pick<RoutineOccurrence, 'routineId' | 'date'>) =>
   `routine:${o.routineId}:${o.date}`;
 
 /** The pseudo-folder the routines live in, at the top level. */
-const ROUTINES = 'routines';
+export const ROUTINES = 'routines';
+
+export type SubjectIndex = ReturnType<typeof buildIndex>;
+
+/** What can be studied: every course, unit and task not yet done. */
+export function useSubjectIndex(nodes: StudyNode[]): SubjectIndex {
+  return useMemo(() => buildIndex(nodes.filter((n) => !n.completedAt)), [nodes]);
+}
+
+/** The names above a node, course first. */
+function chainOf(index: SubjectIndex, n: StudyNode): string[] {
+  const chain: string[] = [];
+  let cur = n;
+  while (cur.parentId && index.byId.has(cur.parentId)) {
+    cur = index.byId.get(cur.parentId)!;
+    chain.unshift(cur.title);
+  }
+  return chain;
+}
+
+export interface SubjectHit {
+  key: string;
+  title: string;
+  where: string;
+}
+
+/**
+ * Every task, unit and course whose name or path holds all the words typed, plus the
+ * routines due, as one flat list. Each says where it lives, since two units can share a
+ * name. Null when nothing is typed.
+ */
+export function searchSubjects(
+  query: string,
+  index: SubjectIndex,
+  routines: RoutineOccurrence[],
+): SubjectHit[] | null {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return null;
+  const hits: SubjectHit[] = [];
+  for (const n of index.byId.values()) {
+    const where = chainOf(index, n);
+    const hay = [...where, n.title].join(' ').toLowerCase();
+    if (words.every((w) => hay.includes(w)))
+      hits.push({ key: nodeKey(n.id), title: n.title, where: where.join(' › ') || 'Course' });
+  }
+  for (const o of routines) {
+    if (words.every((w) => `${o.title} routine`.toLowerCase().includes(w)))
+      hits.push({ key: routineKey(o), title: o.title, where: 'Routine' });
+  }
+  // Names that start with what was typed first, then the rest alphabetically.
+  const first = words[0]!;
+  hits.sort((a, b) => {
+    const as = a.title.toLowerCase().startsWith(first) ? 0 : 1;
+    const bs = b.title.toLowerCase().startsWith(first) ? 0 : 1;
+    return as - bs || a.title.localeCompare(b.title);
+  });
+  return hits.slice(0, 50);
+}
+
+/** The chosen thing and where it lives, for a summary line; null when nothing is chosen. */
+export function describeSubject(
+  value: string,
+  index: SubjectIndex,
+  routines: RoutineOccurrence[],
+): { title: string; where: string } | null {
+  if (value === NONE) return { title: 'No task', where: 'Minutes still count' };
+  if (value.startsWith('routine:')) {
+    const o = routines.find((r) => routineKey(r) === value);
+    return o ? { title: o.title, where: 'Routine' } : null;
+  }
+  if (value.startsWith('node:')) {
+    const n = index.byId.get(value.slice(5));
+    if (!n) return null;
+    const chain = chainOf(index, n);
+    return { title: n.title, where: chain.length ? chain.join(' › ') : 'Course' };
+  }
+  return null;
+}
 
 export interface SubjectPickerProps {
   nodes: StudyNode[];
@@ -29,46 +106,11 @@ export interface SubjectPickerProps {
  * "No task" is the first row at the top, and the routines the last.
  */
 export function SubjectPicker({ nodes, routines, today, value, onChange }: SubjectPickerProps) {
-  const index = useMemo(() => buildIndex(nodes.filter((n) => !n.completedAt)), [nodes]);
+  const index = useSubjectIndex(nodes);
   const [path, setPath] = useState<string[]>([]);
   const [query, setQuery] = useState('');
 
-  /**
-   * Every task, unit and course whose name or path holds all the words typed, plus the
-   * routines due, as one flat list. Each says where it lives, since two units can share a name.
-   */
-  const results = useMemo(() => {
-    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-    if (words.length === 0) return null;
-    const pathOf = (n: StudyNode): string[] => {
-      const chain: string[] = [];
-      let cur = n;
-      while (cur.parentId && index.byId.has(cur.parentId)) {
-        cur = index.byId.get(cur.parentId)!;
-        chain.unshift(cur.title);
-      }
-      return chain;
-    };
-    const hits: Array<{ key: string; title: string; where: string }> = [];
-    for (const n of index.byId.values()) {
-      const where = pathOf(n);
-      const hay = [...where, n.title].join(' ').toLowerCase();
-      if (words.every((w) => hay.includes(w)))
-        hits.push({ key: nodeKey(n.id), title: n.title, where: where.join(' › ') || 'Course' });
-    }
-    for (const o of routines) {
-      if (words.every((w) => `${o.title} routine`.toLowerCase().includes(w)))
-        hits.push({ key: routineKey(o), title: o.title, where: 'Routine' });
-    }
-    // Names that start with what was typed first, then the rest alphabetically.
-    const first = words[0]!;
-    hits.sort((a, b) => {
-      const as = a.title.toLowerCase().startsWith(first) ? 0 : 1;
-      const bs = b.title.toLowerCase().startsWith(first) ? 0 : 1;
-      return as - bs || a.title.localeCompare(b.title);
-    });
-    return hits.slice(0, 50);
-  }, [query, index, routines]);
+  const results = useMemo(() => searchSubjects(query, index, routines), [query, index, routines]);
 
   const here = path[path.length - 1];
   const inRoutines = here === ROUTINES;
@@ -79,25 +121,7 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
   const above = path.slice(0, -1).map(titleOf);
 
   /** The chosen thing and where it lives, for the summary line. */
-  const chosen = (() => {
-    if (value === NONE) return { title: 'No task', where: 'Minutes still count' };
-    if (value.startsWith('routine:')) {
-      const o = routines.find((r) => routineKey(r) === value);
-      return o ? { title: o.title, where: 'Routine' } : null;
-    }
-    if (value.startsWith('node:')) {
-      const n = index.byId.get(value.slice(5));
-      if (!n) return null;
-      const chain: string[] = [];
-      let cur = n;
-      while (cur.parentId && index.byId.has(cur.parentId)) {
-        cur = index.byId.get(cur.parentId)!;
-        chain.unshift(cur.title);
-      }
-      return { title: n.title, where: chain.length ? chain.join(' › ') : 'Course' };
-    }
-    return null;
-  })();
+  const chosen = describeSubject(value, index, routines);
 
   return (
     <div className="picker" role="group" aria-label="What to study">

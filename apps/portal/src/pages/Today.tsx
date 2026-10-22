@@ -32,7 +32,7 @@ import { TipCard } from '../components/TipCard';
 import { NudgesCard } from '../components/NudgesCard';
 import { useHints } from '../lib/hints';
 import { useTip } from '../lib/use-tip';
-import { openFocusTab } from '../lib/focus-tab';
+import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
 import { useActiveSession, useMe, useNodes, usePace, useSessions, useTags } from '../lib/queries';
@@ -69,8 +69,9 @@ function FullDashboard() {
   const navigate = useNavigate();
 
   const openFocus = () => {
-    if (openFocusTab() === 'blocked')
-      toast('Allow pop-ups to open the focus screen in its own tab.');
+    const result = openFocusTab();
+    if (result === 'here') navigate(FOCUS_PATH);
+    if (result === 'blocked') toast('Allow pop-ups to open the focus screen in its own tab.');
   };
 
   /**

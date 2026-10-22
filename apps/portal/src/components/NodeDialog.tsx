@@ -135,6 +135,7 @@ export function NodeDialog({ open, onClose, node, parentId, nodes }: NodeDialogP
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title={node ? 'Edit' : 'New item'}

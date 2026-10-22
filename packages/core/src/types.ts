@@ -327,6 +327,12 @@ export interface TimelapsePreset {
   /** The video's shape; 'camera' follows the camera's own. */
   aspect: TimelapseAspect;
   /**
+   * How far the focus screen darkens while it records and nobody is touching it, 0 (not at
+   * all) to 0.9. A black layer over the page, not the display's own brightness, which a web
+   * page can't change; never in the video.
+   */
+  dim: number;
+  /**
    * Where each piece sits in the video and whether it is shown. The camera's and the
    * screen's visibility also decide what is recorded. Replaces showTimer and
    * showClockTime, which only seed it for a row saved before it existed.

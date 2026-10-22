@@ -651,6 +651,7 @@ function PlanSettings({
 
   return (
     <Modal
+      phone="full"
       open={open}
       onClose={onClose}
       title="Edit plan"

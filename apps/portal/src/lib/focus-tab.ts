@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { isPhone } from './device';
 
 /**
  * The focus screen is its own browser tab. Starting a session anywhere opens it; starting
@@ -34,7 +35,12 @@ export type OpenFocusResult =
   /** A focus tab this page had opened was brought forward. */
   | 'focused'
   /** The browser blocked the popup. */
-  | 'blocked';
+  | 'blocked'
+  /**
+   * A phone: nothing was opened, and the caller goes to FOCUS_PATH in this tab. A second tab
+   * on a phone is a second Safari tab (or, in the installed app, a browser sheet over it).
+   */
+  | 'here';
 
 /**
  * Open the focus screen, or bring forward the one this page opened earlier. Synchronous on
@@ -44,6 +50,7 @@ export type OpenFocusResult =
  * or a fresh blank one; the blank one is then sent to the focus screen.
  */
 export function openFocusTab(): OpenFocusResult {
+  if (isPhone()) return 'here';
   let handle: Window | null;
   try {
     handle = window.open('', WINDOW_NAME);

@@ -12,6 +12,20 @@ import {
   useAuth,
 } from './lib/auth';
 import { useCachePersistence } from './lib/local-state';
+import {
+  loadAchievements,
+  loadAnalytics,
+  loadCalendar,
+  loadFocus,
+  loadGrades,
+  loadPlan,
+  loadPlans,
+  loadProfile,
+  loadRoutines,
+  loadSettings,
+  loadSocial,
+  loadTasks,
+} from './lib/page-loaders';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
 import { Today } from './pages/Today';
@@ -23,22 +37,21 @@ const AuthCallback = lazy(() =>
 const Onboarding = lazy(() =>
   import('./pages/Onboarding').then((m) => ({ default: m.Onboarding })),
 );
-const Tasks = lazy(() => import('./pages/Tasks').then((m) => ({ default: m.Tasks })));
-const Grades = lazy(() => import('./pages/Grades').then((m) => ({ default: m.Grades })));
-const Routines = lazy(() => import('./pages/Routines').then((m) => ({ default: m.Routines })));
-const Plans = lazy(() => import('./pages/Plans').then((m) => ({ default: m.Plans })));
-const Plan = lazy(() => import('./pages/Plan').then((m) => ({ default: m.Plan })));
-const Calendar = lazy(() => import('./pages/Calendar').then((m) => ({ default: m.Calendar })));
-const Analytics = lazy(() => import('./pages/Analytics').then((m) => ({ default: m.Analytics })));
-const Achievements = lazy(() =>
-  import('./pages/Achievements').then((m) => ({ default: m.Achievements })),
-);
-const Settings = lazy(() => import('./pages/Settings').then((m) => ({ default: m.Settings })));
+// The nav's pages load through lib/page-loaders, which also warms them up ahead of a tap.
+const Tasks = lazy(() => loadTasks().then((m) => ({ default: m.Tasks })));
+const Grades = lazy(() => loadGrades().then((m) => ({ default: m.Grades })));
+const Routines = lazy(() => loadRoutines().then((m) => ({ default: m.Routines })));
+const Plans = lazy(() => loadPlans().then((m) => ({ default: m.Plans })));
+const Plan = lazy(() => loadPlan().then((m) => ({ default: m.Plan })));
+const Calendar = lazy(() => loadCalendar().then((m) => ({ default: m.Calendar })));
+const Analytics = lazy(() => loadAnalytics().then((m) => ({ default: m.Analytics })));
+const Achievements = lazy(() => loadAchievements().then((m) => ({ default: m.Achievements })));
+const Settings = lazy(() => loadSettings().then((m) => ({ default: m.Settings })));
 const Extension = lazy(() => import('./pages/Extension').then((m) => ({ default: m.Extension })));
 const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
-const Profile = lazy(() => import('./pages/Profile').then((m) => ({ default: m.Profile })));
-const Social = lazy(() => import('./pages/Social').then((m) => ({ default: m.Social })));
-const Focus = lazy(() => import('./pages/Focus').then((m) => ({ default: m.Focus })));
+const Profile = lazy(() => loadProfile().then((m) => ({ default: m.Profile })));
+const Social = lazy(() => loadSocial().then((m) => ({ default: m.Social })));
+const Focus = lazy(() => loadFocus().then((m) => ({ default: m.Focus })));
 const ResetPassword = lazy(() =>
   import('./pages/ResetPassword').then((m) => ({ default: m.ResetPassword })),
 );
