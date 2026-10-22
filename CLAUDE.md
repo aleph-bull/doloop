@@ -526,6 +526,12 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   share back up after it is stopped from the browser's bar.
 - Saying no to the screen leaves the full camera picture: when a still has no screen image,
   nothing is drawn in the screen's box. There is never a black space for it.
+- **Live clip** (2026-10-22): while recording, a button on the recording pill (L on a
+  computer, a pill on the phone's camera screen) films the camera at full speed, up to 30
+  frames a second, for up to 30 s a clip and 60 s a recording, and the video plays that part
+  at real speed. Clip frames are stills with `clip` set, never thinned; `planTimelapse`
+  takes `liveMarks(stills)` and slots each clip in where it was filmed. The why and the
+  details are in DECISIONS.md, "Live clip".
 
 **The layout (Settings › Timelapse, `/settings#timelapse`).**
 - **Two presets, Phone and Computer**, each folded until clicked (`/settings#timelapse-phone`

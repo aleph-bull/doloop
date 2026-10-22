@@ -1,5 +1,6 @@
 import type { FocusContext } from '@komogon/core';
 import {
+  Clapperboard,
   Eye,
   EyeOff,
   Pause,
@@ -13,7 +14,7 @@ import { useEffect, useRef } from 'react';
 import { useToast } from '@komogon/ui';
 import { isUpright } from '../../lib/device';
 import type { SessionController } from '../../lib/session-controller';
-import type { CameraFacing, TimelapseRecorder } from '../../lib/timelapse';
+import { clipTime, type CameraFacing, type TimelapseRecorder } from '../../lib/timelapse';
 import { TaskContext } from './TaskContext';
 import { TimerDisplay } from './TimerDisplay';
 
@@ -101,6 +102,7 @@ export function PhoneCamera({
     return () => media.removeEventListener('change', onTurn);
   }, [toast]);
 
+  const { clip } = recorder;
   const status =
     recorder.status === 'starting'
       ? 'Starting the camera'
@@ -108,13 +110,16 @@ export function PhoneCamera({
         ? 'The camera stopped'
         : recorder.cameraMuted
           ? 'The camera is paused'
-          : filming
-            ? 'Recording'
-            : onBreak
-              ? 'Not filming the break'
-              : timer.phase === 'paused'
-                ? 'Paused'
-                : 'Waiting for focus';
+          : clip
+            ? `Live clip ${clipTime(clip)}`
+            : filming
+              ? 'Recording'
+              : onBreak
+                ? 'Not filming the break'
+                : timer.phase === 'paused'
+                  ? 'Paused'
+                  : 'Waiting for focus';
+  const clipButton = !!clip || recorder.canClip || recorder.clipsFull;
 
   return (
     <div className="pcam" data-facing={facing}>
@@ -174,8 +179,27 @@ export function PhoneCamera({
       </div>
 
       <div className={`pcam-dock focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
-        {(ctl.canSkip || (timer.mode === 'scheduled' && timer.plannedEndAt)) && (
+        {(clipButton || ctl.canSkip || (timer.mode === 'scheduled' && timer.plannedEndAt)) && (
           <div className="pcam-extra">
+            {clipButton && (
+              <button
+                type="button"
+                className={`pcam-pill${clip ? ' is-clip' : ''}`}
+                onClick={recorder.toggleClip}
+                disabled={!clip && recorder.clipsFull}
+              >
+                {clip ? (
+                  <>
+                    <Square size={13} aria-hidden /> Stop clip
+                  </>
+                ) : (
+                  <>
+                    <Clapperboard size={15} aria-hidden />{' '}
+                    {recorder.clipsFull ? 'Live clips used up' : 'Live clip'}
+                  </>
+                )}
+              </button>
+            )}
             {ctl.canSkip && (
               <button
                 type="button"
