@@ -338,7 +338,8 @@ posts in the middle, the first five of the leaderboard on the right (Global or F
 880px of page width the left column moves under the posts (it holds the requests, so it must
 stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
 dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
-The owner called the first version "massive"; don't let it grow back.
+The owner called the first version "massive"; don't let it grow back. The one exception is
+the small leaderboard, which they asked to have roomier (18px 20px padding, 2026-10-21).
 
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and the task's title

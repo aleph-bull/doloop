@@ -315,7 +315,7 @@ export function MiniLeaderboard() {
   const board = useLeaderboard(scope);
   const entries = board.data?.entries ?? [];
   return (
-    <Panel as="aside" className="side-card" aria-label="Leaderboard">
+    <Panel as="aside" className="side-card is-board" aria-label="Leaderboard">
       <div className="side-head">
         <h2 className="side-title">Leaderboard</h2>
         <div className="side-scope" role="group" aria-label="Which board">

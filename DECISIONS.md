@@ -1729,3 +1729,7 @@ The owner asked for dev tools such as starting onboarding again without losing d
 - **Deleting** an account removes it and everything in it for good, after typing its email to confirm. "Keep this email blocked" (on by default) stops the address signing up again.
 - **Admins are protected:** an `ADMIN_EMAILS` account (yours included) can't be suspended, deleted or blocked from the page.
 - **Migration numbering.** This shipped first as `0021_admin_moderation` (table `blocked_emails`, column `users.banned_at`). The unpushed `username` branch also has a `0021_usernames`, made earlier, so its journal `when` is older. Drizzle runs a migration only if its `when` is later than the last one applied, so merged as it is, the usernames migration would be skipped on the hosted database without any error. When merging that branch, delete its 0021 SQL, snapshot and journal entry, then run `npx drizzle-kit generate --name usernames` to make a fresh 0022.
+
+## Social side cards, 2026-10-21 (user request)
+
+- **The small leaderboard beside the feed is roomier.** The owner asked for larger margins and padding on it: 18px 20px padding (the other side cards keep 12px 14px), 14px between its parts and 6px between rows. It is the one exception to the dense side cards.
