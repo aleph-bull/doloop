@@ -22,6 +22,18 @@ export const TIMELAPSE_START_INTERVAL_MS = 500;
 /** The highest frame rate a video is made at. */
 export const TIMELAPSE_MAX_FPS = 60;
 
+/*
+ * A live clip: for a moment the camera is filmed at full speed, every frame kept, and the
+ * video plays that stretch at real speed, for showing the camera something. Clips are never
+ * thinned, so they are kept short.
+ */
+/** The most frames a second a live clip films. */
+export const LIVE_CLIP_FPS = 30;
+/** One live clip stops on its own after this long. */
+export const LIVE_CLIP_MAX_SECONDS = 30;
+/** The live clips one recording can hold in all. */
+export const LIVE_CLIP_TOTAL_SECONDS = 60;
+
 export interface TimelapseOptions {
   lengthMode: TimelapseLengthMode;
   lengthSeconds: number;
@@ -54,19 +66,25 @@ export function startIntervalMs(opts: TimelapseOptions): number {
   return Math.max(TIMELAPSE_MIN_INTERVAL_MS, Math.round(ms));
 }
 
-/** Drop every other still, keeping the first. */
-export function thinStills<T>(stills: readonly T[]): T[] {
-  return stills.filter((_, i) => i % 2 === 0);
+/** Drop every other still, keeping the first. A live clip's stills (`isClip`) are all kept. */
+export function thinStills<T>(stills: readonly T[], isClip?: (still: T) => boolean): T[] {
+  let n = 0;
+  return stills.filter((s) => isClip?.(s) || n++ % 2 === 0);
 }
 
 /**
  * The buffer after a still was added: thinned once it holds more than `cap`, or null when
  * it still has room. Thinning one past the cap leaves an odd count, so the still just taken
  * is one of those kept; the caller doubles its interval and times the next still from it,
- * and the spacing stays even.
+ * and the spacing stays even. A live clip's stills don't count toward the cap.
  */
-export function thinIfFull<T>(stills: readonly T[], cap: number): T[] | null {
-  return stills.length > cap ? thinStills(stills) : null;
+export function thinIfFull<T>(
+  stills: readonly T[],
+  cap: number,
+  isClip?: (still: T) => boolean,
+): T[] | null {
+  const count = isClip ? stills.reduce((n, s) => (isClip(s) ? n : n + 1), 0) : stills.length;
+  return count > cap ? thinStills(stills, isClip) : null;
 }
 
 export interface TimelapsePlan {
@@ -80,7 +98,17 @@ export interface TimelapsePlan {
   maxFps: number;
   /** True when there are too few stills to reach the asked length, so the video is shorter. */
   short: boolean;
+  /** For each frame, true when it plays a live clip. Absent when the stills have none. */
+  live?: boolean[];
+  /** Seconds of the video that are live clips, playing at real speed. */
+  liveSeconds: number;
 }
+
+/**
+ * A still's place in a live clip: which clip (they are numbered from 1) and when it was
+ * taken, in ms. Null for an ordinary still.
+ */
+export type LiveMark = { clip: number; at: number } | null;
 
 /** Split `count` stills across `frames` frames, as evenly as whole stills allow. */
 function partition(count: number, frames: number): Array<[number, number]> {
@@ -103,8 +131,94 @@ function partition(count: number, frames: number): Array<[number, number]> {
  *   with too few the video is as long as the stills allow instead.
  * - speed: `spanSeconds / speed` long; the frame rate can only go as high as the stills
  *   reach without showing the same one twice.
+ *
+ * `marks` says which stills belong to a live clip. The ordinary stills are laid out as
+ * above, as if the clips weren't there, and each clip goes in where it was filmed, a frame
+ * for every 1/fps of it, so it plays at real speed and adds its own length to the video.
  */
 export function planTimelapse(
+  stillCount: number,
+  spanSeconds: number,
+  opts: TimelapseOptions,
+  marks?: readonly LiveMark[],
+): TimelapsePlan {
+  const runs = marks ? clipRuns(marks.slice(0, stillCount)) : [];
+  if (runs.length === 0) return planOrdinary(stillCount, spanSeconds, opts);
+  const at = (i: number) => marks![i]!.at;
+  const ordinary: number[] = [];
+  for (let i = 0; i < stillCount; i++) if (!marks![i]) ordinary.push(i);
+  const clipSeconds = runs.reduce((sum, run) => sum + runSeconds(at, run), 0);
+  // A speed counts the focus the ordinary stills stand for; the clips play at 1x.
+  let base = planOrdinary(ordinary.length, Math.max(0, spanSeconds - clipSeconds), opts);
+  const fpsAsked = clampFps(opts.fps);
+  if (base.fps < fpsAsked && base.frames.length > 0) {
+    // Speed lowers the rate when the stills are few, which would make a clip stutter; the
+    // asked rate shows the ordinary stills a frame or two longer instead.
+    const count = Math.max(1, Math.round(base.durationSeconds * fpsAsked));
+    base = { ...base, fps: fpsAsked, frames: partition(ordinary.length, count) };
+  }
+  const fps = base.fps;
+
+  const frames: Array<[number, number]> = [];
+  const live: boolean[] = [];
+  let next = 0;
+  const addClip = (run: [number, number]) => {
+    const [from, to] = run;
+    const count = Math.max(1, Math.round(runSeconds(at, run) * fps));
+    let i = from;
+    for (let k = 0; k < count; k++) {
+      // The still showing at this moment of the clip: the last one taken by then.
+      const t = at(from) + (k * 1000) / fps;
+      while (i + 1 < to && at(i + 1) <= t) i++;
+      frames.push([i, i + 1]);
+      live.push(true);
+    }
+  };
+  for (const [a, b] of base.frames) {
+    const from = ordinary[a]!;
+    // A clip filmed before this frame's first still plays before it.
+    while (next < runs.length && runs[next]![0] < from) addClip(runs[next++]!);
+    // A frame never blends across a clip: it stops where the next clip starts.
+    const clip = runs[next];
+    const to = Math.min(ordinary[b - 1]! + 1, clip ? clip[0] : stillCount);
+    frames.push([from, to]);
+    live.push(false);
+  }
+  while (next < runs.length) addClip(runs[next++]!);
+  const liveFrames = live.filter(Boolean).length;
+  return {
+    fps,
+    frames,
+    durationSeconds: frames.length / fps,
+    maxFps: base.maxFps,
+    short: ordinary.length > 0 && base.short,
+    live,
+    liveSeconds: liveFrames / fps,
+  };
+}
+
+/** Each live clip in the stills, as [first, end): a run of stills of the same clip. */
+function clipRuns(marks: readonly LiveMark[]): Array<[number, number]> {
+  const runs: Array<[number, number]> = [];
+  for (let i = 0; i < marks.length; i++) {
+    const m = marks[i];
+    if (!m) continue;
+    const last = runs[runs.length - 1];
+    if (last && last[1] === i && marks[i - 1]?.clip === m.clip) last[1] = i + 1;
+    else runs.push([i, i + 1]);
+  }
+  return runs;
+}
+
+/** How long a clip ran: first still to last, and the last one's own share of a second. */
+function runSeconds(at: (i: number) => number, [from, to]: [number, number]): number {
+  const n = to - from;
+  const step = n > 1 ? (at(to - 1) - at(from)) / (n - 1) : 1000 / LIVE_CLIP_FPS;
+  return (at(to - 1) - at(from) + step) / 1000;
+}
+
+/** The plan for ordinary stills only, by the length mode. */
+function planOrdinary(
   stillCount: number,
   spanSeconds: number,
   opts: TimelapseOptions,
@@ -117,6 +231,7 @@ export function planTimelapse(
       durationSeconds: 0,
       maxFps: TIMELAPSE_MAX_FPS,
       short: true,
+      liveSeconds: 0,
     };
 
   if (opts.lengthMode === 'length') {
@@ -130,6 +245,7 @@ export function planTimelapse(
         durationSeconds: length,
         maxFps,
         short: false,
+        liveSeconds: 0,
       };
     }
     return {
@@ -138,6 +254,7 @@ export function planTimelapse(
       durationSeconds: stillCount / fpsAsked,
       maxFps,
       short: true,
+      liveSeconds: 0,
     };
   }
 
@@ -155,6 +272,7 @@ export function planTimelapse(
       durationSeconds: count / fps,
       maxFps,
       short: false,
+      liveSeconds: 0,
     };
   }
 
@@ -164,6 +282,7 @@ export function planTimelapse(
     durationSeconds: stillCount / fpsAsked,
     maxFps: TIMELAPSE_MAX_FPS,
     short: false,
+    liveSeconds: 0,
   };
 }
 

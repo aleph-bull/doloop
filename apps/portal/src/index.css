@@ -7390,6 +7390,14 @@
   background: rgb(0 0 0 / 0.42);
   font-size: var(--text-sm);
 }
+/* A live clip filming: the pill that stops it takes the stop button's red. */
+.pcam-pill.is-clip {
+  background: color-mix(in srgb, var(--status-bad) 72%, rgb(0 0 0 / 0.5));
+}
+.pcam-pill:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .pcam-restart {
   position: absolute;
   top: calc(max(14px, env(safe-area-inset-top)) + 64px);

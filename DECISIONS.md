@@ -1941,6 +1941,40 @@ The owner asked for four things in one message: a preview before a post goes out
 - `targetsFor` (a preset's layouts for the editor) moved from `TimelapsePresets.tsx` into `TimelapseLayoutEditor.tsx` so the dialog can use it without a circular import.
 - Checked in the sandbox with a fake camera (a canvas stream): looks in Settings and on the focus screen, the end card in a made video (4.6 s from 1.6 s of stills), the Social preview posting without the hours (201, on the feed without the time), the Instagram preview at computer and phone widths, and "Change layout?" remaking the video in the new look with new words. The share menu, the clipboard on a real phone, and the sites' own pages weren't tried; the owner will have to try those.
 
+## The homepage below the devices, redone, 2026-10-22 (user request)
+
+The owner liked the hero, laptop and phone, but said the rest of `apps/site` looked bad: the
+words were right, the layout of text and pictures wasn't, the screenshots were from an older
+app, and their own timelapses should be on it. They asked for something like other clean
+start-up sites without losing the brand.
+
+- **Words unchanged**, every heading and paragraph as they were.
+- **One pattern per section:** the heading on the left and its paragraph on the right (stacked
+  on phones), then the pictures on the same 1120 px container. The alternating left-right
+  splits and the narrow screenshots are gone.
+- **Plain screenshots, cropped tight**, all with the same 24px corner and no shadow or frame
+  (the owner rejected photo stages behind sections before). New captures from the current
+  app (sidebar, Social, the new profile era), Jerry's seeded sandbox: Analytics' week view;
+  the focus screen as a wide band; the feed beside the Leaderboard tab, sized so both are one
+  height.
+- **The owner's timelapses** (10-18, and both from 10-20) under the focus screen, three across,
+  each a whole session in ten seconds. They play only while on screen, and wait on a poster
+  with controls under reduced motion. On phones they are a row to swipe. The 10-17 one was
+  left out because someone else is in the background for a stretch of it.
+- **Closing:** the logo, "Better than last time.", the line and the two buttons straight on
+  the page, without the white card.
+
+## Live clip: a moment of the timelapse at real speed, 2026-10-22 (user request)
+
+The owner wanted to be able to be silly in a timelapse now and then and show the camera something: an option that films the camera at full speed and plays that part at 1x. They asked for a 1-2 word name; it's **Live clip**.
+
+- **Where:** while recording, the computer's recording pill in the top bar has a "Live clip" button, and the L key starts and stops one (not while typing or with a dialog up). On a phone it's a pill above the camera screen's controls. While one runs, the pill says "Live clip 0:07 of 0:30" with a "Stop clip" button (red on the phone). It only offers itself while stills are being taken (focus, or breaks when "Record breaks too" is on) with the camera giving pictures; a break, a pause or stopping the recording ends the clip.
+- **Limits:** one clip stops on its own after 30 seconds (`LIVE_CLIP_MAX_SECONDS`), and a recording holds 60 seconds of clips in all (`LIVE_CLIP_TOTAL_SECONDS`), because every frame of a clip is kept (about 2 MB a second); after that the button says "Live clips used up" until the stills are thrown away. Settings › Timelapse and the focus screen's controls say it in one line.
+- **Recording** (`useTimelapseRecorder`): while a clip runs the paced stills stop, and every frame the camera gives, up to 30 a second (`LIVE_CLIP_FPS`), is kept as a still marked with its clip's number (`Still.clip`) and stamped with the moment it was drawn. Frames are drawn on time and saved alongside one another, up to 45 at once: a JPEG can take about a second to come back in a page the browser thinks nobody is looking at, and waiting for each would have filmed a clip at a frame a second. The paced stills wait until the clip's last frames are saved, so the order holds. Clip frames are never thinned and don't count toward the cap (`thinIfFull(..., isClip)`), so thinning keeps working on the ordinary stills as before. A clip has no screen picture: the camera gets the whole frame for whatever is being shown.
+- **The video** (`planTimelapse(..., marks)` in core, tests beside it): the ordinary stills are paced exactly as before, as if the clips weren't there, and each clip goes in where it was filmed with one frame for every 1/fps of it, using the still taken by that moment, so it plays at real speed at any frame rate and adds its own length. A set length is the length of the timelapse part; a speed counts the focus the ordinary stills stand for; when speed would lower the frame rate (few stills), the asked rate is kept so the clip doesn't stutter. A blended frame never reaches across a clip. Clip frames get no smoothing; the deflicker is worked out over the ordinary stills, and a clip takes the light of the still before it. The progress bar holds through a clip; the elapsed clock ticks in real time. The phone's trim spreads its pictures and its bar by time, so a clip's many frames don't take over the strip.
+- The "Your timelapse" card says "24 stills and a live clip (5 s) from 1 min of focus".
+- Checked in the sandbox with a fake camera (a canvas stream whose colour moves with a frame counter): the L key and the buttons, the 30-second stop, the 60-second total, the phone's camera screen at phone size, and a made video whose clip advanced at the fake camera's own rate (about 80 degrees of colour a second, as live) while the stills around it ran at timelapse speed. A real camera, a real phone and Safari weren't tried.
+
 ## The timelapse: your own text on the video, no end card, and the other sites without a preview, 2026-10-22 (user request)
 
 The owner saw the first version (section above) and changed three things.

@@ -62,10 +62,14 @@
         </div>
       </section>
 
+      <!-- Each feature: the heading on the left, its paragraph on the right, then the app.
+           Every picture is a plain screenshot (or one of the owner's timelapses) with the
+           same corner; widths line up on the one container. -->
+
       <!-- Track -->
       <section id="track" class="section">
-        <div class="container split">
-          <div class="split-text rise">
+        <div class="container">
+          <div class="feature-head rise">
             <h2>Track your focus sessions.</h2>
             <p class="lede-sm">
               See how long the homework really takes, module by module, and how many hours you
@@ -73,14 +77,14 @@
               and get ahead.
             </p>
           </div>
-          <img class="shot rise rise-pop" style="--d: 160ms" src="/shots/analytics.webp" alt="Komodon analytics: hours this week against last week, and where the time went" width="2880" height="1800" loading="lazy" />
+          <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/analytics.webp" alt="Komodon analytics: 6.1 hours this week against 8.9 last week, the weekly goal met, and what that time is enough for" width="1928" height="1084" loading="lazy" />
         </div>
       </section>
 
       <!-- Focus -->
       <section id="focus" class="section">
-        <div class="container split split-reverse">
-          <div class="split-text rise">
+        <div class="container">
+          <div class="feature-head rise">
             <h2>Stay accountable and focused.</h2>
             <p class="lede-sm">
               Komodon is built for getting work done. The Pomodoro timer is yours to shape, a
@@ -88,25 +92,30 @@
               site blocker is there if you want it.
             </p>
           </div>
-          <img class="shot rise rise-pop" style="--d: 160ms" src="/shots/focus.webp" alt="The Komodon focus screen: a large countdown over the backdrop" width="2880" height="1800" loading="lazy" />
+          <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/focus.webp" alt="The Komodon focus screen: a large countdown for Problem set 3 over the backdrop" width="2240" height="963" loading="lazy" />
+          <!-- Real timelapses from Komodon, each a whole session in ten seconds. main.js plays
+               them while they're on screen. -->
+          <div class="clips">
+            <video class="panel clip rise rise-pop" style="--d: 160ms" src="/clips/afternoon.mp4" poster="/clips/afternoon.webp" width="720" height="406" muted loop playsinline preload="none" aria-label="A timelapse of an afternoon study session, 1:58 to 5:04 PM"></video>
+            <video class="panel clip rise rise-pop" style="--d: 260ms" src="/clips/late-night.mp4" poster="/clips/late-night.webp" width="720" height="406" muted loop playsinline preload="none" aria-label="A timelapse of a late-night study session, 1:28 to 2:23 AM"></video>
+            <video class="panel clip rise rise-pop" style="--d: 360ms" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline preload="none" aria-label="A timelapse of a study session over three hours long"></video>
+          </div>
         </div>
       </section>
 
       <!-- Share -->
       <section id="share" class="section">
         <div class="container">
-          <div class="section-head rise">
+          <div class="feature-head rise">
             <h2>Share your wins with friends.</h2>
             <p class="lede-sm">
               After a session of hard work, share it with your friends, or set up a friendly
               competition. Grow stronger and better together.
             </p>
           </div>
-          <div class="stage">
-            <div class="stage-content two">
-              <img class="shot rise rise-pop" style="--d: 160ms" src="/shots/profile.webp" alt="A Komodon profile: a six-month grid of days studied and totals" width="2880" height="1800" loading="lazy" />
-              <img class="shot rise rise-pop" style="--d: 300ms" src="/shots/leaderboard.webp" alt="The Komodon leaderboard: people ranked by focused hours" width="2880" height="1800" loading="lazy" />
-            </div>
+          <div class="share-grid">
+            <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/feed.webp" alt="The Komodon feed: friends studying right now, and a box to share how a session went" width="904" height="950" loading="lazy" />
+            <img class="panel rise rise-pop" style="--d: 220ms" src="/shots/leaderboard.webp" alt="The Komodon leaderboard: the top three by focused hours, then everyone else and how you compare" width="1888" height="1416" loading="lazy" />
           </div>
         </div>
       </section>
@@ -114,6 +123,7 @@
       <!-- Closing -->
       <section class="section closing">
         <div class="container closing-inner rise rise-pop">
+          <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
           <h2>Better than last time.</h2>
           <p class="lede-sm">Free to use. Currently in alpha.</p>
           <div class="cta-row">
