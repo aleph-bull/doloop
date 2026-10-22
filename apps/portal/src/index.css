@@ -44,9 +44,13 @@
   }
 }
 
-/* Each page rises in as it arrives: quick, so a tab change never feels like it waits. */
+/* Each page rises in as it arrives: quick, so a tab change never feels like it waits.
+   `backwards`, never `both`: an opacity animation still held at its end makes Chrome treat
+   the page as the backdrop of every glass card inside it, so the cards stay unblurred and
+   only the patches that repaint frost (seen in Vivaldi, 2026-10-22). Any fade on something
+   that holds cards follows the same rule. */
 .route-in {
-  animation: route-in 240ms var(--ease-out) both;
+  animation: route-in 240ms var(--ease-out) backwards;
 }
 @keyframes route-in {
   from {
@@ -2737,6 +2741,28 @@
   font-size: var(--text-base);
   font-weight: 600;
 }
+/* Appearance › Advanced: the glass's four sliders, a name, the control and its value. */
+.glass-controls {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 48px;
+  align-items: center;
+  gap: 10px 12px;
+  max-width: 460px;
+  font-size: var(--text-sm);
+}
+.glass-controls > :nth-child(3n) {
+  text-align: right;
+  color: var(--fg-muted);
+}
+.glass-color {
+  width: 64px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
 /* Data and privacy: what happens to your data, said plainly before any buttons. */
 .privacy-promise {
   display: flex;
@@ -4805,7 +4831,7 @@
   gap: 18px;
 }
 .summary-reveal {
-  animation: summary-reveal 520ms var(--ease-spring) both;
+  animation: summary-reveal 520ms var(--ease-spring) backwards;
 }
 @keyframes summary-reveal {
   from {
@@ -5004,7 +5030,7 @@
 }
 .rc-rise,
 .rc-bento > * {
-  animation: rc-rise 520ms var(--ease-out) both;
+  animation: rc-rise 520ms var(--ease-out) backwards;
 }
 .rc-bento > :nth-child(2) {
   animation-delay: 60ms;
@@ -6655,25 +6681,35 @@
   color: var(--fg);
 }
 /*
- * Badges, folded to one row and a fading second. The fade is a mask whose length is a
- * registered property, so it can transition away as the fold opens rather than snap.
+ * Badges, folded to one row and a fading second. The fade is a mask on each badge of the
+ * second row (`data-fold-edge`, set by BadgeFold), not on the fold: a mask on the fold
+ * would be the backdrop of every badge's glass, and none of them would frost. The fold cuts
+ * those badges at 60% of their height; `--fold` runs from 1 (folded) to 0 (open) so the
+ * fade slides off as the fold grows rather than snapping.
  */
-@property --badge-fade {
-  syntax: '<length>';
-  inherits: false;
-  initial-value: 0px;
+@property --fold {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
 }
 .badge-fold {
-  --badge-fade: 0px;
+  --fold: 0;
   overflow: hidden;
   /* Room for the cards' shadows inside the clip. */
   padding: 2px;
   margin: -2px;
-  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--badge-fade)), transparent);
   /* Ease in and out: a long open that starts and settles gently instead of leaping. */
   transition:
     height 700ms cubic-bezier(0.45, 0, 0.2, 1),
-    --badge-fade 700ms cubic-bezier(0.45, 0, 0.2, 1);
+    --fold 700ms cubic-bezier(0.45, 0, 0.2, 1);
+}
+.badge-fold [data-fold-edge] {
+  --fold-cut: calc(100% - 40% * var(--fold));
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(var(--fold-cut) - 90px * var(--fold)),
+    transparent var(--fold-cut)
+  );
 }
 .badge-card.is-revealing {
   animation: badge-reveal 460ms cubic-bezier(0.2, 0, 0.2, 1) both;
@@ -6681,7 +6717,7 @@
 }
 /* A card rail opened to "See all": the grid fades in rather than snapping. */
 .rail-expanded {
-  animation: badge-reveal var(--dur-slow) var(--ease-out) both;
+  animation: badge-reveal var(--dur-slow) var(--ease-out) backwards;
 }
 @keyframes badge-reveal {
   from {
@@ -6694,7 +6730,7 @@
   }
 }
 .badge-fold.is-folded {
-  --badge-fade: 90px;
+  --fold: 1;
 }
 .badge-fold-toggle {
   align-self: center;

@@ -583,6 +583,7 @@ export function Focus() {
           backgroundId={appearance.backgroundId}
           theme={appearance.theme}
           customImageUrl={appearance.customImageUrl}
+          glass={appearance.glass}
         />
         <Spinner />
       </div>
@@ -595,6 +596,7 @@ export function Focus() {
         backgroundId={appearance.backgroundId}
         theme={appearance.theme}
         customImageUrl={appearance.customImageUrl}
+        glass={appearance.glass}
       />
       {vis?.enabled && (
         <AudioVisualizer

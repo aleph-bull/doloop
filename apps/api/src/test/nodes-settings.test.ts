@@ -218,6 +218,43 @@ describe('settings and profile', () => {
     expect(bad.statusCode).toBe(400);
   });
 
+  it('keeps the glass settings, starting at the light frost', async () => {
+    const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme;
+    expect(before).toMatchObject({
+      glassColor: null,
+      glassAlpha: null,
+      glassBlur: 11,
+      glassSaturate: 100,
+    });
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { glassColor: '#2c2c3e', glassAlpha: 0.65, glassBlur: 6 } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().settings.theme).toMatchObject({
+      glassColor: '#2c2c3e',
+      glassAlpha: 0.65,
+      glassBlur: 6,
+      glassSaturate: 100,
+    });
+    const back = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { glassColor: null, glassAlpha: null } },
+    });
+    expect(back.json().settings.theme).toMatchObject({ glassColor: null, glassAlpha: null });
+    for (const theme of [
+      { glassBlur: 41 },
+      { glassSaturate: 99 },
+      { glassAlpha: 0.2 },
+      { glassColor: 'red' },
+    ]) {
+      const bad = await t.api({ method: 'PATCH', url: '/api/me/settings', payload: { theme } });
+      expect(bad.statusCode).toBe(400);
+    }
+  });
+
   it('updates timezone and onboarding, regenerates ics token, exports data', async () => {
     const res = await t.api({
       method: 'PATCH',

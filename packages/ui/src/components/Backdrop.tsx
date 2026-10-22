@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { backgroundById, photoScrimCss } from '../backgrounds';
-import { adaptToPhoto, THEME_GLASS, type RGB } from '../contrast';
+import { adaptToPhoto, chooseGlass, THEME_GLASS, type GlassChoice, type RGB } from '../contrast';
 import type { ResolvedTheme } from '../theme';
 
 export interface BackdropProps {
@@ -13,6 +13,8 @@ export interface BackdropProps {
    * it passes nothing; the extension passes the portal origin.
    */
   assetBase?: string;
+  /** Someone's own glass colour and weight (Appearance › Advanced). */
+  glass?: GlassChoice;
 }
 
 /** The wash over a photo that keeps text straight on the backdrop readable. */
@@ -29,7 +31,44 @@ const ADAPTED_TOKENS = [
   '--fg-on-backdrop',
   '--accent-text-backdrop',
   '--backdrop-halo',
+  '--fg-on-glass',
+  '--accent-text-glass',
 ];
+
+const rgba = (rgb: RGB, alpha: number) => `rgb(${rgb.join(' ')} / ${alpha.toFixed(2)})`;
+
+/**
+ * Someone's own glass colour and weight, laid over what `applyGlass` set. `own` is the glass
+ * the theme and photo asked for. A colour that wants the other text (dark glass in light mode,
+ * say) turns the text on all glass round, and pins the page's own text on a gradient, which
+ * otherwise follows the glass's.
+ */
+function applyChosenGlass(
+  glass: GlassChoice | undefined,
+  avg: RGB | null,
+  theme: ResolvedTheme,
+  own: { alpha: number; strongAlpha: number; chromeAlpha: number },
+): void {
+  const chosen = glass ? chooseGlass(glass, theme, avg, own) : null;
+  if (!chosen) return;
+  const root = document.documentElement;
+  root.style.setProperty('--glass-fill', rgba(chosen.fill, chosen.alpha));
+  root.style.setProperty('--glass-fill-strong', rgba(chosen.fill, chosen.strongAlpha));
+  root.style.setProperty('--chrome-fill', rgba(chosen.chrome, own.chromeAlpha));
+  if (chosen.lightText === (theme === 'dark')) return;
+  const fg = chosen.lightText ? '#f4f5f9' : '#0f1220';
+  const accent = chosen.lightText ? 'var(--accent-text-on-dark)' : 'var(--accent-text-on-light)';
+  root.style.setProperty('--fg-on-glass', fg);
+  root.style.setProperty('--accent-text-glass', accent);
+  if (!avg) {
+    const pageFg = theme === 'dark' ? '#f4f5f9' : '#0f1220';
+    root.style.setProperty('--fg-on-backdrop', pageFg);
+    root.style.setProperty(
+      '--accent-text-backdrop',
+      theme === 'dark' ? 'var(--accent-text-on-dark)' : 'var(--accent-text-on-light)',
+    );
+  }
+}
 
 /**
  * Push the adapted tokens onto <html>, or clear them for a plain gradient. Returns the page
@@ -42,21 +81,24 @@ function applyGlass(
   avg: RGB | null,
   theme: ResolvedTheme,
   kind: 'photo' | 'solid' = 'photo',
+  chosen?: GlassChoice,
 ): PageWash | null {
   const root = document.documentElement;
   if (!avg) {
     for (const v of ADAPTED_TOKENS) root.style.removeProperty(v);
     delete root.dataset.backdrop;
+    applyChosenGlass(chosen, null, theme, THEME_GLASS[theme]);
     return null;
   }
   const a = adaptToPhoto(avg, theme);
   // Lets text that sits straight on a photo pick up a soft halo (see styles.css). A flat
   // colour has no busy patches to cover, so it gets none.
   root.dataset.backdrop = kind;
-  const glass = (alpha: number, rgb: RGB = a.fill) => `rgb(${rgb.join(' ')} / ${alpha.toFixed(2)})`;
-  root.style.setProperty('--glass-fill', glass(a.alpha));
-  root.style.setProperty('--glass-fill-strong', glass(a.strongAlpha));
-  root.style.setProperty('--chrome-fill', glass(a.chromeAlpha, THEME_GLASS[theme].chrome));
+  root.style.setProperty('--glass-fill', rgba(a.fill, a.alpha));
+  root.style.setProperty('--glass-fill-strong', rgba(a.fill, a.strongAlpha));
+  root.style.setProperty('--chrome-fill', rgba(THEME_GLASS[theme].chrome, a.chromeAlpha));
+  root.style.removeProperty('--fg-on-glass');
+  root.style.removeProperty('--accent-text-glass');
 
   const lightPage = a.pageFg[0] > 128;
   root.style.setProperty('--fg-on-backdrop', `rgb(${a.pageFg.join(' ')})`);
@@ -65,6 +107,7 @@ function applyGlass(
     lightPage ? 'var(--accent-text-on-dark)' : 'var(--accent-text-on-light)',
   );
   root.style.setProperty('--backdrop-halo', lightPage ? 'rgb(26 28 40)' : 'rgb(246 247 250)');
+  applyChosenGlass(chosen, avg, theme, a);
   return a.pageScrim > 0 ? { color: a.pageWash, alpha: a.pageScrim } : null;
 }
 
@@ -76,7 +119,13 @@ function applyGlass(
  * paints instantly. A user's own upload is sampled live, since nothing is known about it
  * ahead of time.
  */
-export function Backdrop({ backgroundId, theme, customImageUrl, assetBase = '' }: BackdropProps) {
+export function Backdrop({
+  backgroundId,
+  theme,
+  customImageUrl,
+  assetBase = '',
+  glass,
+}: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
   const variant = theme === 'dark' ? def.dark : def.light;
@@ -84,14 +133,20 @@ export function Backdrop({ backgroundId, theme, customImageUrl, assetBase = '' }
   const solid = customImageUrl ? null : def.solid;
   const [uploadOk, setUploadOk] = useState(false);
   const [wash, setWash] = useState<PageWash | null>(null);
+  // Kept as plain values, so a new settings object with the same glass changes nothing.
+  const glassColor = glass?.color ?? null;
+  const glassAlpha = glass?.alpha ?? null;
 
   // Shipped photographs: apply synchronously on change, so text never renders unreadable.
   useEffect(() => {
     if (customImageUrl) return;
+    const chosen = { color: glassColor, alpha: glassAlpha };
     setWash(
-      solid ? applyGlass(solid, theme, 'solid') : applyGlass(photo ? photo.avg : null, theme),
+      solid
+        ? applyGlass(solid, theme, 'solid', chosen)
+        : applyGlass(photo ? photo.avg : null, theme, 'photo', chosen),
     );
-  }, [photo, solid, customImageUrl, theme]);
+  }, [photo, solid, customImageUrl, theme, glassColor, glassAlpha]);
 
   // A user's own image has to be measured in the browser.
   useEffect(() => {
@@ -103,7 +158,7 @@ export function Backdrop({ backgroundId, theme, customImageUrl, assetBase = '' }
     sampleImage(customImageUrl)
       .then((avg) => {
         if (cancelled) return;
-        setWash(applyGlass(avg, theme));
+        setWash(applyGlass(avg, theme, 'photo', { color: glassColor, alpha: glassAlpha }));
         setUploadOk(true);
       })
       .catch(() => {
@@ -112,7 +167,7 @@ export function Backdrop({ backgroundId, theme, customImageUrl, assetBase = '' }
     return () => {
       cancelled = true;
     };
-  }, [customImageUrl, theme]);
+  }, [customImageUrl, theme, glassColor, glassAlpha]);
 
   const imageUrl = customImageUrl && uploadOk ? customImageUrl : null;
   // `src` has no leading slash, so an empty base resolves to the app root.

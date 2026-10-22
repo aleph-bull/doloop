@@ -200,6 +200,15 @@ export function AppearancePresets({
         panel: p.panel,
         panelColor: p.panelColor,
         panelAlpha: p.panelAlpha,
+        // A look saved before the glass settings keeps whatever glass is set now.
+        ...(p.glassBlur === undefined
+          ? {}
+          : {
+              glassColor: p.glassColor ?? null,
+              glassAlpha: p.glassAlpha ?? null,
+              glassBlur: p.glassBlur,
+              glassSaturate: p.glassSaturate ?? 100,
+            }),
       };
       if (p.hasImage) {
         const image = await presetImage(p.id);

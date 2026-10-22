@@ -20,6 +20,11 @@ export interface AppearancePreset {
   panel: Theme['panel'];
   panelColor: string;
   panelAlpha: number;
+  /** The glass (Appearance › Advanced). Missing on looks saved before it existed. */
+  glassColor?: string | null;
+  glassAlpha?: number | null;
+  glassBlur?: number;
+  glassSaturate?: number;
 }
 
 const LIST_KEY = 'komogon.appearancePresets';
@@ -97,6 +102,10 @@ export async function savePreset(
     panel: theme.panel,
     panelColor: theme.panelColor,
     panelAlpha: theme.panelAlpha,
+    glassColor: theme.glassColor,
+    glassAlpha: theme.glassAlpha,
+    glassBlur: theme.glassBlur,
+    glassSaturate: theme.glassSaturate,
   };
   if (preset.hasImage) await idb('readwrite', (s) => s.put(image, preset.id));
   saveList([...list, preset]);

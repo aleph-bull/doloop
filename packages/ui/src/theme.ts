@@ -249,8 +249,32 @@ export interface UserThemeLike {
     panel: 'opaque' | 'glass' | 'custom' | 'matte';
     panelColor: string;
     panelAlpha: number;
+    /** Optional so an extension built before them still applies the rest. */
+    glassBlur?: number;
+    glassSaturate?: number;
   };
   effects: { reducedMotion: 'system' | 'on' | 'off' };
+}
+
+/**
+ * The glass's blur and colour boost (Appearance › Advanced) on every glass surface. Strong
+ * glass (dialogs, toasts) keeps the same proportion to the cards as the tokens' 44px to 28px.
+ */
+export function applyGlassFrost(
+  blur: number | undefined,
+  saturate: number | undefined,
+  root: HTMLElement = document.documentElement,
+): void {
+  if (blur === undefined) {
+    root.style.removeProperty('--glass-blur');
+    root.style.removeProperty('--glass-blur-strong');
+  } else {
+    const px = Math.min(40, Math.max(0, blur));
+    root.style.setProperty('--glass-blur', `${px}px`);
+    root.style.setProperty('--glass-blur-strong', `${Math.round((px * 44) / 28)}px`);
+  }
+  if (saturate === undefined) root.style.removeProperty('--glass-saturate');
+  else root.style.setProperty('--glass-saturate', `${Math.min(200, Math.max(100, saturate))}%`);
 }
 
 /**
@@ -303,6 +327,7 @@ export function applyUserTheme(
   );
   // A custom panel colour gets its own accent text, measured against that colour.
   if (panelBehind) root.style.setProperty('--panel-accent-text', readableAccent(hsl, panelBehind));
+  applyGlassFrost(settings.theme.glassBlur, settings.theme.glassSaturate, root);
   return resolved;
 }
 

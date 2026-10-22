@@ -268,6 +268,10 @@ function BadgeFold({ count, children }: { count: number; children: ReactNode }) 
       const first = rects[0];
       // The first card of the second row: the first one sitting lower than card one.
       const second = rects.find((r) => first && r.top > first.top + 1);
+      // The second row carries the fold's fade itself (see .badge-fold in index.css).
+      cards.forEach((c, i) =>
+        c.toggleAttribute('data-fold-edge', !!second && Math.abs(rects[i]!.top - second.top) < 1),
+      );
       if (!first || !second) return setHeights(null);
       setHeights({
         folded: Math.round(second.top - top + second.height * 0.6),

@@ -118,6 +118,14 @@ export interface UserSettings {
     panelColor: string;
     /** 0..1 opacity for panel 'custom'. */
     panelAlpha: number;
+    /** The glass's colour (Appearance › Advanced). Null keeps the theme's own. */
+    glassColor: string | null;
+    /** How much of the glass's colour covers the background, 0.3..0.95. Null keeps the theme's. */
+    glassAlpha: number | null;
+    /** The glass's blur in px, 0..40. */
+    glassBlur: number;
+    /** How much the glass deepens the colours behind it, 100..200 (%). */
+    glassSaturate: number;
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
     extensionBackground: string;
     /** The user's own accent colours ('custom:h,s,l'), kept beside the built-in ones. */

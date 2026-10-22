@@ -63,6 +63,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
     panel: 'glass',
     panelColor: '#151827',
     panelAlpha: 0.92,
+    glassColor: null,
+    glassAlpha: null,
+    // The owner's pick on 2026-10-22: a light frost that leaves the card's colour in charge.
+    glassBlur: 11,
+    glassSaturate: 100,
     extensionBackground: 'same',
     savedAccents: [],
   },
