@@ -860,7 +860,7 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 24px 26px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 /* What the clock is doing, with a dot that breathes while it runs. */
@@ -1811,7 +1811,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
 }
 .start-panel-main {
   display: flex;
@@ -1840,9 +1840,6 @@
   min-width: 196px;
 }
 @media (max-width: 560px) {
-  .start-panel {
-    padding: 20px;
-  }
   .start-panel-actions {
     width: 100%;
     flex-direction: column-reverse;
@@ -2370,7 +2367,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 20px 40px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
 }
 .days-panel-grid {
   flex: 1 1 360px;
@@ -2995,7 +2992,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .reward-card-head {
   display: flex;
@@ -3400,16 +3397,15 @@
 
 .hint {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 12px 10px 12px 16px;
+  padding: var(--card-pad);
   font-size: var(--text-sm);
   color: var(--fg-muted);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
 }
 .hint-icon {
   flex: none;
-  margin-top: 2px;
   color: var(--accent-text);
 }
 .hint-body {
@@ -4397,7 +4393,7 @@
   align-items: center;
   /* The headline card is the one place on the page that gets to breathe. */
   gap: 40px;
-  padding: 40px 48px;
+  padding: var(--card-pad);
   flex-wrap: wrap;
 }
 .rc-hero-main {
@@ -4588,7 +4584,7 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 22px 24px;
+  padding: var(--card-pad);
   min-width: 0;
   transition: transform var(--dur-slow) var(--ease-out);
 }
@@ -4636,7 +4632,6 @@
 @media (max-width: 640px) {
   .rc-hero {
     gap: 28px;
-    padding: 28px 24px;
   }
   .rc-hero-side {
     width: 100%;
@@ -4945,7 +4940,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px;
+  padding: var(--card-pad);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
   border: 1px solid var(--border);
@@ -4985,7 +4980,7 @@
 
 /* Streaks: the flame, the week in dots, and thirty days as a ring. */
 .rc-streaks {
-  padding: 22px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -5086,7 +5081,7 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 20px 12px 16px;
+  padding: var(--card-pad);
   text-align: center;
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--panel-fill) 72%, transparent);
@@ -5295,9 +5290,9 @@
 }
 .tip-card {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .tip-card p {
   line-height: 1.45;
@@ -5318,7 +5313,7 @@
   flex: none;
   width: 30px;
   height: 30px;
-  margin: -4px -6px 0 0;
+  margin-right: -6px;
   border-radius: 50%;
   color: var(--fg-muted);
   transition:
@@ -5385,7 +5380,7 @@
   }
 }
 .dash-note {
-  padding: 14px 18px;
+  padding: var(--card-pad);
   font-size: var(--text-sm);
 }
 /* Coming up and Routines, side by side when there is room, full width when alone. */
@@ -5400,7 +5395,7 @@
 }
 /* A card's own heading row, inside it. */
 .dash-card {
-  padding: 20px 22px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -5416,7 +5411,7 @@
 /* Nothing in Tasks yet: the quick ways in. Rows in a narrow card, side by side in a wide one. */
 .get-started {
   container-type: inline-size;
-  padding: 28px 32px 32px;
+  padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -5551,7 +5546,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 28px 48px;
-  padding: 28px 32px 24px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 .dash-label {
@@ -5777,7 +5772,7 @@
   display: flex;
   align-items: center;
   gap: 18px;
-  padding: 24px 28px;
+  padding: var(--card-pad);
 }
 .dash-empty > div {
   display: flex;
@@ -5797,7 +5792,6 @@
 @media (max-width: 760px) {
   .dash-hero {
     grid-template-columns: minmax(0, 1fr);
-    padding: 22px 20px 20px;
     gap: 24px;
   }
   .dash-days-cols {
@@ -5953,7 +5947,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 26px 28px 22px;
+  padding: var(--card-pad);
   overflow: hidden;
 }
 .ach-hero-top {
@@ -6153,13 +6147,6 @@
   font-size: var(--text-xs);
   font-weight: 400;
   color: var(--fg-muted);
-}
-.badge-card:not(.is-earned) {
-  box-shadow: none;
-  background: color-mix(in srgb, var(--panel-fill) 70%, transparent);
-}
-:root[data-panel='glass'] .badge-card:not(.is-earned) {
-  background: color-mix(in srgb, var(--glass-fill) 80%, transparent);
 }
 
 /* The streak's flame: the same line icon as the top bar, on a soft tile. No emoji. */
@@ -6636,7 +6623,7 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: 12px 20px;
-  padding: 24px;
+  padding: var(--card-pad);
 }
 .profile-avatar {
   flex: none;

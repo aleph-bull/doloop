@@ -216,7 +216,7 @@ export function Routines() {
       </div>
 
       {routines.length === 0 ? (
-        <Glass className="p-8 text-center flex flex-col items-center gap-3">
+        <Glass className="p-5 text-center flex flex-col items-center gap-3">
           <span aria-hidden style={{ color: 'var(--fg-subtle)' }}>
             <Repeat size={32} />
           </span>

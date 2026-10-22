@@ -1843,3 +1843,30 @@ The owner asked for the Analytics "Good to know" cards to look nicer.
 - **Two cards get a progress bar** on the card's floor: "You're 88% through Unit 1" (the highlight's own progress) and the forecast (all-time hours against the hours it names). The other cards stay text only.
 - Lines wrap with `text-wrap: pretty` so a headline doesn't leave one word on its last line. On a phone the cards are one a row with the icon beside the words, so each stays short.
 - **Same surface as every other card on the page.** The owner found them off in colour and opacity. They had their own near-solid fill (`--glass-solid` at 78%, from when they were "text over the photo") and were Glass cards with its top sheen; they are now Panels with no override, like the chart tiles, so they match the tiles and trophies in every panel style.
+
+## Every card is the same card, 2026-10-21 (user request)
+
+- **The ask:** "proper consistency with every card with exceptions (nav bar, side bar, setting
+  bar etc). Same rounded edges and allat". An audit of every card on every page found the
+  corners, border, shadow and blur already matched; the padding and two fills did not.
+- **20px padding on every card** (`--card-pad`), the roomy ones included: the dashboard hero
+  (was 28-32px), start panel, timer card, note, "Days focused", the Analytics hero (40-48px),
+  streaks, tiles, equivalents (14px) and trophies, the Achievements hero and reward cards,
+  the profile header and tiles, "Got a lot due?", the plan cards and plan page, and the
+  empty and error states (24-32px).
+- **The hint banner is a card too:** the 22px corner (was 14px) and 20px padding, and its
+  lightbulb is centred on the row ("tip icon is too high make it centred"); the tip card's
+  lightbulb and close button are centred the same way.
+- **Locked badges are on the same surface** as earned ones; they had a lighter fill and no
+  shadow. The lock icon and the muted name still say locked.
+- **Kept as they are:** the Tasks table and the calendar grid run edge to edge (their text
+  stays 20px in); the nav bar, sidebar and settings bar, toasts, menus, dialogs, the focus
+  screen and the sign-in card are not cards.
+- **The glass blur stays at 28px.** It was lowered to 16px when the owner found the cards
+  "too frosted", and put back when they preferred the colour from before.
+- **Tried and undone the same night: making every card frost without exception.** The
+  Achievements badges (under the fold's mask) and cards inside fading wrappers (a page
+  arriving, Analytics loading or rising in, "See all", dialogs) show the background unblurred,
+  because a mask or opacity on an ancestor turns the blur off. Moving the masks and fades onto
+  the cards fixed that, but the owner didn't like the look and asked for it reverted. Leave
+  those as they are unless the owner asks again.

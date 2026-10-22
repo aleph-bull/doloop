@@ -415,7 +415,7 @@ export function SettingsNav({ activeId, onSelect, query, onQuery, matched }: Set
 /** Shown when a search matches nothing, so the page is never just blank. */
 export function NoSettingsMatch({ query, onClear }: { query: string; onClear: () => void }) {
   return (
-    <Panel className="p-6 text-center flex flex-col gap-3">
+    <Panel className="p-5 text-center flex flex-col gap-3">
       <p className="muted">
         Nothing in settings matches <strong>{query}</strong>.
       </p>
