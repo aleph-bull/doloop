@@ -1,7 +1,19 @@
 import type { FastifyInstance } from 'fastify';
 import { randomInt } from 'node:crypto';
 import { addDays, toLocalDate } from '@komogon/core';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, notInArray, sql } from 'drizzle-orm';
+import {
+  and,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  notInArray,
+  or,
+} from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { jamMembers, jams, nodes, routines, sessions } from '../db/schema';
@@ -205,7 +217,7 @@ export function jamRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       .select({ id: jamMembers.jamId })
       .from(jamMembers)
       .where(eq(jamMembers.userId, me));
-    const running = and(isNull(jams.endedAt), sql`${jams.endsAt} > ${now}`);
+    const running = and(isNull(jams.endedAt), gt(jams.endsAt, now));
     const activeRows = await db.query.jams.findMany({
       where: and(inArray(jams.id, mine), running),
       orderBy: [jams.endsAt],
@@ -229,10 +241,7 @@ export function jamRoutes(app: FastifyInstance, db: Db, clock: () => string) {
             orderBy: [jams.endsAt],
           });
     const endedRows = await db.query.jams.findMany({
-      where: and(
-        inArray(jams.id, mine),
-        sql`(${jams.endedAt} is not null or ${jams.endsAt} <= ${now})`,
-      ),
+      where: and(inArray(jams.id, mine), or(isNotNull(jams.endedAt), lte(jams.endsAt, now))),
       orderBy: [desc(jams.endsAt)],
       limit: JAM_ENDED_LIMIT,
     });

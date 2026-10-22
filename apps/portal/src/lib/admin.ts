@@ -14,6 +14,59 @@ export async function adminFetch(path: string, init?: RequestInit): Promise<Resp
   return res;
 }
 
+/** An admin call with a JSON body (or none), answering JSON or nothing. */
+export async function adminSend<T = void>(
+  method: string,
+  path: string,
+  body?: unknown,
+): Promise<T> {
+  const res = await adminFetch(path, {
+    method,
+    ...(body === undefined
+      ? {}
+      : { headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }),
+  });
+  return (res.status === 204 ? undefined : await res.json()) as T;
+}
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  createdAt: string;
+  onboarded: boolean;
+  hasPassword: boolean;
+  xp: number;
+  level: number;
+  streak: number;
+  sessions: number;
+  focusMinutes: number;
+  timezone: string;
+  bannedAt: string | null;
+  /** On `ADMIN_EMAILS`: can't be suspended, deleted or blocked. */
+  admin: boolean;
+  you: boolean;
+}
+
+export interface AdminSession {
+  id: string;
+  title: string;
+  startedAt: string;
+  endedAt: string | null;
+  workSeconds: number;
+}
+
+export interface BlockedEmail {
+  email: string;
+  createdAt: string;
+  accountId: string | null;
+}
+
+export const adminKeys = {
+  accounts: ['admin', 'accounts'] as const,
+  sessions: (id: string) => ['admin', 'sessions', id] as const,
+  blocked: ['admin', 'blocked'] as const,
+};
+
 /** Whether the signed-in account is an admin (`ADMIN_EMAILS` on the API). */
 export function useIsAdmin(): boolean {
   const q = useQuery({

@@ -1,10 +1,10 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { Spinner } from '@komogon/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
 import { ApiError } from './lib/api';
-import { NOT_INVITED_MESSAGE, useAuth } from './lib/auth';
+import { NOT_INVITED_MESSAGE, SUSPENDED_MESSAGE, useAuth } from './lib/auth';
 import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
@@ -73,28 +73,35 @@ function RequireAuth({ children, landing = false }: { children: ReactNode; landi
   return <>{children}</>;
 }
 
-/** The API turned this account away (`ALLOWED_EMAILS`): sign out and say why. */
-function NotInvited() {
+/**
+ * The API turned this account away (not on `ALLOWED_EMAILS`, or suspended by an admin):
+ * sign out and say why.
+ */
+function TurnedAway({ message }: { message: string }) {
   const auth = useAuth();
   const { signOut } = auth;
+  const navigate = useNavigate();
   useEffect(() => {
-    void signOut();
-  }, [signOut]);
+    // Go on once signed out: at "/" the signed-out app shows the landing page in this
+    // component's place, so the <Navigate> below would never get to say why.
+    void signOut().then(() => navigate('/signin', { replace: true, state: { error: message } }));
+  }, [signOut, navigate, message]);
   if (auth.status === 'signed-in')
     return (
       <Centered>
         <Spinner />
       </Centered>
     );
-  return <Navigate to="/signin" replace state={{ error: NOT_INVITED_MESSAGE }} />;
+  return <Navigate to="/signin" replace state={{ error: message }} />;
 }
 
 /** Sends new users through onboarding once; everything else renders in the shell. */
 function Gate({ children }: { children: ReactNode }) {
   const me = useMe();
   const location = useLocation();
-  if (me.error instanceof ApiError && me.error.status === 403 && me.error.message === 'invite_only')
-    return <NotInvited />;
+  const refused = me.error instanceof ApiError && me.error.status === 403 ? me.error.message : null;
+  if (refused === 'invite_only') return <TurnedAway message={NOT_INVITED_MESSAGE} />;
+  if (refused === 'account_suspended') return <TurnedAway message={SUSPENDED_MESSAGE} />;
   if (me.isError && !me.data)
     return (
       <Centered>

@@ -155,7 +155,7 @@ export async function buildServer(opts: BuildOptions) {
   };
   emailAuthRoutes(app, opts.db, clock, email);
   meRoutes(app, opts.db, clock);
-  adminRoutes(app, opts.db, admins);
+  adminRoutes(app, opts.db, admins, clock);
   leaderboardRoutes(app, opts.db, clock);
   profileRoutes(app, opts.db, clock);
   socialRoutes(app, opts.db, clock);

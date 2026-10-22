@@ -30,11 +30,16 @@ export const supabase: SupabaseClient | null =
 export const NOT_INVITED_MESSAGE =
   "Komodon is in a small private test at the moment, and this email isn't on the list. If you were invited, use the address the invite was sent to.";
 
+/** Shown to an account an admin suspended, or an address they blocked. */
+export const SUSPENDED_MESSAGE =
+  'This account has been suspended. If that seems wrong, get in touch with whoever runs Komodon.';
+
 /**
  * Sign-in errors in plain words. With sign-ups turned off in Supabase, a magic link or Google
  * sign-in for an unknown email fails with "Signups not allowed…"; that means not invited.
  */
 export function friendlyAuthError(message: string): string {
+  if (message === 'account_suspended') return SUSPENDED_MESSAGE;
   if (/signups? not allowed|not allowed for otp/i.test(message)) return NOT_INVITED_MESSAGE;
   if (/invalid login credentials/i.test(message)) return "That email and password don't match.";
   if (/email not confirmed/i.test(message))

@@ -62,6 +62,15 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
   data, and setting a new password. Testers are told on the sign-in page that the owner can
   see accounts and study data, and are asked not to reuse a personal password.
+- Admin tools (2026-10-21): each account's Manage dialog adds study time, takes time off or
+  deletes a session, restarts onboarding, and suspends or deletes the account; the page also
+  has Dev tools (go through onboarding again on your own account) and Blocked emails. A
+  suspension is `users.banned_at` plus the address in `blocked_emails`, kept in step
+  (`services/moderation.ts`); it is checked where every sign-in token is issued
+  (`accountSession`) and on every request (the auth plugin answers 403
+  `account_suspended`, and the portal signs out with a message). Suspended accounts are left
+  off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
+  blocked from there.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.
@@ -153,6 +162,12 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
+- **Never put a JavaScript `Date` inside a hand-written Drizzle `sql` template.** The hosted
+  API talks to Neon through postgres.js, and Drizzle switches off postgres.js's date
+  conversion, so a raw `Date` there fails the whole query. Tests and sandboxes run on PGlite,
+  which takes the `Date` happily, so nothing catches it before komogon.app (it broke the Jams
+  tab, found 2026-10-21). Use Drizzle's own comparisons (`gt(jams.endsAt, now)`, `lte`,
+  `or`), which convert through the column, or pass `date.toISOString()`.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
@@ -326,7 +341,8 @@ posts in the middle, the first five of the leaderboard on the right (Global or F
 880px of page width the left column moves under the posts (it holds the requests, so it must
 stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
 dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
-The owner called the first version "massive"; don't let it grow back.
+The owner called the first version "massive"; don't let it grow back. The one exception is
+the small leaderboard, which they asked to have roomier (18px 20px padding, 2026-10-21).
 
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and the task's title
