@@ -237,6 +237,19 @@ export interface ReviewInput {
   note?: string | null;
 }
 
+/** A pasted list of courses and items, as `POST /api/nodes/import` takes it. */
+export interface ImportNodesInput {
+  courses: Array<{
+    title: string;
+    items: Array<{
+      title: string;
+      kind: 'assessment' | 'task';
+      dueAt: string | null;
+      estimatedMinutes: number | null;
+    }>;
+  }>;
+}
+
 export interface NodeInput {
   parentId?: string | null;
   title?: string;
@@ -548,6 +561,13 @@ export const api = {
   updateTag: (id: string, patch: { name?: string; color?: TagColor; sortOrder?: number }) =>
     request<{ tag: Tag }>('PATCH', `/api/tags/${id}`, patch),
   deleteTag: (id: string) => request<void>('DELETE', `/api/tags/${id}`),
+
+  importNodes: (input: ImportNodesInput) =>
+    request<{ courses: number; items: number; skipped: number }>(
+      'POST',
+      '/api/nodes/import',
+      input,
+    ),
   pace: () =>
     request<{
       now: string;

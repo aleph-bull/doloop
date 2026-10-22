@@ -6,6 +6,7 @@ import {
   REWARDS,
   SOUND_PRESETS,
   STREAK_DAY_START,
+  STUDY_LIST,
   TAG_COLORS,
   WEEK_STREAK_DAYS,
 } from '@komogon/core';
@@ -87,6 +88,32 @@ export const updateTagSchema = z
     sortOrder: z.number().optional(),
   })
   .strict();
+
+/** A pasted list of courses and what's due in them, added in one go (`POST /api/nodes/import`). */
+export const importNodesSchema = z
+  .object({
+    courses: z
+      .array(
+        z.object({
+          title: z.string().trim().min(1).max(200),
+          items: z
+            .array(
+              z.object({
+                title: z.string().trim().min(1).max(200),
+                kind: z.enum(['assessment', 'task']),
+                dueAt: isoDateTime.nullable().optional(),
+                estimatedMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+              }),
+            )
+            .max(STUDY_LIST.MAX_ITEMS),
+        }),
+      )
+      .min(1)
+      .max(STUDY_LIST.MAX_COURSES),
+  })
+  .refine((v) => v.courses.reduce((n, c) => n + c.items.length, 0) <= STUDY_LIST.MAX_ITEMS, {
+    message: `One list can add up to ${STUDY_LIST.MAX_ITEMS} items`,
+  });
 
 export const sessionMode = z.enum(['pomodoro', 'unlimited', 'scheduled']);
 

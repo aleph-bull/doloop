@@ -12,6 +12,7 @@ import {
   type FeedPage,
   type FeedPost,
   type FeedScope,
+  type ImportNodesInput,
   type LeaderboardScope,
   type LogTrackerInput,
   type DrillInput,
@@ -795,6 +796,15 @@ export function useCreateNode() {
         redo: () => api.updateNode(id, { archived: false }).then(() => invalidate(...NODE_KEYS)),
       });
     },
+  });
+}
+
+/** A pasted list added in one go. Not on the undo stack: an import is fixed in Tasks. */
+export function useImportNodes() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: ImportNodesInput) => api.importNodes(input),
+    onSuccess: () => invalidate(...NODE_KEYS),
   });
 }
 

@@ -426,7 +426,7 @@ export function Settings() {
                 checked={s.dashboard.focusOnly}
                 onChange={(v) => patch({ dashboard: { focusOnly: v } })}
                 label="Simplify the dashboard"
-                description="Show just the timer and session options on the dashboard. Other pages stay available in navigation."
+                description="While Tasks is empty, the dashboard shows only ways to bring your courses in. Other pages stay available in navigation."
               />
               <div className="field">
                 <span className="field-label">Daily card</span>

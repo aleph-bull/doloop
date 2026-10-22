@@ -2,6 +2,7 @@ import { tagsOf, type NodePace, type StudyNode, type Tag } from '@komogon/core';
 import {
   Check,
   ChevronRight,
+  ClipboardPaste,
   GripVertical,
   LayoutTemplate,
   Pencil,
@@ -20,6 +21,7 @@ import {
 import { Button, EmptyState, Panel, Reveal, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
+import { PasteListDialog } from '../components/PasteListDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { TagChip, TagManager, TagPicker } from '../components/Tags';
 import { TemplateDialog } from '../components/TemplateDialog';
@@ -365,6 +367,7 @@ export function Tasks() {
     () => new Map((tags.data?.tags ?? []).map((t) => [t.id, t])),
     [tags.data],
   );
+  const [paste, setPaste] = useState(false);
   // Dragging courses: which is being dragged, where it would land, and the new order shown
   // until the server's copy catches up. The optimistic order is tied to the data it was
   // made from, so fresh data replaces it without an effect.
@@ -526,9 +529,14 @@ export function Tasks() {
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <h1 className="page-title">Tasks</h1>
-        <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
-          <Plus size={16} aria-hidden /> New course
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="secondary" onClick={() => setPaste(true)}>
+            <ClipboardPaste size={16} aria-hidden /> Paste a list
+          </Button>
+          <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
+            <Plus size={16} aria-hidden /> New course
+          </Button>
+        </div>
       </div>
 
       <Panel className="task-table">
@@ -537,9 +545,14 @@ export function Tasks() {
             title="Nothing here yet"
             body="Add a course, then its assignments, quizzes and readings. Estimates and due dates let Komodon plan your day."
             action={
-              <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
-                Add a course
-              </Button>
+              <div className="flex gap-2 flex-wrap justify-center">
+                <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
+                  Add a course
+                </Button>
+                <Button variant="secondary" onClick={() => setPaste(true)}>
+                  Paste a whole list
+                </Button>
+              </div>
             }
           />
         ) : (
@@ -625,6 +638,7 @@ export function Tasks() {
         node={start}
         lockSubject
       />
+      <PasteListDialog open={paste} onClose={() => setPaste(false)} />
       <TemplateDialog
         open={template !== null}
         onClose={() => setTemplate(null)}

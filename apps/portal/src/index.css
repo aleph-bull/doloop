@@ -5351,15 +5351,137 @@
 .dash-card .card-title {
   font-weight: 500;
 }
-.dash-first {
-  padding: 32px;
+/* Nothing in Tasks yet: the quick ways in. Rows in a narrow card, side by side in a wide one. */
+.get-started {
+  container-type: inline-size;
+  padding: 28px 32px 32px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  gap: 18px;
 }
-.dash-first .btn {
-  margin-top: 8px;
+.get-started-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.get-started-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+@container (min-width: 760px) {
+  .get-started-options {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+}
+.get-started-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 14px 14px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.get-started-option:hover,
+.get-started-option:focus-visible {
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  text-decoration: none;
+}
+.get-started-icon {
+  flex: none;
+  display: flex;
+  color: var(--accent-text);
+}
+.get-started-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.get-started-title {
+  font-weight: 500;
+}
+.get-started-sub {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.get-started-chevron {
+  flex: none;
+  color: var(--fg-subtle);
+}
+
+/* The paste dialog: the list as it will be added, under the box it came from. */
+.paste-dialog {
+  max-width: min(680px, calc(100vw - 32px));
+}
+.paste-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow: auto;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.paste-courses {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.paste-course {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.paste-course-title {
+  font-weight: 600;
+}
+.paste-items {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+.paste-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0 3px 12px;
+  font-size: var(--text-sm);
+}
+.paste-item-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.paste-item-meta {
+  margin-left: auto;
+  flex: none;
+  color: var(--fg-muted);
+}
+.paste-problems summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+.paste-problems ul {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: var(--text-sm);
 }
 
 /* The stat hero: this week leads, the last seven days beside it, the rest underneath. */
@@ -6662,7 +6784,7 @@
     padding-left: 0;
   }
 }
-/* The first dashboard keeps the session options together, on phones and desktops. */
+/* The simplified dashboard, on phones and desktops. */
 .focus-dashboard {
   width: 100%;
   max-width: 640px;
@@ -6670,15 +6792,6 @@
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-:root[data-panel='glass'] .focus-start .btn-primary {
-  background: hsl(var(--accent-h) min(var(--accent-s), 45%) min(var(--accent-l), 35%));
-  color: #fff;
-}
-
-:root[data-panel='glass'] .focus-start .btn-primary:hover:not(:disabled) {
-  background: hsl(var(--accent-h) min(var(--accent-s), 45%) min(var(--accent-l), 30%));
 }
 
 .social-profile-grid {

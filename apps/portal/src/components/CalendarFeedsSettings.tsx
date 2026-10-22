@@ -10,20 +10,29 @@ import './calendar-feeds.css';
 /** What an added calendar's events can change: the week, the To plan list, tasks. */
 const TOUCHED = [keys.feeds, ['blocks'], keys.nodes, keys.pace, keys.commitments] as const;
 
+/** Refreshes everything an added or changed calendar can touch. */
+export function useRefreshFeeds() {
+  const qc = useQueryClient();
+  return () => {
+    for (const key of TOUCHED) void qc.invalidateQueries({ queryKey: key });
+  };
+}
+
+/** The toast after a calendar is added. */
+export function feedAddedMessage(r: CalendarFeedResponse): string {
+  return `Added ${r.feed.name}. ${eventsLabel(r.feed.events)}.`;
+}
+
 /**
  * Calendars added by their link (.ics). Works with any calendar app and needs no setup on
  * the server, unlike connecting Google or Outlook.
  */
 export function CalendarFeedsSettings() {
   const feeds = useCalendarFeeds();
-  const qc = useQueryClient();
+  const refresh = useRefreshFeeds();
   const { toast } = useToast();
   const [adding, setAdding] = useState(false);
   const list = feeds.data?.feeds ?? [];
-
-  const refresh = () => {
-    for (const key of TOUCHED) void qc.invalidateQueries({ queryKey: key });
-  };
 
   return (
     <div className="flex flex-col gap-3">
@@ -64,7 +73,7 @@ export function CalendarFeedsSettings() {
           onAdded={(r) => {
             setAdding(false);
             refresh();
-            toast(`Added ${r.feed.name}. ${eventsLabel(r.feed.events)}.`, { tone: 'ok' });
+            toast(feedAddedMessage(r), { tone: 'ok' });
           }}
         />
       )}
@@ -212,7 +221,7 @@ function FeedRow({ feed, onChanged }: { feed: CalendarFeed; onChanged: () => voi
   );
 }
 
-function AddCalendarDialog({
+export function AddCalendarDialog({
   onClose,
   onAdded,
 }: {

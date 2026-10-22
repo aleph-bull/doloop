@@ -39,3 +39,4 @@ export * from './timelapse-layout';
 export * from './timelapse-presets';
 export * from './study-plan';
 export * from './universities';
+export * from './study-list';

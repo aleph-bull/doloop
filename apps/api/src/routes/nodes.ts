@@ -1,11 +1,18 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { archiveNode, createNode, deleteNode, listNodes, updateNode } from '../services/nodes';
+import {
+  archiveNode,
+  createNode,
+  deleteNode,
+  importNodes,
+  listNodes,
+  updateNode,
+} from '../services/nodes';
 import { dailyPlan, paceSnapshot, paceToJson } from '../services/pace';
 import { listBlocks } from '../services/planned-blocks';
 import { buildIndex, descendantIds } from '@komogon/core';
-import { createNodeSchema, updateNodeSchema, uuid } from '../validation';
+import { createNodeSchema, importNodesSchema, updateNodeSchema, uuid } from '../validation';
 
 const idParams = z.object({ id: uuid });
 
@@ -19,6 +26,12 @@ export function nodeRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     const body = createNodeSchema.parse(req.body);
     const node = await createNode(db, req.user.id, body, clock());
     return reply.code(201).send({ node });
+  });
+
+  /** A pasted list of courses and items, added in one go. */
+  app.post('/api/nodes/import', async (req) => {
+    const body = importNodesSchema.parse(req.body);
+    return importNodes(db, req.user.id, body, clock());
   });
 
   app.patch('/api/nodes/:id', async (req) => {

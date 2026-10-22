@@ -15,6 +15,7 @@ import { DashboardStats } from '../components/DashboardStats';
 import { ErrorPanel } from '../components/ErrorState';
 import { FollowUpPrompt } from '../components/FollowUpPrompt';
 import { FocusDashboard } from '../components/FocusDashboard';
+import { GetStarted } from '../components/GetStarted';
 import { Hint } from '../components/Hint';
 import { NamePrompt } from '../components/NamePrompt';
 import { NodeCard } from '../components/NodeCard';
@@ -44,7 +45,11 @@ const EMPTY_PACE: Record<string, NodePace> = {};
 
 export function Today() {
   const me = useMe();
-  return me.data?.user.settings.dashboard.focusOnly ? <FocusDashboard /> : <FullDashboard />;
+  const nodes = useNodes();
+  // The simplified screen is only for an empty account: the first course or item, however
+  // it arrives (by hand, pasted, from a calendar), brings up the full dashboard.
+  const simple = me.data?.user.settings.dashboard.focusOnly && nodes.data?.nodes.length === 0;
+  return simple ? <FocusDashboard /> : <FullDashboard />;
 }
 
 function FullDashboard() {
@@ -227,15 +232,12 @@ function FullDashboard() {
           </Hint>,
         ].find((h) => h.props.when && !isDismissed(h.props.id))}
 
-      {/* A first visit: the one thing to do comes before any numbers. */}
+      {/* A first visit: the ways to bring courses in come before any numbers. */}
       {roots.length === 0 && (
-        <Glass className="dash-first">
-          <h2 className="section-title">Nothing to study yet</h2>
-          <p className="muted">Add a course and what's due in it, and Today plans your day.</p>
-          <Link to="/tasks" className="btn btn-primary btn-lg">
-            Add your first course
-          </Link>
-        </Glass>
+        <GetStarted
+          title="Nothing to study yet"
+          line="Add a course and what's due in it, and Today plans your day."
+        />
       )}
 
       <DashboardStats />
