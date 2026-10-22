@@ -10,6 +10,7 @@ import {
   SOUND_EVENT_LABELS,
   SOUND_PRESETS,
   STREAK_DAY_START,
+  WEEK_STREAK_DAYS,
   type UserSettings,
 } from '@komogon/core';
 import { useEffect, useState } from 'react';
@@ -785,6 +786,14 @@ export function Settings() {
                 max={240}
                 onCommit={(v) => patch({ streak: { minMinutes: v } })}
               />
+              <NumberField
+                label="Days a week for the weekly streak"
+                value={s.streak.daysPerWeek}
+                min={WEEK_STREAK_DAYS.MIN}
+                max={WEEK_STREAK_DAYS.MAX}
+                hint="Weeks run Monday to Sunday."
+                onCommit={(v) => patch({ streak: { daysPerWeek: v } })}
+              />
               <DayStartField
                 hour={s.streak.dayStartHour}
                 changedAt={s.streak.dayStartChangedAt}
@@ -803,8 +812,8 @@ export function Settings() {
 
             <Section id="rest-days" title="Rest days">
               <p className="muted text-sm">
-                Rest days never break a streak. Weekly changes take effect next Monday. Vacations
-                need 48 hours notice and can be removed anytime.{' '}
+                Your daily plan works around rest days. Weekly changes take effect next Monday.
+                Vacations need 48 hours notice and can be removed anytime.{' '}
                 {restDays.data && (
                   <strong>
                     {restDays.data.editsRemaining} change

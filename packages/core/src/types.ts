@@ -79,6 +79,8 @@ export interface UserSettings {
     dayStartHour: number;
     /** When dayStartHour last changed, set by the server; it may change once a day. */
     dayStartChangedAt: ISODateTime | null;
+    /** Streak days a Monday-to-Sunday week needs to count toward the weekly streak (1-7). */
+    daysPerWeek: number;
   };
   /** What the dashboard ring and the Analytics week measure against. */
   goals: { weeklyMinutes: number };
@@ -332,6 +334,16 @@ export interface StreakState {
   lastCountedDate: ISODate | null;
   freezesHeld: number;
   breakDaysHeld: number;
+  /** The weekly streak. Absent on rows saved before it existed, until the next sync. */
+  weeks?: WeekStreakState;
+}
+
+/** Weeks in a row with enough streak days (see evaluateWeekStreak). */
+export interface WeekStreakState {
+  current: number;
+  longest: number;
+  /** Monday of the last week judged (counted or ended), or null. */
+  lastCountedWeek: ISODate | null;
 }
 
 export interface User {

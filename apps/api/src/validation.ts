@@ -6,6 +6,7 @@ import {
   REWARDS,
   SOUND_PRESETS,
   STREAK_DAY_START,
+  WEEK_STREAK_DAYS,
 } from '@komogon/core';
 import { z } from 'zod';
 
@@ -197,6 +198,7 @@ export const settingsSchema = z
           .int()
           .min(STREAK_DAY_START.MIN_HOUR)
           .max(STREAK_DAY_START.MAX_HOUR),
+        daysPerWeek: z.number().int().min(WEEK_STREAK_DAYS.MIN).max(WEEK_STREAK_DAYS.MAX),
       })
       .partial(),
     goals: z.object({ weeklyMinutes: z.number().int().min(30).max(10_080) }).partial(),

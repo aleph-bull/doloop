@@ -137,7 +137,7 @@ export function Profile() {
   }
   if (stats && stats.streak.current > 0)
     totals.push({
-      label: 'Streak',
+      label: 'Daily streak',
       value: stats.streak.current,
       unit: stats.streak.current === 1 ? 'day' : 'days',
       note:
@@ -145,9 +145,23 @@ export function Profile() {
     });
   else if (stats && stats.streak.longest > 0)
     totals.push({
-      label: 'Best streak',
+      label: 'Best daily streak',
       value: stats.streak.longest,
       unit: stats.streak.longest === 1 ? 'day' : 'days',
+    });
+  const weeks = stats?.streak.weeks;
+  if (weeks && weeks.current > 0)
+    totals.push({
+      label: 'Weekly streak',
+      value: weeks.current,
+      unit: weeks.current === 1 ? 'week' : 'weeks',
+      note: weeks.longest > weeks.current ? `Best ${weeks.longest}` : undefined,
+    });
+  else if (weeks && weeks.longest > 0)
+    totals.push({
+      label: 'Best weekly streak',
+      value: weeks.longest,
+      unit: weeks.longest === 1 ? 'week' : 'weeks',
     });
   if (stats && stats.longestSessionMinutes > 0)
     totals.push({ label: 'Longest session', ...figure(stats.longestSessionMinutes) });

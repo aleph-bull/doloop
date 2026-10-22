@@ -1,5 +1,5 @@
 import { badgeByKey, formatClock, levelProgress, type SessionXpBreakdown } from '@komogon/core';
-import { Award, Flame, Sparkles, TrendingUp } from 'lucide-react';
+import { Award, CalendarCheck, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { CountUp, ProgressBar } from '@komogon/ui';
 import type { EndSummary } from '../lib/api';
@@ -41,6 +41,7 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
   const effortScore = summary.session.review?.effort ?? null;
   const effort = effortScore ? EFFORT_WORD[effortScore - 1] : null;
   const bonuses = BONUS_LINES.filter((b) => (xp[b.key] as number) > 0);
+  const weeks = summary.streak.weeks;
   const badges = summary.badges
     .map((k) => badgeByKey(k))
     .filter((b): b is NonNullable<typeof b> => !!b);
@@ -109,7 +110,7 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         )}
         <div>
           <dt>
-            <Flame size={12} aria-hidden /> Streak
+            <Flame size={12} aria-hidden /> Daily streak
           </dt>
           <dd className="tabular">
             {summary.streak.current} day{summary.streak.current === 1 ? '' : 's'}
@@ -118,6 +119,19 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
             )}
           </dd>
         </div>
+        {weeks && weeks.current > 0 && (
+          <div>
+            <dt>
+              <CalendarCheck size={12} aria-hidden /> Weekly streak
+            </dt>
+            <dd className="tabular">
+              {weeks.current} week{weeks.current === 1 ? '' : 's'}
+              {weeks.longest > weeks.current && (
+                <span className="summary-stat-aside">Best {weeks.longest}</span>
+              )}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>
             <TrendingUp size={12} aria-hidden /> Level

@@ -9,7 +9,7 @@ import {
   toLocalParts,
 } from './dates';
 import { fmtDurationWord } from './highlights';
-import { STREAK_MILESTONES } from './streak';
+import { STREAK_MILESTONES, weekStreakNumbers } from './streak';
 import { buildIndex, rootOf } from './tree';
 import type { ISODate, ISODateTime, PlannedBlock, Session, StreakState, StudyNode } from './types';
 
@@ -1037,7 +1037,7 @@ export interface DashboardStats {
   goalRatio: number;
   /** The last seven days, oldest first, ending today. */
   sparkline: Array<{ date: ISODate; minutes: number }>;
-  streak: { current: number; longest: number };
+  streak: { current: number; longest: number; weeks: { current: number; longest: number } };
 }
 
 export interface DashboardInput {
@@ -1063,6 +1063,10 @@ export function dashboardStats(input: DashboardInput): DashboardStats {
     goalMinutes: input.goalMinutes,
     goalRatio: input.goalMinutes > 0 ? Math.min(1, weekMinutes / input.goalMinutes) : 0,
     sparkline,
-    streak: { current: input.streak.current, longest: input.streak.longest },
+    streak: {
+      current: input.streak.current,
+      longest: input.streak.longest,
+      weeks: weekStreakNumbers(input.streak),
+    },
   };
 }

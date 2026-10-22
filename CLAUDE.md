@@ -32,11 +32,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
    `apps/portal/vercel.json`), API on Render (`render.yaml`), data in Neon Postgres, domain
    on Cloudflare. A push to `main` on GitHub (`aleph-bull/doloop`) redeploys both.
    cron-job.org pings `/api/health` every 10 minutes so Render's free plan doesn't sleep.
-2. **The owner's always-on copy** on their own PC: a frozen build on localhost:5173 and :8787
-   with their real data in `~/.komogon/pglite`. **Do not stop, restart or update it
-   (`pnpm local:stop|start|update`) without asking first.** They study on it, sometimes
-   while you are working. To read its data, copy the folder or use a backup in
-   `~/.komogon/backups`; never point scripts or tests at the live folder.
+2. **The always-on copy is gone** (removed 2026-10-21 at the owner's request; they study on
+   komogon.app now). It was a frozen build on localhost:5173 and :8787 started at sign-in.
+   Its data is still in `~/.komogon/pglite` with backups in `~/.komogon/backups`, and the
+   `pnpm local:*` scripts are still in the repo. Don't start it again unless the owner asks,
+   and don't delete that folder: it is their study history from before the move.
 3. **Sandboxes** for checking changes in a browser, with throwaway data (launch configs in
    `.claude/launch.json`): `sandbox-api`/`sandbox` (8797/5183, dev sign-in),
    `sandbox-2-api`/`sandbox-2` (8798/5184), `sandbox-password-api`/`sandbox-password`
@@ -143,8 +143,8 @@ Keep the owner's own wording verbatim, "!" included.
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
-  local scripts, the startup shortcut and the komogon.app domain. Renaming them would drop
-  saved browser state or break the always-on copy. Only the name people see is Komodon.
+  local scripts and the komogon.app domain. Renaming them would drop saved browser state.
+  Only the name people see is Komodon.
 
 ## Checks and traps
 
@@ -153,8 +153,6 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
-- Never pipe `pnpm local:start|update` output: the servers inherit the pipe and the command
-  never returns.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
@@ -191,35 +189,8 @@ Keep the owner's own wording verbatim, "!" included.
 
 ## Recent changes (2026-10-20)
 
-- Social (2026-10-21, later the same day): `/social` is a page tab with `?tab=` views: Feed
-  (`components/social/Feed.tsx`, posts with a shared session, a video and likes and
-  comments), Friends (requests, friends, search by name), Compare (you beside your friends,
-  `GET /api/social/compare`) and Leaderboard (moved from Analytics, with a podium). The API
-  is `routes/social.ts`; profiles are `/profile` and `/profile/:id` and list the person's
-  posts. Videos: `post_media` holds base64, `GET /api/posts/:id/media` serves bytes, and
-  the portal plays them from an object URL after fetching with the token (a video tag cannot
-  send the header). Drizzle drops the table from `posts.id` in a select list, so the count
-  subqueries there are written by hand with aliases. Seed a sandbox with people on it:
-  `cd apps/api && npx tsx seed-social-demo.tmp.ts`, then the `social-sandbox-api` and
-  `social-sandbox` launch configs (8802/5188; they run from the `social` worktree folder).
-  The feed is three columns (`.feed-layout`, container queries on `.feed-wrap`): your
-  card, the posts, a five-row leaderboard. Settings › Social (`settings.social`) is what a
-  person shares; the API enforces it in `routes/social.ts`, `profiles.ts` and
-  `leaderboard.ts`, so a new place that shows someone's numbers must check it too.
-  The leaderboard has a global and a friends scope (`?scope=`); the setting is three-way
-  ('global' | 'friends' | 'off', older true/false normalised in `withDefaults`). Posts
-  carry a video or a picture; sample media for the seed is made with a scratch
-  `ffmpeg-static` and passed as `SEED_MEDIA_DIR` (there is no ffmpeg on this PC).
-  Jams (`routes/jams.ts`, `components/social/JamsTab.tsx`) replaced Compare: a timed game
-  people join by friendship or by code; minutes count from each person's joining time.
-  Friends have no tab: they are the `FriendsCard` beside the feed. The owner wants these
-  cards dense (40px pictures on posts, 26px in lists, 12-14px padding); don't let them grow.
-  Groups (`routes/groups.ts`, `GroupsTab.tsx`): lasting groups with this week's lines and
-  ranks, "Live now" (sessions with `last_seen_at` in the last ten minutes) and nudges
-  (`nudges` table, one per pair per two hours; `NudgesCard` shows them on the dashboard).
-  Posts have kudos (the like routes, relabelled). The leaderboard tab also carries
-  `GET /api/leaderboard/stats` (you against everyone, people under 15 min a week left out,
-  last week when this week is empty) and, on the friends scope, the Compare bento.
+- Social (2026-10-21): the feed, groups, jams, the leaderboard, nudges and kudos. The whole
+  thing is written up in "Social: how it works" below.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,
@@ -260,6 +231,166 @@ Keep the owner's own wording verbatim, "!" included.
   (they used to sit in Pace and streaks).
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
+
+## Social: how it works (built 2026-10-21)
+
+Social is the part of the app where people see each other: a feed of shared sessions, study
+groups, jams (timed games), the leaderboard, friends, nudges and kudos. It was built in one
+day from the owner's instructions and reshaped several times; this is the state as pushed.
+
+**Pages and routes (portal).**
+
+- `/social` is a nav tab (after Analytics; Settings › Pages › Social hides it along with
+  the profile link). `pages/Social.tsx` reads `?tab=`: `feed` (default), `groups`,
+  `jams`, `leaderboard`. Old `?tab=friends` goes to the feed and `?tab=compare` to
+  jams. The Feed tab shows a count of friend requests waiting; Jams shows how many are
+  running.
+- `/profile` is your own profile, `/profile/:id` someone else's (`pages/Profile.tsx`;
+  `/social/:id` still redirects). A profile is the head card (picture, name, university,
+  joined, friend count), then three panels (the day grid, strongest days, totals), then the
+  person's posts. On someone else's profile the `FriendButton` sits in the head: Add friend,
+  Requested (click takes it back), Accept and Decline, or a Friends chip that opens a small
+  card with "Friends since <date>" and a Remove friend that asks "Are you sure?" first.
+- Everything under `components/social/`: `Feed.tsx` (the three-column layout),
+  `FeedSide.tsx` (your card, the friends card, the small leaderboard), `Composer.tsx`,
+  `PostCard.tsx`, `GroupsTab.tsx`, `JamsTab.tsx`, `LeaderboardTab.tsx`,
+  `CompareBento.tsx`, `DayLines.tsx` (the shared running-total line chart),
+  `FriendButton.tsx`, `Avatar.tsx`. The dashboard's `components/NudgesCard.tsx` shows
+  nudges in both dashboard layouts. Styles are all in `apps/portal/src/social.css`,
+  imported from `index.css`.
+- Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
+  `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
+  mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys
+  carry a version number (`['leaderboard', 2, scope]`): the persisted query cache once
+  served an older response shape and crashed the tab, so bump the number when a response
+  shape changes.
+
+**The feed.** Three columns like LinkedIn's home, sized by the page's own width (container
+queries on `.feed-wrap`): your card and the friends card on the left, the composer and
+posts in the middle, the first five of the leaderboard on the right (Global or Friends). Under
+880px of page width the left column moves under the posts (it holds the requests, so it must
+stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
+dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
+The owner called the first version "massive"; don't let it grow back.
+
+**Posts.** A post is always about one finished session (`sessionId` is required, the
+composer's Post button waits for one) and carries the session's minutes and the task's title
+as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
+(500 characters) and one file: a video (MP4/WebM under 5 MB, with a JPEG poster the portal
+makes from a frame) or a picture (JPEG/PNG/WebP under 2 MB). The bytes live in `post_media`
+as base64; `GET /api/posts/:id/media` serves them, and the portal fetches with the token and
+plays or shows a blob URL, because a plain `<video src>` cannot send the header. The focus
+screen's timelapse export has "Share to Social", which posts the video with the session
+attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+`post_comments` (500 characters, deletable by their author or the post's author). Only the
+author deletes a post. Counts come with every post; liking patches the caches rather than
+refetching (`patchPost` in queries.ts).
+
+**Friends.** `friendships` holds one row per pair with `status` pending or accepted;
+declining deletes the row so the same person can be asked again, and asking someone who
+already asked you is the same as accepting. The friends card beside the feed: search by name
+(`GET /api/social/people?q=`), the friends list (each with a nudge bell and a remove), then
+"Friend requests" split into Inbound (the first three, the rest fading behind "Show all") and
+Outgoing (folded until opened). The API refuses a request to someone who turned requests off.
+
+**Sharing settings (Settings › Social, `settings.social`).** Who sees your posts
+(everyone signed in or friends only; the feed and profiles both filter), study totals on
+your profile (off, the profile answers null for stats, grid and weekdays and the page says
+they keep their study time to themselves), which leaderboards count you (`'global'` = both,
+`'friends'` = only your friends' boards, `'off'` = neither; older rows held true/false,
+normalised in `withDefaults`), and whether you take friend requests. Everything is on by
+default. The API enforces each of these in `routes/social.ts`, `profiles.ts` and
+`leaderboard.ts`: any new place that shows someone's numbers must check them too. Jams and
+groups have no setting because joining is the consent.
+
+**Leaderboard.** `GET /api/leaderboard?scope=global|friends`: all-time focused time, top
+ten, test accounts and admins left out of the global board. Each row carries eight weeks of
+minutes, this week, the streak and days of the last 28, so the tab shows the first three as
+tiles with a sparkline and the rest as rows with a small one. Under the global board,
+"You and everyone" (`GET /api/leaderboard/stats`): your focused time and days this week
+against the average, plus session length and streak as plain figures. The average is over
+people with at least 15 minutes in the week; when nobody else reaches that this week, last
+week's numbers are used and the card says so; session length and streak averages are over
+the same people. Under the friends board, the Compare bento (`routes/compare.ts`,
+`GET /api/social/compare`): your weeks beside your friends' in Monday weeks in your timezone.
+
+**Jams (`routes/jams.ts`, tables `jams`, `jam_members`).** A timed game, like a
+Spotify jam: start one for a day, three days or a week; friends see it under "Friends are in"
+and join; anyone with its six-letter code (no vowels or confusable letters, `newJamCode`)
+joins from outside. Focused minutes count from the moment each person joined, so a late
+joiner has no head start. The host can end it early; members can leave; the most minutes at
+the end wins and the card names the winner. Each member comes with `byDay` (running total
+over the jam's days) and their top subjects, shown when the card is opened with its chevron.
+
+**Groups (`routes/groups.ts`, tables `groups`, `group_members`, `nudges`).** A
+lasting set of friends. A group's card is the last seven days ending today (a group younger
+than that starts on its first day): the total "together", a line per person of their running
+total (`DayLines`, yours in the accent, the others in greys, starting on the first day's
+value so there is no climb from zero), and everyone ranked with their minutes and a segmented
+bar of their biggest subjects named beneath. "Live now" lists friends in a session right
+now: a session with no end and `last_seen_at` within ten minutes, with a clock running since
+it started and what they are on. Nudges: a friend or a fellow group member can be nudged to
+study once every two hours per pair (a second one inside the window is a 409 that says when);
+"Nudge" appears next to a group member under half the group's average. The nudged person
+sees them on the dashboard until "Got it", and they expire after a day.
+
+**Traps.**
+
+- Drizzle drops the table from `posts.id` in a select list, so the count subqueries in
+  `loadPosts` are written by hand with aliases (`post_comments c where c.post_id =
+  posts.id`); a bare `"id"` there would be the comment's own.
+- The side columns on the feed must not be scroll boxes (overflow clips the glass shadows);
+  the board is sticky, your card and friends scroll with the page.
+- Panels take the page's full width (see the Look rules); the first Jams page was a narrow
+  centred column and read as chopped.
+- The API tests for these are `social.test.ts`, `groups.test.ts`, `jams.test.ts`,
+  `compare.test.ts`, `leaderboard.test.ts` and `profiles.test.ts`.
+
+**Sandbox with people on it.** `apps/api/seed-social-demo.tmp.ts` (untracked, like the
+site seed) wipes and rebuilds `apps/api/.pglite-sandbox-social` with six people, eight weeks
+of sessions, friendships, posts, a group, jams, a nudge and two live sessions; pass
+`SEED_MEDIA_DIR` pointing at a folder of `v1.mp4`..`v3.mp4` with `v*-poster.jpg` and
+`pic1.jpg`, `pic2.jpg` to get media posts (there is no ffmpeg on this PC; a scratch
+`ffmpeg-static` made the samples). Then the `social-sandbox-api` / `social-sandbox`
+launch configs (8802/5188) and sign in as jerry@komodon.demo. The configs run from the
+`social` worktree folder; point them at the checkout you are working in.
+
+## The timelapse, and why it can't use the iPhone's camera
+
+- **How it works.** On the focus screen, `useTimelapseRecorder` (`apps/portal/src/lib/timelapse.ts`)
+  takes JPEG stills from the camera, plus a shared screen if the person picks one
+  (`getDisplayMedia`, asked each session). It takes them during focus only, unless breaks
+  are recorded too. The stills stay in the tab's memory: nothing is uploaded, and closing
+  the tab loses them. Pacing works like a phone timelapse (`packages/core/src/timelapse.ts`).
+  Auto mode starts at one still every 0.5 s. Each time the stills reach twice the target
+  (600), every other one is dropped and the interval doubles, so a session of any length
+  ends up as a video of about 20-40 s.
+- **Making the video.** `renderTimelapse` draws every frame with `composeFrame`
+  (`lib/timelapse-compose.ts`). The camera fills the frame, and the screen box, clocks, task
+  name, progress bar and mark sit on top wherever the layout editor put them (the layout
+  maths is in `packages/core/src/timelapse-layout.ts`). Where the browser has WebCodecs, the
+  frames are encoded to an H.264 MP4 with `mp4-muxer`. Elsewhere, MediaRecorder records the
+  canvas in real time. The person can then download the video or share it in a post
+  (`lib/post-media.ts`).
+- **The iPhone camera (owner's question, 2026-10-21).** On a phone, can the site use the
+  iPhone's own camera and Time-Lapse mode instead of ours? No:
+  - A web page reaches the iPhone camera only through a file input with `capture`. iOS offers
+    Photo and Video there, never Time-Lapse, and no link opens the Camera app in Time-Lapse.
+  - Plain Video mode is no substitute. The camera covers the timer, and an hour of footage
+    (3-4 GB) is too much for Safari to turn into a timelapse.
+  - What would work is an import: the person films with the Camera app's Time-Lapse, then
+    picks the video from Photos after the session, and Komodon adds the mark. A running clock
+    can't line up with the study time, because the Camera app can't pause for breaks and
+    chooses its own speed.
+- **Our recorder on phones today.**
+  - It always uses the front camera (`facingMode: 'user'`, in `lib/timelapse.ts` and again in
+    `TimelapseLayoutEditor.tsx`).
+  - Nothing keeps the screen awake, and iOS stops the camera when the screen locks. The camera
+    track isn't watched for `ended` or `mute` (the screen's track is), so a phone left alone
+    probably stops recording at auto-lock without saying anything.
+  - iPhones have no `getDisplayMedia`, so screen recording reports itself unavailable there.
+- **Not built.** The import, a back-camera choice and a wake lock are logged in
+  `docs/IDEAS.md` (2026-10-21).
 
 ## The homepage (`apps/site`, 2026-10-21)
 

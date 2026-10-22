@@ -3,6 +3,7 @@ import {
   ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
+  CalendarCheck,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -314,6 +315,7 @@ function Hero({
 
 function Streaks({ data }: { data: RecapResponse }) {
   const { streak, consistency: c } = data;
+  const weeks = streak.weeks;
   const next = c.nextMilestone;
   return (
     <Glass as="section" className="rc-streaks rc-rise" aria-labelledby="streaks-h">
@@ -321,18 +323,35 @@ function Streaks({ data }: { data: RecapResponse }) {
         Streaks and consistency
       </h2>
       <div className="rc-streaks-body">
-        <div className="rc-streak-main">
-          <span className={`streak-badge${streak.current > 0 ? ' is-lit' : ''}`} aria-hidden>
-            <FlameIcon size={28} />
-          </span>
-          <div>
-            <p className="rc-streak-number">
-              {streak.current} {streak.current === 1 ? 'day' : 'days'}
-            </p>
-            <p className="muted text-sm">
-              Best: {streak.longest} {streak.longest === 1 ? 'day' : 'days'}
-            </p>
+        <div className="rc-streak-stack">
+          <div className="rc-streak-main">
+            <span className={`streak-badge${streak.current > 0 ? ' is-lit' : ''}`} aria-hidden>
+              <FlameIcon size={28} />
+            </span>
+            <div>
+              <p className="rc-streak-number">
+                {streak.current} {streak.current === 1 ? 'day' : 'days'}
+              </p>
+              <p className="muted text-sm">
+                Best: {streak.longest} {streak.longest === 1 ? 'day' : 'days'}
+              </p>
+            </div>
           </div>
+          {weeks && weeks.longest > 0 && (
+            <div className="rc-streak-main">
+              <span className={`streak-badge${weeks.current > 0 ? ' is-lit' : ''}`} aria-hidden>
+                <CalendarCheck size={26} />
+              </span>
+              <div>
+                <p className="rc-streak-number">
+                  {weeks.current} {weeks.current === 1 ? 'week' : 'weeks'}
+                </p>
+                <p className="muted text-sm">
+                  Best: {weeks.longest} {weeks.longest === 1 ? 'week' : 'weeks'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="rc-week-dots">
           <ol aria-label="This week">

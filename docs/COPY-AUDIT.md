@@ -283,7 +283,7 @@ open. Pick it up when the owner asks; don't change any of it unasked.
 - "Badge toasts" ("toast" is jargon).
 - The sound hints repeat their labels ("A work block has ended.").
 - "Comfortable minutes per day".
-- Rest days: "Rest days never break a streak. Weekly changes take effect next Monday.
+- Rest days: "Your daily plan works around rest days. Weekly changes take effect next Monday.
   Vacations need 48 hours notice and can be removed anytime. 2 changes left this week."
   Also "Pending: Sat, Sun from 2026-10-27." (an ISO date, and "none from" reads badly).
 - "Site blocking (extension)" doesn't match the nav; "…during work intervals"; "Only the

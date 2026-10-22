@@ -42,7 +42,7 @@ export const APP_TIPS: AppTip[] = [
   },
   {
     id: 'rest-days',
-    text: 'Rest days never break your streak, and your daily plan works around them.',
+    text: 'Your daily plan works around rest days.',
     to: '/settings#rest-days',
     link: 'Set rest days',
   },
