@@ -45,20 +45,18 @@
 }
 
 /* Each page rises in as it arrives: quick, so a tab change never feels like it waits.
-   `backwards`, never `both`: an opacity animation still held at its end makes Chrome treat
-   the page as the backdrop of every glass card inside it, so the cards stay unblurred and
-   only the patches that repaint frost (seen in Vivaldi, 2026-10-22). Any fade on something
-   that holds cards follows the same rule. */
+   It rises without fading. Opacity on anything that holds glass cards makes Chrome treat it
+   as the cards' backdrop, so they show the photo unblurred until the fade is over (the owner
+   saw the blur arrive half a second late), and held at its end it kept them unblurred for
+   good (the black patches, 2026-10-22). Transform alone leaves the blur alone. */
 .route-in {
   animation: route-in 240ms var(--ease-out) backwards;
 }
 @keyframes route-in {
   from {
-    opacity: 0;
     transform: translateY(6px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
@@ -5054,13 +5052,13 @@
 .rc-bento > :nth-child(n + 6) {
   animation-delay: 300ms;
 }
+/* A rise without a fade, like the page's own (see .route-in): a fading section or tile
+   shows its glass unblurred until the fade is over. */
 @keyframes rc-rise {
   from {
-    opacity: 0;
     transform: translateY(14px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }
@@ -6722,17 +6720,16 @@
   animation: badge-reveal 460ms cubic-bezier(0.2, 0, 0.2, 1) both;
   animation-delay: calc(min(var(--reveal-i, 0), 24) * 22ms + 80ms);
 }
-/* A card rail opened to "See all": the grid fades in rather than snapping. */
+/* A card rail opened to "See all": the grid rises in rather than snapping. Rises only, no
+   fade, so the glass stays frosted the whole way (see .route-in). */
 .rail-expanded {
   animation: badge-reveal var(--dur-slow) var(--ease-out) backwards;
 }
 @keyframes badge-reveal {
   from {
-    opacity: 0;
     transform: translateY(10px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }

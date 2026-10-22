@@ -286,7 +286,7 @@ function BadgeFold({ count, children }: { count: number; children: ReactNode }) 
 
   const folds = heights !== null && heights.full > heights.folded + 4;
 
-  // On opening, the badges that were hidden fade and rise into place in a quick cascade,
+  // On opening, the badges that were hidden rise into place in a quick cascade,
   // top to bottom, while the fold grows; the ones already on show stay put.
   const toggle = () => {
     const grid = gridRef.current;
