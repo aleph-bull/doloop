@@ -48,8 +48,9 @@ export function SignOutButton({
           <span className="sidenav-label">Sign out</span>
         </button>
       ) : labelled ? (
-        <Button variant="secondary" size="sm" onClick={() => setAsking(true)}>
-          <LogOut size={15} aria-hidden /> Sign out
+        <Button variant="secondary" size="sm" title="Sign out" onClick={() => setAsking(true)}>
+          {/* Its own element, so a narrow place (the profile on a phone) can show the icon only. */}
+          <LogOut size={15} aria-hidden /> <span className="signout-label">Sign out</span>
         </Button>
       ) : (
         <Button

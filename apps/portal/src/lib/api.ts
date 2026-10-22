@@ -513,6 +513,16 @@ export interface ProfileStats {
   last28Minutes: number;
   streak: { current: number; longest: number; weeks?: WeekStreak };
   level: number;
+  /** How far into the level, 0 to 1. Optional for older cached copies. */
+  levelRatio?: number;
+}
+
+/** One of the badges a profile shows: the ones that paid the most XP. */
+export interface ProfileBadge {
+  key: string;
+  name: string;
+  description: string;
+  unlockedAt: string;
 }
 
 /** Your own university verification, from GET /api/me/university. */
@@ -529,6 +539,10 @@ export interface ProfileResponse {
   stats: ProfileStats | null;
   heatmap: StudyHeatmapData | null;
   weekday: RhythmProfile | null;
+  /** Their top badges, biggest first, and their hours of the day; null when kept to
+   * themselves. Optional for older cached copies. */
+  badges?: ProfileBadge[] | null;
+  clock?: ClockProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
   /** A friend in a session right now, if they share it. Optional for older cached copies. */

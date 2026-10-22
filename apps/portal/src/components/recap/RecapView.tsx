@@ -1,4 +1,4 @@
-import { dayOfWeek, type ClockProfile, type RangeRecap } from '@komogon/core';
+import { dayOfWeek, type RangeRecap } from '@komogon/core';
 import {
   ArrowDownRight,
   ArrowRight,
@@ -23,7 +23,6 @@ import {
   Heatmap,
   Panel,
   ProgressBar,
-  RadialClock,
   Ring,
   SkeletonBlock,
   StackedDays,
@@ -36,6 +35,7 @@ import { useMe, useRecap } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { EquivalentsStrip } from './EquivalentsStrip';
 import { saveShareCard } from './share-card';
+import { clockLabel, StudyClock } from './StudyClock';
 import { TrophyShelf } from './TrophyShelf';
 
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -63,17 +63,6 @@ function rangeLabel(p: RangeRecap): string {
   const a = fmtDate(noon(p.from));
   const sameMonth = p.from.slice(0, 7) === p.to.slice(0, 7);
   return `${a} to ${sameMonth ? Number(p.to.slice(8)) : fmtDate(noon(p.to))}`;
-}
-
-/** What the clock says about when someone studies, in a word or two and an animal. */
-function clockLabel(c: ClockProfile): string | null {
-  if (c.peakHour === null || c.totalMinutes < 30) return null;
-  const h = c.peakHour;
-  if (h >= 21 || h < 4) return "You're a night owl 🦉";
-  if (h < 9) return 'Early bird 🐦';
-  if (h < 12) return 'Morning mind ☕';
-  if (h < 17) return 'Afternoon focus 🌤️';
-  return 'Evening engine 🌆';
 }
 
 /** "this week", "last week", "that week": how the page refers to the range showing. */
@@ -437,7 +426,13 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
       <Tile
         key="days"
         size="wide"
-        title={range === 'week' ? 'Day by day' : data.ago === 0 ? 'Every day this month' : 'Every day of the month'}
+        title={
+          range === 'week'
+            ? 'Day by day'
+            : data.ago === 0
+              ? 'Every day this month'
+              : 'Every day of the month'
+        }
         note={
           p.bestDay
             ? `${LONG_DAYS[dayOfWeek(p.bestDay.date)]} ${range === 'month' ? fmtDate(noon(p.bestDay.date)) : ''} led with ${fmtHours(p.bestDay.minutes)}.`.replace(
@@ -518,21 +513,7 @@ function Charts({ data, range }: { data: RecapResponse; range: RecapRangeParam }
       note={clockNote ?? undefined}
       empty={data.clock.totalMinutes === 0 ? 'Your hours of the day fill in as you study.' : null}
     >
-      <RadialClock
-        hours={data.clock.hours}
-        fmt={fmtHours}
-        ariaLabel="Study time by hour of the day"
-      >
-        {data.clock.peakHour !== null && (
-          <>
-            <span className="rc-ring-small">peak</span>
-            <span className="rc-ring-big">
-              {data.clock.peakHour % 12 === 0 ? 12 : data.clock.peakHour % 12}
-              {data.clock.peakHour < 12 ? ' am' : ' pm'}
-            </span>
-          </>
-        )}
-      </RadialClock>
+      <StudyClock clock={data.clock} />
     </Tile>,
   );
 

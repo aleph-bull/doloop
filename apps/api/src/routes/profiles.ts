@@ -1,10 +1,14 @@
 import type { FastifyInstance } from 'fastify';
 import {
+  badgeByKey,
+  levelProgress,
   lifetimeStats,
   studyHeatmap,
+  timeOfDayClock,
   universityById,
   weekdayProfile,
   weekStreakNumbers,
+  type ClockProfile,
   type Heatmap,
   type RhythmProfile,
 } from '@komogon/core';
@@ -13,6 +17,7 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { posts, userAssets, users } from '../db/schema';
 import { notFound } from '../errors';
+import { listAchievements } from '../services/achievements';
 import { loadCompletedSessions } from '../services/pace';
 import type { Person } from '../services/people';
 import { settingsOf } from '../services/users';
@@ -31,6 +36,8 @@ import {
 export const PROFILE_HEATMAP_WEEKS = 26;
 /** The newest posts a profile returns. */
 export const PROFILE_POSTS_LIMIT = 50;
+/** How many badges a profile shows: the ones that paid the most XP. */
+export const PROFILE_TOP_BADGES = 4;
 
 export interface PublicProfile {
   id: string;
@@ -61,6 +68,15 @@ export interface ProfileStats {
   last28Minutes: number;
   streak: { current: number; longest: number; weeks: { current: number; longest: number } };
   level: number;
+  /** How far into the level they are, 0 to 1. The XP itself stays on Achievements. */
+  levelRatio: number;
+}
+
+export interface ProfileBadge {
+  key: string;
+  name: string;
+  description: string;
+  unlockedAt: string;
 }
 
 /** Study numbers are null when the person keeps them to themselves (Settings › Social). */
@@ -69,6 +85,10 @@ export interface ProfileResponse {
   stats: ProfileStats | null;
   heatmap: Heatmap | null;
   weekday: RhythmProfile | null;
+  /** Their biggest badges by the XP each paid, biggest first; empty before the first. */
+  badges: ProfileBadge[] | null;
+  /** When in the day they study, all time, by the hour in their own timezone. */
+  clock: ClockProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
   /** In a session right now: shown to friends, when they let friends see it. */
@@ -94,7 +114,9 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     if (!row || row.onboardedAt === null) throw notFound('No such profile');
     const now = clock();
     const settings = settingsOf(row);
-    const [sessions, avatar, page, friends, friendship] = await Promise.all([
+    const you = row.id === req.user.id;
+    const showStats = you || settings.social.stats;
+    const [sessions, avatar, page, friends, friendship, held] = await Promise.all([
       loadCompletedSessions(db, row.id),
       db.query.userAssets.findFirst({
         where: and(eq(userAssets.userId, row.id), eq(userAssets.kind, 'avatar')),
@@ -102,6 +124,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       loadPosts(db, req.user.id, eq(posts.userId, row.id), PROFILE_POSTS_LIMIT),
       friendIds(db, row.id),
       friendshipWith(db, req.user.id, row.id),
+      showStats ? listAchievements(db, row.id) : Promise.resolve([]),
     ]);
     const tz = row.timezone;
     const lifetime = lifetimeStats({
@@ -111,8 +134,6 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       joinedAt: row.createdAt.toISOString(),
     });
     const uni = universityById(settings.profile.university);
-    const you = row.id === req.user.id;
-    const showStats = you || settings.social.stats;
     const showPosts =
       you || friendship.status === 'friends' || settings.social.posts === 'everyone';
     const showLive = !you && friendship.status === 'friends' && settings.social.live;
@@ -145,16 +166,42 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
               weeks: weekStreakNumbers(row.streak),
             },
             level: row.level,
+            levelRatio: levelProgress(row.xp).ratio,
           }
         : null,
       heatmap: showStats
         ? studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS })
         : null,
       weekday: showStats ? weekdayProfile(sessions, tz) : null,
+      badges: showStats ? topBadges(held) : null,
+      clock: showStats ? timeOfDayClock(sessions, tz) : null,
       posts: showPosts ? page.posts : [],
       people: showPosts ? page.people : {},
       live,
     };
     return response;
   });
+}
+
+/**
+ * The badges that paid the most XP, biggest first; between two that paid the same, the
+ * newer one. A key no longer in the catalogue is skipped.
+ */
+export function topBadges(
+  held: Array<{ key: string; unlockedAt: string }>,
+  count = PROFILE_TOP_BADGES,
+): ProfileBadge[] {
+  return held
+    .flatMap((a) => {
+      const def = badgeByKey(a.key);
+      return def ? [{ def, unlockedAt: a.unlockedAt }] : [];
+    })
+    .sort((a, b) => b.def.xp - a.def.xp || b.unlockedAt.localeCompare(a.unlockedAt))
+    .slice(0, count)
+    .map(({ def, unlockedAt }) => ({
+      key: def.key,
+      name: def.name,
+      description: def.description,
+      unlockedAt,
+    }));
 }

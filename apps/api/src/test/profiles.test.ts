@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { TimerState } from '@komogon/core';
 import { eq } from 'drizzle-orm';
-import { sessions, users } from '../db/schema';
+import { achievements, sessions, users } from '../db/schema';
 import { createTestApp, USER_A, USER_B, type TestApp } from './helpers';
 
 let t: TestApp;
@@ -173,5 +173,58 @@ describe('profiles', () => {
     expect(yours.statusCode).toBe(204);
     const after = (await t.api({ method: 'GET', url: '/api/profiles/me' })).json();
     expect(after.posts.map((p: { id: string }) => p.id)).toEqual([second.json().post.id]);
+  });
+
+  it('shows the four badges that paid the most XP, the hours of the day and the level bar', async () => {
+    const day = (d: number) => new Date(`2026-09-${String(d).padStart(2, '0')}T12:00:00Z`);
+    await t.db.insert(achievements).values([
+      { userId: USER_A.id, key: 'first-session', unlockedAt: day(1) }, // 25
+      { userId: USER_A.id, key: 'hours-10', unlockedAt: day(2) }, // 100
+      { userId: USER_A.id, key: 'deep-work', unlockedAt: day(5) }, // 100, newer
+      { userId: USER_A.id, key: 'focus-25', unlockedAt: day(3) }, // 150
+      { userId: USER_A.id, key: 'hours-100', unlockedAt: day(4) }, // 800
+      { userId: USER_A.id, key: 'retired-badge', unlockedAt: day(6) },
+    ]);
+    const body = (
+      await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })
+    ).json();
+    expect(body.badges.map((b: { key: string }) => b.key)).toEqual([
+      'hours-100',
+      'focus-25',
+      'deep-work',
+      'hours-10',
+    ]);
+    expect(body.badges[0]).toEqual({
+      key: 'hours-100',
+      name: 'Century of hours',
+      description: 'One hundred hours of focused work, all time.',
+      unlockedAt: day(4).toISOString(),
+    });
+    // What a badge pays stays on Achievements.
+    expect(JSON.stringify(body.badges)).not.toContain('xp');
+    // The session from 6:00 to 8:00 in Toronto with 90 minutes of work, spread over its two
+    // hours.
+    expect(body.clock.hours).toHaveLength(24);
+    expect(body.clock.totalMinutes).toBe(90);
+    expect([body.clock.hours[6], body.clock.hours[7]]).toEqual([45, 45]);
+    expect(body.stats.levelRatio).toBeGreaterThanOrEqual(0);
+    expect(body.stats.levelRatio).toBeLessThan(1);
+  });
+
+  it('keeps badges and hours to themselves along with the totals', async () => {
+    const saved = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { social: { stats: false } },
+    });
+    expect(saved.statusCode).toBe(200);
+    const theirs = (
+      await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })
+    ).json();
+    expect(theirs).toMatchObject({ stats: null, badges: null, clock: null });
+    // Their own profile still shows everything.
+    const own = (await t.api({ method: 'GET', url: '/api/profiles/me' })).json();
+    expect(own.badges).toHaveLength(4);
+    expect(own.clock.totalMinutes).toBe(90);
   });
 });

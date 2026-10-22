@@ -939,10 +939,323 @@
   justify-content: space-between;
   gap: 12px;
 }
-.profile-posts-list {
+.profile-posts-list,
+.profile-posts-items {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+/* Under the totals: the posts at exactly the feed's width, with the top badges and the hours
+   of the day beside them. The side column is as wide as the feed's two side columns and the
+   gap between them, and narrows at the same page widths the feed does, so a post is the same
+   size here as on Social. */
+.profile-lower-wrap {
+  container-type: inline-size;
+}
+.profile-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(210px + 240px + 14px);
+  gap: 14px;
+  align-items: start;
+}
+/* The "Posts" heading takes the first row and the side column starts on the second, so the
+   first post and the card beside it share a top edge. */
+.profile-lower > .profile-posts-list {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: grid;
+  grid-template-rows: subgrid;
+}
+.profile-side {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* No posts to show: the side cards share the width. Nothing beside the posts: they take it. */
+.profile-lower.is-side-only,
+.profile-lower.is-posts-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+.profile-lower.is-side-only > .profile-side {
+  grid-column: 1;
+  grid-row: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  align-items: start;
+}
+@container (max-width: 880px) {
+  .profile-lower:not(.is-side-only, .is-posts-only) {
+    grid-template-columns: minmax(0, 1fr) 240px;
+  }
+}
+/* Narrower still, the side cards go above the posts, the way the totals do. */
+@container (max-width: 660px) {
+  .profile-lower:not(.is-side-only, .is-posts-only) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 24px;
+  }
+  .profile-lower > .profile-side,
+  .profile-lower > .profile-posts-list {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .profile-lower > .profile-posts-list {
+    display: flex;
+  }
+}
+
+/* Top badges: small tiles, two to a row, one in a narrow column. */
+.profile-badges {
+  container: profile-badges / inline-size;
+}
+.profile-side-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.profile-badge-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.profile-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.profile-badge .badge-medal {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 8px;
+  color: var(--accent-fg);
+  background: var(--accent-fill);
+}
+.profile-badge-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.profile-badge-desc {
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+.profile-badge-when {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+/* One to a row, each badge is a line: the medal on the left, the words beside it. */
+@container profile-badges (max-width: 300px) {
+  .profile-badge-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profile-badge {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 12px 14px;
+  }
+  .profile-badge .badge-medal {
+    grid-row: span 3;
+    margin-bottom: 0;
+  }
+  .profile-badge-when {
+    padding-top: 4px;
+  }
+}
+
+/* Totals in one row: the weekly streak's tile, then the figures. Short of room, the figures
+   wrap beside the tile first, and on a phone go under it. */
+.profile-totals-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px 24px;
+}
+.profile-totals-body > .profile-streak {
+  flex: 0 1 auto;
+}
+.days-panel-stats.profile-stats {
+  flex: 1 1 0;
+  gap: 20px 22px;
+}
+/* The head card lays itself out by its own width, so the sidebar's room counts. */
+.profile-head {
+  container: profile-head / inline-size;
+}
+/* On a phone the buttons take their own line under the name, so the name has the card's
+   width rather than squeezing beside them ("Jer / ry"). The Friends card then opens to
+   the right, since its chip sits at the card's left edge. */
+@container profile-head (max-width: 520px) {
+  .profile-head .profile-actions {
+    order: 1;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+  .profile-head .profile-bio {
+    order: 2;
+  }
+  .profile-head .friend-pop {
+    right: auto;
+    left: 0;
+  }
+  /* Your own: the gear and sign out go above the picture, small, sign out as its icon. */
+  .profile-head .profile-actions.is-own {
+    order: -1;
+    gap: 6px;
+  }
+  .profile-head .profile-actions.is-own .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+  .profile-head .profile-actions.is-own .btn svg {
+    width: 16px;
+    height: 16px;
+  }
+  .profile-head .signout-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* The weekly streak's tile: the accent, with this week's days. Gone out, it is plain. */
+.profile-streak {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.profile-streak.is-weekly.is-lit {
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+}
+.profile-streak-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg-subtle);
+}
+.profile-streak.is-lit .profile-streak-icon {
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+}
+.profile-streak-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.profile-streak-label {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.profile-streak-figure {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.profile-streak-figure small {
+  font-size: 0.45em;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+  margin-left: 0.3em;
+}
+.profile-streak-note {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+/* This week, Monday first: a filled dot for each day with a session. */
+.profile-week {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 5px;
+}
+.profile-week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.profile-week-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.profile-week-day.is-on .profile-week-dot {
+  background: var(--accent);
+}
+.profile-week-day.is-future .profile-week-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--fg) 16%, transparent);
+}
+.profile-week-letter {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--fg-subtle);
+}
+
+/* The level, with a slim bar of how far into it they are. */
+.profile-level-bar {
+  width: 96px;
+  height: 5px;
+  margin-left: 4px;
+}
+
+/* A running daily streak as a badge on the picture's corner: the flame and the day count. */
+.profile-avatar-wrap {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.profile-avatar-streak {
+  position: absolute;
+  right: -10px;
+  bottom: -6px;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 11px 3px 5px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--flame) 40%, var(--glass-solid, #1c1b22));
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.profile-avatar-streak .rc-flame {
+  margin: -8px -3px -6px -4px;
 }
 
 /* ----- the friends card, under yours ----- */

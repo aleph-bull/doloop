@@ -329,8 +329,11 @@ day from the owner's instructions and reshaped several times; this is the state 
   running.
 - `/profile` is your own profile, `/profile/:id` someone else's (`pages/Profile.tsx`;
   `/social/:id` still redirects). A profile is the head card (picture, name, university,
-  joined, friend count), then three panels (the day grid, strongest days, totals), then the
-  person's posts. On someone else's profile the `FriendButton` sits in the head: Add friend,
+  joined, friend count, and a running daily streak as a flame badge on the picture's corner), then three panels
+  (the day grid, strongest days, totals in one row: the weekly streak tile, then the figures,
+  with the level bar under the title), then the person's posts at exactly the feed's width
+  with their top four badges and the "Peak study hours" clock in a column beside them (the
+  side column is the feed's two side columns wide, so keep the two in step). On someone else's profile the `FriendButton` sits in the head: Add friend,
   Requested (click takes it back), Accept and Decline, or a Friends chip that opens a small
   card with "Friends since <date>" and a Remove friend that asks "Are you sure?" first.
 - Everything under `components/social/`: `Feed.tsx` (the three-column layout),
