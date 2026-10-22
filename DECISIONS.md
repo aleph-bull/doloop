@@ -1940,3 +1940,9 @@ The owner asked for four things in one message: a preview before a post goes out
   - Found while checking it: the card used to stop any video being made whenever its video changed, so clearing the old one cancelled the remake. Making now stops only when the card goes away.
 - `targetsFor` (a preset's layouts for the editor) moved from `TimelapsePresets.tsx` into `TimelapseLayoutEditor.tsx` so the dialog can use it without a circular import.
 - Checked in the sandbox with a fake camera (a canvas stream): looks in Settings and on the focus screen, the end card in a made video (4.6 s from 1.6 s of stills), the Social preview posting without the hours (201, on the feed without the time), the Instagram preview at computer and phone widths, and "Change layout?" remaking the video in the new look with new words. The share menu, the clipboard on a real phone, and the sites' own pages weren't tried; the owner will have to try those.
+
+## The visualizer's defaults are the owner's own look (owner request, 2026-10-22)
+
+- The owner asked for the visualizer settings on their account to become the defaults, except for the way audio gets picked up. Read from their screenshots: opacity 0.5 (was 0.85), colour Custom #ffd1e3 (was Accent), Waves off (was on). Cloud mist, the beat drop circle and "Calm when silent" were already at the defaults.
+- **Listening keeps its defaults** (Bass heavy and the custom sliders under it), as asked; the owner uses Balanced. "Enable audio visualizer" and "Never ask again" stay off too: they are on/off choices, not the look.
+- Accounts that finished onboarding before this keep the full set of settings stored then, so this reaches new accounts, and "Reset the visualizer to its defaults" (which reads `DEFAULT_SETTINGS`).
