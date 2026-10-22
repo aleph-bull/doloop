@@ -5140,15 +5140,61 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 12px;
 }
+/* Each card: an accent icon tile, the line, its detail, and a bar when it's about progress. */
 .rc-insight {
   padding: var(--card-pad);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
+.rc-insight-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
 .rc-insight-head {
   font-weight: 600;
   line-height: 1.35;
+  text-wrap: pretty;
+}
+.rc-insight-detail {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+/* Sits on the card's floor, so bars line up across a row of cards of different text. */
+.rc-insight-detail:has(+ .rc-insight-bar) {
+  margin-bottom: 14px;
+}
+.rc-insight-bar {
+  margin-top: auto;
+}
+/* One card a row on a phone: the icon moves beside the words so each card stays short. */
+@media (max-width: 520px) {
+  .rc-insight {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-content: start;
+    column-gap: 14px;
+    row-gap: 4px;
+  }
+  .rc-insight-icon {
+    grid-row: 1 / span 2;
+    margin-bottom: 0;
+  }
+  .rc-insight > :not(.rc-insight-icon) {
+    grid-column: 2;
+  }
+  .rc-insight-detail:has(+ .rc-insight-bar) {
+    margin-bottom: 8px;
+  }
 }
 .rc-grades {
   display: flex;
@@ -6415,11 +6461,6 @@
 /* A size warning in the timelapse settings: the same quiet hint, in the warning tone. */
 .timelapse-size-warn {
   color: color-mix(in srgb, var(--status-warn) 70%, var(--fg));
-}
-
-/* Good to know: text cards over the photo, so mostly solid. */
-.glass.rc-insight {
-  background: color-mix(in srgb, var(--glass-solid) 78%, transparent);
 }
 
 /* Saved looks: a preview of each, its background with a little card in its panel style. */
