@@ -40,6 +40,22 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'timezone',
       'sign out',
       'email',
+      // What other people see of you on Social.
+      'social',
+      'sharing',
+      'share',
+      'private',
+      'who sees',
+      'posts',
+      'friends only',
+      'leaderboard',
+      'jams',
+      'friend requests',
+      'profile stats',
+      'studying now',
+      'live',
+      'online',
+      'status',
       // Data and privacy lives here too.
       'privacy',
       'data',
@@ -99,28 +115,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     ],
   },
   {
-    id: 'social',
-    title: 'Social',
-    keywords: [
-      'social',
-      'sharing',
-      'share',
-      'privacy',
-      'private',
-      'who sees',
-      'posts',
-      'friends only',
-      'leaderboard',
-      'jams',
-      'friend requests',
-      'profile stats',
-      'studying now',
-      'live',
-      'online',
-      'status',
-    ],
-  },
-  {
     id: 'theme',
     title: 'Appearance',
     keywords: [
@@ -146,7 +140,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'motion',
       'animation',
       'reduced motion',
-      'confetti',
     ],
   },
   {
@@ -160,12 +153,8 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'cycles',
       'auto start',
       'show timer',
-    ],
-  },
-  {
-    id: 'review',
-    title: 'After each session',
-    keywords: [
+      // After each session.
+      'after each session',
       'review',
       'quick',
       'full',
@@ -175,6 +164,7 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'effort',
       'notes',
       'phrases',
+      'confetti',
     ],
   },
   {
@@ -261,6 +251,13 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'reward price',
       'minimum xp',
       'xp',
+      // Rest days.
+      'rest day',
+      'day off',
+      'weekend',
+      'vacation',
+      'break days',
+      'holiday',
     ],
   },
   {
@@ -279,11 +276,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'conversion',
       'goal gpa',
     ],
-  },
-  {
-    id: 'rest-days',
-    title: 'Rest days',
-    keywords: ['rest day', 'day off', 'weekend', 'vacation', 'break days', 'holiday'],
   },
   {
     id: 'blocking',

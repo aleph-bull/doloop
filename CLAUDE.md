@@ -400,7 +400,7 @@ already asked you is the same as accepting. The friends card beside the feed: se
 "Friend requests" split into Inbound (the first three, the rest fading behind "Show all") and
 Outgoing (folded until opened). The API refuses a request to someone who turned requests off.
 
-**Sharing settings (Settings › Social, `settings.social`).** Who sees your posts
+**Sharing settings (Settings › Account › Social, `settings.social`).** Who sees your posts
 (everyone signed in or friends only; the feed and profiles both filter), study totals on
 your profile (off, the profile answers null for stats, grid and weekdays and the page says
 they keep their study time to themselves), which leaderboards count you (`'global'` = both,
@@ -445,7 +445,7 @@ sees them on the dashboard until "Got it", and they expire after a day.
 composer, `components/social/LiveNow.tsx`, shared with the Groups tab), first in the friends
 card with a dot and "Studying · 24 min", and as a pill on their profile. `GET
 /api/social/live` (in `routes/groups.ts`, beside `liveAmong`) and the profile's `live` field
-carry them; each has `state` (`focus`, `break`, `paused`). Settings › Social › "Show friends
+carry them; each has `state` (`focus`, `break`, `paused`). Settings › Account › Social › "Show friends
 when I'm studying" (`settings.social.live`) hides you from friends everywhere except your
 groups' own cards (`sharingLive`). "Live" means `last_seen_at` within ten minutes; the
 session view refreshes it once a minute (`SEEN_EVERY_MS` in `services/sessions.ts`) because

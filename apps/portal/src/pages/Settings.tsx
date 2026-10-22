@@ -96,6 +96,38 @@ function Section({
   );
 }
 
+/**
+ * A part of a section with its own heading. These were sections of their own once, so their
+ * old links (/settings#rest-days) open the section that holds them and scroll down to them.
+ */
+function GroupHead({ id, children }: { id: string; children: React.ReactNode }) {
+  useEffect(() => {
+    const fromHash = () => {
+      if (window.location.hash !== `#${id}`) return;
+      window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 60);
+    };
+    fromHash();
+    window.addEventListener('hashchange', fromHash);
+    return () => window.removeEventListener('hashchange', fromHash);
+  }, [id]);
+  return (
+    <h3 id={id} className="settings-group-head">
+      {children}
+    </h3>
+  );
+}
+
+/** Old section links, and the section that holds what they pointed at now. */
+const MOVED_SECTIONS = new Map([
+  // Account, You, and Data and privacy were separate before they merged.
+  ['account', 'profile'],
+  ['privacy', 'profile'],
+  // Moved into other sections on 2026-10-22; each lands on its own heading (GroupHead).
+  ['social', 'profile'],
+  ['review', 'timer'],
+  ['rest-days', 'pace'],
+]);
+
 function NumberField({
   label,
   value,
@@ -270,15 +302,10 @@ export function Settings() {
   useEffect(() => {
     const fromHash = () => {
       const raw = window.location.hash.slice(1);
-      // Account, You, and Data and privacy were separate before they merged; old links still land.
+      // Links to groups that moved into another section still land (MOVED_SECTIONS).
       // A timelapse preset's link (#timelapse-phone) opens the Timelapse group; the group
       // opens the preset itself.
-      const id =
-        raw === 'account' || raw === 'privacy'
-          ? 'profile'
-          : raw.startsWith('timelapse-')
-            ? 'timelapse'
-            : raw;
+      const id = raw.startsWith('timelapse-') ? 'timelapse' : (MOVED_SECTIONS.get(raw) ?? raw);
       if (id && SETTINGS_SECTIONS.some((x) => x.id === id)) {
         setQuery('');
         setActiveId(id);
@@ -378,6 +405,53 @@ export function Settings() {
                 <p className="field-hint">Signed in as {me.data!.user.email || auth.email}.</p>
                 <SignOutButton labelled />
               </div>
+              <GroupHead id="social">Social</GroupHead>
+              <p className="field-hint">What other people get to see of you on Social.</p>
+              <div className="field">
+                <span className="field-label">Who sees your posts</span>
+                <Segmented
+                  ariaLabel="Who sees your posts"
+                  value={s.social.posts}
+                  onChange={(posts) => patch({ social: { posts } })}
+                  options={[
+                    { value: 'everyone', label: 'Everyone' },
+                    { value: 'friends', label: 'Friends only' },
+                  ]}
+                />
+              </div>
+              <Toggle
+                checked={s.social.stats}
+                onChange={(v) => patch({ social: { stats: v } })}
+                label="Study totals on your profile"
+                description="The days grid, strongest days and totals. Off, your profile shows who you are and your posts."
+              />
+              <div className="field">
+                <span className="field-label">Leaderboards</span>
+                <Segmented
+                  ariaLabel="Which leaderboards count you"
+                  value={s.social.leaderboard}
+                  onChange={(leaderboard) => patch({ social: { leaderboard } })}
+                  options={[
+                    { value: 'global', label: 'Global and friends' },
+                    { value: 'friends', label: 'Friends only' },
+                    { value: 'off', label: 'Neither' },
+                  ]}
+                />
+                <span className="field-hint">
+                  Where your focused time counts. Friends see a board of their own.
+                </span>
+              </div>
+              <Toggle
+                checked={s.social.requests}
+                onChange={(v) => patch({ social: { requests: v } })}
+                label="Take friend requests"
+              />
+              <Toggle
+                checked={s.social.live}
+                onChange={(v) => patch({ social: { live: v } })}
+                label="Show friends when I’m studying"
+                description="While a session runs, friends see how long you’ve been at it and on what. People in your groups and jams see it either way."
+              />
               <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />
             </Section>
@@ -447,55 +521,6 @@ export function Settings() {
                 onChange={(v) => patch({ quote: { appTips: v } })}
                 label="Tips about the app"
                 description="Now and then a short tip about Komodon shows under the start panel, with a link to try it."
-              />
-            </Section>
-
-            <Section id="social" title="Social">
-              <p className="field-hint">What other people get to see of you on Social.</p>
-              <div className="field">
-                <span className="field-label">Who sees your posts</span>
-                <Segmented
-                  ariaLabel="Who sees your posts"
-                  value={s.social.posts}
-                  onChange={(posts) => patch({ social: { posts } })}
-                  options={[
-                    { value: 'everyone', label: 'Everyone' },
-                    { value: 'friends', label: 'Friends only' },
-                  ]}
-                />
-              </div>
-              <Toggle
-                checked={s.social.stats}
-                onChange={(v) => patch({ social: { stats: v } })}
-                label="Study totals on your profile"
-                description="The days grid, strongest days and totals. Off, your profile shows who you are and your posts."
-              />
-              <div className="field">
-                <span className="field-label">Leaderboards</span>
-                <Segmented
-                  ariaLabel="Which leaderboards count you"
-                  value={s.social.leaderboard}
-                  onChange={(leaderboard) => patch({ social: { leaderboard } })}
-                  options={[
-                    { value: 'global', label: 'Global and friends' },
-                    { value: 'friends', label: 'Friends only' },
-                    { value: 'off', label: 'Neither' },
-                  ]}
-                />
-                <span className="field-hint">
-                  Where your focused time counts. Friends see a board of their own.
-                </span>
-              </div>
-              <Toggle
-                checked={s.social.requests}
-                onChange={(v) => patch({ social: { requests: v } })}
-                label="Take friend requests"
-              />
-              <Toggle
-                checked={s.social.live}
-                onChange={(v) => patch({ social: { live: v } })}
-                label="Show friends when I’m studying"
-                description="While a session runs, friends see how long you’ve been at it and on what. People in your groups and jams see it either way."
               />
             </Section>
 
@@ -580,6 +605,19 @@ export function Settings() {
                   Where the pages sit on a computer. Phones keep the bar along the bottom.
                 </span>
               </div>
+              <div className="field">
+                <span className="field-label">Motion</span>
+                <Segmented
+                  ariaLabel="Reduced motion"
+                  value={s.effects.reducedMotion}
+                  onChange={(reducedMotion) => patch({ effects: { reducedMotion } })}
+                  options={[
+                    { value: 'system', label: 'System' },
+                    { value: 'on', label: 'Reduce' },
+                    { value: 'off', label: 'Full' },
+                  ]}
+                />
+              </div>
               <Toggle
                 checked={advanced || !!s.theme.customBackgroundUrl}
                 onChange={setAdvanced}
@@ -630,9 +668,7 @@ export function Settings() {
                 label="Show the timer by default"
                 description="You can still hide it per session."
               />
-            </Section>
-
-            <Section id="review" title="After each session">
+              <GroupHead id="review">After each session</GroupHead>
               <div className="field">
                 <span className="field-label">Review</span>
                 <Segmented
@@ -665,19 +701,6 @@ export function Settings() {
                 onChange={(v) => patch({ effects: { badgeToasts: v } })}
                 label="Badge toasts"
               />
-              <div className="field">
-                <span className="field-label">Motion</span>
-                <Segmented
-                  ariaLabel="Reduced motion"
-                  value={s.effects.reducedMotion}
-                  onChange={(reducedMotion) => patch({ effects: { reducedMotion } })}
-                  options={[
-                    { value: 'system', label: 'System' },
-                    { value: 'on', label: 'Reduce' },
-                    { value: 'off', label: 'Full' },
-                  ]}
-                />
-              </div>
             </Section>
 
             <Section id="focus" title="Focus screen">
@@ -815,13 +838,7 @@ export function Settings() {
                 changedAt={s.rewards.minCostChangedAt}
                 onChange={(xp) => patch({ rewards: { minCostXp: xp } })}
               />
-            </Section>
-
-            <Section id="grading" title="Grades">
-              <GradeScaleSettings settings={s} onPatch={patch} />
-            </Section>
-
-            <Section id="rest-days" title="Rest days">
+              <GroupHead id="rest-days">Rest days</GroupHead>
               <p className="muted text-sm">
                 Your daily plan works around rest days. Weekly changes take effect next Monday.
                 Vacations need 48 hours notice and can be removed anytime.{' '}
@@ -938,6 +955,10 @@ export function Settings() {
                   </Button>
                 </div>
               </div>
+            </Section>
+
+            <Section id="grading" title="Grades">
+              <GradeScaleSettings settings={s} onPatch={patch} />
             </Section>
 
             <Section id="blocking" title="Site blocking (extension)">
