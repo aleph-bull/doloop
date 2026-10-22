@@ -1959,3 +1959,26 @@ The owner asked for the phone version to feel like an iPhone app rather than the
 - **The screen dims while it records.** Once the focus screen rests (its controls fade after four still seconds), a black layer darkens it by the preset's new `dim` setting (0 to 90%; phones 70%, computers 50%), on the camera screen and the computer's focus screen alike. It is a layer over the page, not the display's brightness, which a web page can't change, and never in the video. The first touch or click on a resting screen only wakes it (`FocusWake`), so a tap on a dark screen can't land on Stop; that guard is there whenever the screen rests, recording or not. A break starting or ending wakes the screen for a moment. When the recording stops, is cancelled or the camera fails, the dim goes with it. The setting is "Dim the screen while recording" in each timelapse preset (Settings and the focus screen's controls), with a small clock beside the slider dimming as it moves.
 - **The focus screen's controls** rise as a sheet from the bottom on a phone, over a scrim that closes them, rather than hanging from the gear in the top corner.
 - **Smaller fixes.** The focus screen's phase word ("FOCUS · CYCLE 1") sat left of the clock under it: letter spacing trails the last letter too, so its trailing space is taken back. Fields give way in a row (`min-width: 0`), which a 16px field needed: the Tags card's Add button sat past the card's edge. Phones no longer flash grey on every tap or zoom on a quick double tap of a button. After merging the morning's timelapse work: the "Start from a look" previews grew with the screen's pixel density (three times as tall on an iPhone) and ran into the line under them; their row is now the box's height.
+
+## The homepage below the devices, redone, 2026-10-22 (user request)
+
+The owner liked the hero, laptop and phone, but said the rest of `apps/site` looked bad: the
+words were right, the layout of text and pictures wasn't, the screenshots were from an older
+app, and their own timelapses should be on it. They asked for something like other clean
+start-up sites without losing the brand.
+
+- **Words unchanged**, every heading and paragraph as they were.
+- **One pattern per section:** the heading on the left and its paragraph on the right (stacked
+  on phones), then the pictures on the same 1120 px container. The alternating left-right
+  splits and the narrow screenshots are gone.
+- **Plain screenshots, cropped tight**, all with the same 24px corner and no shadow or frame
+  (the owner rejected photo stages behind sections before). New captures from the current
+  app (sidebar, Social, the new profile era), Jerry's seeded sandbox: Analytics' week view;
+  the focus screen as a wide band; the feed beside the Leaderboard tab, sized so both are one
+  height.
+- **The owner's timelapses** (10-18, and both from 10-20) under the focus screen, three across,
+  each a whole session in ten seconds. They play only while on screen, and wait on a poster
+  with controls under reduced motion. On phones they are a row to swipe. The 10-17 one was
+  left out because someone else is in the background for a stretch of it.
+- **Closing:** the logo, "Better than last time.", the line and the two buttons straight on
+  the page, without the white card.
