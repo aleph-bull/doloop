@@ -1,6 +1,7 @@
 import { UOFT_GRADE_SCALE } from './grades';
 import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
 import { defaultPhoneTimelapse, normalizePhoneTimelapse } from './timelapse-presets';
+import { cleanEndText } from './timelapse-styles';
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
@@ -151,6 +152,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     // The camera's own shape, measured once it is seen.
     aspect: 'camera',
     layout: defaultTimelapseLayout(16 / 9),
+    endText: '',
   },
   // Upright and sideways, each in the camera's shape held that way.
   timelapsePhone: defaultPhoneTimelapse(),
@@ -203,6 +205,7 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
     seed.clock.visible = tl.showClockTime !== false;
   }
   tl.layout = normalizeTimelapseLayout(savedLayout, seed);
+  tl.endText = cleanEndText(tl.endText);
   settings.timelapsePhone = normalizePhoneTimelapse(
     settings.timelapsePhone,
     partial.timelapsePhone as Partial<Record<'layout' | 'sidewaysLayout', unknown>> | undefined,

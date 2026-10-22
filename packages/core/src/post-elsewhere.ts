@@ -14,6 +14,10 @@ export interface PostPlatformInfo {
   uploadUrl: string;
   /** What to do there once the video has downloaded, in a sentence. */
   nextStep: string;
+  /** The upload page with the caption already written in, where the site takes one. */
+  withCaption?: (caption: string) => string;
+  /** The longest caption the site takes, when it is short enough to run into. */
+  captionMax?: number;
 }
 
 /** In the order the buttons show. */
@@ -36,8 +40,40 @@ export const POST_PLATFORM_INFO: Record<PostPlatform, PostPlatformInfo> = {
     // X's documented web intent: its composer, where the video is added.
     uploadUrl: 'https://x.com/intent/tweet',
     nextStep: 'Add it to your post on X.',
+    // The intent takes the post's words as `text`.
+    withCaption: (caption) => `https://x.com/intent/tweet?text=${encodeURIComponent(caption)}`,
+    captionMax: 280,
   },
 };
+
+/** Study time the way a caption says it: "45 min", "2 h", "1 h 30 min". */
+export function studyTimeText(minutes: number): string {
+  const m = Math.max(1, Math.round(minutes));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h === 0) return `${r} min`;
+  return r === 0 ? `${h} h` : `${h} h ${r} min`;
+}
+
+/** The line about the session: "1 h 30 min of focus on Calculus". */
+export function sessionLine(minutes: number, subject: string | null): string {
+  return `${studyTimeText(minutes)} of focus${subject ? ` on ${subject}` : ''}`;
+}
+
+/**
+ * The words that go with a video posted elsewhere: what the person wrote, then the session's
+ * line when they chose to show how long they studied. Empty when there is neither.
+ */
+export function postCaption(input: {
+  text: string;
+  session: { minutes: number; subject: string | null } | null;
+  showTime: boolean;
+}): string {
+  const parts = [input.text.trim()];
+  if (input.showTime && input.session && input.session.minutes > 0)
+    parts.push(sessionLine(input.session.minutes, input.session.subject));
+  return parts.filter(Boolean).join('\n\n');
+}
 
 /** The longest video X takes from an account without Premium (help.x.com). */
 export const X_MAX_SECONDS = 140;

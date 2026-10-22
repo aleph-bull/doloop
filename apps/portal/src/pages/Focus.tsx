@@ -681,6 +681,12 @@ export function Focus() {
               recording={recording}
               onSaved={() => setTlSavedAt(recorder.count)}
               sessionId={summary.session.id}
+              postSession={{
+                minutes: Math.round(summary.session.workSeconds / 60),
+                subject: summary.session.nodeId
+                  ? (nodeIndex.byId.get(summary.session.nodeId)?.title ?? null)
+                  : null,
+              }}
             />
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>

@@ -11,6 +11,7 @@ import {
   type TimelapseAspect,
   type TimelapseLayout,
 } from './timelapse-layout';
+import { cleanEndText } from './timelapse-styles';
 import type { TimelapsePreset, UserSettings } from './types';
 
 export type TimelapseDevice = 'phone' | 'computer';
@@ -58,6 +59,7 @@ export function defaultPhoneTimelapse(): UserSettings['timelapsePhone'] {
     layout: upright,
     sidewaysAspect: 'camera',
     sidewaysLayout: sideways,
+    endText: '',
   };
 }
 
@@ -84,6 +86,7 @@ export function normalizePhoneTimelapse(
       : 'camera',
     layout: fix(saved?.layout, d.layout),
     sidewaysLayout: fix(saved?.sidewaysLayout, d.sidewaysLayout),
+    endText: cleanEndText(merged.endText),
   };
 }
 

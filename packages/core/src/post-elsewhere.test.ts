@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   POST_PLATFORM_INFO,
   POST_PLATFORMS,
+  postCaption,
   postElsewhereNote,
+  sessionLine,
+  studyTimeText,
   X_MAX_SECONDS,
 } from './post-elsewhere';
 
@@ -32,5 +35,37 @@ describe('posting a timelapse elsewhere', () => {
     for (const p of POST_PLATFORMS) {
       expect(new URL(POST_PLATFORM_INFO[p].uploadUrl).protocol).toBe('https:');
     }
+  });
+
+  it('writes the caption into the composer on X, and knows its length limit', () => {
+    const x = POST_PLATFORM_INFO.x;
+    expect(x.withCaption?.('Day 3 & done')).toBe(
+      'https://x.com/intent/tweet?text=Day%203%20%26%20done',
+    );
+    expect(x.captionMax).toBe(280);
+    expect(POST_PLATFORM_INFO.instagram.withCaption).toBeUndefined();
+  });
+});
+
+describe('the words posted with the video', () => {
+  it('says study time plainly', () => {
+    expect(studyTimeText(45)).toBe('45 min');
+    expect(studyTimeText(120)).toBe('2 h');
+    expect(studyTimeText(90.4)).toBe('1 h 30 min');
+    expect(studyTimeText(0)).toBe('1 min');
+    expect(sessionLine(90, 'Calculus')).toBe('1 h 30 min of focus on Calculus');
+    expect(sessionLine(25, null)).toBe('25 min of focus');
+  });
+
+  it('puts the session after what the person wrote, when asked', () => {
+    const session = { minutes: 90, subject: 'Calculus' };
+    expect(postCaption({ text: ' Day 3 ', session, showTime: true })).toBe(
+      'Day 3\n\n1 h 30 min of focus on Calculus',
+    );
+    expect(postCaption({ text: 'Day 3', session, showTime: false })).toBe('Day 3');
+    expect(postCaption({ text: '', session, showTime: true })).toBe(
+      '1 h 30 min of focus on Calculus',
+    );
+    expect(postCaption({ text: '  ', session: null, showTime: true })).toBe('');
   });
 });

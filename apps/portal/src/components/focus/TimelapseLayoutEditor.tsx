@@ -6,6 +6,8 @@ import {
   defaultTimelapseLayout,
   fitBoxToRatio,
   minBoxSide,
+  PHONE_SIDEWAYS_ASPECTS,
+  PHONE_UPRIGHT_ASPECTS,
   phoneAspectRatio,
   TIMELAPSE_TEXT_ELEMENTS,
   TIMELAPSE_ELEMENT_LABELS,
@@ -15,6 +17,7 @@ import {
   type TimelapseAlign,
   type TimelapseAspect,
   type TimelapseBox,
+  type TimelapseDevice,
   type TimelapseElementId,
   type TimelapseLayout,
   type TimelapseOrientation,
@@ -33,7 +36,7 @@ import {
   Undo2,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Segmented } from '@komogon/ui';
 import { useMe } from '../../lib/queries';
@@ -45,7 +48,13 @@ import {
   rememberCameraRatio,
   timeOfDayText,
 } from '../../lib/timelapse';
-import { composeFrame, type DrawnRects } from '../../lib/timelapse-compose';
+import {
+  composeFrame,
+  sourceSize,
+  type ComposeFrame,
+  type DrawnRects,
+} from '../../lib/timelapse-compose';
+import { TimelapseStylePicker } from './TimelapseStylePicker';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
@@ -85,7 +94,61 @@ export interface LayoutTarget {
   save: (aspect: TimelapseAspect, layout: TimelapseLayout) => DeepPartial<UserSettings>;
 }
 
+/** The layouts a preset's editor arranges: the computer's one, or the phone's two. */
+export function targetsFor(settings: UserSettings, device: TimelapseDevice): LayoutTarget[] {
+  if (device === 'computer') {
+    const c = settings.timelapse;
+    return [
+      {
+        id: 'computer',
+        label: 'Computer',
+        aspect: c.aspect,
+        layout: c.layout,
+        shapes: COMPUTER_SHAPES,
+        orientation: null,
+        save: (aspect, layout) => ({ timelapse: { aspect, layout } }),
+      },
+    ];
+  }
+  const p = settings.timelapsePhone;
+  return [
+    {
+      id: 'upright',
+      label: 'Upright',
+      aspect: p.aspect,
+      layout: p.layout,
+      shapes: PHONE_UPRIGHT_ASPECTS,
+      orientation: 'upright',
+      save: (aspect, layout) => ({ timelapsePhone: { aspect, layout } }),
+    },
+    {
+      id: 'sideways',
+      label: 'Sideways',
+      aspect: p.sidewaysAspect,
+      layout: p.sidewaysLayout,
+      shapes: PHONE_SIDEWAYS_ASPECTS,
+      orientation: 'sideways',
+      save: (aspect, layout) => ({
+        timelapsePhone: { sidewaysAspect: aspect, sidewaysLayout: layout },
+      }),
+    },
+  ];
+}
+
 type Draft = { aspect: TimelapseAspect; layout: TimelapseLayout };
+
+/** What a footer given to the editor works with, in place of the unsaved bubble. */
+export interface LayoutEditorControls {
+  /** Something differs from what is saved. */
+  dirty: boolean;
+  saving: boolean;
+  /**
+   * Save every changed layout, and resolve with the shape and layout on screen as they are
+   * now stored (unchanged ones too), so a video can be made with them straight away.
+   */
+  save: () => Promise<Draft>;
+  revert: () => void;
+}
 
 /** Several targets' patches as one save; each group merges field by field, like the API. */
 function mergePatches(patches: Array<DeepPartial<UserSettings>>): DeepPartial<UserSettings> {
@@ -202,6 +265,18 @@ export interface TimelapseLayoutEditorProps {
   active?: boolean;
   /** What the task name shows in the preview. */
   sampleTitle?: string;
+  /**
+   * A still to arrange the pieces over, in place of the live camera: a frame of a video just
+   * made. The preview then shows that frame, and the camera button goes.
+   */
+  backdrop?: { camera: CanvasImageSource | null; screen: CanvasImageSource | null } | null;
+  /** What the clocks, the task name and the progress bar say in the preview. */
+  sample?: Partial<Omit<ComposeFrame, 'camera' | 'screen'>>;
+  /**
+   * Buttons of its own under the editor (in a dialog), given the save and revert. Without
+   * it, unsaved changes show in a bubble at the bottom of the window.
+   */
+  footer?: (controls: LayoutEditorControls) => ReactNode;
 }
 
 /**
@@ -217,6 +292,9 @@ export function TimelapseLayoutEditor({
   screen: withScreen = true,
   active = true,
   sampleTitle = 'Your task name',
+  backdrop = null,
+  sample,
+  footer,
 }: TimelapseLayoutEditorProps) {
   const timeZone = useMe().data?.user.timezone;
   const [currentId, setCurrentId] = useState(targets[0]!.id);
@@ -243,7 +321,14 @@ export function TimelapseLayoutEditor({
   };
   const dirty = targets.some(changed);
   const [selected, setSelected] = useState<TimelapseElementId | null>(null);
-  const [cameraRatio, setCameraRatio] = useState<number | null>(() => knownCameraRatio());
+  const [cameraRatio, setCameraRatio] = useState<number | null>(() => {
+    // A still's own shape is the camera's, as it filmed this video.
+    if (backdrop?.camera) {
+      const { w, h } = sourceSize(backdrop.camera);
+      if (w && h) return w / h;
+    }
+    return knownCameraRatio();
+  });
   const screenRatio = useMemo(() => knownScreenRatio(), []);
   const [camera, setCamera] = useState<MediaStream | null>(null);
   const [cameraState, setCameraState] = useState<'idle' | 'asking' | 'denied'>('idle');
@@ -364,12 +449,13 @@ export function TimelapseLayoutEditor({
       ch,
       layout,
       {
-        camera: video && video.readyState >= 2 ? video : null,
-        screen: null,
+        camera: video && video.readyState >= 2 ? video : (backdrop?.camera ?? null),
+        screen: backdrop?.screen ?? null,
         clock: timeOfDayText(now, timeZone),
         elapsed: '42:17',
         title: sampleTitle,
         progress: 0.6,
+        ...sample,
       },
       { mark: '#ffffff', placeholders: true },
     );
@@ -388,7 +474,7 @@ export function TimelapseLayoutEditor({
       });
       return same ? prev : next;
     });
-  }, [camera, cw, ch, layout, sampleTitle, timeZone, now]);
+  }, [camera, cw, ch, layout, sampleTitle, timeZone, now, backdrop, sample]);
 
   useEffect(() => {
     draw();
@@ -492,17 +578,19 @@ export function TimelapseLayoutEditor({
     return { aspect: d.aspect, layout: next };
   };
 
-  /** Save every changed layout at once. */
-  const commit = () => {
+  /** Save every changed layout at once; resolves with the layout on screen as stored. */
+  const commit = async (): Promise<Draft> => {
     const all = draft ? { ...drafts, [target.id]: snapped(draft) } : drafts;
+    const shown = all[target.id] ?? { aspect: target.aspect, layout: target.layout };
     const patches = targets
       .filter((t) => all[t.id])
       .map((t) => t.save(all[t.id]!.aspect, all[t.id]!.layout));
-    if (patches.length === 0) return;
+    if (patches.length === 0) return shown;
     setSaving(true);
     setDrafts(all);
     // A save that fails leaves the drafts and the buttons, so it can be tried again.
-    void Promise.resolve(onChange(mergePatches(patches))).finally(() => setSaving(false));
+    await Promise.resolve(onChange(mergePatches(patches))).finally(() => setSaving(false));
+    return shown;
   };
   const revert = () => {
     setSelected(null);
@@ -638,6 +726,19 @@ export function TimelapseLayoutEditor({
         )}
       </div>
 
+      <TimelapseStylePicker
+        ratio={ratio}
+        layout={layout}
+        screenRatio={screenRatio}
+        camera={backdrop?.camera ?? null}
+        screen={backdrop?.screen ?? null}
+        sample={{ title: sampleTitle, ...sample }}
+        onPick={(_, next) => {
+          setSelected(null);
+          saveLayout(next);
+        }}
+      />
+
       <div
         ref={stageRef}
         className="tl-stage"
@@ -745,7 +846,7 @@ export function TimelapseLayoutEditor({
       )}
 
       <div className="flex gap-2 flex-wrap">
-        {camera ? (
+        {backdrop ? null : camera ? (
           <Button variant="ghost" size="sm" onClick={stopCamera}>
             <CameraOff size={14} aria-hidden /> Turn the camera off
           </Button>
@@ -774,7 +875,10 @@ export function TimelapseLayoutEditor({
           : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the task name keep their shape as they grow. Nothing changes until you save.'}
       </span>
 
+      {footer?.({ dirty, saving, save: commit, revert })}
+
       {dirty &&
+        !footer &&
         createPortal(
           <div className="tl-unsaved-stack">
             <div className="toast glass-strong tl-unsaved" role="status">
@@ -783,7 +887,7 @@ export function TimelapseLayoutEditor({
                 <Button variant="ghost" size="sm" onClick={revert} disabled={saving}>
                   <Undo2 size={14} aria-hidden /> Revert
                 </Button>
-                <Button variant="primary" size="sm" onClick={commit} disabled={saving}>
+                <Button variant="primary" size="sm" onClick={() => void commit()} disabled={saving}>
                   <Check size={14} aria-hidden /> Save
                 </Button>
               </span>

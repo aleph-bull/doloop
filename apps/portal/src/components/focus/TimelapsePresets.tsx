@@ -1,15 +1,10 @@
-import {
-  PHONE_SIDEWAYS_ASPECTS,
-  PHONE_UPRIGHT_ASPECTS,
-  type TimelapseDevice,
-  type UserSettings,
-} from '@komogon/core';
+import type { TimelapseDevice, UserSettings } from '@komogon/core';
 import { ChevronDown, Laptop, Smartphone } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Reveal } from '@komogon/ui';
 import { isPhone } from '../../lib/device';
 import { presetOf, TimelapseSettings } from './Timelapse';
-import { COMPUTER_SHAPES, TimelapseLayoutEditor, type LayoutTarget } from './TimelapseLayoutEditor';
+import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
@@ -36,47 +31,6 @@ function presetSummary(settings: UserSettings, device: TimelapseDevice): string 
   return [shape, length, `${p.fps} fps`, p.recordBreaks ? 'breaks filmed' : null]
     .filter(Boolean)
     .join(' · ');
-}
-
-/** The layouts a preset's editor arranges: the computer's one, or the phone's two. */
-function targetsFor(settings: UserSettings, device: TimelapseDevice): LayoutTarget[] {
-  if (device === 'computer') {
-    const c = settings.timelapse;
-    return [
-      {
-        id: 'computer',
-        label: 'Computer',
-        aspect: c.aspect,
-        layout: c.layout,
-        shapes: COMPUTER_SHAPES,
-        orientation: null,
-        save: (aspect, layout) => ({ timelapse: { aspect, layout } }),
-      },
-    ];
-  }
-  const p = settings.timelapsePhone;
-  return [
-    {
-      id: 'upright',
-      label: 'Upright',
-      aspect: p.aspect,
-      layout: p.layout,
-      shapes: PHONE_UPRIGHT_ASPECTS,
-      orientation: 'upright',
-      save: (aspect, layout) => ({ timelapsePhone: { aspect, layout } }),
-    },
-    {
-      id: 'sideways',
-      label: 'Sideways',
-      aspect: p.sidewaysAspect,
-      layout: p.sidewaysLayout,
-      shapes: PHONE_SIDEWAYS_ASPECTS,
-      orientation: 'sideways',
-      save: (aspect, layout) => ({
-        timelapsePhone: { sidewaysAspect: aspect, sidewaysLayout: layout },
-      }),
-    },
-  ];
 }
 
 /**

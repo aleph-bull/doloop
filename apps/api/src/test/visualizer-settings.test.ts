@@ -184,6 +184,34 @@ describe('settings: timelapse', () => {
     expect(offFrame.statusCode).toBe(400);
   });
 
+  it('keeps words for the end of each preset, trimmed, and empty by default', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.timelapse.endText).toBe('');
+    expect(me.json().user.settings.timelapsePhone.endText).toBe('');
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: {
+        timelapse: { endText: '  Day 12 of finals ' },
+        timelapsePhone: { endText: 'Up early' },
+      },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().settings.timelapse.endText).toBe('Day 12 of finals');
+    expect(ok.json().settings.timelapsePhone.endText).toBe('Up early');
+    const long = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { endText: 'x'.repeat(141) } },
+    });
+    expect(long.statusCode).toBe(400);
+    await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { endText: '' } },
+    });
+  });
+
   it('keeps a phone preset of its own, with a shape for each way the phone is held', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
     const phone = me.json().user.settings.timelapsePhone;

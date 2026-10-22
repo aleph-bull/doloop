@@ -1,6 +1,7 @@
 import {
   aspectRatio,
   deflickerGains,
+  endCardFrames,
   startIntervalMs,
   stillCap,
   thinIfFull,
@@ -15,6 +16,7 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   composeFrame,
+  drawEndCard,
   rectLuma,
   sourceSize,
   type DrawnRects,
@@ -594,6 +596,8 @@ export interface TimelapseLook {
   aspect: TimelapseAspect;
   /** Where each piece goes. */
   layout: TimelapseLayout;
+  /** Words for a card at the end; empty or absent leaves it out. */
+  endText?: string;
 }
 
 /** "2:14 PM EST": the time a still was taken, in the account's timezone. */
@@ -894,13 +898,31 @@ export async function renderTimelapse(
   const mark = await watermarkTone(toneDraw, ctx, w, h, plan);
   toneDraw.dispose();
   const draw = frameDrawer(ctx, w, h, stills, plan, look, buffers);
+  // The end card holds the last frame under the words, fading in over its first half second.
+  const last = plan.frames.length - 1;
+  const ending = endCardFrames(look.endText, plan.fps);
+  const endText = look.endText?.trim() ?? '';
+  let held: HTMLCanvasElement | null = null;
   const drawFrame = async (j: number) => {
-    await draw(j, mark);
+    if (j <= last) {
+      await draw(j, mark);
+      if (j === last && ending > 0) {
+        held = document.createElement('canvas');
+        held.width = w;
+        held.height = h;
+        held.getContext('2d')?.drawImage(canvas, 0, 0);
+      }
+      return;
+    }
+    if (held) ctx.drawImage(held, 0, 0);
+    drawEndCard(ctx, w, h, endText, Math.min(1, (j - last) / Math.max(1, plan.fps * 0.5)));
   };
+  const count = plan.frames.length + ending;
   try {
     const config = await pickEncoderConfig(w, h, plan.fps);
-    if (config) return await encodeFrames(canvas, config, plan, drawFrame, onProgress, signal);
-    return await recordFrames(canvas, plan, drawFrame, onProgress, signal);
+    if (config)
+      return await encodeFrames(canvas, config, plan.fps, count, drawFrame, onProgress, signal);
+    return await recordFrames(canvas, plan.fps, count, drawFrame, onProgress, signal);
   } finally {
     draw.dispose();
   }
@@ -909,7 +931,8 @@ export async function renderTimelapse(
 async function encodeFrames(
   canvas: HTMLCanvasElement,
   config: VideoEncoderConfig,
-  plan: TimelapsePlan,
+  fps: number,
+  count: number,
   draw: (j: number) => Promise<void>,
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
@@ -917,7 +940,7 @@ async function encodeFrames(
   const target = new ArrayBufferTarget();
   const muxer = new Muxer({
     target,
-    video: { codec: 'avc', width: canvas.width, height: canvas.height, frameRate: plan.fps },
+    video: { codec: 'avc', width: canvas.width, height: canvas.height, frameRate: fps },
     fastStart: 'in-memory',
   });
   let failure: unknown = null;
@@ -928,11 +951,11 @@ async function encodeFrames(
     },
   });
   encoder.configure(config);
-  const frameUs = 1_000_000 / plan.fps;
+  const frameUs = 1_000_000 / fps;
   // A keyframe every two seconds keeps scrubbing quick.
-  const keyEvery = Math.max(1, Math.round(plan.fps * 2));
+  const keyEvery = Math.max(1, Math.round(fps * 2));
   try {
-    for (let j = 0; j < plan.frames.length; j++) {
+    for (let j = 0; j < count; j++) {
       if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
       if (failure) throw failure;
       await draw(j);
@@ -944,7 +967,7 @@ async function encodeFrames(
       frame.close();
       // Let the encoder catch up rather than queueing hundreds of frames in memory.
       while (encoder.encodeQueueSize > 6) await sleep(4);
-      onProgress((j + 1) / plan.frames.length);
+      onProgress((j + 1) / count);
     }
     await encoder.flush();
     if (failure) throw failure;
@@ -957,7 +980,8 @@ async function encodeFrames(
 
 async function recordFrames(
   canvas: HTMLCanvasElement,
-  plan: TimelapsePlan,
+  fps: number,
+  count: number,
   draw: (j: number) => Promise<void>,
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
@@ -971,15 +995,15 @@ async function recordFrames(
     if (e.data.size > 0) chunks.push(e.data);
   };
   const done = new Promise<void>((r) => (recorder.onstop = () => r()));
-  const frameMs = 1000 / plan.fps;
+  const frameMs = 1000 / fps;
   recorder.start();
   const t0 = performance.now();
   try {
-    for (let j = 0; j < plan.frames.length; j++) {
+    for (let j = 0; j < count; j++) {
       if (signal?.aborted) throw new DOMException('Stopped', 'AbortError');
       await draw(j);
       track?.requestFrame();
-      onProgress((j + 1) / plan.frames.length);
+      onProgress((j + 1) / count);
       await sleep(t0 + (j + 1) * frameMs - performance.now());
     }
   } finally {

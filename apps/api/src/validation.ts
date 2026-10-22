@@ -249,6 +249,8 @@ const timelapsePreset = {
   recordBreaks: z.boolean(),
   breakClock: z.enum(['break', 'running']),
   layout: timelapseLayout,
+  // TIMELAPSE_END_TEXT_MAX in core; empty leaves the end card out.
+  endText: z.string().trim().max(140),
 };
 
 export const settingsSchema = z
