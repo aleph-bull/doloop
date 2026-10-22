@@ -89,9 +89,11 @@
   --space-12: 48px;
 
   /* ---------- Glass recipe ---------- */
-  --glass-blur: 28px;
-  --glass-saturate: 180%;
-  --glass-blur-strong: 44px;
+  /* The owner's pick, 2026-10-22 (was 28px, 180% and 44px). Appearance › Advanced changes
+     them per person, inline on <html>. */
+  --glass-blur: 11px;
+  --glass-saturate: 100%;
+  --glass-blur-strong: 17px;
 
   /* ---------- Accent (overridden by data-accent / custom) ---------- */
   --accent-h: 240;

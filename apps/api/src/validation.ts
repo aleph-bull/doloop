@@ -325,6 +325,13 @@ export const settingsSchema = z
         panel: z.enum(['opaque', 'glass', 'custom', 'matte']),
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),
+        glassColor: z
+          .string()
+          .regex(/^#[0-9a-fA-F]{6}$/)
+          .nullable(),
+        glassAlpha: z.number().min(0.3).max(0.95).nullable(),
+        glassBlur: z.number().int().min(0).max(40),
+        glassSaturate: z.number().int().min(100).max(200),
         extensionBackground: z.string().max(32),
         // A hard ceiling only; the route refuses growing past MAX_SAVED_ACCENTS, so a list saved
         // under an older, higher limit can still be trimmed or reordered.

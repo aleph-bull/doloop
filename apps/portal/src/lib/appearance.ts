@@ -5,6 +5,7 @@ import {
   recommendedTheme,
   resolveTheme,
   sampleImage,
+  type GlassChoice,
   type ResolvedTheme,
   type RGB,
 } from '@komogon/ui';
@@ -15,9 +16,11 @@ export interface Appearance {
   theme: ResolvedTheme;
   backgroundId: string;
   customImageUrl: string | null;
+  /** Their own glass colour and weight (Appearance › Advanced), for the Backdrop. */
+  glass: GlassChoice;
 }
 
-interface Resolved extends Appearance {
+interface Resolved extends Omit<Appearance, 'glass'> {
   /** The background's own pick, which the Recommended mode follows; null on a gradient. */
   recommended: ResolvedTheme | null;
 }
@@ -95,5 +98,9 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
     theme: resolved.theme,
     backgroundId: resolved.backgroundId,
     customImageUrl: resolved.customImageUrl,
+    glass: {
+      color: settings?.theme.glassColor ?? null,
+      alpha: settings?.theme.glassAlpha ?? null,
+    },
   };
 }

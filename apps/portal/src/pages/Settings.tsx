@@ -47,6 +47,7 @@ import { AccentPicker } from '../components/AccentPicker';
 import { AppearancePresets } from '../components/AppearancePresets';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
+import { GlassSettings } from '../components/GlassSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseRecordChoice } from '../components/focus/Timelapse';
@@ -622,7 +623,11 @@ export function Settings() {
                 checked={advanced || !!s.theme.customBackgroundUrl}
                 onChange={setAdvanced}
                 label="Advanced"
-                description="Upload your own image."
+                description={
+                  s.theme.panel === 'matte'
+                    ? 'Upload your own image.'
+                    : 'Upload your own image, and set how the glass looks.'
+                }
               />
               {(advanced || !!s.theme.customBackgroundUrl) && (
                 <BackgroundUpload
@@ -631,6 +636,16 @@ export function Settings() {
                     void qc.invalidateQueries({ queryKey: keys.background });
                     void me.refetch();
                   }}
+                />
+              )}
+              {(advanced || !!s.theme.customBackgroundUrl) && s.theme.panel !== 'matte' && (
+                <GlassSettings
+                  glassColor={s.theme.glassColor}
+                  glassAlpha={s.theme.glassAlpha}
+                  glassBlur={s.theme.glassBlur}
+                  glassSaturate={s.theme.glassSaturate}
+                  theme={theme}
+                  onChange={patch}
                 />
               )}
             </Section>

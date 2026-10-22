@@ -221,6 +221,13 @@ Keep the owner's own wording verbatim, "!" included.
   of everything inside it** (in Chrome that ancestor becomes the backdrop). So the
   dashboard rail has no mask on its track; `CardRail` gives each card its own share of the
   edge fade on scroll and resize. Don't fade a row of glass cards with a mask on the row.
+  **That includes an opacity animation that keeps its end** (`both` or `forwards`): a page
+  fade held that way left every card on komogon.app unblurred, with frosted patches wherever
+  something repainted (2026-10-22). Fade anything that holds cards with `backwards`. The
+  browser tools can't see this one, because their screenshots repaint the whole page.
+- The glass's colour, weight, blur and colour boost are settings (Appearance › Advanced ›
+  Glass, `settings.theme.glass*`); the defaults are the owner's pick, 11px blur and no boost.
+  Use `--glass-blur` and `--glass-saturate` in new glass, never fixed numbers.
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.

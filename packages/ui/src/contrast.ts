@@ -167,6 +167,56 @@ export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark'): PhotoAdaptation
   };
 }
 
+/** The glass someone set in Settings › Appearance › Advanced. Null keeps the theme's own. */
+export interface GlassChoice {
+  color: string | null;
+  alpha: number | null;
+}
+
+export interface ChosenGlass {
+  fill: RGB;
+  alpha: number;
+  strongAlpha: number;
+  /** The top bar and sidebar take a chosen colour too, since they share the text colour. */
+  chrome: RGB;
+  /** Whichever of light or dark text reads better on the cards as they show. */
+  lightText: boolean;
+}
+
+/**
+ * The glass with someone's own colour and weight, over `avg` (a photo or flat colour, shown
+ * under its scrim) or the theme's plain base on a gradient. `own` is the glass it replaces,
+ * so a colour alone keeps the weight the photo asked for. Null when nothing is chosen.
+ * Their weight is kept as set, even where the theme's own glass would have been thicker.
+ */
+export function chooseGlass(
+  choice: GlassChoice,
+  theme: 'light' | 'dark',
+  avg: RGB | null,
+  own: { alpha: number; strongAlpha: number },
+): ChosenGlass | null {
+  if (!choice.color && choice.alpha === null) return null;
+  const base = THEME_GLASS[theme];
+  const color = choice.color && /^#[0-9a-f]{6}$/i.test(choice.color) ? choice.color : null;
+  const fill = color ? hexToRgb(color) : base.fill;
+  const alpha =
+    choice.alpha === null ? own.alpha : Math.min(MAX_ALPHA, Math.max(0.3, choice.alpha));
+  const strongAlpha = Math.min(
+    0.97,
+    Math.max(own.strongAlpha, Math.round((alpha + 0.15) * 100) / 100),
+  );
+  const behind: RGB = avg
+    ? composite(PHOTO_SCRIM[theme].color, PHOTO_SCRIM[theme].alpha, avg)
+    : theme === 'dark'
+      ? [11, 13, 20]
+      : [238, 240, 245];
+  const card = composite(fill, alpha, behind);
+  const lightText = color
+    ? contrastRatio(TEXT_LIGHT, card) >= contrastRatio(TEXT_DARK, card)
+    : theme === 'dark';
+  return { fill, alpha, strongAlpha, chrome: color ? fill : base.chrome, lightText };
+}
+
 /**
  * The theme a backdrop colour suits, for the Recommended mode: light mode on a light
  * background (where black text reads better), dark mode on a dark one.

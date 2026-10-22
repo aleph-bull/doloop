@@ -130,6 +130,14 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'glass',
       'matte',
       'opacity',
+      // The glass sliders under Advanced.
+      'blur',
+      'frost',
+      'frosted',
+      'weight',
+      'colourful',
+      'saturation',
+      'advanced',
       // Where the pages sit on a computer.
       'navigation',
       'nav bar',
