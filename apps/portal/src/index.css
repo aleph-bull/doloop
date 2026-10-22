@@ -1424,11 +1424,110 @@
     display: none;
   }
 }
-.tasks-head-actions {
+/*
+ * The Tags card under the table: a tile per tag across the card's width, each with what it
+ * is on, its colours, rename and delete.
+ */
+.tag-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px 20px;
+}
+.tag-manager-head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: 10px 16px;
   flex-wrap: wrap;
+}
+.tag-manager-new {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tag-manager-input {
+  width: 200px;
+  height: 34px;
+  font-size: var(--text-sm);
+}
+.tag-manager-empty {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.tag-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 10px;
+}
+.tag-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 12px 10px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 4%, transparent);
+}
+.tag-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 28px;
+}
+.tag-tile-name {
+  height: 28px;
+  flex: 1 1 auto;
+}
+.tag-tile-count {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.tag-tile-where {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.tag-tile-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+}
+.tag-tile .tag-edit-colors {
+  gap: 5px;
+}
+.tag-tile .tag-swatch {
+  width: 16px;
+  height: 16px;
+}
+.tag-tile-actions {
+  display: flex;
+  gap: 2px;
+}
+.tag-tile-sure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.tag-manager .tag-edit-name:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--accent);
+}
+@media (max-width: 520px) {
+  .tag-manager-new,
+  .tag-manager-input {
+    flex: 1 1 auto;
+    width: auto;
+  }
 }
 /* The tag menu: floats over the page beside the cell that opened it. */
 .glass.tag-pop {
@@ -7159,4 +7258,402 @@
 }
 :root:has(.tl-unsaved-stack) .toast-stack {
   bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px) + 60px);
+}
+
+/* Settings › Timelapse: the phone's and the computer's presets, each folded until clicked. */
+.tl-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tl-preset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.tl-preset-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  font: inherit;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.tl-preset-head:hover {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.tl-preset-icon {
+  flex: none;
+  color: var(--fg-muted);
+}
+.tl-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-preset-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.tl-preset-here {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.tl-preset-sum {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.tl-preset-chevron {
+  flex: none;
+  color: var(--fg-muted);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.tl-preset.is-open .tl-preset-chevron {
+  transform: rotate(180deg);
+}
+.tl-preset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 14px 16px;
+}
+
+/*
+ * The camera screen: on a phone recording a timelapse, the focus screen is the live camera
+ * with the timer on it. Always light text on the dark-ish picture, whatever the theme, and
+ * it turns with the phone: controls along the bottom upright, down the right side sideways.
+ */
+.pcam {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  user-select: none;
+  touch-action: manipulation;
+}
+.pcam-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The front camera shows as a mirror, like the Camera app; the stills are not mirrored. */
+.pcam[data-facing='user'] .pcam-video {
+  transform: scaleX(-1);
+}
+/* A little darker while focus runs, back up for breaks and pauses. Never in the stills. */
+.pcam-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+  pointer-events: none;
+}
+.pcam-dim.is-on {
+  opacity: 1;
+}
+.pcam-top {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pcam-top-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+.pcam-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.45);
+  font-size: var(--text-sm);
+}
+.pcam-rec .timelapse-dot.is-idle {
+  background: rgb(255 255 255 / 0.55);
+}
+.pcam-round,
+.pcam-shutter,
+.pcam-pill,
+.pcam-restart {
+  border: none;
+  font: inherit;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pcam-round {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.42);
+}
+.pcam-round.is-stop {
+  background: color-mix(in srgb, var(--status-bad) 72%, rgb(0 0 0 / 0.5));
+}
+.pcam-round:disabled,
+.pcam-shutter:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* The big round button where the Camera app has its shutter: pause and resume. */
+.pcam-shutter {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: rgb(255 255 255 / 0.16);
+}
+.pcam-shutter:active {
+  background: rgb(255 255 255 / 0.3);
+}
+.pcam-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.42);
+  font-size: var(--text-sm);
+}
+.pcam-restart {
+  position: absolute;
+  top: calc(max(14px, env(safe-area-inset-top)) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100% - 32px));
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: rgb(0 0 0 / 0.6);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.pcam-info {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 150px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.pcam-info .focus-phase {
+  color: rgb(255 255 255 / 0.82);
+}
+.pcam-info .focus-time {
+  font-size: clamp(3.75rem, 21vw, 7.5rem);
+}
+.pcam-info .focus-context {
+  margin-top: 6px;
+}
+.pcam-info .focus-subject {
+  font-size: var(--text-lg);
+}
+.pcam-info .focus-child,
+.pcam-info .focus-for {
+  color: rgb(255 255 255 / 0.78);
+}
+.pcam-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.pcam-extra {
+  display: flex;
+  gap: 8px;
+}
+.pcam-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+@media (orientation: landscape) {
+  /* The top buttons stand clear of the control column down the right side. */
+  .pcam-top {
+    right: calc(max(18px, env(safe-area-inset-right)) + 96px);
+  }
+  .pcam-info {
+    left: max(24px, env(safe-area-inset-left));
+    right: 140px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    align-items: flex-start;
+    text-align: left;
+  }
+  .pcam-info .focus-time {
+    font-size: clamp(3.5rem, 15vh, 6rem);
+  }
+  .pcam-dock {
+    top: 0;
+    bottom: 0;
+    left: auto;
+    right: max(18px, env(safe-area-inset-right));
+    /* Skip break and +15 min sit to the left of the column, which stays at the edge. */
+    flex-direction: row;
+    justify-content: center;
+  }
+  .pcam-extra {
+    flex-direction: column;
+  }
+  .pcam-controls {
+    flex-direction: column-reverse;
+    gap: 28px;
+  }
+}
+
+/* The phone's trim, like the Photos app's: a viewer, then a strip of stills with handles. */
+.ptrim-view {
+  display: block;
+  max-width: 100%;
+  margin: 2px auto 6px;
+  border-radius: var(--radius-md);
+  background: #000;
+}
+.ptrim-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.ptrim-play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+}
+.ptrim-strip {
+  position: relative;
+  flex: 1;
+  height: 52px;
+  /* Room for the handles, which stand outside the kept part. */
+  margin: 0 14px;
+  touch-action: none;
+}
+.ptrim-thumbs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.ptrim-thumbs > * {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  object-fit: cover;
+}
+.ptrim-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+.ptrim-shade.is-left {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.ptrim-shade.is-right {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+/* The kept part, framed; its two sides are the handles. */
+.ptrim-frame {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-top: 3px solid var(--fg-muted);
+  border-bottom: 3px solid var(--fg-muted);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.ptrim-frame.is-trimmed {
+  border-color: var(--accent);
+}
+.ptrim-handle {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--fg-muted);
+  color: var(--bg);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ew-resize;
+}
+.ptrim-frame.is-trimmed .ptrim-handle {
+  background: var(--accent);
+  color: #fff;
+}
+.ptrim-handle.is-start {
+  left: -14px;
+  border-radius: 6px 0 0 6px;
+}
+.ptrim-handle.is-end {
+  right: -14px;
+  border-radius: 0 6px 6px 0;
+}
+.ptrim-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ptrim-head {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.ptrim-times {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
 }

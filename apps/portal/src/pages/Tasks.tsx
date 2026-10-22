@@ -1,4 +1,4 @@
-import { sortByTagColor, tagsOf, type NodePace, type StudyNode, type Tag } from '@komogon/core';
+import { tagsOf, type NodePace, type StudyNode, type Tag } from '@komogon/core';
 import {
   Check,
   ChevronRight,
@@ -17,25 +17,14 @@ import {
   type ReactNode,
   type CSSProperties,
 } from 'react';
-import { Button, EmptyState, Panel, Reveal, Segmented, Spinner, useToast } from '@komogon/ui';
+import { Button, EmptyState, Panel, Reveal, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
-import { TagChip, TagPicker } from '../components/Tags';
+import { TagChip, TagManager, TagPicker } from '../components/Tags';
 import { TemplateDialog } from '../components/TemplateDialog';
 import { fmtDate, fmtDue, fmtMinutes, fmtPerDay } from '../lib/format';
 import { useNodes, usePace, useTags, useUpdateNode } from '../lib/queries';
-
-type SortKey = 'manual' | 'color';
-const SORT_KEY = 'komogon.tasks.sort';
-
-function readSort(): SortKey {
-  try {
-    return localStorage.getItem(SORT_KEY) === 'color' ? 'color' : 'manual';
-  } catch {
-    return 'manual';
-  }
-}
 
 interface RowProps {
   node: StudyNode;
@@ -372,21 +361,10 @@ export function Tasks() {
   const [template, setTemplate] = useState<StudyNode | null>(null);
   const [tagging, setTagging] = useState<{ id: string; anchor: HTMLElement } | null>(null);
   const closeTagging = useCallback(() => setTagging(null), []);
-  // Your own order (dragged), or grouped by tag colour; remembered on this device.
-  const [sort, setSortState] = useState<SortKey>(readSort);
-  const setSort = (v: SortKey) => {
-    setSortState(v);
-    try {
-      localStorage.setItem(SORT_KEY, v);
-    } catch {
-      /* Blocked storage: the choice lasts until the page is left. */
-    }
-  };
   const tagsById = useMemo(
     () => new Map((tags.data?.tags ?? []).map((t) => [t.id, t])),
     [tags.data],
   );
-  const byColor = sort === 'color';
   // Dragging courses: which is being dragged, where it would land, and the new order shown
   // until the server's copy catches up. The optimistic order is tied to the data it was
   // made from, so fresh data replaces it without an effect.
@@ -403,16 +381,13 @@ export function Tasks() {
       arr.push(n);
       m.set(n.parentId, arr);
     }
-    for (const [id, arr] of m) {
-      arr.sort((a, b) => a.sortOrder - b.sortOrder);
-      if (byColor) m.set(id, sortByTagColor(arr, tagsById));
-    }
+    for (const arr of m.values()) arr.sort((a, b) => a.sortOrder - b.sortOrder);
     return m;
-  }, [list, byColor, tagsById]);
+  }, [list]);
   const sortedRoots = list
     .filter((n) => !n.parentId || !list.some((x) => x.id === n.parentId))
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const manualRoots =
+  const roots =
     optimistic && optimistic.basis === nodes.data
       ? [
           ...optimistic.ids
@@ -421,8 +396,6 @@ export function Tasks() {
           ...sortedRoots.filter((r) => !optimistic.ids.includes(r.id)),
         ]
       : sortedRoots;
-  const roots = byColor ? sortByTagColor(manualRoots, tagsById) : manualRoots;
-  const anyTagged = list.some((n) => tagsOf(n.tagIds, tagsById).length > 0);
   const taggingNode = tagging ? list.find((n) => n.id === tagging.id) : undefined;
 
   if (nodes.isError)
@@ -456,12 +429,12 @@ export function Tasks() {
    * its new neighbours, so only the moved course is written, and Ctrl+Z moves it back.
    */
   const moveCourse = async (id: string, to: number) => {
-    const from = manualRoots.findIndex((r) => r.id === id);
+    const from = roots.findIndex((r) => r.id === id);
     if (from < 0) return;
-    const target = Math.max(0, Math.min(manualRoots.length - 1, to));
+    const target = Math.max(0, Math.min(roots.length - 1, to));
     if (target === from) return;
-    const next = manualRoots.filter((r) => r.id !== id);
-    next.splice(target, 0, manualRoots[from]!);
+    const next = roots.filter((r) => r.id !== id);
+    next.splice(target, 0, roots[from]!);
     const before = next[target - 1];
     const after = next[target + 1];
     const sortOrder =
@@ -483,8 +456,8 @@ export function Tasks() {
 
   const dropOn = (targetId: string, before: boolean) => {
     if (!dragId || dragId === targetId) return;
-    const from = manualRoots.findIndex((r) => r.id === dragId);
-    let to = manualRoots.findIndex((r) => r.id === targetId) + (before ? 0 : 1);
+    const from = roots.findIndex((r) => r.id === dragId);
+    let to = roots.findIndex((r) => r.id === targetId) + (before ? 0 : 1);
     if (from < to) to -= 1;
     void moveCourse(dragId, to);
   };
@@ -553,22 +526,9 @@ export function Tasks() {
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <h1 className="page-title">Tasks</h1>
-        <div className="tasks-head-actions">
-          {anyTagged && roots.length > 1 && (
-            <Segmented
-              ariaLabel="Sort tasks"
-              value={sort}
-              onChange={setSort}
-              options={[
-                { value: 'manual', label: 'Your order' },
-                { value: 'color', label: 'Colour' },
-              ]}
-            />
-          )}
-          <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
-            <Plus size={16} aria-hidden /> New course
-          </Button>
-        </div>
+        <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
+          <Plus size={16} aria-hidden /> New course
+        </Button>
       </div>
 
       <Panel className="task-table">
@@ -619,9 +579,8 @@ export function Tasks() {
                   key={r.id}
                   node={r}
                   depth={0}
-                  // Sorted by colour, the order isn't yours to drag.
-                  grip={roots.length > 1 && !byColor ? courseGrip(r, i) : undefined}
-                  itemProps={byColor ? undefined : courseItemProps(r)}
+                  grip={roots.length > 1 ? courseGrip(r, i) : undefined}
+                  itemProps={courseItemProps(r)}
                   childrenOf={childrenOf}
                   pace={pace.data?.pace ?? {}}
                   tagsById={tagsById}
@@ -639,6 +598,8 @@ export function Tasks() {
           </>
         )}
       </Panel>
+
+      {roots.length > 0 && <TagManager nodes={list} />}
 
       {tagging && taggingNode && (
         <TagPicker

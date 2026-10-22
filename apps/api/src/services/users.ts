@@ -251,14 +251,22 @@ export async function updateProfile(
   if (patch.timezone) set.timezone = patch.timezone;
   if (patch.onboarded && !row.onboardedAt) {
     set.onboardedAt = dt(now);
-    // First sign-in goes straight to a timer. Keep existing accounts' choices intact.
+    // First sign-in goes straight to a timer. Only what the account hasn't chosen yet is
+    // set, so one an admin sent through onboarding again keeps its own choices.
     const settings = settingsOf(row);
+    const stored = row.settings;
     set.settings = {
       ...settings,
-      dashboard: { focusOnly: true },
-      focusScreen: { openOnStart: 'never' },
-      timelapse: { ...settings.timelapse, record: 'never' },
-      visualizer: { ...settings.visualizer, promptDismissed: true },
+      dashboard: stored.dashboard ? settings.dashboard : { focusOnly: true },
+      focusScreen: stored.focusScreen ? settings.focusScreen : { openOnStart: 'never' },
+      timelapse:
+        stored.timelapse?.record !== undefined
+          ? settings.timelapse
+          : { ...settings.timelapse, record: 'never' },
+      visualizer:
+        stored.visualizer?.promptDismissed !== undefined
+          ? settings.visualizer
+          : { ...settings.visualizer, promptDismissed: true },
     };
   }
   if (Object.keys(set).length === 0) return row;

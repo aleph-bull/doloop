@@ -3,8 +3,6 @@ import {
   TAG_COLORS,
   inheritedTagIds,
   nextTagColor,
-  sortByTagColor,
-  tagColorRank,
   tagsOf,
   type Tag,
 } from './tags';
@@ -51,29 +49,5 @@ describe('inheritedTagIds', () => {
     ]);
     expect(inheritedTagIds('a', nodes)).toEqual(['x', 'y']);
     expect(inheritedTagIds('c', nodes)).toEqual(['z']);
-  });
-});
-
-describe('sortByTagColor', () => {
-  it('groups by the first tag colour in palette order, untagged last', () => {
-    const rows = [
-      { id: 'a', tagIds: [] },
-      { id: 'b', tagIds: ['rotman'] },
-      { id: 'c', tagIds: ['econ', 'career'] },
-      { id: 'd', tagIds: ['career'] },
-      { id: 'e' },
-    ];
-    expect(sortByTagColor(rows, byId).map((r) => r.id)).toEqual(['d', 'c', 'b', 'a', 'e']);
-  });
-  it('keeps the manual order inside one colour', () => {
-    const rows = [
-      { id: 'x', tagIds: ['econ'] },
-      { id: 'y', tagIds: ['career'] },
-      { id: 'z', tagIds: ['econ'] },
-    ];
-    expect(sortByTagColor(rows, byId).map((r) => r.id)).toEqual(['y', 'x', 'z']);
-  });
-  it('ranks a node whose only tag was deleted as untagged', () => {
-    expect(tagColorRank(['gone'], byId)).toBe(9);
   });
 });

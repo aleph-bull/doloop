@@ -6,6 +6,7 @@ import type { UserRow } from '../db/schema';
 import { ensureUser } from '../services/users';
 import { AuthError, type Verifier } from './verify';
 import { isLocalTestEmail, requireLocalTestRequest } from '../services/local-test-accounts';
+import { isEmailBlocked, SUSPENDED } from '../services/moderation';
 import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 
@@ -69,6 +70,9 @@ export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOption
       // Checked before ensureUser, so an uninvited sign-in never creates an account row.
       if (!isInvited(auth.email, opts.allowedEmails))
         return reply.code(403).send({ error: 'invite_only' });
+      // Suspended by an admin, or a new account for a blocked address.
+      if (existing ? existing.bannedAt : await isEmailBlocked(opts.db, auth.email))
+        return reply.code(403).send({ error: SUSPENDED });
       const tzHeader = req.headers['x-timezone'];
       const tz = typeof tzHeader === 'string' && isValidTimezone(tzHeader) ? tzHeader : null;
       req.authUserId = auth.id;

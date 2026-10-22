@@ -197,6 +197,33 @@ const timelapseBox = z
   })
   .strict();
 
+/** A whole timelapse layout. Sent whole each time; the reader fills and clamps anything off. */
+const timelapseLayout = z
+  .object({
+    camera: timelapseBox,
+    screen: timelapseBox,
+    clock: timelapseBox,
+    elapsed: timelapseBox,
+    title: timelapseBox,
+    progress: timelapseBox,
+    watermark: timelapseBox,
+  })
+  .partial()
+  .strict();
+
+/** What each timelapse preset holds, the computer's and the phone's. */
+const timelapsePreset = {
+  lengthMode: z.enum(['auto', 'length', 'speed']),
+  lengthSeconds: z.number().int().min(5).max(600),
+  speed: z.number().int().min(10).max(10_000),
+  fps: z.number().int().min(1).max(60),
+  smooth: z.boolean(),
+  deflicker: z.boolean(),
+  recordBreaks: z.boolean(),
+  breakClock: z.enum(['break', 'running']),
+  layout: timelapseLayout,
+};
+
 export const settingsSchema = z
   .object({
     profile: z
@@ -364,33 +391,24 @@ export const settingsSchema = z
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z
       .object({
+        ...timelapsePreset,
         record: z.enum(['ask', 'always', 'never']),
-        lengthMode: z.enum(['auto', 'length', 'speed']),
-        lengthSeconds: z.number().int().min(5).max(600),
-        speed: z.number().int().min(10).max(10_000),
-        fps: z.number().int().min(1).max(60),
         showTimer: z.boolean(),
         showClockTime: z.boolean(),
-        smooth: z.boolean(),
-        deflicker: z.boolean(),
-        recordBreaks: z.boolean(),
-        breakClock: z.enum(['break', 'running']),
         aspect: z.enum(['camera', 'screen', '16:9', '9:16', '1:1', '4:5', '4:3']),
-        // Sent whole each time; the reader fills and clamps anything off.
-        layout: z
-          .object({
-            camera: timelapseBox,
-            screen: timelapseBox,
-            clock: timelapseBox,
-            elapsed: timelapseBox,
-            title: timelapseBox,
-            progress: timelapseBox,
-            watermark: timelapseBox,
-          })
-          .partial()
-          .strict(),
       })
       .partial(),
+    // The phone's preset: no screen, and shapes that suit how the phone is held.
+    timelapsePhone: z
+      .object({
+        ...timelapsePreset,
+        // PHONE_UPRIGHT_ASPECTS and PHONE_SIDEWAYS_ASPECTS in core.
+        aspect: z.enum(['camera', '9:16', '4:5', '1:1']),
+        sidewaysAspect: z.enum(['camera', '16:9', '4:3', '1:1']),
+        sidewaysLayout: timelapseLayout,
+      })
+      .partial()
+      .strict(),
     dismissed: z.array(z.string().trim().min(1).max(64)).max(200),
   })
   .partial()

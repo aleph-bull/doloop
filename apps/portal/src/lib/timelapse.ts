@@ -45,12 +45,25 @@ export interface Still {
   takenAt: number;
   /** What was being worked on, for the task name drawn into the video. */
   title: string | null;
+  /**
+   * The camera's still is taller than it is wide: a phone held upright. The first still of
+   * a video decides its shape (a phone's upright or sideways layout).
+   */
+  portrait?: boolean;
 }
 
 /** Where the session stood when a still was taken. */
 export type StillStamp = Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds' | 'title'>;
 
-export type RecorderStatus = 'off' | 'starting' | 'on' | 'denied' | 'unavailable' | 'error';
+/**
+ * The camera. 'ended' means it stopped on its own after it was on: on a phone, the screen
+ * locked or another app took the camera.
+ */
+export type RecorderStatus =
+  'off' | 'starting' | 'on' | 'ended' | 'denied' | 'unavailable' | 'error';
+
+/** Which camera: the one facing the person, or the one on the back. */
+export type CameraFacing = 'user' | 'environment';
 /**
  * The screen share. 'needs-click' means the browser wants a click before it shows its
  * picker (a session that started recording on its own); 'ended' means it was stopped from
@@ -68,6 +81,7 @@ const STILL_BYTES_KEY = 'komogon.timelapse.stillBytes';
 const SCREEN_BYTES_KEY = 'komogon.timelapse.screenBytes';
 const CAMERA_RATIO_KEY = 'komogon.timelapse.cameraRatio';
 const SCREEN_RATIO_KEY = 'komogon.timelapse.screenRatio';
+const FACING_KEY = 'komogon.timelapse.facing';
 /** A screen still before any has been measured: a 1280 px wide JPEG of a busy desktop. */
 export const DEFAULT_SCREEN_BYTES = 160_000;
 
@@ -130,6 +144,33 @@ export function knownScreenRatio(): number {
 
 function rememberScreenRatio(w: number, h: number) {
   if (w > 0 && h > 0) writeNumber(SCREEN_RATIO_KEY, Math.round((w / h) * 10_000) / 10_000);
+}
+
+/** The camera last chosen in this browser; the front one until the person swaps. */
+export function knownFacing(): CameraFacing {
+  try {
+    return localStorage.getItem(FACING_KEY) === 'environment' ? 'environment' : 'user';
+  } catch {
+    return 'user';
+  }
+}
+
+export function rememberFacing(facing: CameraFacing) {
+  try {
+    localStorage.setItem(FACING_KEY, facing);
+  } catch {
+    /* storage off: the front camera next time */
+  }
+}
+
+/** Whether this device has a second camera to swap to. Cameras are listed without asking. */
+export async function hasTwoCameras(): Promise<boolean> {
+  try {
+    const devices = (await navigator.mediaDevices?.enumerateDevices?.()) ?? [];
+    return devices.filter((d) => d.kind === 'videoinput').length >= 2;
+  } catch {
+    return false;
+  }
 }
 
 /** Free space the browser says it may still use, in bytes, or null when it won't say. */
@@ -222,6 +263,8 @@ export interface TimelapseRecorderArgs {
   options: TimelapseOptions;
   /** Where the session stands right now: focused time, break time, running time, task. */
   stamp: () => StillStamp;
+  /** Which camera to film with; the front one when absent. Changing it swaps the camera. */
+  facing?: CameraFacing;
 }
 
 export interface TimelapseRecorder {
@@ -235,6 +278,13 @@ export interface TimelapseRecorder {
   count: number;
   /** The live camera, for a small preview, while recording. */
   stream: MediaStream | null;
+  /**
+   * The camera is on but sending no pictures for now (a phone's page hidden, or the camera
+   * borrowed by another app). No stills are taken until it comes back.
+   */
+  cameraMuted: boolean;
+  /** Start the camera again after it stopped on its own. */
+  restartCamera: () => void;
   /** Ask for the screen again; call it from a click, which the browser's picker needs. */
   requestScreen: () => void;
   /** The stills taken so far, oldest first. */
@@ -251,11 +301,15 @@ export function useTimelapseRecorder({
   sources,
   options,
   stamp,
+  facing = 'user',
 }: TimelapseRecorderArgs): TimelapseRecorder {
   const [status, setStatus] = useState<RecorderStatus>('off');
   const [screenStatus, setScreenStatus] = useState<ScreenStatus>('off');
   const [count, setCount] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [cameraMuted, setCameraMuted] = useState(false);
+  // Bumped to start the camera again after it stopped on its own.
+  const [cameraTry, setCameraTry] = useState(0);
   const stillsRef = useRef<Still[]>([]);
   const intervalRef = useRef(startIntervalMs(options));
   const cameraVideo = useRef<HTMLVideoElement | null>(null);
@@ -265,9 +319,27 @@ export function useTimelapseRecorder({
   const wantCamera = recording && sources.camera;
   const wantScreen = recording && sources.screen;
   // The loop reads the latest of these without restarting.
-  const live = useRef({ capturing, options, stamp, wantCamera, wantScreen, status, screenStatus });
+  const live = useRef({
+    capturing,
+    options,
+    stamp,
+    wantCamera,
+    wantScreen,
+    status,
+    screenStatus,
+    cameraMuted,
+  });
   useEffect(() => {
-    live.current = { capturing, options, stamp, wantCamera, wantScreen, status, screenStatus };
+    live.current = {
+      capturing,
+      options,
+      stamp,
+      wantCamera,
+      wantScreen,
+      status,
+      screenStatus,
+      cameraMuted,
+    };
   });
 
   // A change of mode before anything is captured starts at that mode's pace.
@@ -285,9 +357,11 @@ export function useTimelapseRecorder({
     let cancelled = false;
     let media: MediaStream | null = null;
     setStatus('starting');
+    setCameraMuted(false);
     navigator.mediaDevices
       .getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        // Ideal, not exact: a laptop with one camera still films when the back is asked for.
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: facing } },
         audio: false,
       })
       .then(async (s) => {
@@ -304,7 +378,18 @@ export function useTimelapseRecorder({
         setStream(s);
         setStatus('on');
         const track = s.getVideoTracks()[0];
-        if (track) void restoreAutoExposure(track);
+        if (track) {
+          void restoreAutoExposure(track);
+          // A phone stops or mutes the camera when the screen locks or the page is hidden.
+          // Without these the recording would go quiet and nobody would know.
+          track.addEventListener('ended', () => {
+            if (cancelled) return;
+            setStream(null);
+            setStatus('ended');
+          });
+          track.addEventListener('mute', () => !cancelled && setCameraMuted(true));
+          track.addEventListener('unmute', () => !cancelled && setCameraMuted(false));
+        }
       })
       .catch((err: unknown) => {
         if (cancelled) return;
@@ -317,9 +402,12 @@ export function useTimelapseRecorder({
       if (cameraVideo.current) cameraVideo.current.srcObject = null;
       cameraVideo.current = null;
       setStream(null);
-      setStatus((s) => (s === 'on' || s === 'starting' ? 'off' : s));
+      setCameraMuted(false);
+      setStatus((s) => (s === 'on' || s === 'starting' || s === 'ended' ? 'off' : s));
     };
-  }, [wantCamera]);
+  }, [wantCamera, facing, cameraTry]);
+
+  const restartCamera = useCallback(() => setCameraTry((n) => n + 1), []);
 
   /* ----- the screen ----- */
   const releaseScreen = useCallback(() => {
@@ -410,18 +498,28 @@ export function useTimelapseRecorder({
     const tinyCtx = tiny.getContext('2d', { willReadFrequently: true });
 
     const take = async () => {
-      const { capturing, options, stamp, wantCamera, wantScreen, status, screenStatus } =
-        live.current;
+      const {
+        capturing,
+        options,
+        stamp,
+        wantCamera,
+        wantScreen,
+        status,
+        screenStatus,
+        cameraMuted,
+      } = live.current;
       if (!capturing || !ctx || !tinyCtx) return;
       // While a wanted source is still opening, wait for it, so the first stills have both.
       if ((wantCamera && status === 'starting') || (wantScreen && screenStatus === 'starting'))
         return;
       const cam = cameraVideo.current;
       const scr = screenVideo.current;
-      const camReady = !!cam && cam.readyState >= 2;
+      // A muted camera hands over its last picture, or black: no stills until it is back.
+      const camReady = !!cam && cam.readyState >= 2 && status === 'on' && !cameraMuted;
       const scrReady = !!scr && scr.readyState >= 2;
       if (!camReady && !scrReady) return;
       const blob = camReady ? await snapshot(canvas, ctx, cam!, STILL_WIDTH, STILL_QUALITY) : null;
+      const portrait = !!blob && canvas.height > canvas.width;
       const luma = camReady ? lumaOf(tinyCtx, canvas) : 0.5;
       const screen = scrReady
         ? await snapshot(canvas, ctx, scr!, SCREEN_WIDTH, SCREEN_QUALITY)
@@ -429,7 +527,10 @@ export function useTimelapseRecorder({
       if (cancelled || (!blob && !screen)) return;
       if (blob) rememberBytes(STILL_BYTES_KEY, blob.size);
       if (screen) rememberBytes(SCREEN_BYTES_KEY, screen.size);
-      const next = [...stillsRef.current, { blob, screen, luma, ...stamp(), takenAt: Date.now() }];
+      const next = [
+        ...stillsRef.current,
+        { blob, screen, luma, portrait, ...stamp(), takenAt: Date.now() },
+      ];
       const thinned = thinIfFull(next, stillCap(options));
       if (thinned) intervalRef.current *= 2;
       stillsRef.current = thinned ?? next;
@@ -468,9 +569,11 @@ export function useTimelapseRecorder({
   return {
     status,
     screenStatus,
-    live: status === 'on' || screenStatus === 'on',
+    live: (status === 'on' && !cameraMuted) || screenStatus === 'on',
     count,
     stream,
+    cameraMuted,
+    restartCamera,
     requestScreen,
     stills,
     spanSeconds,
@@ -559,6 +662,22 @@ function blendBuffer(first: ImageBitmap | null): {
   return ctx ? { canvas, ctx } : null;
 }
 
+/**
+ * A still drawn over the whole buffer. A still the same shape as the buffer just fills it;
+ * one the other way round (the phone turned after the video started) is cropped to the
+ * middle rather than squashed, since the video keeps the shape it started in.
+ */
+function fillBuffer(b: CanvasRenderingContext2D, bmp: ImageBitmap, bw: number, bh: number) {
+  if (Math.abs(bmp.width / bmp.height - bw / bh) < 0.01) {
+    b.drawImage(bmp, 0, 0, bw, bh);
+    return;
+  }
+  const scale = Math.max(bw / bmp.width, bh / bmp.height);
+  const cw = bw / scale;
+  const ch = bh / scale;
+  b.drawImage(bmp, (bmp.width - cw) / 2, (bmp.height - ch) / 2, cw, ch, 0, 0, bw, bh);
+}
+
 async function firstBitmap(stills: Still[], key: 'blob' | 'screen') {
   const s = stills.find((x) => x[key]);
   return s ? createImageBitmap(s[key]!) : null;
@@ -611,7 +730,7 @@ function frameDrawer(
         if (!bmp) continue;
         n++;
         b.globalAlpha = 1 / n;
-        b.drawImage(bmp, 0, 0, bw, bh);
+        fillBuffer(b, bmp, bw, bh);
         drew = true;
       }
     } else {
@@ -619,12 +738,12 @@ function frameDrawer(
       const before = previous !== null && previous !== from ? await bitmap(previous, key) : null;
       if (look.smooth && now && before) {
         // One still per frame: a little of the last one under it softens the steps.
-        b.drawImage(before, 0, 0, bw, bh);
+        fillBuffer(b, before, bw, bh);
         b.globalAlpha = 0.7;
-        b.drawImage(now, 0, 0, bw, bh);
+        fillBuffer(b, now, bw, bh);
         drew = true;
       } else if (now) {
-        b.drawImage(now, 0, 0, bw, bh);
+        fillBuffer(b, now, bw, bh);
         drew = true;
       }
     }

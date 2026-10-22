@@ -3,7 +3,7 @@
  * names, not hex, so each theme can draw them in its own tint.
  */
 
-/** The palette, in the order a colour sort puts them: the rainbow, then brown and grey. */
+/** The palette, in the order the tag menus show it: the rainbow, then brown and grey. */
 export const TAG_COLORS = [
   'red',
   'orange',
@@ -55,30 +55,4 @@ export function inheritedTagIds(
     cur = byId.get(nodeId);
   }
   return out;
-}
-
-/**
- * Where a node lands in a colour sort: its first tag's colour, by palette order. Untagged
- * comes after every colour.
- */
-export function tagColorRank(
-  tagIds: readonly string[] | undefined,
-  byId: Map<string, Tag>,
-): number {
-  const first = tagsOf(tagIds, byId)[0];
-  return first ? TAG_COLORS.indexOf(first.color) : TAG_COLORS.length;
-}
-
-/**
- * Siblings grouped by colour. Stable, so items of one colour keep the order they were
- * dragged into.
- */
-export function sortByTagColor<T extends { tagIds?: string[] }>(
-  list: readonly T[],
-  byId: Map<string, Tag>,
-): T[] {
-  return list
-    .map((item, i) => ({ item, i, rank: tagColorRank(item.tagIds, byId) }))
-    .sort((a, b) => a.rank - b.rank || a.i - b.i)
-    .map((x) => x.item);
 }

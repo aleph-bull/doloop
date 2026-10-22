@@ -1,7 +1,8 @@
-import { useDeferredValue, useState, type ReactNode } from 'react';
+import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { universityById } from '@komogon/core';
 import {
+  BellOff,
   BellRing,
   Check,
   ChevronRight,
@@ -13,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Panel, Spinner, useToast } from '@komogon/ui';
 import type { LeaderboardScope, Person } from '../../lib/api';
-import { fmtHours } from '../../lib/format';
+import { fmtHours, fmtTime } from '../../lib/format';
 import {
   useAcceptFriendRequest,
   useAvatar,
@@ -46,13 +47,13 @@ function RowButton({
   label: string;
   onClick: () => void;
   busy?: boolean;
-  tone?: 'yes';
+  tone?: 'yes' | 'off';
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={`side-row-btn${tone === 'yes' ? ' is-yes' : ''}`}
+      className={`side-row-btn${tone ? ` is-${tone}` : ''}`}
       aria-label={label}
       title={label}
       disabled={busy}
@@ -100,6 +101,21 @@ export function FriendsCard() {
   const who = (id: string) => data?.people[id] ?? found.data?.people[id] ?? unknown(id);
   const inbound = data?.incoming ?? [];
   const shownInbound = allInbound ? inbound : inbound.slice(0, REQUESTS_SHOWN);
+
+  // A friend nudged in the last two hours shows a crossed-out bell until nudgeAgainAt;
+  // `now` ticks over when the next of those comes round.
+  const [now, setNow] = useState(() => Date.now());
+  const againAt = (f: { nudgeAgainAt?: string | null }) =>
+    f.nudgeAgainAt ? Date.parse(f.nudgeAgainAt) : 0;
+  const nextAgain = Math.min(
+    ...(data?.friends ?? []).map(againAt).filter((t) => t > now),
+    Infinity,
+  );
+  useEffect(() => {
+    if (!Number.isFinite(nextAgain)) return;
+    const t = setTimeout(() => setNow(Date.now()), Math.max(0, nextAgain - Date.now()) + 500);
+    return () => clearTimeout(t);
+  }, [nextAgain]);
 
   return (
     <Panel as="aside" className="side-card" aria-label="Friends">
@@ -163,21 +179,35 @@ export function FriendsCard() {
             <ul className="side-people">
               {data.friends.map((f) => (
                 <PersonRow key={f.userId} person={who(f.userId)}>
-                  <RowButton
-                    label="Nudge to study"
-                    busy={nudge.isPending}
-                    onClick={() =>
-                      nudge.mutate(
-                        { userId: f.userId },
-                        {
-                          onSuccess: () => toast(`Nudged ${who(f.userId).name}.`),
-                          onError: fail,
-                        },
-                      )
-                    }
-                  >
-                    <BellRing size={13} aria-hidden />
-                  </RowButton>
+                  {againAt(f) > now ? (
+                    <RowButton
+                      label={`Nudged. Again at ${fmtTime(f.nudgeAgainAt)}`}
+                      tone="off"
+                      onClick={() =>
+                        toast(
+                          `You can nudge ${who(f.userId).name} again at ${fmtTime(f.nudgeAgainAt)}.`,
+                        )
+                      }
+                    >
+                      <BellOff size={13} aria-hidden />
+                    </RowButton>
+                  ) : (
+                    <RowButton
+                      label="Nudge to study"
+                      busy={nudge.isPending}
+                      onClick={() =>
+                        nudge.mutate(
+                          { userId: f.userId },
+                          {
+                            onSuccess: () => toast(`Nudged ${who(f.userId).name}.`),
+                            onError: fail,
+                          },
+                        )
+                      }
+                    >
+                      <BellRing size={13} aria-hidden />
+                    </RowButton>
+                  )}
                   <RowButton
                     label="Remove friend"
                     busy={remove.isPending}
@@ -315,7 +345,7 @@ export function MiniLeaderboard() {
   const board = useLeaderboard(scope);
   const entries = board.data?.entries ?? [];
   return (
-    <Panel as="aside" className="side-card" aria-label="Leaderboard">
+    <Panel as="aside" className="side-card is-board" aria-label="Leaderboard">
       <div className="side-head">
         <h2 className="side-title">Leaderboard</h2>
         <div className="side-scope" role="group" aria-label="Which board">

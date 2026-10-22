@@ -6,6 +6,7 @@ import {
   defaultTimelapseLayout,
   fitBoxToRatio,
   minBoxSide,
+  phoneAspectRatio,
   TIMELAPSE_TEXT_ELEMENTS,
   TIMELAPSE_ELEMENT_LABELS,
   TIMELAPSE_ELEMENTS,
@@ -16,6 +17,7 @@ import {
   type TimelapseBox,
   type TimelapseElementId,
   type TimelapseLayout,
+  type TimelapseOrientation,
   type UserSettings,
 } from '@komogon/core';
 import {
@@ -38,6 +40,7 @@ import { useMe } from '../../lib/queries';
 import {
   cameraSupported,
   knownCameraRatio,
+  knownFacing,
   knownScreenRatio,
   rememberCameraRatio,
   timeOfDayText,
@@ -45,17 +48,52 @@ import {
 import { composeFrame, type DrawnRects } from '../../lib/timelapse-compose';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
-type TimelapseSettingsValue = UserSettings['timelapse'];
 
-const SHAPES: Array<{ value: TimelapseAspect; label: string }> = [
-  { value: 'camera', label: 'Match camera' },
-  { value: 'screen', label: 'Match screen' },
-  { value: '16:9', label: '16:9' },
-  { value: '9:16', label: '9:16' },
-  { value: '1:1', label: '1:1' },
-  { value: '4:5', label: '4:5' },
-  { value: '4:3', label: '4:3' },
+const SHAPE_LABELS: Record<TimelapseAspect, string> = {
+  camera: 'Match camera',
+  screen: 'Match screen',
+  '16:9': '16:9',
+  '9:16': '9:16',
+  '1:1': '1:1',
+  '4:5': '4:5',
+  '4:3': '4:3',
+};
+
+/** Every shape a computer's video can take. */
+export const COMPUTER_SHAPES: readonly TimelapseAspect[] = [
+  'camera',
+  'screen',
+  '16:9',
+  '9:16',
+  '1:1',
+  '4:5',
+  '4:3',
 ];
+
+/**
+ * One layout the editor arranges: the computer's, or a phone's upright or sideways one.
+ * `save` turns a shape and layout into the settings patch that stores them.
+ */
+export interface LayoutTarget {
+  id: string;
+  label: string;
+  aspect: TimelapseAspect;
+  layout: TimelapseLayout;
+  shapes: readonly TimelapseAspect[];
+  /** How the phone is held for this layout; null for a computer, whose camera is as it comes. */
+  orientation: TimelapseOrientation | null;
+  save: (aspect: TimelapseAspect, layout: TimelapseLayout) => DeepPartial<UserSettings>;
+}
+
+type Draft = { aspect: TimelapseAspect; layout: TimelapseLayout };
+
+/** Several targets' patches as one save; each group merges field by field, like the API. */
+function mergePatches(patches: Array<DeepPartial<UserSettings>>): DeepPartial<UserSettings> {
+  const out: Record<string, Record<string, unknown>> = {};
+  for (const p of patches)
+    for (const [k, v] of Object.entries(p)) out[k] = { ...out[k], ...(v as object) };
+  return out as DeepPartial<UserSettings>;
+}
 
 /** "about 4:3": a measured ratio, named after the nearest common shape. */
 function ratioName(r: number): string {
@@ -154,9 +192,14 @@ function stretchFromCorner(
 }
 
 export interface TimelapseLayoutEditorProps {
-  value: TimelapseSettingsValue;
+  /** The layouts to arrange, picked between with a switch when there are several. */
+  targets: LayoutTarget[];
   /** Saves a change; a promise lets the editor know when the save has finished. */
   onChange: (patch: DeepPartial<UserSettings>) => unknown;
+  /** The screen can be placed (a computer's); a phone's layouts have none. */
+  screen?: boolean;
+  /** Shown on the page; while false (its panel folded away) the camera preview is off. */
+  active?: boolean;
   /** What the task name shows in the preview. */
   sampleTitle?: string;
 }
@@ -169,20 +212,36 @@ export interface TimelapseLayoutEditorProps {
  * them resizes it, and Delete takes it out.
  */
 export function TimelapseLayoutEditor({
-  value,
+  targets,
   onChange,
+  screen: withScreen = true,
+  active = true,
   sampleTitle = 'Your task name',
 }: TimelapseLayoutEditorProps) {
   const timeZone = useMe().data?.user.timezone;
-  // Changes wait here until Save; Revert drops them.
-  const [draft, setDraft] = useState<{ aspect: TimelapseAspect; layout: TimelapseLayout } | null>(
-    null,
+  const [currentId, setCurrentId] = useState(targets[0]!.id);
+  const target = targets.find((t) => t.id === currentId) ?? targets[0]!;
+  // Changes wait here until Save, one draft per layout; Revert drops them all.
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const draft: Draft | undefined = drafts[target.id];
+  const setDraft = useCallback(
+    (d: Draft | null) =>
+      setDrafts((all) => {
+        const next = { ...all };
+        if (d) next[target.id] = d;
+        else delete next[target.id];
+        return next;
+      }),
+    [target.id],
   );
   const [saving, setSaving] = useState(false);
-  const aspect = draft?.aspect ?? value.aspect;
-  const layout = draft?.layout ?? value.layout;
-  const dirty =
-    !!draft && !(draft.aspect === value.aspect && sameLayout(draft.layout, value.layout));
+  const aspect = draft?.aspect ?? target.aspect;
+  const layout = draft?.layout ?? target.layout;
+  const changed = (t: LayoutTarget) => {
+    const d = drafts[t.id];
+    return !!d && !(d.aspect === t.aspect && sameLayout(d.layout, t.layout));
+  };
+  const dirty = targets.some(changed);
   const [selected, setSelected] = useState<TimelapseElementId | null>(null);
   const [cameraRatio, setCameraRatio] = useState<number | null>(() => knownCameraRatio());
   const screenRatio = useMemo(() => knownScreenRatio(), []);
@@ -201,13 +260,18 @@ export function TimelapseLayoutEditor({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const drag = useRef<Drag | null>(null);
 
-  const ratio = aspectRatio(aspect, cameraRatio, screenRatio);
+  /** Width over height for a shape: a phone's camera is turned the way it is held. */
+  const ratioOf = (shape: TimelapseAspect, camRatio: number | null) =>
+    target.orientation
+      ? phoneAspectRatio(shape, target.orientation, camRatio)
+      : aspectRatio(shape, camRatio, screenRatio);
+  const ratio = ratioOf(aspect, cameraRatio);
   const { w: cw, h: ch } = videoSize(ratio, 960);
 
   /** A change to the layout, shown at once and held until Save. */
   const saveLayout = useCallback(
     (next: TimelapseLayout) => setDraft({ aspect, layout: next }),
-    [aspect],
+    [aspect, setDraft],
   );
 
   /** A default layout for a shape, keeping which pieces are shown. */
@@ -225,6 +289,10 @@ export function TimelapseLayoutEditor({
     });
   }, []);
   useEffect(() => () => camera?.getTracks().forEach((t) => t.stop()), [camera]);
+  // Folded away: the camera goes off.
+  useEffect(() => {
+    if (!active) stopCamera();
+  }, [active, stopCamera]);
 
   const startCamera = async (): Promise<number | null> => {
     if (!cameraSupported()) {
@@ -234,7 +302,12 @@ export function TimelapseLayoutEditor({
     setCameraState('asking');
     try {
       const s = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+        // The camera the focus screen films with; a computer's front one.
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: { ideal: knownFacing() },
+        },
         audio: false,
       });
       const video = document.createElement('video');
@@ -262,7 +335,7 @@ export function TimelapseLayoutEditor({
    * an arranged one stays, with the screen reshaped so it still fits its picture.
    */
   const pickShape = (shape: TimelapseAspect, camRatio = cameraRatio) => {
-    const newRatio = aspectRatio(shape, camRatio, screenRatio);
+    const newRatio = ratioOf(shape, camRatio);
     const next = sameBoxes(layout, defaultTimelapseLayout(ratio, screenRatio))
       ? freshLayout(newRatio, layout)
       : { ...layout, screen: fitBoxToRatio(layout.screen, newRatio, screenRatio) };
@@ -384,36 +457,65 @@ export function TimelapseLayoutEditor({
     drag.current = null;
   };
 
-  // The saved layout caught up with the draft: drop the draft.
+  // A saved layout caught up with its draft: drop that draft.
+  const savedKey = targets.map((t) => `${t.id}:${t.aspect}:${JSON.stringify(t.layout)}`).join('|');
+  const targetsRef = useRef(targets);
   useEffect(() => {
-    setDraft((d) =>
-      d && d.aspect === value.aspect && sameLayout(d.layout, value.layout) ? null : d,
-    );
+    targetsRef.current = targets;
+  });
+  useEffect(() => {
+    setDrafts((all) => {
+      let next = all;
+      for (const t of targetsRef.current) {
+        const d = all[t.id];
+        if (d && d.aspect === t.aspect && sameLayout(d.layout, t.layout)) {
+          if (next === all) next = { ...all };
+          delete next[t.id];
+        }
+      }
+      return next;
+    });
     setSaving(false);
-  }, [value.aspect, value.layout]);
+  }, [savedKey]);
 
   /**
-   * Save the draft. Each text piece is stored exactly where it was drawn, so its side
-   * (left, middle or right) holds against the box the person saw.
+   * The draft with each text piece exactly where it was drawn, so its side (left, middle or
+   * right) holds against the box the person saw. Only the layout on screen has been drawn.
    */
-  const commit = () => {
-    if (!draft) return;
-    const next = { ...draft.layout };
+  const snapped = (d: Draft): Draft => {
+    const next = { ...d.layout };
     for (const id of TIMELAPSE_TEXT_ELEMENTS) {
       const r = drawn[id];
       if (r && next[id].visible)
         next[id] = clampBox(id, { ...next[id], x: r.x, y: r.y, w: r.w, h: r.h });
     }
+    return { aspect: d.aspect, layout: next };
+  };
+
+  /** Save every changed layout at once. */
+  const commit = () => {
+    const all = draft ? { ...drafts, [target.id]: snapped(draft) } : drafts;
+    const patches = targets
+      .filter((t) => all[t.id])
+      .map((t) => t.save(all[t.id]!.aspect, all[t.id]!.layout));
+    if (patches.length === 0) return;
     setSaving(true);
-    setDraft({ aspect: draft.aspect, layout: next });
-    // A save that fails leaves the draft and the buttons, so it can be tried again.
-    void Promise.resolve(onChange({ timelapse: { aspect: draft.aspect, layout: next } })).finally(
-      () => setSaving(false),
-    );
+    setDrafts(all);
+    // A save that fails leaves the drafts and the buttons, so it can be tried again.
+    void Promise.resolve(onChange(mergePatches(patches))).finally(() => setSaving(false));
   };
   const revert = () => {
     setSelected(null);
-    setDraft(null);
+    setDrafts({});
+  };
+
+  /** Switch to another layout, keeping this one's changes (placed as drawn) for the save. */
+  const switchTo = (id: string) => {
+    if (id === target.id) return;
+    if (draft) setDraft(snapped(draft));
+    setSelected(null);
+    setDrawn({});
+    setCurrentId(id);
   };
 
   // Unsaved changes: ask before the tab closes.
@@ -480,16 +582,21 @@ export function TimelapseLayoutEditor({
     saveLayout(placed(id, next));
   };
 
-  const hidden = TIMELAPSE_MOVABLE.filter((id) => !layout[id].visible);
+  const hidden = TIMELAPSE_MOVABLE.filter(
+    (id) => !layout[id].visible && (withScreen || id !== 'screen'),
+  );
   const reset = () => {
     setSelected(null);
     saveLayout(freshLayout(ratio, layout));
   };
 
+  const held = target.orientation === 'sideways' ? 'sideways' : 'upright';
   const shapeHint: Record<TimelapseAspect, string> = {
-    camera: cameraRatio
-      ? `Matches your camera, about ${ratioName(cameraRatio)}.`
-      : 'The video takes your camera’s shape automatically. Preview with your camera to see it here.',
+    camera: target.orientation
+      ? `The phone’s camera, held ${held}${cameraRatio ? `, about ${ratioName(ratioOf('camera', cameraRatio))}` : ''}.`
+      : cameraRatio
+        ? `Matches your camera, about ${ratioName(cameraRatio)}.`
+        : 'The video takes your camera’s shape automatically. Preview with your camera to see it here.',
     screen: `Matches your screen, about ${ratioName(screenRatio)}.`,
     '9:16': 'Tall, for phone stories and reels.',
     '16:9': 'Wide, like a laptop screen or a video on YouTube.',
@@ -500,13 +607,27 @@ export function TimelapseLayoutEditor({
 
   return (
     <div className="tl-editor">
+      {targets.length > 1 && (
+        <div className="field">
+          <span className="field-label">Held</span>
+          <Segmented
+            ariaLabel="Which layout to arrange"
+            value={target.id}
+            onChange={switchTo}
+            options={targets.map((t) => ({ value: t.id, label: t.label }))}
+          />
+          <span className="field-hint">
+            A video takes the layout for how the phone was held when it started.
+          </span>
+        </div>
+      )}
       <div className="field">
         <span className="field-label">Shape</span>
         <Segmented
           ariaLabel="Shape of the video"
           value={aspect}
           onChange={(v) => (v === 'camera' ? void matchCamera() : pickShape(v))}
-          options={SHAPES}
+          options={target.shapes.map((value) => ({ value, label: SHAPE_LABELS[value] }))}
         />
         <span className="field-hint">{shapeHint[aspect]}</span>
         {cameraState === 'denied' && (
@@ -638,7 +759,7 @@ export function TimelapseLayoutEditor({
             <Camera size={14} aria-hidden /> Preview with my camera
           </Button>
         )}
-        {layout.screen.visible && (
+        {withScreen && layout.screen.visible && (
           <Button variant="ghost" size="sm" onClick={fitScreen}>
             <Monitor size={14} aria-hidden /> Fit the screen to its shape
           </Button>
@@ -648,10 +769,9 @@ export function TimelapseLayoutEditor({
         </Button>
       </div>
       <span className="field-hint">
-        The camera fills the video behind everything. Drag a piece to move it and pull a corner to
-        resize it; the screen, the clocks and the task name keep their shape as they grow. Add the
-        screen to choose where it goes; each session asks whether to record it. Nothing changes
-        until you save.
+        {withScreen
+          ? 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the screen, the clocks and the task name keep their shape as they grow. Add the screen to choose where it goes; each session asks whether to record it. Nothing changes until you save.'
+          : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the task name keep their shape as they grow. Nothing changes until you save.'}
       </span>
 
       {dirty &&

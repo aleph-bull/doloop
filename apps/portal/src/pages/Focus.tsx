@@ -8,6 +8,7 @@ import {
   visualizerTuning,
   viewTimer,
   type StudyNode,
+  type TimelapseDevice,
   type UserSettings,
 } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
@@ -58,8 +59,20 @@ import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { SessionSummary } from '../components/SessionSummary';
 import { announceAchievements } from '../lib/achievements';
-import { cameraSupported, screenSupported, useTimelapseRecorder } from '../lib/timelapse';
+import { isPhone, useWakeLock } from '../lib/device';
 import {
+  cameraSupported,
+  hasTwoCameras,
+  knownFacing,
+  rememberFacing,
+  screenSupported,
+  useTimelapseRecorder,
+  type CameraFacing,
+  type TimelapseRecorder,
+} from '../lib/timelapse';
+import { PhoneCamera } from '../components/focus/PhoneCamera';
+import {
+  presetOf,
   recorderProblem,
   ScreenPrompt,
   screenProblem,
@@ -142,6 +155,10 @@ export function Focus() {
   const session = active.data?.active ?? null;
   /* ---------- timelapse ---------- */
   const tl = settings?.timelapse;
+  // A phone records with its own preset, and its recording is the camera screen.
+  const phone = useMemo(() => isPhone(), []);
+  const device: TimelapseDevice = phone ? 'phone' : 'computer';
+  const preset = settings ? presetOf(settings, device) : undefined;
   const [recording, setRecording] = useState(false);
   const [tlAskOpen, setTlAskOpen] = useState(false);
   /** The session the timelapse question was settled for, so it is asked once per session. */
@@ -195,21 +212,30 @@ export function Focus() {
     const tick = () => {
       const phase = sample().phase;
       const onBreak = phase === 'short-break' || phase === 'long-break';
-      setInFocus(phase === 'work' || (onBreak && !!settingsRef.current?.timelapse.recordBreaks));
+      const st = settingsRef.current;
+      setInFocus(phase === 'work' || (onBreak && !!st && presetOf(st, device).recordBreaks));
     };
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [recording, sample]);
+  }, [recording, sample, device]);
   const tlOptions = useMemo(
     () => ({
-      lengthMode: tl?.lengthMode ?? 'auto',
-      lengthSeconds: tl?.lengthSeconds ?? 30,
-      speed: tl?.speed ?? 300,
-      fps: tl?.fps ?? 30,
+      lengthMode: preset?.lengthMode ?? 'auto',
+      lengthSeconds: preset?.lengthSeconds ?? 30,
+      speed: preset?.speed ?? 300,
+      fps: preset?.fps ?? 30,
     }),
-    [tl?.lengthMode, tl?.lengthSeconds, tl?.speed, tl?.fps],
+    [preset?.lengthMode, preset?.lengthSeconds, preset?.speed, preset?.fps],
   );
+  // The camera a phone films with: the front one until swapped, remembered for next time.
+  const [facing, setFacing] = useState<CameraFacing>(() => (phone ? knownFacing() : 'user'));
+  const flipCamera = () => {
+    const next = facing === 'user' ? 'environment' : 'user';
+    setFacing(next);
+    rememberFacing(next);
+  };
+  const [twoCameras, setTwoCameras] = useState(false);
   // The camera is always recorded. The screen is asked about each session, the first time a
   // recording starts in it, and the answer holds for the rest of that session.
   const [screenOn, setScreenOn] = useState(false);
@@ -226,7 +252,18 @@ export function Focus() {
       const { workSeconds, breakSeconds, totalSeconds, title } = sample();
       return { workSeconds, breakSeconds, totalSeconds, title };
     },
+    facing,
   });
+
+  // Phones list every camera only once one is allowed, so look again when it comes on.
+  useEffect(() => {
+    if (phone) void hasTwoCameras().then(setTwoCameras);
+  }, [phone, recorder.status]);
+
+  /** On a phone, recording is the camera screen, which takes the focus screen's place. */
+  const cameraScreen = phone && recording && !!session;
+  // The phone's camera stops when its screen locks, so the screen stays on while filming.
+  useWakeLock(cameraScreen);
 
   /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
   const tlPending = recorder.count > 0 && recorder.count !== tlSavedAt;
@@ -255,10 +292,11 @@ export function Focus() {
   // The first recording in a session: ask about the screen.
   useEffect(() => {
     if (!recording || !screenSessionId || screenAskedFor.current === screenSessionId) return;
-    if (!screenSupported()) return;
+    // A phone's preset has no screen (and phones can't share one).
+    if (!screenSupported() || phone) return;
     screenAskedFor.current = screenSessionId;
     setScreenAskOpen(true);
-  }, [recording, screenSessionId]);
+  }, [recording, screenSessionId, phone]);
 
   /**
    * Record the screen this session. Runs in the click, since the browser's picker needs
@@ -484,7 +522,7 @@ export function Focus() {
           <TimelapseBadge
             recorder={recorder}
             capturing={inFocus}
-            onShareScreen={screenSupported() ? shareScreen : undefined}
+            onShareScreen={screenSupported() && !phone ? shareScreen : undefined}
             onStop={() => setRecording(false)}
           />
         )}
@@ -539,6 +577,17 @@ export function Focus() {
           nodes={nodes.data.nodes}
           chromeVisible={chromeVisible}
           holdTimer={holdTimer}
+          camera={
+            cameraScreen
+              ? {
+                  recorder,
+                  filming: inFocus,
+                  facing,
+                  onFlip: twoCameras ? flipCamera : undefined,
+                  onStopRecording: () => setRecording(false),
+                }
+              : null
+          }
           onEnded={(s) => {
             setSummary(s);
             setRecording(false);
@@ -555,16 +604,15 @@ export function Focus() {
               phrasesEnabled={settings.effects.phrases}
               onTrimmed={() => setSummary(null)}
             />
-            {tl && (
-              <TimelapseExport
-                recorder={recorder}
-                value={tl}
-                onChange={patch}
-                recording={recording}
-                onSaved={() => setTlSavedAt(recorder.count)}
-                sessionId={summary.session.id}
-              />
-            )}
+            <TimelapseExport
+              recorder={recorder}
+              settings={settings}
+              device={device}
+              onChange={patch}
+              recording={recording}
+              onSaved={() => setTlSavedAt(recorder.count)}
+              sessionId={summary.session.id}
+            />
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
                 Start another
@@ -614,8 +662,10 @@ export function Focus() {
             <section className="focus-sheet-section" aria-label="Timelapse">
               <h3 className="focus-sheet-title">Timelapse</h3>
               <TimelapseSettings
-                value={tl}
+                settings={settings}
+                device={device}
                 onChange={patch}
+                withRecordChoice
                 linkToLayout
                 recording={recording}
                 onRecordingChange={
@@ -630,7 +680,8 @@ export function Focus() {
               {!summary && (
                 <TimelapseExport
                   recorder={recorder}
-                  value={tl}
+                  settings={settings}
+                  device={device}
                   onChange={patch}
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
@@ -656,6 +707,7 @@ export function Focus() {
 
       <TimelapsePrompt
         open={tlAskOpen}
+        device={device}
         onYes={() => {
           setTlAskOpen(false);
           setRecording(true);
@@ -697,6 +749,14 @@ interface FocusSessionProps {
   chromeVisible: boolean;
   /** Pause the clock while true and resume it when it goes false, if this paused it. */
   holdTimer: boolean;
+  /** A phone recording a timelapse: the session is shown on the camera instead. */
+  camera: {
+    recorder: TimelapseRecorder;
+    filming: boolean;
+    facing: CameraFacing;
+    onFlip?: () => void;
+    onStopRecording: () => void;
+  } | null;
   onEnded: (summary: EndSummary) => void;
 }
 
@@ -707,6 +767,7 @@ function FocusSession({
   nodes,
   chromeVisible,
   holdTimer,
+  camera,
   onEnded,
 }: FocusSessionProps) {
   const ctl = useSessionController({ active, settings, nodes, onEnded });
@@ -795,6 +856,22 @@ function FocusSession({
         : timer.mode === 'scheduled' && timer.phase === 'work' && timer.plannedEndAt
           ? `${PHASE_LABEL.work} · until ${fmtTime(timer.plannedEndAt)}`
           : PHASE_LABEL[timer.phase];
+
+  // The same controller either way, so turning the camera on or off never touches the timer.
+  if (camera)
+    return (
+      <>
+        <PhoneCamera
+          ctl={ctl}
+          phase={phase}
+          context={context}
+          hidden={hidden}
+          chromeVisible={chromeVisible}
+          {...camera}
+        />
+        {ctl.dialogs}
+      </>
+    );
 
   return (
     <>
