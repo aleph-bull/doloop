@@ -330,6 +330,8 @@ export function socialRoutes(
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
         sessionId: uuid,
+        /** Show the session's minutes and task on the post; off keeps the post to the words and the file. */
+        showTime: z.boolean().default(true),
         media: z
           .string()
           .max(POST_VIDEO_MAX_BYTES_INLINE * 1.4)
@@ -353,7 +355,8 @@ export function socialRoutes(
       });
       if (!s || !s.endedAt) throw notFound('No such session');
       minutes = Math.round(s.workSeconds / 60);
-      if (s.nodeId) {
+      if (!input.showTime) minutes = null;
+      else if (s.nodeId) {
         const n = await db.query.nodes.findFirst({ where: eq(nodes.id, s.nodeId) });
         subject = n?.title ?? null;
       } else if (s.routineId) {

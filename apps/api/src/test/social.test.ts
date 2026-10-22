@@ -124,6 +124,24 @@ describe('posts on the feed', () => {
     await t.api({ method: 'DELETE', url: `/api/posts/${pic.json().post.id}` });
   });
 
+  it('leaves the minutes and the task off when asked, still about the session', async () => {
+    const res = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId, body: 'No numbers today.', showTime: false },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().post).toMatchObject({ body: 'No numbers today.', session: null });
+    // Still tied to a session: without one it is refused, whatever showTime says.
+    const none = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { body: 'Hi', showTime: false },
+    });
+    expect(none.statusCode).toBe(400);
+    await t.api({ method: 'DELETE', url: `/api/posts/${res.json().post.id}` });
+  });
+
   it('serves the video as bytes to anyone signed in', async () => {
     const res = await t.api({ method: 'GET', url: `/api/posts/${postId}/media`, token: t.tokenB });
     expect(res.statusCode).toBe(200);

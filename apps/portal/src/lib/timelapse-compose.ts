@@ -295,6 +295,59 @@ export function composeFrame(
   return drawn;
 }
 
+/** The words broken into lines that fit `maxWidth` at the context's font. */
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (line && ctx.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = word;
+    } else line = next;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+/**
+ * The card that closes the video: what is already on the canvas (the last frame) darkened,
+ * with the person's words in the middle. `fade` runs 0 to 1 as it comes in.
+ */
+export function drawEndCard(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  text: string,
+  fade = 1,
+) {
+  const f = Math.max(0, Math.min(1, fade));
+  ctx.save();
+  ctx.globalAlpha = 1;
+  ctx.filter = 'none';
+  ctx.fillStyle = `rgba(10, 12, 24, ${(0.62 * f).toFixed(3)})`;
+  ctx.fillRect(0, 0, w, h);
+  const maxWidth = w * 0.8;
+  // As big as reads well, then smaller until it fits in five lines.
+  let size = Math.round(Math.min(w, h) * 0.075);
+  let lines: string[] = [];
+  for (; size >= 12; size = Math.round(size * 0.9)) {
+    ctx.font = `600 ${size}px ${FONT}`;
+    lines = wrapLines(ctx, text, maxWidth);
+    if (lines.length <= 5 && lines.every((l) => ctx.measureText(l).width <= maxWidth)) break;
+  }
+  const lineHeight = size * 1.3;
+  const top = h / 2 - ((lines.length - 1) * lineHeight) / 2;
+  ctx.globalAlpha = f;
+  ctx.fillStyle = '#ffffff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  // Rises a little as it fades in.
+  const rise = (1 - f) * size * 0.4;
+  lines.forEach((l, i) => ctx.fillText(l, w / 2, top + i * lineHeight + rise));
+  ctx.restore();
+}
+
 /** Average brightness, 0..1, of one area of what is on the canvas. */
 export function rectLuma(ctx: CanvasRenderingContext2D, w: number, h: number, r: Rect): number {
   const x = Math.max(0, Math.floor(r.x));

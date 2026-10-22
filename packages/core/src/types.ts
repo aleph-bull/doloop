@@ -338,6 +338,11 @@ export interface TimelapsePreset {
    * showClockTime, which only seed it for a row saved before it existed.
    */
   layout: TimelapseLayout;
+  /**
+   * The person's own words, shown on a card for a few seconds as the video ends. Empty
+   * leaves the card out.
+   */
+  endText: string;
 }
 
 export type FocusOpenMode = 'ask' | 'always' | 'never';

@@ -250,6 +250,8 @@ const timelapsePreset = {
   breakClock: z.enum(['break', 'running']),
   dim: z.number().min(0).max(0.9),
   layout: timelapseLayout,
+  // TIMELAPSE_END_TEXT_MAX in core; empty leaves the end card out.
+  endText: z.string().trim().max(140),
 };
 
 export const settingsSchema = z

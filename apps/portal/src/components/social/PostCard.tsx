@@ -22,7 +22,7 @@ const unknown = (id: string): Person => ({
 });
 
 /** Minutes as a big number with a small unit: "1.5 h", "45 min". */
-function figure(minutes: number): { value: string; unit: string } {
+export function figure(minutes: number): { value: string; unit: string } {
   if (minutes < 60) return { value: String(Math.max(1, Math.round(minutes))), unit: 'min' };
   const h = minutes / 60;
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };

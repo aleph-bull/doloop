@@ -340,6 +340,8 @@ export type FeedScope = 'everyone' | 'friends';
 export interface NewPost {
   body?: string;
   sessionId?: string;
+  /** Show the session's minutes and task on the post (the API's default); false leaves them off. */
+  showTime?: boolean;
   /** The file as a data URL, when the API keeps files itself (no R2; videos under 5 MB). */
   media?: string;
   /** The key of a file already uploaded to R2 (`startUpload`). */

@@ -604,8 +604,23 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
   the frame. The mark is black or white, picked from the brightness behind it on frame 30.
   Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
-  elsewhere MediaRecorder records the canvas in real time. The person can download it or
-  "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still).
+  elsewhere MediaRecorder records the canvas in real time. The person can download it,
+  "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still), or post it
+  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone the share sheet carries the
+  video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
+  Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
+  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
+- **Every post is previewed first** (`PostPreview.tsx`): on Social, the post as the feed
+  shows it, with a line to say and a switch for the hours (`showTime: false` posts no minutes
+  or task); elsewhere, the video with its caption (copied to paste, or written into X's
+  composer). **Words at the end** (`endText` on each preset) add a 3-second card over the
+  last frame; empty adds nothing. **Looks** (`timelapse-styles.ts`: Classic, Big timer,
+  Headline, Corner, Clean) place the pieces for any shape; `matchTimelapseStyle` reads a
+  saved layout back as its look. **"Change layout?"** beside a made video opens the layout
+  editor in a dialog over a moment of that video (`RelayoutDialog.tsx`; not the Settings
+  page, which would drop the stills) and remakes the video with what was saved. All of it:
+  DECISIONS.md, "The timelapse: a preview before posting, words at the end, looks, and
+  Change layout?".
 
 **Links.** The focus screen's controls, the "Record a timelapse?" question ("Change what it
 looks like"), the screen question and the export card link to `/settings#timelapse`. From

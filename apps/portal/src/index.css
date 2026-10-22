@@ -4639,6 +4639,52 @@
   font-weight: 600;
   color: var(--fg-muted);
 }
+/* A section that folds away from its heading; the heading is the whole button. */
+.focus-sheet-section.is-fold {
+  gap: 0;
+}
+.focus-sheet-fold-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.focus-sheet-fold-head:hover {
+  color: var(--fg);
+}
+.focus-sheet-fold-head:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.focus-sheet-chevron {
+  flex: none;
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.focus-sheet-section.is-open .focus-sheet-chevron {
+  transform: rotate(180deg);
+}
+/* The fold clips what it holds, so it reaches 4px past the sides to keep focus rings whole. */
+.focus-sheet-fold {
+  margin: 0 -4px;
+}
+.focus-sheet-fold.is-open {
+  margin-bottom: -4px;
+}
+.focus-sheet-fold-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 4px 4px;
+}
 .vis-layers {
   display: flex;
   flex-direction: column;
@@ -7669,6 +7715,132 @@
   flex-direction: column;
   gap: 12px;
   padding: 4px 14px 16px;
+}
+
+/* Ready-made looks: a little picture of the video in each, its name under it. */
+.tl-looks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 8px;
+}
+.tl-looks.is-compact {
+  grid-template-columns: repeat(auto-fit, minmax(58px, 1fr));
+  gap: 6px;
+}
+.tl-look {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: none;
+  font: inherit;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.tl-look:hover {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.tl-look:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.tl-look.is-on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  color: var(--fg);
+}
+.tl-look-pic {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 72px;
+}
+.tl-looks.is-compact .tl-look {
+  padding: 5px 3px 6px;
+}
+.tl-looks.is-compact .tl-look-pic {
+  height: 52px;
+}
+.tl-looks.is-compact .tl-look-name {
+  font-size: 11px;
+}
+.tl-look-pic canvas {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.tl-look-name {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* "Change layout?": the layout editor over a moment of the video just made. */
+.modal.relayout-dialog {
+  max-width: min(820px, calc(100vw - 32px));
+}
+.relayout-dialog .tl-editor {
+  margin-top: 14px;
+}
+
+/* The post before it goes out: what to say beside it, then the post as it will look. */
+.modal.post-preview-dialog {
+  max-width: min(860px, calc(100vw - 32px));
+}
+.post-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 20px;
+  align-items: start;
+  margin-top: 8px;
+}
+.post-preview-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.post-preview-fields .textarea {
+  width: 100%;
+  resize: vertical;
+}
+.post-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.post-preview-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.post-preview-post {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.post-preview-video {
+  display: block;
+  width: 100%;
+  max-height: 52vh;
+  border-radius: var(--radius-md);
+  background: #000;
+  object-fit: contain;
+}
+@media (max-width: 720px) {
+  .post-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /*
