@@ -151,7 +151,13 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
           }
         : null,
       heatmap: showStats
-        ? studyHeatmap({ sessions, timezone: tz, now, weeks: PROFILE_HEATMAP_WEEKS })
+        ? studyHeatmap({
+            sessions,
+            timezone: tz,
+            now,
+            weeks: PROFILE_HEATMAP_WEEKS,
+            since: row.createdAt.toISOString(),
+          })
         : null,
       weekday: showStats ? weekdayProfile(sessions, tz) : null,
       posts: showPosts ? page.posts : [],

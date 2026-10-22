@@ -140,6 +140,28 @@ describe('studyHeatmap', () => {
     expect(last[6]).toMatchObject({ date: '2026-09-27', future: true });
   });
 
+  it('marks days before the account was made, in its own timezone', () => {
+    // 01:30 UTC on the 19th is still the evening of the 18th in Toronto.
+    const since = '2026-09-19T01:30:00.000Z';
+    const h = studyHeatmap({ sessions: [], timezone: TZ, now: NOW, weeks: 4, since });
+    const at = (d: string) => h.weeks.flat().find((c) => c.date === d)!;
+    expect(at('2026-08-31').before).toBe(true);
+    expect(at('2026-09-17').before).toBe(true);
+    expect(at('2026-09-18').before).toBe(false);
+    expect(at('2026-09-21').before).toBe(false);
+  });
+
+  it('never darkens a day that has study on it, nor any day without `since`', () => {
+    const early = [session('2026-09-01', 9, 30)];
+    const since = '2026-09-10T12:00:00.000Z';
+    const h = studyHeatmap({ sessions: early, timezone: TZ, now: NOW, weeks: 4, since });
+    const at = (d: string) => h.weeks.flat().find((c) => c.date === d)!;
+    expect(at('2026-09-01')).toMatchObject({ before: false, level: 4 });
+    expect(at('2026-09-02').before).toBe(true);
+    const plain = studyHeatmap({ sessions, timezone: TZ, now: NOW, weeks: 4 });
+    expect(plain.weeks.flat().some((c) => c.before)).toBe(false);
+  });
+
   it('ramps levels off the quartiles of studied days only', () => {
     const h = studyHeatmap({ sessions, timezone: TZ, now: NOW, weeks: 4 });
     const at = (d: string) => h.weeks.flat().find((c) => c.date === d)!;

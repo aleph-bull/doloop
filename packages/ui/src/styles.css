@@ -977,11 +977,16 @@ a:hover {
   outline-offset: 1px;
 }
 .heatmap-l0,
-.heatmap-lf {
+.heatmap-lf,
+.heatmap-lb {
   fill: var(--heat-0);
 }
 .heatmap-lf {
   opacity: 0.45;
+}
+/* Before the account existed: faded like the days to come, a touch more. */
+.heatmap-lb {
+  opacity: 0.35;
 }
 .heatmap-l1 {
   fill: var(--heat-1);
