@@ -69,3 +69,13 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
 } else {
   for (const v of clips) v.play().catch(() => {});
 }
+
+// No picture-in-picture. The attribute covers Chrome and Edge; Safari ignores it, so any
+// clip that gets popped out anyway goes straight back into the page.
+for (const v of clips) {
+  v.disablePictureInPicture = true;
+  v.addEventListener('enterpictureinpicture', () => document.exitPictureInPicture().catch(() => {}));
+  v.addEventListener('webkitpresentationmodechanged', () => {
+    if (v.webkitPresentationMode === 'picture-in-picture') v.webkitSetPresentationMode('inline');
+  });
+}

@@ -979,6 +979,11 @@
   .sidenav-stat .sidenav-icon > svg {
     grid-area: 1 / 1;
   }
+  /* The trophy read a little right of the ring's middle, so it sits 0.375px left (owner,
+     2026-10-22, tuned by eye: 1.5px and 0.5px were too far, 0.25px not far enough). */
+  .sidenav-ring + svg {
+    transform: translateX(-0.375px);
+  }
   .sidenav-ring {
     transform: rotate(-90deg);
   }
@@ -7694,28 +7699,6 @@
   font-size: 12px;
 }
 
-/* Trimming the timelapse: the first and last kept stills, side by side, over two sliders. */
-.tl-trim-frames {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.tl-trim-frame {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 0;
-}
-.tl-trim-frame img,
-.tl-trim-empty {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--fg) 8%, transparent);
-}
-
 /* The layout editor's line-up buttons for the chosen piece. */
 .tl-align {
   display: flex;
@@ -8364,20 +8347,20 @@
   color: var(--fg-muted);
 }
 
-/* The phone's trim, like the Photos app's: a viewer, then a strip of stills with handles. */
-.ptrim-view {
+/* The timelapse's trim, like the Photos app's: a viewer, then a strip of stills with handles. */
+.tl-trim-view {
   display: block;
   max-width: 100%;
   margin: 2px auto 6px;
   border-radius: var(--radius-md);
   background: #000;
 }
-.ptrim-bar {
+.tl-trim-bar {
   display: flex;
   align-items: stretch;
   gap: 8px;
 }
-.ptrim-play {
+.tl-trim-play {
   display: grid;
   place-items: center;
   flex: none;
@@ -8388,15 +8371,25 @@
   color: var(--fg);
   cursor: pointer;
 }
-.ptrim-strip {
+@media (hover: hover) {
+  .tl-trim-play:hover {
+    background: color-mix(in srgb, var(--fg) 16%, transparent);
+  }
+}
+.tl-trim-play:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.tl-trim-strip {
   position: relative;
   flex: 1;
   height: 52px;
   /* Room for the handles, which stand outside the kept part. */
   margin: 0 14px;
   touch-action: none;
+  cursor: pointer;
 }
-.ptrim-thumbs {
+.tl-trim-thumbs {
   position: absolute;
   inset: 0;
   display: flex;
@@ -8404,27 +8397,27 @@
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
-.ptrim-thumbs > * {
+.tl-trim-thumbs > * {
   flex: 1;
   min-width: 0;
   height: 100%;
   object-fit: cover;
 }
-.ptrim-shade {
+.tl-trim-shade {
   position: absolute;
   top: 0;
   bottom: 0;
   background: rgb(0 0 0 / 0.55);
   pointer-events: none;
 }
-.ptrim-shade.is-left {
+.tl-trim-shade.is-left {
   border-radius: var(--radius-sm) 0 0 var(--radius-sm);
 }
-.ptrim-shade.is-right {
+.tl-trim-shade.is-right {
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
 }
 /* The kept part, framed; its two sides are the handles. */
-.ptrim-frame {
+.tl-trim-frame {
   position: absolute;
   top: -2px;
   bottom: -2px;
@@ -8433,10 +8426,10 @@
   border-radius: 6px;
   pointer-events: none;
 }
-.ptrim-frame.is-trimmed {
+.tl-trim-frame.is-trimmed {
   border-color: var(--accent);
 }
-.ptrim-handle {
+.tl-trim-handle {
   position: absolute;
   top: -3px;
   bottom: -3px;
@@ -8449,23 +8442,23 @@
   touch-action: none;
   cursor: ew-resize;
 }
-.ptrim-frame.is-trimmed .ptrim-handle {
+.tl-trim-frame.is-trimmed .tl-trim-handle {
   background: var(--accent);
   color: #fff;
 }
-.ptrim-handle.is-start {
+.tl-trim-handle.is-start {
   left: -14px;
   border-radius: 6px 0 0 6px;
 }
-.ptrim-handle.is-end {
+.tl-trim-handle.is-end {
   right: -14px;
   border-radius: 0 6px 6px 0;
 }
-.ptrim-handle:focus-visible {
+.tl-trim-handle:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
-.ptrim-head {
+.tl-trim-head {
   position: absolute;
   top: -6px;
   bottom: -6px;
@@ -8476,7 +8469,7 @@
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
   pointer-events: none;
 }
-.ptrim-times {
+.tl-trim-times {
   display: flex;
   justify-content: space-between;
   gap: 8px;

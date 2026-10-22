@@ -1,6 +1,7 @@
 import {
   applyTimelapseStyle,
   aspectRatio,
+  cleanNoteText,
   fmtBytes,
   LIVE_CLIP_MAX_SECONDS,
   phoneAspectRatio,
@@ -9,7 +10,6 @@ import {
   POST_PLATFORMS,
   postElsewhereNote,
   TIMELAPSE_DEFAULT_STILL_BYTES,
-  timelapseClock,
   timelapseLook,
   timelapseSizeEstimate,
   trimIndices,
@@ -65,16 +65,15 @@ import {
   timeOfDayText,
   type RecorderStatus,
   type ScreenStatus,
-  type Still,
   type TimelapseLook,
   type TimelapseRecorder,
   type TimelapseSources,
 } from '../../lib/timelapse';
 import { NoteField } from './NoteField';
-import { PhoneTrim } from './PhoneTrim';
 import { PostPreview } from './PostPreview';
 import { RelayoutDialog } from './RelayoutDialog';
 import { TimelapseStylePicker } from './TimelapseStylePicker';
+import { TimelapseTrim } from './TimelapseTrim';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 type TimelapseSettingsValue = UserSettings['timelapse'];
@@ -456,9 +455,6 @@ export function TimelapseSettings({
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
       <LengthFields value={value} onChange={set} />
       <SizeNote options={value} screen={device === 'computer' && value.layout.screen.visible} />
-      {linkToLayout && (
-        <NoteField value={value.noteText} onChange={(noteText) => set({ noteText })} />
-      )}
       <Toggle
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
@@ -762,6 +758,8 @@ export function TimelapseExport({
     from: null,
     to: null,
   });
+  // The text on this video, written once the recording stops; the next video starts empty.
+  const [noteText, setNoteText] = useState('');
   const all = recorder.stills();
   // With breaks in the stills the session's running time places them, else focused time.
   const timeKey = all.some((x) => x.breakSeconds !== null) ? 'totalSeconds' : 'workSeconds';
@@ -787,10 +785,14 @@ export function TimelapseExport({
   const clipCount = new Set(clipStills.map((s) => s.clip)).size;
   // A phone's video keeps the shape it starts in: the first kept still says which way up.
   const upright = all[startAt]?.portrait ?? true;
-  const look: TimelapseLook = {
-    ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
-    timeZone,
-  };
+  const look: TimelapseLook = useMemo(
+    () => ({
+      ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
+      timeZone,
+      noteText: cleanNoteText(noteText),
+    }),
+    [settings, device, upright, timeZone, noteText],
+  );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
   const middle = all[middleAt];
@@ -937,6 +939,7 @@ export function TimelapseExport({
     setVideo(null);
     setPreviewOpen(false);
     setTrim({ from: null, to: null });
+    setNoteText('');
     recorder.clear();
   };
 
@@ -944,6 +947,7 @@ export function TimelapseExport({
   const remake = (changes: Partial<TimelapseLook>) => {
     if (video) URL.revokeObjectURL(video.url);
     setVideo(null);
+    if (changes.noteText !== undefined) setNoteText(changes.noteText);
     void make(changes);
   };
 
@@ -1062,47 +1066,31 @@ export function TimelapseExport({
         </div>
       ) : (
         <>
-          {count >= 3 &&
-            last > first &&
-            (device === 'phone' ? (
-              <PhoneTrim
-                stills={all}
-                times={times}
-                first={first}
-                last={last}
-                from={trim.from ?? first}
-                to={trim.to ?? last}
-                startAt={startAt}
-                endAt={endAt}
-                plan={plan}
-                look={look}
-                onChange={(from, to) =>
-                  setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
-                }
-              />
-            ) : (
-              <TrimFields
-                stills={all}
-                first={first}
-                last={last}
-                from={trim.from ?? first}
-                to={trim.to ?? last}
-                startAt={startAt}
-                endAt={endAt}
-                onChange={(from, to) =>
-                  setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
-                }
-              />
-            ))}
+          {count >= 3 && last > first && (
+            <TimelapseTrim
+              stills={all}
+              times={times}
+              first={first}
+              last={last}
+              from={trim.from ?? first}
+              to={trim.to ?? last}
+              startAt={startAt}
+              endAt={endAt}
+              plan={plan}
+              look={look}
+              wide={device === 'computer'}
+              onChange={(from, to) =>
+                setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
+              }
+            />
+          )}
           <LengthFields
             value={value}
             onChange={(p) => onChange(presetPatch(device, p))}
             maxFps={plan.maxFps}
           />
-          <NoteField
-            value={value.noteText}
-            onChange={(noteText) => onChange(presetPatch(device, { noteText }))}
-          />
+          {/* Written after the session, so only once the recording has stopped. */}
+          {!recording && <NoteField value={noteText} onChange={setNoteText} />}
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={() => void make()} disabled={kept < 2}>
               Make the video
@@ -1126,6 +1114,7 @@ export function TimelapseExport({
         onChange={onChange}
         still={middle}
         sample={middleSample}
+        noteText={noteText}
         onRedraw={remake}
       />
     </section>
@@ -1145,98 +1134,4 @@ function downloadVideo(video: { url: string; mime: string }) {
   a.href = video.url;
   a.download = timelapseFileName(video.mime);
   a.click();
-}
-
-interface TrimFieldsProps {
-  stills: Still[];
-  /** The first and last still's time, seconds into the session. */
-  first: number;
-  last: number;
-  /** Where the trim stands, in the same seconds. */
-  from: number;
-  to: number;
-  /** The stills it keeps, [first, end). */
-  startAt: number;
-  endAt: number;
-  onChange: (from: number, to: number) => void;
-}
-
-/**
- * Where the video starts and ends: two sliders over the recorded session, each with the
- * still it lands on, so the cut can be seen before the video is made.
- */
-function TrimFields({ stills, first, last, from, to, startAt, endAt, onChange }: TrimFieldsProps) {
-  // At least a few seconds of session between the two ends, so something is always kept.
-  const gap = Math.max(1, Math.min(10, (last - first) / 20));
-  const trimmed = from > first || to < last;
-  return (
-    <div className="field tl-trim">
-      <span className="field-label">Trim</span>
-      <div className="tl-trim-frames">
-        <TrimFrame still={stills[startAt]} label={`Starts at ${timelapseClock(from)}`} />
-        <TrimFrame
-          still={stills[Math.max(startAt, endAt - 1)]}
-          label={`Ends at ${timelapseClock(to)}`}
-        />
-      </div>
-      <label className="flex flex-col gap-1">
-        <span className="flex justify-between field-hint">
-          <span>Start</span>
-          <span className="tabular">{timelapseClock(from)}</span>
-        </span>
-        <Slider
-          min={first}
-          max={last}
-          step={1}
-          value={from}
-          aria-label="Where the video starts"
-          onChange={(v) => onChange(Math.min(Math.round(v), to - gap), to)}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span className="flex justify-between field-hint">
-          <span>End</span>
-          <span className="tabular">{timelapseClock(to)}</span>
-        </span>
-        <Slider
-          min={first}
-          max={last}
-          step={1}
-          value={to}
-          aria-label="Where the video ends"
-          onChange={(v) => onChange(from, Math.max(Math.round(v), from + gap))}
-        />
-      </label>
-      <span className="field-hint">
-        {trimmed
-          ? `Keeps ${timelapseClock(to - from)} of the ${timelapseClock(last - first)} recorded.`
-          : 'Move the ends to cut the start or the end of the session out of the video.'}
-      </span>
-      {trimmed && (
-        <div>
-          <Button variant="ghost" size="sm" onClick={() => onChange(first, last)}>
-            Keep it all
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** One still, as a small picture: the camera's, or the screen's when there is no camera. */
-function TrimFrame({ still, label }: { still: Still | undefined; label: string }) {
-  const blob = still?.blob ?? still?.screen ?? null;
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    if (!blob) return;
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
-  return (
-    <figure className="tl-trim-frame">
-      {url && blob ? <img src={url} alt="" /> : <span className="tl-trim-empty" />}
-      <figcaption className="field-hint tabular">{label}</figcaption>
-    </figure>
-  );
 }

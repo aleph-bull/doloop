@@ -878,8 +878,8 @@ export function TimelapseLayoutEditor({
       </div>
       <span className="field-hint">
         {withScreen
-          ? 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the screen, the clocks and the texts keep their shape as they grow. Add the screen to choose where it goes; each session asks whether to record it. Your text shows only once you write some. Nothing changes until you save.'
-          : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the texts keep their shape as they grow. Your text shows only once you write some. Nothing changes until you save.'}
+          ? 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the screen, the clocks and the texts keep their shape as they grow. Add the screen to choose where it goes; each session asks whether to record it. Your text shows once you write some, after a session. Nothing changes until you save.'
+          : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the texts keep their shape as they grow. Your text shows once you write some, after a session. Nothing changes until you save.'}
       </span>
 
       {footer?.({ dirty, saving, save: commit, revert })}

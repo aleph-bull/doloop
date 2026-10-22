@@ -1,6 +1,5 @@
 import {
   cleanNoteText,
-  TIMELAPSE_NOTE_MAX,
   type TimelapseAspect,
   type TimelapseDevice,
   type TimelapseLayout,
@@ -8,10 +7,10 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import { useEffect, useState } from 'react';
-import { Button, Input, Modal } from '@komogon/ui';
+import { Button, Modal } from '@komogon/ui';
 import type { ComposeFrame } from '../../lib/timelapse-compose';
 import type { Still } from '../../lib/timelapse';
-import { NOTE_HINT } from './NoteField';
+import { NoteField } from './NoteField';
 import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -35,6 +34,8 @@ export interface RelayoutDialogProps {
   still: Still | undefined;
   /** What the clocks, the task name and the progress bar say at that moment. */
   sample: Partial<Omit<ComposeFrame, 'camera' | 'screen'>>;
+  /** The text on this video, which belongs to it rather than to the layout. */
+  noteText: string;
   /** Saved: make the video again with this. */
   onRedraw: (next: Relayout) => void;
 }
@@ -42,7 +43,8 @@ export interface RelayoutDialogProps {
 /**
  * "Change layout?" after a video is made: the timelapse layout editor, over a moment of that
  * video instead of the live camera, with the text on the video. Saving stores the layout (it
- * is the same setting as in Settings › Timelapse) and the video is made again with it.
+ * is the same setting as in Settings › Timelapse) and the video is made again with it; the
+ * text goes on this video only.
  */
 export function RelayoutDialog({
   open,
@@ -53,20 +55,20 @@ export function RelayoutDialog({
   onChange,
   still,
   sample,
+  noteText: videoNote,
   onRedraw,
 }: RelayoutDialogProps) {
-  const preset = device === 'phone' ? settings.timelapsePhone : settings.timelapse;
   // Only the layout this video uses: a phone's upright or sideways one.
   const targets = targetsFor(settings, device).filter(
     (t) => device === 'computer' || t.id === (orientation ?? 'upright'),
   );
   const backdrop = useStillPictures(open ? still : undefined);
-  const [noteText, setNoteText] = useState(preset.noteText);
-  // Opened again: start from what is saved.
+  const [noteText, setNoteText] = useState(videoNote);
+  // Opened again: start from the video's own text.
   useEffect(() => {
-    if (open) setNoteText(preset.noteText);
-  }, [open, preset.noteText]);
-  const noteChanged = cleanNoteText(noteText) !== preset.noteText;
+    if (open) setNoteText(videoNote);
+  }, [open, videoNote]);
+  const noteChanged = cleanNoteText(noteText) !== cleanNoteText(videoNote);
 
   return (
     <Modal open={open} onClose={onClose} title="Change the layout" className="relayout-dialog">
@@ -85,14 +87,7 @@ export function RelayoutDialog({
           noteText={noteText}
           footer={({ dirty, saving, save, revert }) => (
             <>
-              <Input
-                label="Text on the video"
-                value={noteText}
-                maxLength={TIMELAPSE_NOTE_MAX}
-                placeholder="Week 3 of finals"
-                onChange={(e) => setNoteText(e.target.value)}
-                hint={NOTE_HINT}
-              />
+              <NoteField value={noteText} onChange={setNoteText} />
               <div className="modal-actions">
                 <Button
                   variant="ghost"
@@ -110,16 +105,7 @@ export function RelayoutDialog({
                   onClick={async () => {
                     if (!dirty && !noteChanged) return onClose();
                     const shown = await save();
-                    const words = cleanNoteText(noteText);
-                    if (noteChanged)
-                      await Promise.resolve(
-                        onChange(
-                          device === 'phone'
-                            ? { timelapsePhone: { noteText: words } }
-                            : { timelapse: { noteText: words } },
-                        ),
-                      );
-                    onRedraw({ ...shown, noteText: words });
+                    onRedraw({ ...shown, noteText: cleanNoteText(noteText) });
                     onClose();
                   }}
                 >
