@@ -88,6 +88,14 @@
   gap: 10px;
   padding: 12px 14px;
 }
+/* The board has more room around it and between its rows than the other side cards. */
+.side-card.is-board {
+  gap: 14px;
+  padding: 18px 20px;
+}
+.side-card.is-board .side-board {
+  gap: 6px;
+}
 .side-head {
   display: flex;
   align-items: center;
@@ -155,7 +163,9 @@
   padding: 8px 0 0;
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* One equal column per figure, so however many there are they sit centred. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 .side-stats li {
   display: flex;
@@ -1032,6 +1042,10 @@
 .side-row-btn:disabled {
   opacity: 0.5;
 }
+/* Nudged already: the crossed-out bell, quieter until they can be nudged again. */
+.side-row-btn.is-off {
+  color: var(--fg-subtle);
+}
 .side-add {
   height: 24px;
   padding: 0 10px;
@@ -1362,6 +1376,55 @@
 .live-clock {
   color: var(--status-bad);
   font-weight: 600;
+}
+/* A break or a pause: still in the session, but not focusing. */
+.live-clock.is-resting {
+  color: var(--fg-muted);
+}
+.live-dot.is-resting {
+  background: var(--fg-subtle);
+}
+.live-dot.is-small.is-resting {
+  box-shadow: 0 0 0 2px var(--panel-fill, #000);
+}
+
+/* A friend in a session, in the friends card: a dot on the picture, a line under the name. */
+.side-person-avatar {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+.side-person-avatar .live-dot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+}
+.side-person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.side-person-live {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* On a friend's profile. */
+.profile-live {
+  gap: 6px;
+  max-width: 100%;
+}
+.profile-live .live-dot.is-small {
+  box-shadow: none;
+}
+.profile-live .live-line {
+  font-size: inherit;
+  color: inherit;
+  min-width: 0;
 }
 
 .group {

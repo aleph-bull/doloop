@@ -148,6 +148,7 @@ export async function buildServer(opts: BuildOptions) {
     autoSync: opts.calendar?.autoSync ?? false,
     stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
+    fetchFeed: opts.calendar?.fetchFeed,
   };
   const email = {
     mailer: opts.mailer ?? null,
@@ -158,7 +159,7 @@ export async function buildServer(opts: BuildOptions) {
   };
   emailAuthRoutes(app, opts.db, clock, email);
   meRoutes(app, opts.db, clock, opts.mediaStore ?? null);
-  adminRoutes(app, opts.db, admins);
+  adminRoutes(app, opts.db, admins, clock);
   leaderboardRoutes(app, opts.db, clock);
   profileRoutes(app, opts.db, clock);
   socialRoutes(app, opts.db, clock, opts.mediaStore ?? null);

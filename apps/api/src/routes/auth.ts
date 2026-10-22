@@ -5,6 +5,7 @@ import { isInvited } from '../auth/plugin';
 import type { Db } from '../db/client';
 import { HttpError } from '../errors';
 import { isAdmin } from '../services/admin';
+import { isEmailBlocked, SUSPENDED } from '../services/moderation';
 import { hashPassword, signIn, signUp } from '../services/passwords';
 import { accountSession } from '../services/account-session';
 import { issueEmailCode, requestLimits } from '../services/email-codes';
@@ -108,6 +109,7 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
     if (isLocalTestEmail(body.email))
       throw new HttpError(403, 'Use the local test account sign-in.');
     if (!isInvited(body.email, opts.allowedEmails)) throw new HttpError(403, 'invite_only');
+    if (await isEmailBlocked(db, body.email)) throw new HttpError(403, SUSPENDED);
     const claim = isAdmin(body.email, opts.adminEmails ?? []);
     const timezone = timezoneOf(req.headers['x-timezone']);
     if (opts.requireVerification) {
@@ -173,6 +175,8 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
     if (!isInvited(identity.email, opts.allowedEmails)) throw new HttpError(403, 'invite_only');
     if (isLocalTestEmail(identity.email))
       throw new HttpError(403, 'Use the local test account sign-in.');
+    // Before googleSignIn, which would start an account for a new address.
+    if (await isEmailBlocked(db, identity.email)) throw new HttpError(403, SUSPENDED);
     const account = await googleSignIn(db, identity, timezoneOf(req.headers['x-timezone']));
     await db
       .update(users)

@@ -418,6 +418,6 @@ open. Pick it up when the owner asks; don't change any of it unasked.
 
 ### I. Never audited (new or rewritten after the audit snapshot)
 
-The Landing page (`pages/Landing.tsx`), the rewritten Onboarding, SignIn's new copy,
-ResetPassword, OutlookCalendarSettings, the dev-only LocalMailInbox and LocalTestAccounts, and
-the rest of the FocusDashboard "Time to focus" screen.
+The rewritten Onboarding, SignIn's new copy, ResetPassword, OutlookCalendarSettings, the
+dev-only LocalMailInbox and LocalTestAccounts, and the rest of the FocusDashboard "Time to
+focus" screen.

@@ -6238,376 +6238,6 @@
   background: hsl(var(--accent-h) min(var(--accent-s), 45%) min(var(--accent-l), 30%));
 }
 
-/* Landing: the dashboard's rounded chrome and matte cards, without a photo backdrop. */
-.landing {
-  --fg: #202431;
-  --muted: #596172;
-  --accent: #315f80;
-  --accent-fill: #315f80;
-  --accent-fg: #fff;
-  min-height: 100vh;
-  background: #edf0f5;
-  color: var(--fg);
-}
-.landing::before {
-  display: none;
-}
-.landing-content {
-  max-width: 1160px;
-  padding: 20px 32px 0;
-  margin: 0 auto;
-  position: relative;
-}
-.landing-nav {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 24px;
-  min-height: 62px;
-  padding: 10px 22px;
-  border: 1px solid #fff;
-  border-radius: 40px;
-  background: #f9fafce6;
-}
-.landing-nav nav {
-  display: flex;
-  align-items: center;
-  gap: 28px;
-  font-size: 14px;
-}
-.landing-nav a,
-.landing-footer a {
-  color: inherit;
-}
-.landing-nav .brand > span {
-  display: inline;
-}
-.landing-nav .brand .landing-brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: #315f80;
-  color: #fff;
-}
-.landing-hero {
-  display: flex;
-  flex-direction: column;
-  gap: 56px;
-  padding: 84px 0 80px;
-  align-items: center;
-}
-.landing-intro {
-  text-align: center;
-  max-width: 860px;
-}
-.landing-kicker {
-  font-size: 13px;
-  color: #596172;
-  margin-bottom: 22px;
-}
-.landing-intro h1 {
-  font-size: clamp(42px, 5.3vw, 76px);
-  line-height: 1.08;
-  letter-spacing: -0.05em;
-  font-weight: 600;
-  max-width: 860px;
-}
-.landing-lead {
-  font-size: 18px;
-  line-height: 1.7;
-  color: #596172;
-  max-width: 630px;
-  margin: 26px auto 0;
-}
-.landing-actions {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 30px;
-}
-.landing .btn-primary,
-:root[data-panel='glass'] .landing .btn-primary {
-  background: #315f80;
-  border-color: #315f80;
-  color: #fff;
-}
-.landing .btn-primary:hover,
-:root[data-panel='glass'] .landing .btn-primary:hover {
-  background: #264c68;
-}
-.landing-text-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: inherit;
-  font-size: 14px;
-  text-underline-offset: 4px;
-}
-.landing-footnote {
-  color: #596172;
-  font-size: 12px;
-  margin-top: 18px;
-}
-.landing-preview {
-  width: 100%;
-  max-width: 900px;
-  padding: 24px;
-  border: 1px solid #fff;
-  border-radius: 28px;
-  background: #f7f8fb;
-  box-shadow: 0 16px 55px #2024310b;
-}
-.landing-preview-top {
-  display: flex;
-  justify-content: space-between;
-  color: #596172;
-  font-size: 12px;
-  padding: 0 4px 18px;
-}
-.landing-preview-tabs {
-  display: flex;
-  gap: 24px;
-  padding: 12px 16px;
-  border-radius: 30px;
-  background: #e8ebf1;
-  font-size: 12px;
-}
-.landing-preview-tabs span:first-child {
-  font-weight: 600;
-}
-.landing-preview-body {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 24px;
-  margin-top: 24px;
-}
-.landing-preview-work,
-.landing-example-session {
-  border: 1px solid #d9dee7;
-  border-radius: 18px;
-  background: #f1f3f7;
-  padding: 24px;
-}
-.landing-example-course {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 600;
-  padding-bottom: 18px;
-  border-bottom: 1px solid #20243112;
-}
-.landing-course-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #53768d;
-}
-.landing-example-label {
-  color: #596172;
-  font-size: 12px;
-  font-weight: 400;
-  margin-left: auto;
-}
-.landing-example-task {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 20px 0 0;
-}
-.landing-example-task strong {
-  display: block;
-  font-size: 14px;
-  font-weight: 400;
-}
-.landing-example-task div > span {
-  display: block;
-  font-size: 12px;
-  color: #596172;
-  margin-top: 4px;
-}
-.landing-check,
-.landing-empty-check {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.landing-check {
-  background: #315f80;
-  color: #fff;
-}
-.landing-empty-check {
-  border: 1px solid #8591a1;
-}
-.landing-example-session {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-}
-.landing-example-session > div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #596172;
-}
-.landing-example-clock {
-  font-size: 68px;
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: -0.05em;
-}
-.landing-example-clock span {
-  margin-left: 6px;
-  font-size: 13px;
-  font-weight: 400;
-  letter-spacing: 0;
-}
-.landing-preview-start {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 28px;
-  border-radius: 24px;
-  background: #315f80;
-  color: #fff;
-  text-decoration: none;
-  font-size: 13px;
-}
-.landing-details {
-  padding: 50px 0 64px;
-  border-top: 1px solid #20243115;
-  scroll-margin-top: 24px;
-}
-.landing-section-head h2,
-.landing-end h2,
-.landing-social h2 {
-  font-size: 32px;
-  line-height: 1.2;
-  letter-spacing: -0.035em;
-  font-weight: 600;
-}
-.landing-feature-list {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  margin-top: 30px;
-}
-.landing-feature-list article {
-  padding: 26px;
-  border-radius: 22px;
-  border: 1px solid #fff;
-  background: #f6f7fa;
-}
-.landing-step {
-  color: #596172;
-  font-size: 12px;
-}
-.landing-feature-list h3 {
-  margin: 14px 0 12px;
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.landing-feature-list p,
-.landing-social p {
-  font-size: 14px;
-  line-height: 1.75;
-  color: #596172;
-}
-.landing-feature-list a {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 22px;
-  color: #315f80;
-  font-size: 13px;
-}
-.landing-social {
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  align-items: center;
-  gap: 72px;
-  padding: 56px 0 72px;
-  scroll-margin-top: 24px;
-}
-.landing-social p {
-  margin: 18px 0;
-}
-.landing-social .landing-kicker {
-  margin: 0 0 14px;
-}
-.landing-profile-example {
-  display: flex;
-  align-items: flex-start;
-  gap: 18px;
-  padding: 30px;
-  background: #f6f7fa;
-  border: 1px solid #fff;
-  border-radius: 24px;
-}
-.landing-profile-initial {
-  display: grid;
-  place-items: center;
-  background: #dce6ef;
-  color: #315f80;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  font-size: 22px;
-}
-.landing-profile-example > div {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 13px;
-}
-.landing-profile-example .landing-example-label {
-  margin-left: 0;
-}
-.landing-profile-example strong {
-  font-size: 20px;
-  font-weight: 600;
-}
-.landing-profile-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: #315f80;
-}
-.landing-end {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  flex-wrap: wrap;
-  padding: 44px 0 64px;
-  border-top: 1px solid #20243115;
-}
-.landing-end p {
-  font-size: 14px;
-  color: #596172;
-  margin-top: 10px;
-}
-.landing-footer {
-  display: flex;
-  justify-content: space-between;
-  border-top: 1px solid #20243115;
-  padding: 26px 0;
-  color: #596172;
-  font-size: 13px;
-}
 .social-profile-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6666,61 +6296,8 @@
   margin-top: 10px;
 }
 @media (max-width: 800px) {
-  .landing-content {
-    padding: 12px 20px 0;
-  }
-  .landing-hero {
-    padding: 60px 0;
-    gap: 36px;
-  }
-  .landing-preview-body,
-  .landing-feature-list,
-  .landing-social,
   .social-profile-grid {
     grid-template-columns: 1fr;
-  }
-  .landing-social {
-    gap: 28px;
-  }
-  .landing-feature-list {
-    gap: 16px;
-  }
-  .landing-preview {
-    padding: 16px;
-  }
-}
-@media (max-width: 440px) {
-  .landing-nav {
-    padding: 9px 12px;
-    gap: 10px;
-  }
-  .landing-nav nav {
-    gap: 12px;
-    font-size: 11px;
-  }
-  .landing-nav .brand {
-    font-size: 15px;
-    gap: 6px;
-  }
-  .landing-nav .brand .landing-brand-mark {
-    width: 28px;
-    height: 28px;
-  }
-  .landing-lead {
-    font-size: 16px;
-  }
-  .landing-preview-tabs {
-    gap: 20px;
-    padding: 12px;
-  }
-  .landing-preview-work,
-  .landing-example-session {
-    padding: 20px;
-  }
-  .landing-section-head h2,
-  .landing-end h2,
-  .landing-social h2 {
-    font-size: 28px;
   }
 }
 
@@ -6815,4 +6392,402 @@
 }
 :root:has(.tl-unsaved-stack) .toast-stack {
   bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px) + 60px);
+}
+
+/* Settings › Timelapse: the phone's and the computer's presets, each folded until clicked. */
+.tl-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tl-preset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.tl-preset-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-radius: inherit;
+  font: inherit;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.tl-preset-head:hover {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.tl-preset-icon {
+  flex: none;
+  color: var(--fg-muted);
+}
+.tl-preset-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.tl-preset-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.tl-preset-here {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.tl-preset-sum {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.tl-preset-chevron {
+  flex: none;
+  color: var(--fg-muted);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.tl-preset.is-open .tl-preset-chevron {
+  transform: rotate(180deg);
+}
+.tl-preset-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 14px 16px;
+}
+
+/*
+ * The camera screen: on a phone recording a timelapse, the focus screen is the live camera
+ * with the timer on it. Always light text on the dark-ish picture, whatever the theme, and
+ * it turns with the phone: controls along the bottom upright, down the right side sideways.
+ */
+.pcam {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  user-select: none;
+  touch-action: manipulation;
+}
+.pcam-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The front camera shows as a mirror, like the Camera app; the stills are not mirrored. */
+.pcam[data-facing='user'] .pcam-video {
+  transform: scaleX(-1);
+}
+/* A little darker while focus runs, back up for breaks and pauses. Never in the stills. */
+.pcam-dim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.4);
+  opacity: 0;
+  transition: opacity 900ms var(--ease-out);
+  pointer-events: none;
+}
+.pcam-dim.is-on {
+  opacity: 1;
+}
+.pcam-top {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pcam-top-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+.pcam-rec {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.45);
+  font-size: var(--text-sm);
+}
+.pcam-rec .timelapse-dot.is-idle {
+  background: rgb(255 255 255 / 0.55);
+}
+.pcam-round,
+.pcam-shutter,
+.pcam-pill,
+.pcam-restart {
+  border: none;
+  font: inherit;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pcam-round {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.42);
+}
+.pcam-round.is-stop {
+  background: color-mix(in srgb, var(--status-bad) 72%, rgb(0 0 0 / 0.5));
+}
+.pcam-round:disabled,
+.pcam-shutter:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* The big round button where the Camera app has its shutter: pause and resume. */
+.pcam-shutter {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: rgb(255 255 255 / 0.16);
+}
+.pcam-shutter:active {
+  background: rgb(255 255 255 / 0.3);
+}
+.pcam-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.42);
+  font-size: var(--text-sm);
+}
+.pcam-restart {
+  position: absolute;
+  top: calc(max(14px, env(safe-area-inset-top)) + 64px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(320px, calc(100% - 32px));
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: rgb(0 0 0 / 0.6);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.pcam-info {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: calc(max(20px, env(safe-area-inset-bottom)) + 150px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.pcam-info .focus-phase {
+  color: rgb(255 255 255 / 0.82);
+}
+.pcam-info .focus-time {
+  font-size: clamp(3.75rem, 21vw, 7.5rem);
+}
+.pcam-info .focus-context {
+  margin-top: 6px;
+}
+.pcam-info .focus-subject {
+  font-size: var(--text-lg);
+}
+.pcam-info .focus-child,
+.pcam-info .focus-for {
+  color: rgb(255 255 255 / 0.78);
+}
+.pcam-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(22px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.pcam-extra {
+  display: flex;
+  gap: 8px;
+}
+.pcam-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+}
+@media (orientation: landscape) {
+  /* The top buttons stand clear of the control column down the right side. */
+  .pcam-top {
+    right: calc(max(18px, env(safe-area-inset-right)) + 96px);
+  }
+  .pcam-info {
+    left: max(24px, env(safe-area-inset-left));
+    right: 140px;
+    bottom: max(20px, env(safe-area-inset-bottom));
+    align-items: flex-start;
+    text-align: left;
+  }
+  .pcam-info .focus-time {
+    font-size: clamp(3.5rem, 15vh, 6rem);
+  }
+  .pcam-dock {
+    top: 0;
+    bottom: 0;
+    left: auto;
+    right: max(18px, env(safe-area-inset-right));
+    /* Skip break and +15 min sit to the left of the column, which stays at the edge. */
+    flex-direction: row;
+    justify-content: center;
+  }
+  .pcam-extra {
+    flex-direction: column;
+  }
+  .pcam-controls {
+    flex-direction: column-reverse;
+    gap: 28px;
+  }
+}
+
+/* The phone's trim, like the Photos app's: a viewer, then a strip of stills with handles. */
+.ptrim-view {
+  display: block;
+  max-width: 100%;
+  margin: 2px auto 6px;
+  border-radius: var(--radius-md);
+  background: #000;
+}
+.ptrim-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.ptrim-play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+}
+.ptrim-strip {
+  position: relative;
+  flex: 1;
+  height: 52px;
+  /* Room for the handles, which stand outside the kept part. */
+  margin: 0 14px;
+  touch-action: none;
+}
+.ptrim-thumbs {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.ptrim-thumbs > * {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  object-fit: cover;
+}
+.ptrim-shade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+.ptrim-shade.is-left {
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+}
+.ptrim-shade.is-right {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+/* The kept part, framed; its two sides are the handles. */
+.ptrim-frame {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  border-top: 3px solid var(--fg-muted);
+  border-bottom: 3px solid var(--fg-muted);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.ptrim-frame.is-trimmed {
+  border-color: var(--accent);
+}
+.ptrim-handle {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--fg-muted);
+  color: var(--bg);
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ew-resize;
+}
+.ptrim-frame.is-trimmed .ptrim-handle {
+  background: var(--accent);
+  color: #fff;
+}
+.ptrim-handle.is-start {
+  left: -14px;
+  border-radius: 6px 0 0 6px;
+}
+.ptrim-handle.is-end {
+  right: -14px;
+  border-radius: 0 6px 6px 0;
+}
+.ptrim-handle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.ptrim-head {
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+  pointer-events: none;
+}
+.ptrim-times {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
 }

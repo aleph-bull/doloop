@@ -45,6 +45,7 @@ export const keys = {
   busy: (from: string, to: string) => ['calendar', 'busy', from, to] as const,
   commitments: ['calendar', 'commitments'] as const,
   google: ['calendar', 'google'] as const,
+  feeds: ['calendar', 'feeds'] as const,
   shop: ['shop'] as const,
   background: ['me', 'background'] as const,
   rewards: ['rewards'] as const,
@@ -66,6 +67,7 @@ export const keys = {
   jams: ['social', 'jams', 2] as const,
   compare: ['social', 'compare'] as const,
   groups: ['social', 'groups', 2] as const,
+  live: ['social', 'live'] as const,
   nudges: ['social', 'nudges'] as const,
   // Versioned: the persisted cache held older shapes of these without the per-row lines.
   leaderboard: (scope: LeaderboardScope) => ['leaderboard', 2, scope] as const,
@@ -87,10 +89,15 @@ export function usePace() {
 }
 
 export function useActiveSession() {
+  const qc = useQueryClient();
+  // While a session runs, keep checking in from a background tab too: friends see a
+  // session as live only while it reports in, and many people study with the tab hidden.
+  const running = !!qc.getQueryData<{ active: unknown }>(keys.active)?.active;
   return useQuery({
     queryKey: keys.active,
     queryFn: api.activeSession,
     refetchInterval: 20_000,
+    refetchIntervalInBackground: running,
     staleTime: 5_000,
   });
 }
@@ -173,6 +180,10 @@ export function useCommitments() {
 
 export function useGoogleStatus() {
   return useQuery({ queryKey: keys.google, queryFn: api.googleStatus, staleTime: 30_000 });
+}
+
+export function useCalendarFeeds() {
+  return useQuery({ queryKey: keys.feeds, queryFn: api.calendarFeeds, staleTime: 30_000 });
 }
 
 /* ---------- planned blocks (undoable) ---------- */
@@ -631,6 +642,16 @@ export function useEndJam() {
   return useJamMutation((id: string) => api.endJam(id));
 }
 
+/** Friends in a session right now. Polled, since sessions start and stop all the time. */
+export function useLiveFriends() {
+  return useQuery({
+    queryKey: keys.live,
+    queryFn: api.liveFriends,
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+  });
+}
+
 export function useGroups() {
   // Live timers and nudges go stale fast: refetch while the tab is open.
   return useQuery({
@@ -661,9 +682,17 @@ export function useLeaveGroup() {
   return useGroupMutation((id: string) => api.leaveGroup(id));
 }
 export function useNudge() {
-  return useGroupMutation(({ userId, groupId }: { userId: string; groupId?: string }) =>
-    api.nudge(userId, groupId),
-  );
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, groupId }: { userId: string; groupId?: string }) =>
+      api.nudge(userId, groupId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.groups });
+      // The friends card swaps the bell for a crossed-out one until they can be nudged
+      // again; stay pending until that has loaded so the bell doesn't flash back first.
+      return qc.invalidateQueries({ queryKey: keys.friends });
+    },
+  });
 }
 export function useNudges() {
   return useQuery({

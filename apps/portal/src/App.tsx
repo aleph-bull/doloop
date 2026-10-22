@@ -1,15 +1,14 @@
 import { lazy, Suspense, useEffect, type ReactNode } from 'react';
-import { Navigate, Route, Routes, useLocation, useParams } from 'react-router';
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router';
 import { Spinner } from '@komogon/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
 import { ApiError } from './lib/api';
-import { NOT_INVITED_MESSAGE, useAuth } from './lib/auth';
+import { NOT_INVITED_MESSAGE, SUSPENDED_MESSAGE, useAuth } from './lib/auth';
 import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
 import { Today } from './pages/Today';
-import { Landing } from './pages/Landing';
 
 // Route-level code splitting keeps the first paint small (spec §9: LCP < 2 s).
 const AuthCallback = lazy(() =>
@@ -58,7 +57,7 @@ const fallback = (
   </div>
 );
 
-function RequireAuth({ children, landing = false }: { children: ReactNode; landing?: boolean }) {
+function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const location = useLocation();
   if (auth.status === 'loading')
@@ -67,34 +66,40 @@ function RequireAuth({ children, landing = false }: { children: ReactNode; landi
         <Spinner />
       </Centered>
     );
-  if (auth.status === 'signed-out' && landing && location.pathname === '/') return <Landing />;
   if (auth.status === 'signed-out')
     return <Navigate to="/signin" state={{ from: location }} replace />;
   return <>{children}</>;
 }
 
-/** The API turned this account away (`ALLOWED_EMAILS`): sign out and say why. */
-function NotInvited() {
+/**
+ * The API turned this account away (not on `ALLOWED_EMAILS`, or suspended by an admin):
+ * sign out and say why.
+ */
+function TurnedAway({ message }: { message: string }) {
   const auth = useAuth();
   const { signOut } = auth;
+  const navigate = useNavigate();
   useEffect(() => {
-    void signOut();
-  }, [signOut]);
+    // Go on once signed out: RequireAuth then sends the signed-out app to sign in in this
+    // component's place, so the <Navigate> below would never get to say why.
+    void signOut().then(() => navigate('/signin', { replace: true, state: { error: message } }));
+  }, [signOut, navigate, message]);
   if (auth.status === 'signed-in')
     return (
       <Centered>
         <Spinner />
       </Centered>
     );
-  return <Navigate to="/signin" replace state={{ error: NOT_INVITED_MESSAGE }} />;
+  return <Navigate to="/signin" replace state={{ error: message }} />;
 }
 
 /** Sends new users through onboarding once; everything else renders in the shell. */
 function Gate({ children }: { children: ReactNode }) {
   const me = useMe();
   const location = useLocation();
-  if (me.error instanceof ApiError && me.error.status === 403 && me.error.message === 'invite_only')
-    return <NotInvited />;
+  const refused = me.error instanceof ApiError && me.error.status === 403 ? me.error.message : null;
+  if (refused === 'invite_only') return <TurnedAway message={NOT_INVITED_MESSAGE} />;
+  if (refused === 'account_suspended') return <TurnedAway message={SUSPENDED_MESSAGE} />;
   if (me.isError && !me.data)
     return (
       <Centered>
@@ -123,7 +128,8 @@ export function App() {
         <Routes>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignIn />} />
-          <Route path="/welcome" element={<Landing />} />
+          {/* The app's own landing page was removed (2026-10-21); signed-out visitors sign in. */}
+          <Route path="/welcome" element={<Navigate to="/signin" replace />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
@@ -149,7 +155,7 @@ export function App() {
           />
           <Route
             element={
-              <RequireAuth landing>
+              <RequireAuth>
                 <Gate>
                   <AppShell />
                 </Gate>

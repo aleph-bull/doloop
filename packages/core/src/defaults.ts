@@ -1,5 +1,6 @@
 import { UOFT_GRADE_SCALE } from './grades';
 import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
+import { defaultPhoneTimelapse, normalizePhoneTimelapse } from './timelapse-presets';
 import type { PomodoroConfig, UserSettings } from './types';
 
 /**
@@ -130,6 +131,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     stats: true,
     leaderboard: 'global',
     requests: true,
+    live: true,
   },
   dashboard: { focusOnly: false },
   nav: { style: 'top' },
@@ -150,6 +152,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     aspect: 'camera',
     layout: defaultTimelapseLayout(16 / 9),
   },
+  // Upright and sideways, each in the camera's shape held that way.
+  timelapsePhone: defaultPhoneTimelapse(),
   dismissed: [],
 };
 
@@ -199,5 +203,9 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
     seed.clock.visible = tl.showClockTime !== false;
   }
   tl.layout = normalizeTimelapseLayout(savedLayout, seed);
+  settings.timelapsePhone = normalizePhoneTimelapse(
+    settings.timelapsePhone,
+    partial.timelapsePhone as Partial<Record<'layout' | 'sidewaysLayout', unknown>> | undefined,
+  );
   return settings;
 }

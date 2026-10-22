@@ -1,7 +1,8 @@
-import { useDeferredValue, useState, type ReactNode } from 'react';
+import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { universityById } from '@komogon/core';
 import {
+  BellOff,
   BellRing,
   Check,
   ChevronRight,
@@ -12,8 +13,8 @@ import {
   X,
 } from 'lucide-react';
 import { Panel, Spinner, useToast } from '@komogon/ui';
-import type { LeaderboardScope, Person } from '../../lib/api';
-import { fmtHours } from '../../lib/format';
+import type { LeaderboardScope, LiveMember, Person } from '../../lib/api';
+import { fmtHours, fmtTime } from '../../lib/format';
 import {
   useAcceptFriendRequest,
   useAvatar,
@@ -21,12 +22,14 @@ import {
   useFindPeople,
   useFriends,
   useLeaderboard,
+  useLiveFriends,
   useMe,
   useNudge,
   useRemoveFriend,
   useSendFriendRequest,
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { LiveDot, liveStateLabel, StudyingFor } from './LiveNow';
 
 const unknown = (id: string): Person => ({
   id,
@@ -46,13 +49,13 @@ function RowButton({
   label: string;
   onClick: () => void;
   busy?: boolean;
-  tone?: 'yes';
+  tone?: 'yes' | 'off';
   children: ReactNode;
 }) {
   return (
     <button
       type="button"
-      className={`side-row-btn${tone === 'yes' ? ' is-yes' : ''}`}
+      className={`side-row-btn${tone ? ` is-${tone}` : ''}`}
       aria-label={label}
       title={label}
       disabled={busy}
@@ -63,12 +66,33 @@ function RowButton({
   );
 }
 
-function PersonRow({ person, children }: { person: Person; children?: ReactNode }) {
+function PersonRow({
+  person,
+  live,
+  children,
+}: {
+  person: Person;
+  /** In a session right now: a dot on the picture and a line under the name. */
+  live?: LiveMember;
+  children?: ReactNode;
+}) {
   return (
     <li className="side-person">
       <Link to={`/profile/${person.id}`} className="side-person-link">
-        <Avatar name={person.name} url={person.avatarUrl} size="xs" />
-        <span className="side-person-name">{person.name}</span>
+        <span className="side-person-avatar">
+          <Avatar name={person.name} url={person.avatarUrl} size="xs" />
+          {live && <LiveDot live={live} small />}
+        </span>
+        {live ? (
+          <span className="side-person-text">
+            <span className="side-person-name">{person.name}</span>
+            <span className="side-person-live">
+              {liveStateLabel(live) ?? 'Studying'} · <StudyingFor since={live.startedAt} />
+            </span>
+          </span>
+        ) : (
+          <span className="side-person-name">{person.name}</span>
+        )}
       </Link>
       <span className="side-person-actions">{children}</span>
     </li>
@@ -84,6 +108,7 @@ const REQUESTS_SHOWN = 3;
  */
 export function FriendsCard() {
   const q = useFriends();
+  const live = useLiveFriends();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query.trim());
   const found = useFindPeople(deferred);
@@ -100,6 +125,26 @@ export function FriendsCard() {
   const who = (id: string) => data?.people[id] ?? found.data?.people[id] ?? unknown(id);
   const inbound = data?.incoming ?? [];
   const shownInbound = allInbound ? inbound : inbound.slice(0, REQUESTS_SHOWN);
+  const liveBy = new Map((live.data?.live ?? []).map((l) => [l.userId, l]));
+  // Friends in a session come first, so a glance at the card says who is studying.
+  const friends = [...(data?.friends ?? [])].sort(
+    (a, b) => Number(liveBy.has(b.userId)) - Number(liveBy.has(a.userId)),
+  );
+
+  // A friend nudged in the last two hours shows a crossed-out bell until nudgeAgainAt;
+  // `now` ticks over when the next of those comes round.
+  const [now, setNow] = useState(() => Date.now());
+  const againAt = (f: { nudgeAgainAt?: string | null }) =>
+    f.nudgeAgainAt ? Date.parse(f.nudgeAgainAt) : 0;
+  const nextAgain = Math.min(
+    ...(data?.friends ?? []).map(againAt).filter((t) => t > now),
+    Infinity,
+  );
+  useEffect(() => {
+    if (!Number.isFinite(nextAgain)) return;
+    const t = setTimeout(() => setNow(Date.now()), Math.max(0, nextAgain - Date.now()) + 500);
+    return () => clearTimeout(t);
+  }, [nextAgain]);
 
   return (
     <Panel as="aside" className="side-card" aria-label="Friends">
@@ -161,23 +206,38 @@ export function FriendsCard() {
             !deferred && <p className="muted text-xs">No friends yet. Search above.</p>
           ) : (
             <ul className="side-people">
-              {data.friends.map((f) => (
-                <PersonRow key={f.userId} person={who(f.userId)}>
-                  <RowButton
-                    label="Nudge to study"
-                    busy={nudge.isPending}
-                    onClick={() =>
-                      nudge.mutate(
-                        { userId: f.userId },
-                        {
-                          onSuccess: () => toast(`Nudged ${who(f.userId).name}.`),
-                          onError: fail,
-                        },
-                      )
-                    }
-                  >
-                    <BellRing size={13} aria-hidden />
-                  </RowButton>
+              {friends.map((f) => (
+                <PersonRow key={f.userId} person={who(f.userId)} live={liveBy.get(f.userId)}>
+                  {/* Someone already studying needs no nudge, and the room goes to their line. */}
+                  {liveBy.has(f.userId) ? null : againAt(f) > now ? (
+                    <RowButton
+                      label={`Nudged. Again at ${fmtTime(f.nudgeAgainAt)}`}
+                      tone="off"
+                      onClick={() =>
+                        toast(
+                          `You can nudge ${who(f.userId).name} again at ${fmtTime(f.nudgeAgainAt)}.`,
+                        )
+                      }
+                    >
+                      <BellOff size={13} aria-hidden />
+                    </RowButton>
+                  ) : (
+                    <RowButton
+                      label="Nudge to study"
+                      busy={nudge.isPending}
+                      onClick={() =>
+                        nudge.mutate(
+                          { userId: f.userId },
+                          {
+                            onSuccess: () => toast(`Nudged ${who(f.userId).name}.`),
+                            onError: fail,
+                          },
+                        )
+                      }
+                    >
+                      <BellRing size={13} aria-hidden />
+                    </RowButton>
+                  )}
                   <RowButton
                     label="Remove friend"
                     busy={remove.isPending}
@@ -315,7 +375,7 @@ export function MiniLeaderboard() {
   const board = useLeaderboard(scope);
   const entries = board.data?.entries ?? [];
   return (
-    <Panel as="aside" className="side-card" aria-label="Leaderboard">
+    <Panel as="aside" className="side-card is-board" aria-label="Leaderboard">
       <div className="side-head">
         <h2 className="side-title">Leaderboard</h2>
         <div className="side-scope" role="group" aria-label="Which board">

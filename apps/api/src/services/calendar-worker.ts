@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 import type { FastifyInstance } from 'fastify';
 import type { Db } from '../db/client';
-import { googleCalendar, outlookCalendar, users } from '../db/schema';
+import { calendarFeeds, googleCalendar, outlookCalendar, users } from '../db/schema';
+import { FEED_REFRESH_MS, syncFeed, type FeedDeps } from './calendar-feeds';
 import { syncGoogle, type CalendarDeps } from './calendar-sync';
 import { syncCalendarImport, type OutlookDeps } from './calendar-import';
 
@@ -11,6 +12,7 @@ export function registerCalendarWorker(
   db: Db,
   deps: { google: CalendarDeps | null; outlook: OutlookDeps | null },
   clock: () => string,
+  feeds?: FeedDeps,
 ) {
   let running: Promise<void> | null = null;
   let stopped = false;
@@ -38,6 +40,19 @@ export function registerCalendarWorker(
         } catch (err) {
           app.log.error({ err, provider }, 'Calendar background sync failed');
         }
+      }
+    }
+    if (!feeds) return;
+    // Calendars added by link. A failed read is saved on the feed and waits its turn too.
+    for (const feed of await db.select().from(calendarFeeds)) {
+      if (stopped) return;
+      if (feed.checkedAt && Date.parse(clock()) - feed.checkedAt.getTime() < FEED_REFRESH_MS)
+        continue;
+      try {
+        const user = await db.query.users.findFirst({ where: eq(users.id, feed.userId) });
+        if (user) await syncFeed(db, user, feed, feeds, clock());
+      } catch (err) {
+        app.log.error({ err, feed: feed.id }, 'Calendar feed refresh failed');
       }
     }
   };

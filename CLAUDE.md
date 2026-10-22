@@ -62,6 +62,15 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
   data, and setting a new password. Testers are told on the sign-in page that the owner can
   see accounts and study data, and are asked not to reuse a personal password.
+- Admin tools (2026-10-21): each account's Manage dialog adds study time, takes time off or
+  deletes a session, restarts onboarding, and suspends or deletes the account; the page also
+  has Dev tools (go through onboarding again on your own account) and Blocked emails. A
+  suspension is `users.banned_at` plus the address in `blocked_emails`, kept in step
+  (`services/moderation.ts`); it is checked where every sign-in token is issued
+  (`accountSession`) and on every request (the auth plugin answers 403
+  `account_suspended`, and the portal signs out with a message). Suspended accounts are left
+  off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
+  blocked from there.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.
@@ -153,6 +162,12 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
+- **Never put a JavaScript `Date` inside a hand-written Drizzle `sql` template.** The hosted
+  API talks to Neon through postgres.js, and Drizzle switches off postgres.js's date
+  conversion, so a raw `Date` there fails the whole query. Tests and sandboxes run on PGlite,
+  which takes the `Date` happily, so nothing catches it before komogon.app (it broke the Jams
+  tab, found 2026-10-21). Use Drizzle's own comparisons (`gt(jams.endsAt, now)`, `lte`,
+  `or`), which convert through the column, or pass `date.toISOString()`.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
@@ -189,6 +204,9 @@ Keep the owner's own wording verbatim, "!" included.
 
 ## Recent changes (2026-10-20)
 
+- Timelapse on phones (2026-10-21): recording on a phone turns the focus screen into the
+  camera, and Settings › Timelapse has a Phone and a Computer preset; see "The timelapse"
+  below.
 - Calendar (2026-10-21): rebuilt from scratch; see "The calendar" below.
 - Social (2026-10-21): the feed, groups, jams, the leaderboard, nudges and kudos. The whole
   thing is written up in "Social: how it works" below.
@@ -323,7 +341,8 @@ posts in the middle, the first five of the leaderboard on the right (Global or F
 880px of page width the left column moves under the posts (it holds the requests, so it must
 stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
 dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
-The owner called the first version "massive"; don't let it grow back.
+The owner called the first version "massive"; don't let it grow back. The one exception is
+the small leaderboard, which they asked to have roomier (18px 20px padding, 2026-10-21).
 
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and the task's title
@@ -391,6 +410,17 @@ study once every two hours per pair (a second one inside the window is a 409 tha
 "Nudge" appears next to a group member under half the group's average. The nudged person
 sees them on the dashboard until "Got it", and they expire after a day.
 
+**Studying now (2026-10-21).** Friends in a session show on the feed ("Live now" above the
+composer, `components/social/LiveNow.tsx`, shared with the Groups tab), first in the friends
+card with a dot and "Studying · 24 min", and as a pill on their profile. `GET
+/api/social/live` (in `routes/groups.ts`, beside `liveAmong`) and the profile's `live` field
+carry them; each has `state` (`focus`, `break`, `paused`). Settings › Social › "Show friends
+when I'm studying" (`settings.social.live`) hides you from friends everywhere except your
+groups' own cards (`sharingLive`). "Live" means `last_seen_at` within ten minutes; the
+session view refreshes it once a minute (`SEEN_EVERY_MS` in `services/sessions.ts`) because
+an open-ended timer never changes and so was never saved, and `useActiveSession` keeps
+polling from a background tab while a session runs. Tests: `live.test.ts`.
+
 **Traps.**
 
 - Drizzle drops the table from `posts.id` in a select list, so the count subqueries in
@@ -412,7 +442,7 @@ of sessions, friendships, posts, a group, jams, a nudge and two live sessions; p
 launch configs (8802/5188) and sign in as jerry@komodon.demo. The configs run from the
 `social` worktree folder; point them at the checkout you are working in.
 
-## The timelapse (built 2026-10-21), and why it can't use the iPhone's camera
+## The timelapse (built 2026-10-21): why it can't use the iPhone's camera, and the phone's camera screen
 
 The owner asked for this in one long chat that was then deleted; this section is the record.
 The decisions, in order, are in DECISIONS.md under the three "Timelapse" sections of
@@ -432,9 +462,16 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - `apps/portal/src/components/focus/Timelapse.tsx`: the two questions, the recording pill,
   the recording settings, and the "Your timelapse" export card with trim.
 - `apps/portal/src/pages/Focus.tsx`: wires it together (when to ask, the task name, the
-  screen answer for the session).
-- Settings live in `settings.timelapse` (`packages/core/src/types.ts`, defaults in
-  `defaults.ts`, API schema in `apps/api/src/validation.ts`).
+  screen answer for the session, phone or computer, the camera screen).
+- `apps/portal/src/components/focus/PhoneCamera.tsx`: the phone's camera screen.
+  `PhoneTrim.tsx`: the Photos-style trim on a phone. `TimelapsePresets.tsx`: the two folded
+  presets in Settings › Timelapse.
+- `packages/core/src/timelapse-presets.ts`: phone or computer, upright or sideways
+  (`timelapseLook`, `phoneAspectRatio`, the phone's shapes and defaults). Tests beside it.
+- `apps/portal/src/lib/device.ts`: `isPhone`, `isUpright`, `useWakeLock`.
+- Settings live in `settings.timelapse` (the computer's preset, plus `record`, which both
+  share) and `settings.timelapsePhone` (the phone's) (`packages/core/src/types.ts`, defaults
+  in `defaults.ts`, API schema in `apps/api/src/validation.ts`).
 
 **Recording.**
 - On the focus screen, `useTimelapseRecorder` takes JPEG stills from the camera (960 px
@@ -460,6 +497,15 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   nothing is drawn in the screen's box. There is never a black space for it.
 
 **The layout (Settings › Timelapse, `/settings#timelapse`).**
+- **Two presets, Phone and Computer**, each folded until clicked (`/settings#timelapse-phone`
+  or `#timelapse-computer` opens one); the device's own comes first, marked "This device".
+  Each holds its own layout, shape, length, fps, breaks, smoothing and deflicker; "When a
+  session starts" sits above them and is shared. A recording follows the preset of the
+  device it is made on (`presetOf` in `Timelapse.tsx`; `presetPatch` saves to the right
+  group). The phone's has an Upright and a Sideways layout, switched in its editor and saved
+  together; it never has a screen, and its shapes are the camera's, 9:16, 4:5, 1:1 upright
+  and the camera's, 16:9, 4:3, 1:1 sideways (the API refuses others). The editor takes a list
+  of `LayoutTarget`s (one per layout) and one Save writes every changed one.
 - The **camera is a fixed backdrop**: it always fills the whole frame and can't be moved,
   resized or removed (the owner was emphatic). It has no box in the editor. Stored layouts
   are mended to a full-frame camera by `normalizeTimelapseLayout`.
@@ -531,15 +577,51 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
     picks the video from Photos after the session, and Komodon adds the mark. A running clock
     can't line up with the study time, because the Camera app can't pause for breaks and
     chooses its own speed.
-- **Our recorder on phones today.**
-  - It always uses the front camera (`facingMode: 'user'`, in `lib/timelapse.ts` and again in
-    `TimelapseLayoutEditor.tsx`).
-  - Nothing keeps the screen awake, and iOS stops the camera when the screen locks. The camera
-    track isn't watched for `ended` or `mute` (the screen's track is), so a phone left alone
-    probably stops recording at auto-lock without saying anything.
-  - iPhones have no `getDisplayMedia`, so screen recording reports itself unavailable there.
-- **Not built.** The import, a back-camera choice and a wake lock are logged in
-  `docs/IDEAS.md` (2026-10-21).
+- **So a phone gets Komodon's own camera screen instead** (built 2026-10-21, the owner's
+  choices in DECISIONS.md, "The phone's camera screen"). A phone is a touch screen whose
+  short side is under 600 px (`isPhone`, read once). On a phone, recording is the camera
+  screen; without a recording it is the normal focus screen.
+  - `FocusSession` (in Focus.tsx) renders `PhoneCamera` instead of its clock when given
+    `camera`, so the same session controller (and its dialogs) runs either way and turning
+    the recording on or off never touches the timer.
+  - The live camera fills the screen (`.pcam`, fixed, z-index 55: toasts at 60 and dialogs
+    stay above it). On it: a pill saying what is happening (Recording, Not filming the break,
+    Paused, The camera stopped), swap camera and stop recording top right, then the phase,
+    timer and task, then hide the clock, a big round pause/resume and stop the session.
+    Skip break and +15 min show above them when they apply. Controls fade with stillness like
+    the focus screen; the pill stays. Light text always, whatever the theme.
+  - **It turns with the phone** by CSS alone (`@media (orientation: landscape)`): sideways,
+    the controls run down the right side and the timer sits bottom left. The video keeps the
+    shape it started in: each still records `portrait`, the first kept one picks the
+    upright or sideways layout (`timelapseLook`), and a still the other way round is cropped
+    to the middle by `fillBuffer` in the render rather than squashed. Turning the phone after
+    the first still says so once in a toast.
+  - **Dimming:** `.pcam-dim` (40% black) while the phase is `work`, off for breaks and
+    pauses. It is a layer over the preview only; stills come from the camera track.
+  - **Breaks** always show; the phone preset's `recordBreaks` decides whether they're filmed.
+  - **Cameras:** front by default, `facing` passed to `useTimelapseRecorder` (changing it
+    swaps the camera), remembered in `komogon.timelapse.facing`; the swap button shows when
+    `enumerateDevices` lists two cameras (re-checked once the camera is on, since phones list
+    them all only after permission). The front preview is mirrored, the back one isn't.
+  - **Staying alive:** `useWakeLock` holds the screen on while the camera screen records. The
+    recorder watches the camera track: `ended` sets status `'ended'` (a note offers to start
+    it again, and it restarts when the page becomes visible), `mute` stops stills until
+    `unmute`. `restartCamera()` starts it again.
+  - Phones never get the screen question (iPhones have no `getDisplayMedia` anyway).
+  - **After the session**, `TimelapseExport` shows `PhoneTrim` on a phone instead of the
+    sliders: a viewer drawn with `composeFrame` (no blending, so playing is quick), nine
+    stills in a strip, a handle at each end, a playhead, play. "Save the video" opens the
+    share sheet on a phone (where "Save Video" goes to Photos) and falls back to a download.
+- **Not built.** Importing an Apple Time-Lapse from Photos is still in `docs/IDEAS.md`.
+- **Testing the camera screen in the preview.** The pane has no camera, so give it one before
+  the recording starts: replace `navigator.mediaDevices.getUserMedia` with a function that
+  returns `canvas.captureStream(10)` of a canvas redrawn on a `setInterval` (draw it 720×1280
+  to act as an upright phone), and `enumerateDevices` with two `videoinput`s for the swap
+  button. Do it on the dashboard and start with its Timelapse switch on: that navigates to
+  `/focus` in the same tab, so the replacement survives. Use the mobile preset (it emulates a
+  coarse pointer and a 375 px screen, so `isPhone` is true); a custom size wider than 768 px
+  is not a phone. Media-query `change` events (turning the phone) fire only when a
+  screenshot is taken, so take one before checking for the turn toast.
 
 ## The calendar (`/calendar`, rebuilt 2026-10-21)
 
@@ -667,7 +749,8 @@ Needs are rounded down to 15 minutes. Something fully covered stays listed as "S
 listens on window and asks the grid's `hit`) makes a block straight away, one block long
 (45 to 120 min from the pace suggestion; 60 for a plan). Clicking one opens the block dialog on
 the first free slot, found with `planWeek` for just that item. The "Connect Google or Outlook"
-link at the foot shows only while neither is connected and the server can connect one.
+link at the foot ("Add your timetable to plan around your classes") shows while no calendar
+is added or connected.
 
 ### Plan my week (`planWeek`)
 
@@ -700,6 +783,36 @@ then "N more"; assessments carry a flag), the time studied on days gone by (with
 time planned on days ahead, both on today, and rest-day shading. Days outside the month are
 dimmed. Clicking a day opens its week. `DueList` beside it lists the month's deadlines grouped
 by week ("This week", "Next week", "Last week", or the dates).
+
+### Calendars added by link (2026-10-21)
+
+Settings › Calendar › "Your calendars" (`components/CalendarFeedsSettings.tsx`, styles in
+`components/calendar-feeds.css`). Paste an .ics or webcal link; the events become
+commitments like Google or Outlook ones (block source and import provider `'ics'`, the
+`calendar_feeds` row's id as the calendar id). Why: Google and Outlook need OAuth keys on
+the server, which komogon.app doesn't have, so their rows now hide until it does.
+
+- API: `routes/calendar.ts` (`/api/calendar/feeds`: list, add, PATCH name or tasks, `/sync`,
+  DELETE) and `services/calendar-feeds.ts` (the safe fetch, `syncFeed`, `removeFeed`). The
+  worker refreshes each feed when `checked_at` is over 15 minutes old.
+- The link is encrypted with a key derived from the calendar `stateSecret`
+  (`TOKEN_ENCRYPTION_KEY`, else `AUTH_SECRET`, else the dev secret). Changing that secret
+  makes stored links unreadable; the feed then says "This calendar needs adding again."
+  The portal never gets the link back, only the host.
+- The fetch refuses private, loopback, link-local and other internal addresses at connect
+  time (`safeLookup`), odd ports, links with passwords, over 5 MB and over 15 seconds, and
+  re-checks every redirect. Node's `BlockList` matches IPv4 against the IPv4-mapped IPv6
+  range, so v4 and v6 live in separate lists; keep them apart.
+- `importCalendarSnapshot` takes `{ calendarId, tasks }`: a feed is imported on its own, so
+  one feed's refresh never cancels another's events, and `tasks: false` skips recognition.
+  `free` events (TRANSP:TRANSPARENT) and due moments under a minute long aren't commitments.
+- The reader is `readIcsFeed` in `packages/core/src/ics-feed.ts` (tests beside it): time
+  zones, repeats, exceptions. `parseIcs` in `ics-parse.ts` is the older, narrower reader for
+  turning a file into routines; they share the line helpers.
+- Tests: `calendar-feeds.test.ts` (through the API, with a fake fetcher passed as
+  `calendar.fetchFeed` to `buildServer`).
+- In the portal, `isImported(source)` in `lib/calendar.ts` is the one test for "an imported
+  event"; use it rather than listing the sources.
 
 ### Checking it
 

@@ -31,6 +31,7 @@ import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { OutlookCalendarSettings } from '../components/OutlookCalendarSettings';
+import { CalendarFeedsSettings } from '../components/CalendarFeedsSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
 import { ProfileFields } from '../components/ProfileFields';
 import { SignOutButton } from '../components/SignOutButton';
@@ -48,8 +49,8 @@ import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
-import { TimelapseSettings } from '../components/focus/Timelapse';
-import { TimelapseLayoutEditor } from '../components/focus/TimelapseLayoutEditor';
+import { TimelapseRecordChoice } from '../components/focus/Timelapse';
+import { TimelapsePresets } from '../components/focus/TimelapsePresets';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
@@ -270,7 +271,14 @@ export function Settings() {
     const fromHash = () => {
       const raw = window.location.hash.slice(1);
       // Account, You, and Data and privacy were separate before they merged; old links still land.
-      const id = raw === 'account' || raw === 'privacy' ? 'profile' : raw;
+      // A timelapse preset's link (#timelapse-phone) opens the Timelapse group; the group
+      // opens the preset itself.
+      const id =
+        raw === 'account' || raw === 'privacy'
+          ? 'profile'
+          : raw.startsWith('timelapse-')
+            ? 'timelapse'
+            : raw;
       if (id && SETTINGS_SECTIONS.some((x) => x.id === id)) {
         setQuery('');
         setActiveId(id);
@@ -483,6 +491,12 @@ export function Settings() {
                 onChange={(v) => patch({ social: { requests: v } })}
                 label="Take friend requests"
               />
+              <Toggle
+                checked={s.social.live}
+                onChange={(v) => patch({ social: { live: v } })}
+                label="Show friends when I’m studying"
+                description="While a session runs, friends see how long you’ve been at it and on what. People in your groups and jams see it either way."
+              />
             </Section>
 
             <Section id="theme" title="Appearance" glass>
@@ -692,14 +706,11 @@ export function Settings() {
 
             <Section id="timelapse" title="Timelapse">
               <p className="field-hint">
-                Records you from the camera, and your screen if you like, while you focus, as a
-                short video. The stills stay on this computer.
+                Records you from the camera while you focus, as a short video. The stills stay on
+                your device. Your phone and your computer each have their own look and settings.
               </p>
-              <h3 className="font-medium">Layout</h3>
-              <TimelapseLayoutEditor value={s.timelapse} onChange={patch} />
-              <div className="divider" />
-              <h3 className="font-medium">Recording</h3>
-              <TimelapseSettings value={s.timelapse} onChange={patch} />
+              <TimelapseRecordChoice value={s.timelapse.record} onChange={patch} />
+              <TimelapsePresets settings={s} onChange={patch} />
             </Section>
 
             <Section id="sounds" title="Sounds">
@@ -965,6 +976,7 @@ export function Settings() {
             </Section>
 
             <Section id="calendar" title="Calendar">
+              <CalendarFeedsSettings />
               <GoogleCalendarSettings />
               <OutlookCalendarSettings />
               <p className="field-hint">
@@ -974,7 +986,7 @@ export function Settings() {
               </p>
               <div className="divider" />
               <div className="flex flex-col gap-2">
-                <span className="field-label">Subscribe from any calendar app (.ics)</span>
+                <span className="field-label">See your plan in another calendar app (.ics)</span>
                 <div className="flex gap-2 items-center flex-wrap">
                   <Input
                     readOnly

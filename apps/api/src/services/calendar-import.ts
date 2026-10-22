@@ -28,7 +28,22 @@ const empty = (status: ImportResult['status']): ImportResult => ({
   tasks: 0,
   events: 0,
 });
-const locks = new Map<string, Promise<ImportResult>>();
+const locks = new Map<string, Promise<unknown>>();
+
+/** One import at a time per user, whichever calendar it is for. */
+export async function withImportLock<T>(userId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = locks.get(userId);
+  const run = (async () => {
+    if (previous) await previous.catch(() => undefined);
+    return fn();
+  })();
+  locks.set(userId, run);
+  try {
+    return await run;
+  } finally {
+    if (locks.get(userId) === run) locks.delete(userId);
+  }
+}
 
 /** Serialize each user's imports, including manual sync racing the background worker. */
 export async function syncCalendarImport(
@@ -127,6 +142,16 @@ export async function syncCalendarImport(
   }
 }
 
+export interface SnapshotOptions {
+  /**
+   * The snapshot covers only this calendar, so events of the provider's other calendars are
+   * left alone. Calendars added by link are refreshed one at a time this way.
+   */
+  calendarId?: string;
+  /** False: show the events, but don't turn exams and deadlines into tasks. */
+  tasks?: boolean;
+}
+
 export async function importCalendarSnapshot(
   db: Db,
   user: Pick<UserRow, 'id' | 'timezone'>,
@@ -135,12 +160,17 @@ export async function importCalendarSnapshot(
   from: string,
   to: string,
   now: string,
+  options: SnapshotOptions = {},
 ): Promise<ImportResult> {
   return db.transaction(async (transaction) => {
     const tx = transaction as unknown as Db;
     const result = empty('ok');
     const previous = await tx.query.calendarImports.findMany({
-      where: and(eq(calendarImports.userId, user.id), eq(calendarImports.provider, provider)),
+      where: and(
+        eq(calendarImports.userId, user.id),
+        eq(calendarImports.provider, provider),
+        options.calendarId ? eq(calendarImports.calendarId, options.calendarId) : undefined,
+      ),
     });
     const byKey = new Map(
       previous.map((row) => [JSON.stringify([row.calendarId, row.eventId]), row]),
@@ -201,7 +231,10 @@ export async function importCalendarSnapshot(
       if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start)
         continue;
       const title = event.title.trim().slice(0, 200) || 'Calendar event';
-      const match = recognizeCalendarEvent(event, courses);
+      const match =
+        options.tasks === false
+          ? { course: null, kind: null }
+          : recognizeCalendarEvent(event, courses);
       let course = match.course
         ? courses.find((c) => courseKey(c.title) === courseKey(match.course!))
         : undefined;
@@ -291,8 +324,10 @@ export async function importCalendarSnapshot(
         }
       }
       let blockId = old?.blockId ?? null;
-      // A date-only deadline belongs in the due row, not across the whole day's free time.
-      const commitment = !(event.allDay && match.kind);
+      // A date-only deadline, or a due moment with no length, belongs in the due row, not
+      // across the day's free time. Time the calendar marks as free is nothing to plan around.
+      const instant = end.getTime() - start.getTime() <= 60_000;
+      const commitment = !event.free && !((event.allDay || instant) && match.kind);
       if (blockId)
         await tx
           .update(plannedBlocks)

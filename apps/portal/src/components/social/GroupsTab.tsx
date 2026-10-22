@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { BellRing, Hash, LogOut, Plus } from 'lucide-react';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
-import type { Group, LiveMember, Person } from '../../lib/api';
+import type { Group, Person } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
 import {
   useCreateGroup,
@@ -16,6 +16,7 @@ import {
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { DayLines, hm } from './DayLines';
+import { LiveNow } from './LiveNow';
 
 const unknown = (id: string): Person => ({
   id,
@@ -23,63 +24,6 @@ const unknown = (id: string): Person => ({
   avatarUrl: null,
   university: null,
 });
-
-/** A clock running since the session began, ticking every second. */
-function Elapsed({ since }: { since: string }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  const s = Math.max(0, Math.floor((now - Date.parse(since)) / 1000));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const sec = s % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return (
-    <span className="live-clock tabular">
-      {h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`}
-    </span>
-  );
-}
-
-/** Friends in a session right now, each with their clock and what they are on. */
-function LiveNow({ live, people }: { live: LiveMember[]; people: Record<string, Person> }) {
-  if (live.length === 0) return null;
-  return (
-    <Panel as="section" className="live" aria-label="Live now">
-      <div className="live-head">
-        <span className="live-dot" aria-hidden />
-        <h2 className="side-title">Live now</h2>
-        <span className="live-count">
-          {live.length} {live.length === 1 ? 'friend' : 'friends'} locked in
-        </span>
-      </div>
-      <ul className="live-list">
-        {live.map((l) => {
-          const p = people[l.userId] ?? unknown(l.userId);
-          return (
-            <li key={l.userId} className="live-row">
-              <Link to={`/profile/${l.userId}`} className="live-avatar" aria-label={p.name}>
-                <Avatar name={p.name} url={p.avatarUrl} size="sm" />
-                <span className="live-dot is-small" aria-hidden />
-              </Link>
-              <span className="live-text">
-                <Link to={`/profile/${l.userId}`} className="post-name">
-                  {p.name}
-                </Link>
-                <span className="live-line">
-                  <Elapsed since={l.startedAt} />
-                  {l.subject && <span className="live-subject"> · {l.subject}</span>}
-                </span>
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-    </Panel>
-  );
-}
 
 /** What someone put the time into: a segment per task, and the names under it. */
 export function Subjects({

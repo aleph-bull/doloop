@@ -16,7 +16,9 @@ import { notFound } from '../errors';
 import { loadCompletedSessions } from '../services/pace';
 import type { Person } from '../services/people';
 import { settingsOf } from '../services/users';
+import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
+import { liveAmong, type LiveMember } from './groups';
 import {
   friendIds,
   friendshipWith,
@@ -69,6 +71,8 @@ export interface ProfileResponse {
   weekday: RhythmProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
+  /** In a session right now: shown to friends, when they let friends see it. */
+  live: LiveMember | null;
 }
 
 /**
@@ -111,6 +115,8 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const showStats = you || settings.social.stats;
     const showPosts =
       you || friendship.status === 'friends' || settings.social.posts === 'everyone';
+    const showLive = !you && friendship.status === 'friends' && settings.social.live;
+    const [live = null] = showLive ? await liveAmong(db, [row.id], dt(now)) : [];
     const response: ProfileResponse = {
       profile: {
         id: row.id,
@@ -147,6 +153,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       weekday: showStats ? weekdayProfile(sessions, tz) : null,
       posts: showPosts ? page.posts : [],
       people: showPosts ? page.people : {},
+      live,
     };
     return response;
   });

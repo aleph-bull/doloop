@@ -93,7 +93,7 @@ export function PlanTray({ items, today, open, showConnect, onGrab, onPick }: Pl
       )}
       {showConnect && (
         <Link to="/settings#calendar" className="cal-side-link">
-          Connect Google or Outlook to plan around your classes
+          Add your timetable to plan around your classes
         </Link>
       )}
     </Panel>
