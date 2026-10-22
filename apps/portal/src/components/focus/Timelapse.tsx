@@ -4,6 +4,7 @@ import {
   cleanEndText,
   endCardFrames,
   fmtBytes,
+  LIVE_CLIP_MAX_SECONDS,
   phoneAspectRatio,
   planTimelapse,
   POST_PLATFORM_INFO,
@@ -23,7 +24,15 @@ import {
   type TimelapsePreset,
   type UserSettings,
 } from '@komogon/core';
-import { Download, LayoutTemplate, MonitorUp, Share2, Square, Video } from 'lucide-react';
+import {
+  Clapperboard,
+  Download,
+  LayoutTemplate,
+  MonitorUp,
+  Share2,
+  Square,
+  Video,
+} from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
@@ -45,7 +54,9 @@ import { PlatformMark } from '../PlatformMark';
 import {
   DEFAULT_SCREEN_BYTES,
   freeStorageBytes,
+  isClipStill,
   knownCameraRatio,
+  liveMarks,
   knownScreenRatio,
   measuredScreenBytes,
   measuredStillBytes,
@@ -53,6 +64,7 @@ import {
   screenSupported,
   timelapseFileName,
   videoSupported,
+  clipTime,
   clockText,
   timeOfDayText,
   type RecorderStatus,
@@ -221,8 +233,8 @@ export interface TimelapseBadgeProps {
 }
 
 /**
- * The top bar's "recording" pill: a dot, a tiny mirror of the camera, a button to share the
- * screen when the share is waiting for a click or was stopped, and a stop.
+ * The top bar's "recording" pill: a dot, a tiny mirror of the camera, Live clip, a button to
+ * share the screen when the share is waiting for a click or was stopped, and a stop.
  */
 export function TimelapseBadge({
   recorder,
@@ -234,8 +246,9 @@ export function TimelapseBadge({
   useEffect(() => {
     if (ref.current) ref.current.srcObject = recorder.stream;
   }, [recorder.stream]);
+  const { clip } = recorder;
   return (
-    <span className="timelapse-badge" role="status">
+    <span className={`timelapse-badge${clip ? ' is-clip' : ''}`} role="status">
       {recorder.stream && (
         <video ref={ref} className="timelapse-preview" autoPlay muted playsInline />
       )}
@@ -244,9 +257,31 @@ export function TimelapseBadge({
         aria-hidden
       />
       <span className="tabular">
-        {!recorder.live ? 'Waiting for the screen' : capturing ? 'Recording' : 'Waiting for focus'}{' '}
-        · {recorder.count}
+        {clip
+          ? `Live clip ${clipTime(clip)}`
+          : `${!recorder.live ? 'Waiting for the screen' : capturing ? 'Recording' : 'Waiting for focus'} · ${recorder.count}`}
       </span>
+      {clip ? (
+        <Button variant="ghost" size="sm" onClick={recorder.toggleClip}>
+          Stop clip
+        </Button>
+      ) : (
+        (recorder.canClip || recorder.clipsFull) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={recorder.toggleClip}
+            disabled={recorder.clipsFull}
+            title={
+              recorder.clipsFull
+                ? 'This recording has used up its live clips.'
+                : `Films the camera at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds. L starts and stops it.`
+            }
+          >
+            <Clapperboard size={14} aria-hidden /> Live clip
+          </Button>
+        )
+      )}
       {onShareScreen && SCREEN_OFFER.has(recorder.screenStatus) && (
         <Button variant="ghost" size="sm" onClick={onShareScreen}>
           <MonitorUp size={14} aria-hidden /> Share screen
@@ -405,6 +440,11 @@ export function TimelapseSettings({
           Each time a recording starts, you are asked whether to record your screen too.
         </p>
       )}
+      <p className="field-hint">
+        {device === 'phone'
+          ? `While recording, Live clip on the camera screen films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`
+          : `While recording, Live clip in the top bar (or the L key) films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`}
+      </p>
       {linkToLayout && (
         <p className="field-hint">
           {device === 'phone'
@@ -793,11 +833,18 @@ export function TimelapseExport({
   const span = kept >= 2 ? times[endAt - 1]! - times[startAt]! : 0;
   const trimmed = trim.from !== null || trim.to !== null;
   const plan = useMemo(
-    () => planTimelapse(kept, span, value),
-    // The plan follows the stills kept; the span only changes with them.
+    () => planTimelapse(kept, span, value, liveMarks(all.slice(startAt, endAt))),
+    // The plan follows the stills kept; the span and the clips only change with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [kept, startAt, value.lengthMode, value.lengthSeconds, value.speed, value.fps],
   );
+  // Live clips in what is kept: how many frames, and how many clips.
+  const clipStills = useMemo(
+    () => all.slice(startAt, endAt).filter(isClipStill),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kept, startAt],
+  );
+  const clipCount = new Set(clipStills.map((s) => s.clip)).size;
   // A phone's video keeps the shape it starts in: the first kept still says which way up.
   const upright = all[startAt]?.portrait ?? true;
   const look: TimelapseLook = {
@@ -1000,8 +1047,10 @@ export function TimelapseExport({
         <h3 className="font-medium">Your timelapse</h3>
       </div>
       <p className="muted text-sm">
-        {kept} stills from {fmtMinutes(span / 60)} of{' '}
-        {timeKey === 'totalSeconds' ? 'the session' : 'focus'}
+        {kept - clipStills.length} stills
+        {clipCount > 0 &&
+          ` and ${clipCount === 1 ? 'a live clip' : `${clipCount} live clips`} (${Math.max(1, Math.round(plan.liveSeconds))} s)`}{' '}
+        from {fmtMinutes(span / 60)} of {timeKey === 'totalSeconds' ? 'the session' : 'focus'}
         {trimmed ? ', trimmed' : ''}. It comes out{' '}
         {Math.max(1, Math.round(plan.durationSeconds + endSeconds(value.endText)))} s at {plan.fps}{' '}
         fps

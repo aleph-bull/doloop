@@ -2,11 +2,15 @@ import {
   aspectRatio,
   deflickerGains,
   endCardFrames,
+  LIVE_CLIP_FPS,
+  LIVE_CLIP_MAX_SECONDS,
+  LIVE_CLIP_TOTAL_SECONDS,
   startIntervalMs,
   stillCap,
   thinIfFull,
   timelapseClock,
   videoSize,
+  type LiveMark,
   type TimelapseAspect,
   type TimelapseLayout,
   type TimelapseOptions,
@@ -52,7 +56,19 @@ export interface Still {
    * a video decides its shape (a phone's upright or sideways layout).
    */
   portrait?: boolean;
+  /**
+   * The live clip this still is a frame of (numbered from 1 in a recording), filmed at full
+   * speed and played at real speed; absent for an ordinary still.
+   */
+  clip?: number;
 }
+
+/** A still is a frame of a live clip. */
+export const isClipStill = (s: Still): boolean => s.clip !== undefined;
+
+/** Which of these stills are live clip frames, and when each was taken, for the plan. */
+export const liveMarks = (stills: readonly Still[]): LiveMark[] =>
+  stills.map((s) => (s.clip !== undefined ? { clip: s.clip, at: s.takenAt } : null));
 
 /** Where the session stood when a still was taken. */
 export type StillStamp = Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds' | 'title'>;
@@ -76,6 +92,10 @@ export type ScreenStatus = RecorderStatus | 'needs-click' | 'ended';
 /** Width camera stills are kept at: sharp enough for the video, small enough to hold 2400. */
 const STILL_WIDTH = 960;
 const STILL_QUALITY = 0.82;
+/** A live clip keeps every frame, so each is saved a little lighter. */
+const CLIP_QUALITY = 0.75;
+/** Clip frames being saved at once; past this, frames are skipped until saving catches up. */
+const CLIP_MAX_SAVING = 45;
 /** Screen stills are kept wider, so text on them stays readable. */
 const SCREEN_WIDTH = 1280;
 const SCREEN_QUALITY = 0.8;
@@ -295,6 +315,14 @@ export interface TimelapseRecorder {
   spanSeconds: () => number;
   /** Throw the stills away. */
   clear: () => void;
+  /** The live clip filming now: seconds into it, and how long it may run. */
+  clip: { seconds: number; maxSeconds: number } | null;
+  /** A live clip can start now: the camera is giving pictures during focus, with room left. */
+  canClip: boolean;
+  /** This recording's live clips are used up. */
+  clipsFull: boolean;
+  /** Start a live clip, or stop the one filming. */
+  toggleClip: () => void;
 }
 
 export function useTimelapseRecorder({
@@ -318,6 +346,20 @@ export function useTimelapseRecorder({
   const screenVideo = useRef<HTMLVideoElement | null>(null);
   const screenStream = useRef<MediaStream | null>(null);
   const screenAsking = useRef(false);
+  // The live clip filming now, read by both loops the moment it changes; the state redraws.
+  const clipRef = useRef<{ id: number; startedAt: number; limitMs: number } | null>(null);
+  const clipsMade = useRef(0);
+  /** Seconds of live clip held, against the room a recording has for them. */
+  const clipUsed = useRef(0);
+  /** Clip frames still being saved; the paced stills wait for them, so the order holds. */
+  const clipSaving = useRef(0);
+  /** Bumped each time the stills are thrown away, so frames still saving are dropped too. */
+  const clears = useRef(0);
+  /** How long the clip filming now may run, in seconds; null when none is. */
+  const [clipMax, setClipMax] = useState<number | null>(null);
+  const clipOn = clipMax !== null;
+  const [clipSeconds, setClipSeconds] = useState(0);
+  const [clipsFull, setClipsFull] = useState(false);
   const wantCamera = recording && sources.camera;
   const wantScreen = recording && sources.screen;
   // The loop reads the latest of these without restarting.
@@ -510,7 +552,8 @@ export function useTimelapseRecorder({
         screenStatus,
         cameraMuted,
       } = live.current;
-      if (!capturing || !ctx || !tinyCtx) return;
+      // A live clip takes every frame while it runs; the paced stills pick up after it.
+      if (!capturing || !ctx || !tinyCtx || clipRef.current || clipSaving.current > 0) return;
       // While a wanted source is still opening, wait for it, so the first stills have both.
       if ((wantCamera && status === 'starting') || (wantScreen && screenStatus === 'starting'))
         return;
@@ -526,14 +569,15 @@ export function useTimelapseRecorder({
       const screen = scrReady
         ? await snapshot(canvas, ctx, scr!, SCREEN_WIDTH, SCREEN_QUALITY)
         : null;
-      if (cancelled || (!blob && !screen)) return;
+      // A clip that started while this still was saving goes on without it.
+      if (cancelled || clipRef.current || clipSaving.current > 0 || (!blob && !screen)) return;
       if (blob) rememberBytes(STILL_BYTES_KEY, blob.size);
       if (screen) rememberBytes(SCREEN_BYTES_KEY, screen.size);
       const next = [
         ...stillsRef.current,
         { blob, screen, luma, portrait, ...stamp(), takenAt: Date.now() },
       ];
-      const thinned = thinIfFull(next, stillCap(options));
+      const thinned = thinIfFull(next, stillCap(options), isClipStill);
       if (thinned) intervalRef.current *= 2;
       stillsRef.current = thinned ?? next;
       setCount(stillsRef.current.length);
@@ -554,6 +598,109 @@ export function useTimelapseRecorder({
     };
   }, [recording]);
 
+  /* ----- live clips ----- */
+  const stopClip = useCallback(() => {
+    const c = clipRef.current;
+    if (!c) return;
+    clipRef.current = null;
+    clipUsed.current += Math.min(c.limitMs, Date.now() - c.startedAt) / 1000;
+    setClipsFull(clipUsed.current > LIVE_CLIP_TOTAL_SECONDS - 1);
+    setClipMax(null);
+  }, []);
+
+  const toggleClip = useCallback(() => {
+    if (clipRef.current) return stopClip();
+    const { capturing, wantCamera, status, cameraMuted } = live.current;
+    const room = LIVE_CLIP_TOTAL_SECONDS - clipUsed.current;
+    if (!capturing || !wantCamera || status !== 'on' || cameraMuted || room < 1) return;
+    const seconds = Math.floor(Math.min(LIVE_CLIP_MAX_SECONDS, room));
+    clipRef.current = { id: ++clipsMade.current, startedAt: Date.now(), limitMs: seconds * 1000 };
+    setClipSeconds(0);
+    setClipMax(seconds);
+  }, [stopClip]);
+
+  // A clip films focus only, like the stills: a break, a pause or the end of recording stops it.
+  useEffect(() => {
+    if (!recording || !capturing) stopClip();
+  }, [recording, capturing, stopClip]);
+
+  // While a clip runs, every frame the camera gives (up to LIVE_CLIP_FPS) is kept, stamped
+  // with the moment it was drawn, so the video can play it back at exactly real speed.
+  // Frames are drawn on time and saved alongside one another: a JPEG can take a while to
+  // come back (about a second, in a page the browser thinks nobody is looking at), and
+  // waiting for each before drawing the next would film a clip at a frame a second.
+  useEffect(() => {
+    const clip = clipRef.current;
+    if (!clipOn || !clip) return;
+    let stopped = false;
+    let timer = 0;
+    let shown = 0;
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const tiny = document.createElement('canvas');
+    tiny.width = 16;
+    tiny.height = 9;
+    const tinyCtx = tiny.getContext('2d', { willReadFrequently: true });
+    const frameMs = 1000 / LIVE_CLIP_FPS;
+    const keptSince = clears.current;
+    // Frames wait here, in the order they were drawn, until their JPEGs are back.
+    const queue: Array<{ still: Still | null | undefined }> = [];
+    const flush = () => {
+      while (queue.length > 0 && queue[0]!.still !== undefined) {
+        const { still } = queue.shift()!;
+        // Thrown away meanwhile: the frame goes with the rest.
+        if (still && clears.current === keptSince)
+          stillsRef.current = [...stillsRef.current, still];
+      }
+      clipSaving.current = queue.length;
+      if (stopped && queue.length === 0) setCount(stillsRef.current.length);
+    };
+
+    const grab = () => {
+      const { stamp, status, cameraMuted } = live.current;
+      const cam = cameraVideo.current;
+      if (!ctx || !tinyCtx || !cam || cam.readyState < 2 || status !== 'on' || cameraMuted) return;
+      // Too far behind: this frame is skipped, and the plan holds the one before.
+      if (queue.length >= CLIP_MAX_SAVING) return;
+      const takenAt = Date.now();
+      const at = stamp();
+      // The picture is copied as it is drawn, so the canvas is free again straight away.
+      const saving = snapshot(canvas, ctx, cam, STILL_WIDTH, CLIP_QUALITY);
+      const luma = lumaOf(tinyCtx, canvas);
+      const portrait = canvas.height > canvas.width;
+      const slot: { still: Still | null | undefined } = { still: undefined };
+      queue.push(slot);
+      clipSaving.current = queue.length;
+      void saving.then((blob) => {
+        // No screen in a clip: the camera has the whole frame for whatever is being shown.
+        slot.still = blob
+          ? { blob, screen: null, luma, portrait, clip: clip.id, ...at, takenAt }
+          : null;
+        flush();
+      });
+    };
+
+    const tick = () => {
+      if (Date.now() - clip.startedAt >= clip.limitMs) return stopClip();
+      const started = performance.now();
+      grab();
+      // The count and the clip's clock redraw once a second, not on every frame.
+      const seconds = Math.floor((Date.now() - clip.startedAt) / 1000);
+      if (seconds !== shown) {
+        shown = seconds;
+        setClipSeconds(seconds);
+        setCount(stillsRef.current.length);
+      }
+      timer = window.setTimeout(tick, Math.max(0, frameMs - (performance.now() - started)));
+    };
+    tick();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+      flush();
+    };
+  }, [clipOn, stopClip]);
+
   const stills = useCallback(() => stillsRef.current, []);
   const spanSeconds = useCallback(() => {
     const s = stillsRef.current;
@@ -563,10 +710,14 @@ export function useTimelapseRecorder({
     return s[s.length - 1]![key] - s[0]![key];
   }, []);
   const clear = useCallback(() => {
+    stopClip();
+    clears.current += 1;
     stillsRef.current = [];
     intervalRef.current = startIntervalMs(live.current.options);
+    clipUsed.current = 0;
+    setClipsFull(false);
     setCount(0);
-  }, []);
+  }, [stopClip]);
 
   return {
     status,
@@ -580,6 +731,17 @@ export function useTimelapseRecorder({
     stills,
     spanSeconds,
     clear,
+    clip: clipMax !== null ? { seconds: clipSeconds, maxSeconds: clipMax } : null,
+    canClip:
+      !clipOn &&
+      !clipsFull &&
+      recording &&
+      capturing &&
+      sources.camera &&
+      status === 'on' &&
+      !cameraMuted,
+    clipsFull,
+    toggleClip,
   };
 }
 
@@ -626,6 +788,12 @@ export function clockText(
   }
   if (still.breakSeconds !== null) return `Break ${timelapseClock(still.breakSeconds)}`;
   return timelapseClock(still.workSeconds);
+}
+
+/** "0:07 of 0:30": how far a live clip has run, and how long it may. */
+export function clipTime(clip: { seconds: number; maxSeconds: number }): string {
+  const short = (s: number) => timelapseClock(s).replace(/^0/, '');
+  return `${short(clip.seconds)} of ${short(clip.maxSeconds)}`;
 }
 
 const MIME_CHOICES = [
@@ -682,6 +850,41 @@ function fillBuffer(b: CanvasRenderingContext2D, bmp: ImageBitmap, bw: number, b
   b.drawImage(bmp, (bmp.width - cw) / 2, (bmp.height - ch) / 2, cw, ch, 0, 0, bw, bh);
 }
 
+/**
+ * The deflicker's gains, worked out over the ordinary stills alone, since a clip's thirty
+ * frames a second would swamp the window. A clip's frames take the gain of the still before
+ * it, so its light carries on from there.
+ */
+function clipAwareGains(stills: Still[]): number[] {
+  const g = deflickerGains(stills.filter((s) => !isClipStill(s)).map((s) => s.luma));
+  let last = g[0] ?? 1;
+  let k = 0;
+  return stills.map((s) => {
+    if (!isClipStill(s)) last = g[k++]!;
+    return last;
+  });
+}
+
+/**
+ * Where the progress bar stands on each frame. It fills over the ordinary frames and holds
+ * through a live clip, which is a few seconds of a long session.
+ */
+function frameProgress(plan: TimelapsePlan): (j: number) => number {
+  const n = plan.frames.length;
+  const byFrame = (j: number) => (n > 1 ? j / (n - 1) : 1);
+  const live = plan.live;
+  if (!live) return byFrame;
+  const ordinary = live.filter((x) => !x).length;
+  if (ordinary < 2) return byFrame;
+  const at: number[] = [];
+  let r = -1;
+  for (let j = 0; j < n; j++) {
+    if (!live[j]) r++;
+    at.push(Math.max(0, r) / (ordinary - 1));
+  }
+  return (j) => at[j] ?? 1;
+}
+
 async function firstBitmap(stills: Still[], key: 'blob' | 'screen') {
   const s = stills.find((x) => x[key]);
   return s ? createImageBitmap(s[key]!) : null;
@@ -699,7 +902,8 @@ function frameDrawer(
     screen: ReturnType<typeof blendBuffer>;
   },
 ): FrameDrawer {
-  const gains = look.deflicker ? deflickerGains(stills.map((s) => s.luma)) : null;
+  const gains = look.deflicker ? clipAwareGains(stills) : null;
+  const progressAt = frameProgress(plan);
   // Decoded stills, kept only while a frame still needs them.
   const cache = new Map<string, ImageBitmap | null>();
   const bitmap = async (i: number, key: 'blob' | 'screen') => {
@@ -719,6 +923,7 @@ function frameDrawer(
     from: number,
     to: number,
     gain: number,
+    live: boolean,
   ): Promise<boolean> => {
     const { ctx: b, canvas } = buf;
     const bw = canvas.width;
@@ -726,7 +931,14 @@ function frameDrawer(
     b.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
     b.globalAlpha = 1;
     let drew = false;
-    if (look.smooth && to - from > 1) {
+    if (live) {
+      // A live clip is real motion already: each frame is just its own still.
+      const now = await bitmap(from, key);
+      if (now) {
+        fillBuffer(b, now, bw, bh);
+        drew = true;
+      }
+    } else if (look.smooth && to - from > 1) {
       // Several stills behind this frame: average them, like a long shutter.
       let n = 0;
       for (let i = from; i < to; i++) {
@@ -770,14 +982,15 @@ function frameDrawer(
       for (let i = from; i < to; i++) g += gains[i]!;
       gain = g / (to - from);
     }
+    const live = !!plan.live?.[j];
     const camera = buffers.camera
-      ? (await blend(buffers.camera, 'blob', from, to, gain))
+      ? (await blend(buffers.camera, 'blob', from, to, gain, live))
         ? buffers.camera.canvas
         : null
       : null;
     const screen =
       buffers.screen && look.layout.screen.visible
-        ? (await blend(buffers.screen, 'screen', from, to, 1))
+        ? (await blend(buffers.screen, 'screen', from, to, 1, live))
           ? buffers.screen.canvas
           : null
         : null;
@@ -794,7 +1007,7 @@ function frameDrawer(
         clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
         elapsed: clockText(still, look.breakClock),
         title: still.title,
-        progress: plan.frames.length > 1 ? j / (plan.frames.length - 1) : 1,
+        progress: progressAt(j),
       },
       { mark },
     );
