@@ -15,8 +15,9 @@ import { ProfileSettingsDialog } from '../components/ProfileSettingsDialog';
 import { SignOutButton } from '../components/SignOutButton';
 import { Avatar } from '../components/social/Avatar';
 import { FriendButton } from '../components/social/FriendButton';
+import { LiveDot, LiveLine } from '../components/social/LiveNow';
 import { PostCard } from '../components/social/PostCard';
-import { ApiError, type PublicProfile } from '../lib/api';
+import { ApiError, type LiveMember, type PublicProfile } from '../lib/api';
 import { fmtDate, fmtHours } from '../lib/format';
 import { useProfile } from '../lib/queries';
 
@@ -29,13 +30,27 @@ function joined(iso: string): string {
 }
 
 /** Name, picture, university and a line about them, with the gear on your own. */
-function Head({ profile, onSettings }: { profile: PublicProfile; onSettings: () => void }) {
+function Head({
+  profile,
+  live,
+  onSettings,
+}: {
+  profile: PublicProfile;
+  live: LiveMember | null;
+  onSettings: () => void;
+}) {
   return (
     <Panel as="header" className="profile-head">
       <Avatar name={profile.name} url={profile.avatarUrl} />
       <div className="profile-id">
         <h1 className="page-title profile-name">{profile.name}</h1>
         <div className="pill-row">
+          {live && (
+            <span className="chip chip-neutral profile-chip profile-live">
+              <LiveDot live={live} small />
+              Studying now · <LiveLine live={live} />
+            </span>
+          )}
           {profile.university && (
             <span
               className="chip chip-neutral profile-chip"
@@ -170,7 +185,7 @@ export function Profile() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Head profile={profile} onSettings={() => setSettingsOpen(true)} />
+      <Head profile={profile} live={q.data.live ?? null} onSettings={() => setSettingsOpen(true)} />
 
       {/* Null when they keep their study time to themselves (Settings › Social). */}
       {!stats || !heatmap || !weekday ? (

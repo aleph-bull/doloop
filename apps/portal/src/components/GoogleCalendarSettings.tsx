@@ -66,6 +66,8 @@ export function GoogleCalendarSettings() {
     }
   };
 
+  if (s && !s.available && !s.connected) return null;
+
   const description = !s
     ? 'Checking…'
     : !s.available

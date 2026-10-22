@@ -146,6 +146,7 @@ export async function buildServer(opts: BuildOptions) {
     autoSync: opts.calendar?.autoSync ?? false,
     stateSecret: opts.calendar?.stateSecret ?? 'dev-state-secret',
     portalUrl: opts.calendar?.portalUrl ?? 'http://localhost:5173',
+    fetchFeed: opts.calendar?.fetchFeed,
   };
   const email = {
     mailer: opts.mailer ?? null,

@@ -229,7 +229,7 @@ export const plannedBlocks = pgTable(
      * Google). 'google' is an imported commitment: context to plan around, never a study
      * plan. 'session' is a block of study that actually happened.
      */
-    source: text('source', { enum: ['app', 'google', 'outlook', 'session'] })
+    source: text('source', { enum: ['app', 'google', 'outlook', 'ics', 'session'] })
       .notNull()
       .default('app'),
     /** Title for imported commitments, so the grid can show what the time is taken by. */
@@ -683,6 +683,38 @@ export const outlookCalendar = pgTable('outlook_calendar', {
   lastSyncAt: ts('last_sync_at'),
 });
 
+/**
+ * A calendar added by its link (the .ics address Google, Outlook, iCloud or a school hands
+ * out). Its events are imported like a connected calendar's, with provider 'ics' and the
+ * feed's id as the calendar id. The link is a secret (it opens the whole calendar), so it is
+ * stored encrypted and never sent back to the portal.
+ */
+export const calendarFeeds = pgTable(
+  'calendar_feeds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    urlEnc: text('url_enc').notNull(),
+    /** sha256 of the link, so the same calendar isn't added twice. */
+    urlHash: text('url_hash').notNull(),
+    /** Shown instead of the link: "calendar.google.com". */
+    host: text('host').notNull(),
+    /** Turn exams and deadlines in it into tasks, as connected calendars do. */
+    tasks: boolean('tasks').notNull().default(true),
+    events: integer('events').notNull().default(0),
+    lastSyncAt: ts('last_sync_at'),
+    /** Last time it was read, whether or not that worked; paces the background refresh. */
+    checkedAt: ts('checked_at'),
+    /** Why the last refresh failed, in words for the settings page; null when it worked. */
+    lastError: text('last_error'),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('calendar_feeds_user_url_idx').on(t.userId, t.urlHash)],
+);
+
 /** Provider identity and the last imported values keep resyncs idempotent and preserve edits. */
 export const calendarImports = pgTable(
   'calendar_imports',
@@ -691,7 +723,7 @@ export const calendarImports = pgTable(
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    provider: text('provider', { enum: ['google', 'outlook'] }).notNull(),
+    provider: text('provider', { enum: ['google', 'outlook', 'ics'] }).notNull(),
     calendarId: text('calendar_id').notNull(),
     eventId: text('event_id').notNull(),
     nodeId: uuid('node_id').references(() => nodes.id, { onDelete: 'set null' }),
@@ -884,6 +916,7 @@ export const schema = {
   googleCalendar,
   outlookCalendar,
   calendarImports,
+  calendarFeeds,
   streakEvents,
   userAssets,
   posts,

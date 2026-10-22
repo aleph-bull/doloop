@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { Panel, Spinner, useToast } from '@komogon/ui';
-import type { LeaderboardScope, Person } from '../../lib/api';
+import type { LeaderboardScope, LiveMember, Person } from '../../lib/api';
 import { fmtHours, fmtTime } from '../../lib/format';
 import {
   useAcceptFriendRequest,
@@ -22,12 +22,14 @@ import {
   useFindPeople,
   useFriends,
   useLeaderboard,
+  useLiveFriends,
   useMe,
   useNudge,
   useRemoveFriend,
   useSendFriendRequest,
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { LiveDot, liveStateLabel, StudyingFor } from './LiveNow';
 
 const unknown = (id: string): Person => ({
   id,
@@ -64,12 +66,33 @@ function RowButton({
   );
 }
 
-function PersonRow({ person, children }: { person: Person; children?: ReactNode }) {
+function PersonRow({
+  person,
+  live,
+  children,
+}: {
+  person: Person;
+  /** In a session right now: a dot on the picture and a line under the name. */
+  live?: LiveMember;
+  children?: ReactNode;
+}) {
   return (
     <li className="side-person">
       <Link to={`/profile/${person.id}`} className="side-person-link">
-        <Avatar name={person.name} url={person.avatarUrl} size="xs" />
-        <span className="side-person-name">{person.name}</span>
+        <span className="side-person-avatar">
+          <Avatar name={person.name} url={person.avatarUrl} size="xs" />
+          {live && <LiveDot live={live} small />}
+        </span>
+        {live ? (
+          <span className="side-person-text">
+            <span className="side-person-name">{person.name}</span>
+            <span className="side-person-live">
+              {liveStateLabel(live) ?? 'Studying'} · <StudyingFor since={live.startedAt} />
+            </span>
+          </span>
+        ) : (
+          <span className="side-person-name">{person.name}</span>
+        )}
       </Link>
       <span className="side-person-actions">{children}</span>
     </li>
@@ -85,6 +108,7 @@ const REQUESTS_SHOWN = 3;
  */
 export function FriendsCard() {
   const q = useFriends();
+  const live = useLiveFriends();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query.trim());
   const found = useFindPeople(deferred);
@@ -101,6 +125,11 @@ export function FriendsCard() {
   const who = (id: string) => data?.people[id] ?? found.data?.people[id] ?? unknown(id);
   const inbound = data?.incoming ?? [];
   const shownInbound = allInbound ? inbound : inbound.slice(0, REQUESTS_SHOWN);
+  const liveBy = new Map((live.data?.live ?? []).map((l) => [l.userId, l]));
+  // Friends in a session come first, so a glance at the card says who is studying.
+  const friends = [...(data?.friends ?? [])].sort(
+    (a, b) => Number(liveBy.has(b.userId)) - Number(liveBy.has(a.userId)),
+  );
 
   // A friend nudged in the last two hours shows a crossed-out bell until nudgeAgainAt;
   // `now` ticks over when the next of those comes round.
@@ -177,9 +206,10 @@ export function FriendsCard() {
             !deferred && <p className="muted text-xs">No friends yet. Search above.</p>
           ) : (
             <ul className="side-people">
-              {data.friends.map((f) => (
-                <PersonRow key={f.userId} person={who(f.userId)}>
-                  {againAt(f) > now ? (
+              {friends.map((f) => (
+                <PersonRow key={f.userId} person={who(f.userId)} live={liveBy.get(f.userId)}>
+                  {/* Someone already studying needs no nudge, and the room goes to their line. */}
+                  {liveBy.has(f.userId) ? null : againAt(f) > now ? (
                     <RowButton
                       label={`Nudged. Again at ${fmtTime(f.nudgeAgainAt)}`}
                       tone="off"

@@ -2,19 +2,21 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button, EmptyState, Segmented, Spinner } from '@komogon/ui';
 import type { FeedScope } from '../../lib/api';
-import { useFeed } from '../../lib/queries';
+import { useFeed, useLiveFriends } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Composer } from './Composer';
 import { FriendsCard, MiniLeaderboard, ProfileCard } from './FeedSide';
+import { LiveNow } from './LiveNow';
 import { PostCard } from './PostCard';
 
 /**
  * The feed: you on the left, the posts in the middle, the leaderboard on the right. Narrower,
- * the sides go and the posts have the page.
+ * the sides go and the posts have the page. Friends in a session right now sit above it all.
  */
 export function Feed() {
   const [scope, setScope] = useState<FeedScope>('everyone');
   const feed = useFeed(scope);
+  const live = useLiveFriends();
   const posts = feed.data?.pages.flatMap((p) => p.posts) ?? [];
   const people = Object.assign({}, ...(feed.data?.pages.map((p) => p.people) ?? []));
 
@@ -26,6 +28,7 @@ export function Feed() {
           <FriendsCard />
         </div>
         <div className="feed">
+          {live.data && <LiveNow live={live.data.live} people={live.data.people} />}
           <Composer />
           <div className="feed-bar">
             <Segmented

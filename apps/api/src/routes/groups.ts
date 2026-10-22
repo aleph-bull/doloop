@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import { addDays, toLocalDate } from '@komogon/core';
+import { addDays, toLocalDate, withDefaults } from '@komogon/core';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { groupMembers, groups, nodes, nudges, routines, sessions } from '../db/schema';
+import { groupMembers, groups, nodes, nudges, routines, sessions, users } from '../db/schema';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
@@ -24,6 +24,14 @@ export interface LiveMember {
   startedAt: string;
   /** The task or routine, by title; null for a free session. */
   subject: string | null;
+  /** Where the timer is: a stretch of focus, a break, or paused. */
+  state: 'focus' | 'break' | 'paused';
+}
+
+export interface LiveResponse {
+  /** Friends in a session right now, the one at it longest first. */
+  live: LiveMember[];
+  people: Record<string, Person>;
 }
 
 export interface GroupMemberWeek {
@@ -78,11 +86,33 @@ export async function liveAmong(db: Db, ids: string[], now: Date): Promise<LiveM
     rows.map((r) => r.nodeId),
     rows.map((r) => r.routineId),
   );
-  return rows.map((r) => ({
-    userId: r.userId,
-    startedAt: r.startedAt.toISOString(),
-    subject: (r.nodeId && titles.get(r.nodeId)) || (r.routineId && titles.get(r.routineId)) || null,
-  }));
+  return rows
+    .map((r) => ({
+      userId: r.userId,
+      startedAt: r.startedAt.toISOString(),
+      subject:
+        (r.nodeId && titles.get(r.nodeId)) || (r.routineId && titles.get(r.routineId)) || null,
+      state:
+        r.timer.phase === 'paused'
+          ? ('paused' as const)
+          : r.timer.phase === 'short-break' || r.timer.phase === 'long-break'
+            ? ('break' as const)
+            : ('focus' as const),
+    }))
+    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+}
+
+/**
+ * Of these friends, the ones who let friends see when they are studying (Settings › Social).
+ * Group members see each other regardless: joining a group is the consent.
+ */
+export async function sharingLive(db: Db, ids: string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const rows = await db.query.users.findMany({
+    where: inArray(users.id, ids),
+    columns: { id: true, settings: true },
+  });
+  return rows.filter((r) => withDefaults(r.settings).social.live).map((r) => r.id);
 }
 
 async function subjectTitles(
@@ -212,6 +242,20 @@ export function groupRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     return row;
   };
 
+  /** Friends studying right now, for the feed and the friends list. */
+  app.get('/api/social/live', async (req) => {
+    const friends = await friendIds(db, req.user.id);
+    const live = await liveAmong(db, await sharingLive(db, friends), dt(clock()));
+    const response: LiveResponse = {
+      live,
+      people: await loadPeople(
+        db,
+        live.map((l) => l.userId),
+      ),
+    };
+    return response;
+  });
+
   app.get('/api/social/groups', async (req) => {
     const me = req.user;
     const now = dt(clock());
@@ -243,7 +287,7 @@ export function groupRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     const load = (list: GroupRow[]) =>
       Promise.all(list.map((r) => loadGroup(db, r, me.id, now, me.timezone)));
     const [list, open] = await Promise.all([load(rows), load(openRows)]);
-    const live = await liveAmong(db, friends, now);
+    const live = await liveAmong(db, await sharingLive(db, friends), now);
     const response: GroupsResponse = {
       groups: list,
       open,

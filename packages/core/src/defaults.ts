@@ -131,6 +131,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     stats: true,
     leaderboard: 'global',
     requests: true,
+    live: true,
   },
   dashboard: { focusOnly: false },
   nav: { style: 'top' },

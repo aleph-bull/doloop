@@ -122,7 +122,7 @@ describe('groups', () => {
     });
     const mine = (await t.api({ method: 'GET', url: '/api/social/groups' })).json();
     expect(mine.groups[0].live).toEqual([
-      { userId: USER_B.id, startedAt: '2026-09-23T13:50:00.000Z', subject: null },
+      { userId: USER_B.id, startedAt: '2026-09-23T13:50:00.000Z', subject: null, state: 'focus' },
     ]);
     expect(mine.live.map((l: { userId: string }) => l.userId)).toEqual([USER_B.id]);
     expect(

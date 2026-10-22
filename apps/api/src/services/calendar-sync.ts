@@ -380,7 +380,7 @@ export async function importedCommitments(
   return db.query.plannedBlocks.findMany({
     where: and(
       eq(plannedBlocks.userId, userId),
-      inArray(plannedBlocks.source, ['google', 'outlook']),
+      inArray(plannedBlocks.source, ['google', 'outlook', 'ics']),
       eq(plannedBlocks.cancelled, false),
       gte(plannedBlocks.endAt, dt(from)),
     ),

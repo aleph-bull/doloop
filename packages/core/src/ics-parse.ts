@@ -27,7 +27,7 @@ export interface IcsTime {
 }
 
 /** Undo RFC 5545 line folding: a CRLF followed by a space or tab continues the line. */
-function unfold(text: string): string[] {
+export function unfold(text: string): string[] {
   return text
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
@@ -36,17 +36,17 @@ function unfold(text: string): string[] {
     .filter((l) => l.trim() !== '');
 }
 
-function unescapeText(s: string): string {
+export function unescapeText(s: string): string {
   return s.replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
 }
 
-interface ContentLine {
+export interface ContentLine {
   name: string;
   params: Record<string, string>;
   value: string;
 }
 
-function parseLine(line: string): ContentLine | null {
+export function parseLine(line: string): ContentLine | null {
   const colon = splitOnUnquoted(line, ':');
   if (colon < 0) return null;
   const head = line.slice(0, colon);

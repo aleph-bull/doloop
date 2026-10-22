@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  TAG_COLORS,
-  inheritedTagIds,
-  nextTagColor,
-  tagsOf,
-  type Tag,
-} from './tags';
+import { TAG_COLORS, inheritedTagIds, nextTagColor, tagsOf, type Tag } from './tags';
 
 const tag = (id: string, color: Tag['color']): Tag => ({ id, name: id, color, sortOrder: 0 });
 const byId = new Map(

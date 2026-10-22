@@ -1,14 +1,29 @@
 import type { FastifyInstance } from 'fastify';
 import { createHash, randomBytes } from 'node:crypto';
-import { findFreeSlots } from '@komogon/core';
-import { eq } from 'drizzle-orm';
+import { findFreeSlots, looksLikeIcs, readIcsFeed } from '@komogon/core';
+import { and, asc, count, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { outlookCalendar, users } from '../db/schema';
+import { calendarFeeds, outlookCalendar, users } from '../db/schema';
 import { syncCalendarImport, outlookBusy, type OutlookDeps } from '../services/calendar-import';
 import { encrypt } from '../services/crypto';
+import {
+  FEEDS_PER_USER,
+  FeedError,
+  NOT_A_CALENDAR,
+  feedKey,
+  feedUrlHash,
+  feedView,
+  feedWindow,
+  fetchFeedText,
+  normalizeFeedUrl,
+  removeFeed,
+  syncFeed,
+  type FeedDeps,
+  type FeedFetcher,
+} from '../services/calendar-feeds';
 import { registerCalendarWorker } from '../services/calendar-worker';
-import { badRequest, notFound } from '../errors';
+import { badRequest, conflict, notFound } from '../errors';
 import {
   busyTimes,
   completeConnection,
@@ -34,6 +49,8 @@ export interface CalendarRouteOptions {
   /** Secret for signing the OAuth state parameter. */
   stateSecret: string;
   portalUrl: string;
+  /** Fetches calendars added by link; a fake in tests. */
+  fetchFeed?: FeedFetcher;
 }
 
 export function calendarRoutes(
@@ -44,7 +61,110 @@ export function calendarRoutes(
 ) {
   const pending = new Map<string, { userId: string; verifier: string; expires: number }>();
   const importDeps = { google: opts.deps, outlook: opts.outlook };
-  if (opts.autoSync) registerCalendarWorker(app, db, importDeps, clock);
+  const feeds: FeedDeps = {
+    fetch: opts.fetchFeed ?? fetchFeedText,
+    key: feedKey(opts.stateSecret),
+  };
+  if (opts.autoSync) registerCalendarWorker(app, db, importDeps, clock, feeds);
+
+  // Calendars added by their link (.ics): any calendar app can give one out, and no
+  // sign-in or server setup is needed, unlike connecting Google or Outlook.
+  const findFeed = async (userId: string, id: string) => {
+    const row = await db.query.calendarFeeds.findFirst({
+      where: and(eq(calendarFeeds.id, id), eq(calendarFeeds.userId, userId)),
+    });
+    if (!row) throw notFound('Calendar not found');
+    return row;
+  };
+  const feedName = z.string().trim().min(1).max(60);
+
+  app.get('/api/calendar/feeds', async (req) => {
+    const rows = await db.query.calendarFeeds.findMany({
+      where: eq(calendarFeeds.userId, req.user.id),
+      orderBy: [asc(calendarFeeds.createdAt)],
+    });
+    return { feeds: rows.map(feedView) };
+  });
+
+  app.post('/api/calendar/feeds', async (req, reply) => {
+    const body = z
+      .object({
+        url: z.string().trim().min(1).max(2000),
+        name: feedName.optional(),
+        tasks: z.boolean().optional(),
+      })
+      .parse(req.body);
+    const [{ n } = { n: 0 }] = await db
+      .select({ n: count() })
+      .from(calendarFeeds)
+      .where(eq(calendarFeeds.userId, req.user.id));
+    if (n >= FEEDS_PER_USER) throw badRequest(`You can add up to ${FEEDS_PER_USER} calendars.`);
+    let url: URL;
+    let text: string;
+    try {
+      url = normalizeFeedUrl(body.url);
+      text = await feeds.fetch(url.toString());
+    } catch (err) {
+      if (err instanceof FeedError) throw badRequest(err.message);
+      throw err;
+    }
+    if (!looksLikeIcs(text)) throw badRequest(NOT_A_CALENDAR);
+    const urlHash = feedUrlHash(url.toString());
+    const existing = await db.query.calendarFeeds.findFirst({
+      where: and(eq(calendarFeeds.userId, req.user.id), eq(calendarFeeds.urlHash, urlHash)),
+    });
+    if (existing) throw conflict(`That calendar is already added, as ${existing.name}.`);
+    const now = clock();
+    const own = readIcsFeed(text, { ...feedWindow(now), timezone: req.user.timezone }).name;
+    const [row] = await db
+      .insert(calendarFeeds)
+      .values({
+        userId: req.user.id,
+        name: body.name ?? own?.slice(0, 60) ?? url.hostname.replace(/^www./, ''),
+        urlEnc: encrypt(url.toString(), feeds.key),
+        urlHash,
+        host: url.hostname,
+        tasks: body.tasks ?? true,
+        createdAt: new Date(now),
+      })
+      .returning();
+    const { feed, result } = await syncFeed(db, req.user, row!, feeds, now, text);
+    return reply.code(201).send({ feed: feedView(feed), result });
+  });
+
+  app.patch('/api/calendar/feeds/:id', async (req) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const body = z
+      .object({ name: feedName.optional(), tasks: z.boolean().optional() })
+      .parse(req.body);
+    const row = await findFeed(req.user.id, id);
+    const [updated] = await db
+      .update(calendarFeeds)
+      .set({ name: body.name ?? row.name, tasks: body.tasks ?? row.tasks })
+      .where(eq(calendarFeeds.id, row.id))
+      .returning();
+    // Turning tasks on or off changes what the events become, so read it again.
+    if (body.tasks !== undefined && body.tasks !== row.tasks) {
+      const { feed, result } = await syncFeed(db, req.user, updated!, feeds, clock());
+      return { feed: feedView(feed), result };
+    }
+    return { feed: feedView(updated!), result: null };
+  });
+
+  app.post('/api/calendar/feeds/:id/sync', async (req) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    const row = await findFeed(req.user.id, id);
+    const { feed, result } = await syncFeed(db, req.user, row, feeds, clock());
+    return { feed: feedView(feed), result };
+  });
+
+  app.delete('/api/calendar/feeds/:id', async (req, reply) => {
+    const { id } = z.object({ id: z.string().uuid() }).parse(req.params);
+    await findFeed(req.user.id, id);
+    await removeFeed(db, req.user.id, id);
+    return reply.code(204).send();
+  });
+
   app.get('/api/calendar/outlook/status', async (req) => {
     const row = await db.query.outlookCalendar.findFirst({
       where: eq(outlookCalendar.userId, req.user.id),
