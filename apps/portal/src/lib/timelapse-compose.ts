@@ -1,4 +1,9 @@
-import type { TimelapseBox, TimelapseElementId, TimelapseLayout } from '@komogon/core';
+import type {
+  TimelapseAlign,
+  TimelapseBox,
+  TimelapseElementId,
+  TimelapseLayout,
+} from '@komogon/core';
 import { LOGO_PATH, LOGO_VIEWBOX } from '@komogon/ui';
 
 /**
@@ -61,6 +66,13 @@ const toRect = (b: TimelapseBox, w: number, h: number): Rect => ({
   w: b.w * w,
   h: b.h * h,
 });
+
+/** Where a piece `pw` wide starts in its box, holding to the box's side. */
+function anchorX(r: Rect, pw: number, align: TimelapseAlign | undefined): number {
+  if (align === 'right') return r.x + r.w - pw;
+  if (align === 'center') return r.x + (r.w - pw) / 2;
+  return r.x;
+}
 
 /** A piece of `pw` × `ph` pixels at (x, y), moved back inside the frame if it runs over. */
 function keepInFrame(x: number, y: number, pw: number, ph: number, w: number, h: number): Rect {
@@ -133,8 +145,8 @@ function drawPlaceholder(
 }
 
 /**
- * A text in a dark pill, exactly the box's height, as wide as the text needs, starting at
- * the box's top left (moved in if it would run out of the frame).
+ * A text in a dark pill, exactly the box's height, as wide as the text needs, holding to
+ * the box's left, middle or right (moved in if it would run out of the frame).
  */
 function drawPill(
   ctx: CanvasRenderingContext2D,
@@ -142,6 +154,7 @@ function drawPill(
   text: string,
   w: number,
   h: number,
+  align: TimelapseAlign | undefined,
 ): Rect {
   let size = r.h / 1.55;
   ctx.save();
@@ -154,7 +167,8 @@ function drawPill(
     tw = ctx.measureText(text).width;
   }
   const pad = size * 0.55;
-  const at = keepInFrame(r.x, r.y, tw + pad * 2, size + pad, w, h);
+  const pw = tw + pad * 2;
+  const at = keepInFrame(anchorX(r, pw, align), r.y, pw, size + pad, w, h);
   ctx.fillStyle = PILL_FILL;
   ctx.beginPath();
   ctx.roundRect(at.x, at.y, at.w, at.h, at.h / 2);
@@ -194,13 +208,15 @@ function drawWatermark(
   tone: WatermarkTone | null,
   w: number,
   h: number,
+  align: TimelapseAlign | undefined,
 ): Rect {
   const size = r.h;
   const text = 'Komodon';
   ctx.save();
   ctx.font = `600 ${Math.round(size * 0.78)}px Satoshi, ${FONT}`;
   const tw = ctx.measureText(text).width;
-  const at = keepInFrame(r.x, r.y, size * 1.35 + tw, size, w, h);
+  const mw = size * 1.35 + tw;
+  const at = keepInFrame(anchorX(r, mw, align), r.y, mw, size, w, h);
   if (tone) {
     const cy = at.y + size / 2;
     ctx.globalAlpha = 0.3;
@@ -261,13 +277,20 @@ export function composeFrame(
   ];
   for (const [id, text] of texts) {
     const box = layout[id];
-    if (box.visible && text) drawn[id] = drawPill(ctx, toRect(box, w, h), text, w, h);
+    if (box.visible && text) drawn[id] = drawPill(ctx, toRect(box, w, h), text, w, h, box.align);
   }
   if (layout.progress.visible && frame.progress !== null) {
     drawn.progress = toRect(layout.progress, w, h);
     drawProgress(ctx, drawn.progress, frame.progress);
   }
-  drawn.watermark = drawWatermark(ctx, toRect(layout.watermark, w, h), opts.mark, w, h);
+  drawn.watermark = drawWatermark(
+    ctx,
+    toRect(layout.watermark, w, h),
+    opts.mark,
+    w,
+    h,
+    layout.watermark.align,
+  );
   ctx.restore();
   return drawn;
 }

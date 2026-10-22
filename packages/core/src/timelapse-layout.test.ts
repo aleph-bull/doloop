@@ -3,6 +3,7 @@ import { withDefaults } from './defaults';
 import {
   CAMERA_BOX,
   TIMELAPSE_ELEMENTS,
+  alignBox,
   aspectRatio,
   canHideElement,
   clampBox,
@@ -113,5 +114,26 @@ describe('timelapse layout in saved settings', () => {
     const s = withDefaults({ timelapse: { showTimer: false, layout } });
     expect(s.timelapse.layout.elapsed.visible).toBe(true);
     expect(s.timelapse.layout.title.x).toBe(0.2);
+  });
+});
+
+describe('lining pieces up', () => {
+  const b = { x: 0.3, y: 0.5, w: 0.2, h: 0.1, visible: true };
+  it('puts a box against the left, in the middle, or against the right', () => {
+    expect(alignBox(b, 'left').x).toBeCloseTo(0.04);
+    expect(alignBox(b, 'center').x).toBeCloseTo(0.4);
+    expect(alignBox(b, 'right').x).toBeCloseTo(0.76);
+    expect(alignBox(b, 'right').y).toBe(0.5);
+  });
+  it('lines a full-width piece up against the edge itself', () => {
+    expect(alignBox({ ...b, w: 1 }, 'right').x).toBe(0);
+  });
+  it('keeps a text piece’s side through a save, and drops it from other pieces', () => {
+    const l = normalizeTimelapseLayout({
+      title: { x: 0.5, y: 0.7, w: 0.3, h: 0.08, visible: true, align: 'right' },
+      screen: { x: 0.1, y: 0.1, w: 0.3, h: 0.2, visible: true, align: 'right' },
+    });
+    expect(l.title.align).toBe('right');
+    expect(l.screen.align).toBeUndefined();
   });
 });

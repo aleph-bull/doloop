@@ -6861,3 +6861,50 @@
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--fg) 8%, transparent);
 }
+
+/* The layout editor's line-up buttons for the chosen piece. */
+.tl-align {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.tl-align .field-hint {
+  margin-right: 4px;
+}
+.tl-align .btn.is-on {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  color: var(--fg);
+}
+
+/*
+ * Unsaved timelapse layout: a toast-style bubble that stays at the bottom of the window
+ * until the changes are saved or reverted. Ordinary toasts rise above it meanwhile.
+ */
+.tl-unsaved-stack {
+  position: fixed;
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 59;
+  display: flex;
+  justify-content: center;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.toast.tl-unsaved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 6px 6px 6px 18px;
+  max-width: none;
+}
+.tl-unsaved-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+:root:has(.tl-unsaved-stack) .toast-stack {
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px) + 60px);
+}

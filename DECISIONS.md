@@ -1682,3 +1682,8 @@ Marking a task done (the Tasks checkbox, or ending a session with "mark done") m
 ## Closing a tip asks "Disable tips?", 2026-10-21 (user request)
 
 Closing a tip on the dashboard raises a toast from the bottom: "Disable tips?" with a check and an X. The check turns off Settings › Pages › Dashboard › "Tips about the app" (the same `quote.appTips` switch); the X, or no answer within 8 seconds, keeps tips on. It asks every time a tip is closed. To make it, `toast()` in `@komogon/ui` now returns a function that takes that toast away early.
+
+## Timelapse layout: line-up buttons, and Save and Revert, 2026-10-21 (user request)
+
+- **Line up.** The chosen piece (screen, clocks, task name, progress bar, mark) has Left, Centre and Right buttons under the preview: against the left side, in the middle, or against the right side, 4% in from the edge. A text piece also remembers that side (`align` on its box), so a longer real task name grows away from it: a right-aligned name grows leftwards. The default task name and mark hold to the right.
+- **Nothing saves until Save.** Moves, resizes, shape changes, add and remove all wait in a draft. After the first change a bubble stays at the bottom of the window ("You have unsaved changes to the timelapse layout.", Revert and Save) until one is pressed; ordinary toasts rise above it meanwhile, and closing the tab with changes asks first. The other timelapse settings below the editor still save as they change.

@@ -58,6 +58,28 @@ export interface TimelapseBox {
   h: number;
   /** Shown in the video. */
   visible: boolean;
+  /**
+   * For a text piece, which side of its box the text holds to, so a longer real task name
+   * grows away from that side: from the left edge, out from the middle, or back from the
+   * right edge. Left when absent.
+   */
+  align?: TimelapseAlign;
+}
+
+export type TimelapseAlign = 'left' | 'center' | 'right';
+
+/** The gap kept from the frame's sides when a piece is lined up against one. */
+export const TIMELAPSE_ALIGN_MARGIN = 0.04;
+
+/**
+ * A box lined up in the frame: against the left side, in the middle, or against the right
+ * side, keeping its size and height. A piece that spans the frame lines up against the
+ * edge itself.
+ */
+export function alignBox(b: TimelapseBox, align: TimelapseAlign): TimelapseBox {
+  const margin = b.w > 1 - TIMELAPSE_ALIGN_MARGIN * 2 ? 0 : TIMELAPSE_ALIGN_MARGIN;
+  const x = align === 'left' ? margin : align === 'right' ? 1 - margin - b.w : (1 - b.w) / 2;
+  return { ...b, x: Math.max(0, Math.min(1 - b.w, x)) };
 }
 
 export type TimelapseLayout = Record<TimelapseElementId, TimelapseBox>;
@@ -116,13 +138,14 @@ export function videoSize(ratio: number, longSide = TIMELAPSE_LONG_SIDE): { w: n
     : { w: even(longSide * r), h: even(longSide) };
 }
 
-const box = (x: number, y: number, w: number, h: number, visible = true): TimelapseBox => ({
-  x,
-  y,
-  w,
-  h,
-  visible,
-});
+const box = (
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  visible = true,
+  align?: TimelapseAlign,
+): TimelapseBox => (align ? { x, y, w, h, visible, align } : { x, y, w, h, visible });
 
 /** The camera's box: always the whole frame. */
 export const CAMERA_BOX: TimelapseBox = box(0, 0, 1, 1);
@@ -173,7 +196,7 @@ export function defaultTimelapseLayout(
       elapsed: box(0.05, 0.86, 0.25, 0.045),
       title: box(0.05, 0.8, 0.6, 0.045),
       progress: box(0, 0.988, 1, 0.012),
-      watermark: box(0.62, 0.93, 0.33, 0.03),
+      watermark: box(0.62, 0.93, 0.33, 0.03, true, 'right'),
     };
   }
   if (ratio < 1.2) {
@@ -184,7 +207,7 @@ export function defaultTimelapseLayout(
       elapsed: box(0.05, 0.86, 0.2, 0.065),
       title: box(0.05, 0.77, 0.5, 0.065),
       progress: box(0, 0.986, 1, 0.014),
-      watermark: box(0.72, 0.89, 0.23, 0.045),
+      watermark: box(0.72, 0.89, 0.23, 0.045, true, 'right'),
     };
   }
   return {
@@ -192,9 +215,9 @@ export function defaultTimelapseLayout(
     screen: fit(box(0.5, 0.06, 0.46, 0.46, false)),
     clock: box(0.04, 0.06, 0.2, 0.08),
     elapsed: box(0.04, 0.84, 0.12, 0.08),
-    title: box(0.5, 0.76, 0.3, 0.08),
+    title: box(0.5, 0.76, 0.46, 0.08, true, 'right'),
     progress: box(0, 0.982, 1, 0.018),
-    watermark: box(0.82, 0.88, 0.14, 0.055),
+    watermark: box(0.7, 0.88, 0.26, 0.055, true, 'right'),
   };
 }
 
@@ -213,7 +236,15 @@ export function clampBox(id: TimelapseElementId, b: TimelapseBox): TimelapseBox 
   if (id === 'camera') return { ...CAMERA_BOX };
   const w = clamp(b.w, minBoxSide(id, 'w'), 1);
   const h = clamp(b.h, minBoxSide(id, 'h'), 1);
-  return { x: clamp(b.x, 0, 1 - w), y: clamp(b.y, 0, 1 - h), w, h, visible: b.visible };
+  const out: TimelapseBox = {
+    x: clamp(b.x, 0, 1 - w),
+    y: clamp(b.y, 0, 1 - h),
+    w,
+    h,
+    visible: b.visible,
+  };
+  if (b.align && b.align !== 'left' && TIMELAPSE_TEXT_ELEMENTS.includes(id)) out.align = b.align;
+  return out;
 }
 
 /**
@@ -236,6 +267,12 @@ export function normalizeTimelapseLayout(
       w: num(r.w) ?? d.w,
       h: num(r.h) ?? d.h,
       visible: typeof r.visible === 'boolean' ? r.visible : d.visible,
+      align:
+        r.align === 'left' || r.align === 'center' || r.align === 'right'
+          ? r.align
+          : r.x === undefined
+            ? d.align
+            : undefined,
     });
   }
   out.watermark.visible = true;

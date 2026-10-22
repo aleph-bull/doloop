@@ -171,6 +171,7 @@ const timelapseBox = z
     w: z.number().min(0).max(1),
     h: z.number().min(0).max(1),
     visible: z.boolean(),
+    align: z.enum(['left', 'center', 'right']).optional(),
   })
   .strict();
 

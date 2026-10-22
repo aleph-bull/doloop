@@ -1,22 +1,38 @@
 import {
+  alignBox,
   aspectRatio,
   canHideElement,
   clampBox,
   defaultTimelapseLayout,
   fitBoxToRatio,
   minBoxSide,
+  TIMELAPSE_TEXT_ELEMENTS,
   TIMELAPSE_ELEMENT_LABELS,
   TIMELAPSE_ELEMENTS,
   TIMELAPSE_MOVABLE,
   videoSize,
+  type TimelapseAlign,
   type TimelapseAspect,
   type TimelapseBox,
   type TimelapseElementId,
   type TimelapseLayout,
   type UserSettings,
 } from '@komogon/core';
-import { Camera, CameraOff, Monitor, Plus, RotateCcw, X } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Camera,
+  CameraOff,
+  Check,
+  Monitor,
+  Plus,
+  RotateCcw,
+  Undo2,
+  X,
+} from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Segmented } from '@komogon/ui';
 import { useMe } from '../../lib/queries';
 import {
@@ -139,7 +155,8 @@ function stretchFromCorner(
 
 export interface TimelapseLayoutEditorProps {
   value: TimelapseSettingsValue;
-  onChange: (patch: DeepPartial<UserSettings>) => void;
+  /** Saves a change; a promise lets the editor know when the save has finished. */
+  onChange: (patch: DeepPartial<UserSettings>) => unknown;
   /** What the task name shows in the preview. */
   sampleTitle?: string;
 }
@@ -157,8 +174,15 @@ export function TimelapseLayoutEditor({
   sampleTitle = 'Your task name',
 }: TimelapseLayoutEditorProps) {
   const timeZone = useMe().data?.user.timezone;
-  const [draft, setDraft] = useState<TimelapseLayout | null>(null);
-  const layout = draft ?? value.layout;
+  // Changes wait here until Save; Revert drops them.
+  const [draft, setDraft] = useState<{ aspect: TimelapseAspect; layout: TimelapseLayout } | null>(
+    null,
+  );
+  const [saving, setSaving] = useState(false);
+  const aspect = draft?.aspect ?? value.aspect;
+  const layout = draft?.layout ?? value.layout;
+  const dirty =
+    !!draft && !(draft.aspect === value.aspect && sameLayout(draft.layout, value.layout));
   const [selected, setSelected] = useState<TimelapseElementId | null>(null);
   const [cameraRatio, setCameraRatio] = useState<number | null>(() => knownCameraRatio());
   const screenRatio = useMemo(() => knownScreenRatio(), []);
@@ -177,20 +201,13 @@ export function TimelapseLayoutEditor({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const drag = useRef<Drag | null>(null);
 
-  const ratio = aspectRatio(value.aspect, cameraRatio, screenRatio);
+  const ratio = aspectRatio(aspect, cameraRatio, screenRatio);
   const { w: cw, h: ch } = videoSize(ratio, 960);
 
-  const save = useCallback(
-    (next: Partial<TimelapseSettingsValue>) => onChange({ timelapse: next }),
-    [onChange],
-  );
-  /** Show a change at once and save it; the draft stays until the saved copy matches it. */
+  /** A change to the layout, shown at once and held until Save. */
   const saveLayout = useCallback(
-    (next: TimelapseLayout) => {
-      setDraft(next);
-      save({ layout: next });
-    },
-    [save],
+    (next: TimelapseLayout) => setDraft({ aspect, layout: next }),
+    [aspect],
   );
 
   /** A default layout for a shape, keeping which pieces are shown. */
@@ -244,13 +261,12 @@ export function TimelapseLayoutEditor({
    * Pick a shape. A layout still at the old shape's starting places moves to the new one's;
    * an arranged one stays, with the screen reshaped so it still fits its picture.
    */
-  const pickShape = (aspect: TimelapseAspect, camRatio = cameraRatio) => {
-    const newRatio = aspectRatio(aspect, camRatio, screenRatio);
+  const pickShape = (shape: TimelapseAspect, camRatio = cameraRatio) => {
+    const newRatio = aspectRatio(shape, camRatio, screenRatio);
     const next = sameBoxes(layout, defaultTimelapseLayout(ratio, screenRatio))
       ? freshLayout(newRatio, layout)
       : { ...layout, screen: fitBoxToRatio(layout.screen, newRatio, screenRatio) };
-    setDraft(next);
-    save({ aspect, layout: next });
+    setDraft({ aspect: shape, layout: next });
   };
 
   const matchCamera = async () => {
@@ -343,7 +359,7 @@ export function TimelapseLayoutEditor({
   /** A piece placed at a rect: its layout box becomes exactly that rect. */
   const placed = (id: TimelapseElementId, r: TimelapseBox): TimelapseLayout => ({
     ...layout,
-    [id]: clampBox(id, { ...r, visible: layout[id].visible }),
+    [id]: clampBox(id, { ...r, visible: layout[id].visible, align: r.align ?? layout[id].align }),
   });
 
   const move = (e: React.PointerEvent) => {
@@ -359,20 +375,70 @@ export function TimelapseLayoutEditor({
         : keepsShape(d.id)
           ? scaleFromCorner(d.id, r, d.mode, dx, dy)
           : stretchFromCorner(d.id, r, d.mode, dx, dy);
-    setDraft(placed(d.id, next));
+    saveLayout(placed(d.id, next));
   };
 
   const end = (e: React.PointerEvent) => {
     const d = drag.current;
     if (!d || d.pointer !== e.pointerId) return;
     drag.current = null;
-    if (draft) saveLayout(draft);
   };
 
   // The saved layout caught up with the draft: drop the draft.
   useEffect(() => {
-    setDraft((d) => (d && sameLayout(d, value.layout) ? null : d));
-  }, [value.layout]);
+    setDraft((d) =>
+      d && d.aspect === value.aspect && sameLayout(d.layout, value.layout) ? null : d,
+    );
+    setSaving(false);
+  }, [value.aspect, value.layout]);
+
+  /**
+   * Save the draft. Each text piece is stored exactly where it was drawn, so its side
+   * (left, middle or right) holds against the box the person saw.
+   */
+  const commit = () => {
+    if (!draft) return;
+    const next = { ...draft.layout };
+    for (const id of TIMELAPSE_TEXT_ELEMENTS) {
+      const r = drawn[id];
+      if (r && next[id].visible)
+        next[id] = clampBox(id, { ...next[id], x: r.x, y: r.y, w: r.w, h: r.h });
+    }
+    setSaving(true);
+    setDraft({ aspect: draft.aspect, layout: next });
+    // A save that fails leaves the draft and the buttons, so it can be tried again.
+    void Promise.resolve(onChange({ timelapse: { aspect: draft.aspect, layout: next } })).finally(
+      () => setSaving(false),
+    );
+  };
+  const revert = () => {
+    setSelected(null);
+    setDraft(null);
+  };
+
+  // Unsaved changes: ask before the tab closes.
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  /** Line a piece up against the left, in the middle, or against the right. */
+  const lineUp = (id: TimelapseElementId, side: TimelapseAlign) => {
+    const r = alignBox(rectOf(id), side);
+    saveLayout(placed(id, TIMELAPSE_TEXT_ELEMENTS.includes(id) ? { ...r, align: side } : r));
+  };
+  /** The side a piece holds to now, for the buttons' pressed state. */
+  const sideOf = (id: TimelapseElementId): TimelapseAlign | null => {
+    if (TIMELAPSE_TEXT_ELEMENTS.includes(id)) return layout[id].align ?? 'left';
+    const r = rectOf(id);
+    const sides: TimelapseAlign[] = ['left', 'center', 'right'];
+    return sides.find((side) => Math.abs(alignBox(r, side).x - r.x) < 0.002) ?? null;
+  };
 
   const hide = (id: TimelapseElementId) => {
     if (!canHideElement(id)) return;
@@ -438,11 +504,11 @@ export function TimelapseLayoutEditor({
         <span className="field-label">Shape</span>
         <Segmented
           ariaLabel="Shape of the video"
-          value={value.aspect}
+          value={aspect}
           onChange={(v) => (v === 'camera' ? void matchCamera() : pickShape(v))}
           options={SHAPES}
         />
-        <span className="field-hint">{shapeHint[value.aspect]}</span>
+        <span className="field-hint">{shapeHint[aspect]}</span>
         {cameraState === 'denied' && (
           <span className="field-hint timelapse-size-warn" role="status">
             The camera was blocked, so its shape is not known yet. Allow it in the address bar and
@@ -520,6 +586,32 @@ export function TimelapseLayoutEditor({
         })}
       </div>
 
+      {selected && layout[selected].visible && (
+        <div className="tl-align" role="group" aria-label="Line up the chosen piece">
+          <span className="field-hint">
+            Line up {TIMELAPSE_ELEMENT_LABELS[selected].toLowerCase()}
+          </span>
+          {(
+            [
+              ['left', 'Left', AlignLeft],
+              ['center', 'Centre', AlignCenter],
+              ['right', 'Right', AlignRight],
+            ] as const
+          ).map(([side, name, Icon]) => (
+            <Button
+              key={side}
+              variant="ghost"
+              size="sm"
+              aria-pressed={sideOf(selected) === side}
+              className={sideOf(selected) === side ? 'is-on' : undefined}
+              onClick={() => lineUp(selected, side)}
+            >
+              <Icon size={14} aria-hidden /> {name}
+            </Button>
+          ))}
+        </div>
+      )}
+
       {hidden.length > 0 && (
         <div className="tl-hidden">
           <span className="field-hint">Add back</span>
@@ -558,8 +650,27 @@ export function TimelapseLayoutEditor({
       <span className="field-hint">
         The camera fills the video behind everything. Drag a piece to move it and pull a corner to
         resize it; the screen, the clocks and the task name keep their shape as they grow. Add the
-        screen to choose where it goes; each session asks whether to record it.
+        screen to choose where it goes; each session asks whether to record it. Nothing changes
+        until you save.
       </span>
+
+      {dirty &&
+        createPortal(
+          <div className="tl-unsaved-stack">
+            <div className="toast glass-strong tl-unsaved" role="status">
+              <span>You have unsaved changes to the timelapse layout.</span>
+              <span className="tl-unsaved-actions">
+                <Button variant="ghost" size="sm" onClick={revert} disabled={saving}>
+                  <Undo2 size={14} aria-hidden /> Revert
+                </Button>
+                <Button variant="primary" size="sm" onClick={commit} disabled={saving}>
+                  <Check size={14} aria-hidden /> Save
+                </Button>
+              </span>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }
