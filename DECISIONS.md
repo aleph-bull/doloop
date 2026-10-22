@@ -1817,6 +1817,10 @@ The owner: onboarding had "too much friction"; a busy student has to add their c
 - **The "Your session" card is off the first screen** (its Pomodoro, Timelapse and Show the timer toggles and Start), replaced by "Got a lot due?" at the owner's request ("remove this card and replace it with the other card"). The greeting line stays "A little space for what you want to do."
 - **The simplified first screen shows only while Tasks is empty.** The owner, on an earlier build: "this should never appear. when i add my first task or import things it should just show full dashboard". So `Today` shows `FocusDashboard` only when "Simplify the dashboard" is on and the account has no courses or items; the first one, added by hand, pasted or from a calendar, brings up the full dashboard on every device. The setting's description says so. A session can still be started from the full dashboard or the focus screen.
 
+## The profile's day grid darkens the days before the account existed, 2026-10-21 (user request)
+
+The owner asked for the days on the profile's "Days studied" grid from before the account existed to be darkened, so a new account's six months don't read as months of days off. (They briefly asked for "until the first session" instead, then went back to the join date.) `studyHeatmap` takes an optional `since` (the account's `created_at`) and marks each earlier day `before`, worked out in the account's own timezone; a day that has study on it is never marked, in case time was added from before the account began. The grid draws those squares like the days still to come (the empty-day colour, faded) but a little darker: 35% opacity against the future days' 45%. A first try in solid black at 24% was "too dark". They read "before joining" on hover and can't be selected. Only the profile passes `since`; the Analytics and recap grids are unchanged.
+
 ## "I'm a dev": throwaway accounts, fresh or Jerry, 2026-10-21 (user request)
 
 The owner asked for a quick way for them and the agents to see and test changes on the hosted app: an "I'm a dev" link on the sign-in page, paste the dev password, and get an account that isn't a real one, has no admin powers and isn't connected to the rest of the app. Little security needed; it's a debug account. Then: two choices before signing in, a fresh account or Jerry, a long-time user with friends and stats, both on the app's defaults; a way to sign out; and the link small and greyed out.
@@ -1834,6 +1838,42 @@ The owner asked for a quick way for them and the agents to see and test changes 
 ## The sidebar is the default, 2026-10-21 (user request)
 
 The owner asked for the sidebar as the default. `DEFAULT_SETTINGS.nav.style` is now `'sidebar'`, so new accounts, and anyone who never picked one in Settings, get the sidebar on a computer. Phones keep the bottom bar. This replaces "Top bar stays the default" from earlier; Settings still offers both.
+
+## Prettier "Good to know" cards on Analytics, 2026-10-21 (user request)
+
+The owner asked for the Analytics "Good to know" cards to look nicer.
+
+- **Each card has an icon** in a small accent-tinted tile, picked by the insight behind it (`INSIGHT_ICONS` in `RecapView.tsx`): a target for the forecast, an hourglass for progress through a task, a list of ticks for tasks done, a brain for a focused run, and so on. Lucide icons, no emoji: the forecast sentence ends in a target emoji, which the card drops since its icon says the same.
+- **Two cards get a progress bar** on the card's floor: "You're 88% through Unit 1" (the highlight's own progress) and the forecast (all-time hours against the hours it names). The other cards stay text only.
+- Lines wrap with `text-wrap: pretty` so a headline doesn't leave one word on its last line. On a phone the cards are one a row with the icon beside the words, so each stays short.
+- **Same surface as every other card on the page.** The owner found them off in colour and opacity. They had their own near-solid fill (`--glass-solid` at 78%, from when they were "text over the photo") and were Glass cards with its top sheen; they are now Panels with no override, like the chart tiles, so they match the tiles and trophies in every panel style.
+
+## Every card is the same card, 2026-10-21 (user request)
+
+- **The ask:** "proper consistency with every card with exceptions (nav bar, side bar, setting
+  bar etc). Same rounded edges and allat". An audit of every card on every page found the
+  corners, border, shadow and blur already matched; the padding and two fills did not.
+- **20px padding on every card** (`--card-pad`), the roomy ones included: the dashboard hero
+  (was 28-32px), start panel, timer card, note, "Days focused", the Analytics hero (40-48px),
+  streaks, tiles, equivalents (14px) and trophies, the Achievements hero and reward cards,
+  the profile header and tiles, "Got a lot due?", the plan cards and plan page, and the
+  empty and error states (24-32px).
+- **The hint banner is a card too:** the 22px corner (was 14px) and 20px padding, and its
+  lightbulb is centred on the row ("tip icon is too high make it centred"); the tip card's
+  lightbulb and close button are centred the same way.
+- **Locked badges are on the same surface** as earned ones; they had a lighter fill and no
+  shadow. The lock icon and the muted name still say locked.
+- **Kept as they are:** the Tasks table and the calendar grid run edge to edge (their text
+  stays 20px in); the nav bar, sidebar and settings bar, toasts, menus, dialogs, the focus
+  screen and the sign-in card are not cards.
+- **The glass blur stays at 28px.** It was lowered to 16px when the owner found the cards
+  "too frosted", and put back when they preferred the colour from before.
+- **Tried and undone the same night: making every card frost without exception.** The
+  Achievements badges (under the fold's mask) and cards inside fading wrappers (a page
+  arriving, Analytics loading or rising in, "See all", dialogs) show the background unblurred,
+  because a mask or opacity on an ancestor turns the blur off. Moving the masks and fades onto
+  the cards fixed that, but the owner didn't like the look and asked for it reverted. Leave
+  those as they are unless the owner asks again.
 
 ## Coming up and the task cards, trimmed, 2026-10-21 (user request)
 

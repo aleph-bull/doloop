@@ -144,6 +144,12 @@ Keep the owner's own wording verbatim, "!" included.
   edge to edge (the calendar, the Tasks table) keeps its text 20px in from the sides and top
   instead. A card's header that might not fit wraps (`flex-wrap`) rather than running past
   the edge.
+- **Every card is the same card** (the owner, 2026-10-21: "proper consistency with every
+  card"): the 22px corner, exactly `--card-pad` (never roomier either: heroes, empty states
+  and banners like the hint included), and the Panels setting's one surface (no lighter
+  fill for a locked or quiet card; say that with the text and an icon). Not cards: the
+  nav bar, sidebar and settings bar, toasts, menus and dialogs, the focus screen, and the
+  sign-in card.
 - Never black text on buttons or the logo; accent buttons keep white labels and the fill
   deepens instead. Solid accent fills are muted (saturation capped at 45%).
 - No all-caps labels (except on the focus screen); labels are in sentence case.

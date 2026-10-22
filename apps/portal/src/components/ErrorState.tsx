@@ -12,7 +12,7 @@ export function ErrorPanel({
   retryLabel?: string;
 }) {
   return (
-    <Glass role="alert" className="p-6 flex flex-col gap-3 items-start">
+    <Glass role="alert" className="p-5 flex flex-col gap-3 items-start">
       <p>{message}</p>
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>

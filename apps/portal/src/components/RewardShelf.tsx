@@ -194,7 +194,7 @@ export function RewardShelf() {
       </p>
 
       {rewards.length === 0 ? (
-        <Panel className="p-6 text-center flex flex-col items-center gap-2">
+        <Panel className="p-5 text-center flex flex-col items-center gap-2">
           <span aria-hidden style={{ color: 'var(--fg-subtle)' }}>
             <Gift size={28} />
           </span>

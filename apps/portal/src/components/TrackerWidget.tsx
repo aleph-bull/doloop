@@ -59,7 +59,7 @@ export function TrackerWidget({ widget, weeks, onEdit }: TrackerWidgetProps) {
   const goalMet = tracker.dailyGoal !== null && todayAmount >= tracker.dailyGoal;
 
   return (
-    <Panel as="section" className="p-4 flex flex-col gap-3" aria-labelledby={`tr-${tracker.id}`}>
+    <Panel as="section" className="p-5 flex flex-col gap-3" aria-labelledby={`tr-${tracker.id}`}>
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           <h3 id={`tr-${tracker.id}`} className="text-base font-semibold truncate">

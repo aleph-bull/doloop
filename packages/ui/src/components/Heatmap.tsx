@@ -13,6 +13,8 @@ export interface HeatmapDay {
   minutes: number;
   level: 0 | 1 | 2 | 3 | 4;
   future: boolean;
+  /** Before the account existed: drawn darker than an empty day, and not selectable. */
+  before?: boolean;
 }
 
 export interface HeatmapProps {
@@ -105,36 +107,41 @@ export function Heatmap({
           ) : null,
         )}
         {weeks.map((week, col) =>
-          week.map((day, row) => (
-            <rect
-              key={`${id}-${day.date}`}
-              x={LABEL_W + col * step}
-              y={LABEL_H + row * step}
-              width={cell}
-              height={cell}
-              rx={2.5}
-              className={`heatmap-cell heatmap-l${day.future ? 'f' : day.level}`}
-              tabIndex={onSelect && !day.future ? 0 : undefined}
-              role={onSelect && !day.future ? 'button' : undefined}
-              onClick={onSelect && !day.future ? () => onSelect(day) : undefined}
-              onKeyDown={
-                onSelect && !day.future
-                  ? (e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onSelect(day);
+          week.map((day, row) => {
+            const live = onSelect && !day.future && !day.before;
+            return (
+              <rect
+                key={`${id}-${day.date}`}
+                x={LABEL_W + col * step}
+                y={LABEL_H + row * step}
+                width={cell}
+                height={cell}
+                rx={2.5}
+                className={`heatmap-cell heatmap-l${day.future ? 'f' : day.before ? 'b' : day.level}`}
+                tabIndex={live ? 0 : undefined}
+                role={live ? 'button' : undefined}
+                onClick={live ? () => onSelect(day) : undefined}
+                onKeyDown={
+                  live
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onSelect(day);
+                        }
                       }
-                    }
-                  : undefined
-              }
-            >
-              <title>
-                {day.future
-                  ? `${pretty(day.date)}: upcoming`
-                  : `${pretty(day.date)}: ${format(day.minutes)}`}
-              </title>
-            </rect>
-          )),
+                    : undefined
+                }
+              >
+                <title>
+                  {day.future
+                    ? `${pretty(day.date)}: upcoming`
+                    : day.before
+                      ? `${pretty(day.date)}: before joining`
+                      : `${pretty(day.date)}: ${format(day.minutes)}`}
+                </title>
+              </rect>
+            );
+          }),
         )}
       </svg>
       <div className="heatmap-legend">
