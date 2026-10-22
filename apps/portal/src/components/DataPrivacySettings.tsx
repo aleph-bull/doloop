@@ -134,7 +134,7 @@ export function DataPrivacySettings() {
       <div className="flex flex-col gap-2">
         <h3 className="font-medium">Delete everything</h3>
         <p className="field-hint">
-          Deletes your account and all of your data for good. You may want to export a copy first.
+          Deletes your account and all of your data forever (a long time!)
         </p>
         <div>
           <Button variant="danger" onClick={() => setConfirming(true)}>
