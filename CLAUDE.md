@@ -406,23 +406,115 @@ of sessions, friendships, posts, a group, jams, a nudge and two live sessions; p
 launch configs (8802/5188) and sign in as jerry@komodon.demo. The configs run from the
 `social` worktree folder; point them at the checkout you are working in.
 
-## The timelapse, and why it can't use the iPhone's camera
+## The timelapse (built 2026-10-21), and why it can't use the iPhone's camera
 
-- **How it works.** On the focus screen, `useTimelapseRecorder` (`apps/portal/src/lib/timelapse.ts`)
-  takes JPEG stills from the camera, plus a shared screen if the person picks one
-  (`getDisplayMedia`, asked each session). It takes them during focus only, unless breaks
-  are recorded too. The stills stay in the tab's memory: nothing is uploaded, and closing
-  the tab loses them. Pacing works like a phone timelapse (`packages/core/src/timelapse.ts`).
-  Auto mode starts at one still every 0.5 s. Each time the stills reach twice the target
-  (600), every other one is dropped and the interval doubles, so a session of any length
-  ends up as a video of about 20-40 s.
-- **Making the video.** `renderTimelapse` draws every frame with `composeFrame`
-  (`lib/timelapse-compose.ts`). The camera fills the frame, and the screen box, clocks, task
-  name, progress bar and mark sit on top wherever the layout editor put them (the layout
-  maths is in `packages/core/src/timelapse-layout.ts`). Where the browser has WebCodecs, the
-  frames are encoded to an H.264 MP4 with `mp4-muxer`. Elsewhere, MediaRecorder records the
-  canvas in real time. The person can then download the video or share it in a post
-  (`lib/post-media.ts`).
+The owner asked for this in one long chat that was then deleted; this section is the record.
+The decisions, in order, are in DECISIONS.md under the three "Timelapse" sections of
+2026-10-21.
+
+**The files.**
+- `packages/core/src/timelapse.ts`: pacing, thinning, the plan from stills to frames,
+  deflicker, size estimates, `trimIndices`. Tests beside it.
+- `packages/core/src/timelapse-layout.ts`: the layout model (pieces, boxes, shapes,
+  defaults, `normalizeTimelapseLayout`, `alignBox`, `fitBoxToRatio`). Tests beside it.
+- `apps/portal/src/lib/timelapse.ts`: `useTimelapseRecorder` (camera and screen capture)
+  and `renderTimelapse` (stills to MP4).
+- `apps/portal/src/lib/timelapse-compose.ts`: `composeFrame`, which draws one frame. The
+  video and the settings preview both use it, so the preview is exactly what comes out.
+- `apps/portal/src/components/focus/TimelapseLayoutEditor.tsx`: the editor in Settings ›
+  Timelapse.
+- `apps/portal/src/components/focus/Timelapse.tsx`: the two questions, the recording pill,
+  the recording settings, and the "Your timelapse" export card with trim.
+- `apps/portal/src/pages/Focus.tsx`: wires it together (when to ask, the task name, the
+  screen answer for the session).
+- Settings live in `settings.timelapse` (`packages/core/src/types.ts`, defaults in
+  `defaults.ts`, API schema in `apps/api/src/validation.ts`).
+
+**Recording.**
+- On the focus screen, `useTimelapseRecorder` takes JPEG stills from the camera (960 px
+  wide), plus a shared screen (1280 px wide, `getDisplayMedia`) when the person said yes to
+  it this session. It takes them during focus only, unless "Record breaks too" is on. The
+  stills stay in the tab's memory: nothing is uploaded, and closing the tab loses them (the
+  focus screen asks before it closes with unsaved stills).
+- Each still carries the session's focused time, break time, running time, the time of day,
+  and the task name as the focus screen shows it ("Course · Task").
+- Pacing works like a phone timelapse. Auto mode starts at one still every 0.5 s. Each time
+  the stills reach twice the target (600), every other one is dropped and the interval
+  doubles, so a session of any length ends up as a video of about 20-40 s. "Set length" and
+  "Speed" modes exist too.
+- **When it asks.** `timelapse.record` is ask / always / never. With ask, "Record a
+  timelapse?" opens once per session. Then, whenever a recording starts in a session, "Record
+  your screen this time?" opens (Record my screen / Just the camera). That answer lasts for
+  the session only; there is no saved screen setting, on purpose (the owner wants to be asked
+  every time). The browser's screen picker needs a click, so the Yes button calls
+  `recorder.requestScreen()` inside the click. A recording that started on its own and
+  missed the click shows "Share screen" in the recording pill instead, which also picks a
+  share back up after it is stopped from the browser's bar.
+- Saying no to the screen leaves the full camera picture: when a still has no screen image,
+  nothing is drawn in the screen's box. There is never a black space for it.
+
+**The layout (Settings › Timelapse, `/settings#timelapse`).**
+- The **camera is a fixed backdrop**: it always fills the whole frame and can't be moved,
+  resized or removed (the owner was emphatic). It has no box in the editor. Stored layouts
+  are mended to a full-frame camera by `normalizeTimelapseLayout`.
+- On top sit the **screen**, **current time**, **time elapsed**, **task name**, **progress
+  bar** (fills as the video plays through the session) and the **Komodon mark** (can't be
+  removed). Each is a box in fractions of the frame (0-1), so one layout fits any size.
+- The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
+  each one, and the boxes come from that. Text pieces are placed by their top left and sized
+  by their height; their width is the text's. Resizing from a corner keeps the shape of the
+  screen, the texts and the mark; the progress bar stretches freely. There is **no
+  snapping** (removed at the owner's request).
+- **Line up:** the chosen piece has Left, Centre and Right buttons (4% in from the edge).
+  Text pieces store that side as `align`, so a real task name longer than the preview's
+  grows away from it (a right-aligned name grows leftwards), and a piece that would run off
+  the frame is pushed back in.
+- **Add back:** removed pieces wait as chips under the preview. The screen starts there.
+- **Shape:** Match camera (the default), Match screen, 16:9, 9:16, 1:1, 4:5, 4:3. The video
+  is 1280 px on its long side. The camera's and screen's shapes are remembered in
+  localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`); the screen falls back to
+  the monitor's shape (`window.screen`), which needs no permission. The screen box keeps the
+  screen's shape, refits when the video's shape changes, and has "Fit the screen to its
+  shape". A layout still at a shape's starting places moves to the new shape's defaults; an
+  arranged one stays, and "Reset the layout" starts over.
+- **Save and Revert:** nothing in the editor saves until Save. A toast-style bubble stays at
+  the bottom of the window after the first change, with Revert and Save, and closing the tab
+  with changes asks first. On Save each text piece is stored exactly where it was drawn. The
+  recording settings below the editor (length, fps, breaks, smooth, deflicker) still save
+  on change.
+- `showTimer` / `showClockTime` are old switches kept in the type only so a row saved
+  before the layout existed seeds the two clock pieces.
+
+**Making the video.**
+- The "Your timelapse" card (end-of-session screen and the focus screen's controls) shows
+  the stills, a **Trim** (Start and End sliders over the session, with the first and last
+  kept still shown, "Keep it all" to undo), the length settings, then Make the video.
+- The trim is held in session seconds, not still indices, because thinning halves the
+  stills while recording; an end never moved follows the recording as it grows.
+- `renderTimelapse` blends the stills behind each frame for the camera and the screen
+  separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
+  the frame. The mark is black or white, picked from the brightness behind it on frame 30.
+  Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
+  elsewhere MediaRecorder records the canvas in real time. The person can download it or
+  "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still).
+
+**Links.** The focus screen's controls, the "Record a timelapse?" question ("Change what it
+looks like"), the screen question and the export card link to `/settings#timelapse`. From
+the focus screen they open in a **new tab**, because leaving the focus screen drops the
+stills; the setting reaches the focus tab when it is looked at again (TanStack Query
+refetches on focus). Settings › Focus screen keeps a one-line link to the Timelapse group.
+
+**Testing it.**
+- The Claude browser pane blocks the camera and the screen picker, so a real recording and a
+  real share can't be tested there; the owner has to try those. Everything else can be: the
+  editor works in the preview, and `renderTimelapse` can be run from the page with fake
+  stills made from the background photos (`fetch('/backgrounds/<id>.webp')` gives real
+  image blobs; encoding blobs on a canvas in a hidden pane stalls).
+- A sandbox API runs the code it loaded at start: restart it after changing
+  `validation.ts`, or saves of new layout fields come back 400.
+- The editor redraws on a canvas; to read where boxes are, measure `.tl-box` elements
+  against `.tl-stage` with JavaScript rather than trusting a screenshot.
+
 - **The iPhone camera (owner's question, 2026-10-21).** On a phone, can the site use the
   iPhone's own camera and Time-Lapse mode instead of ours? No:
   - A web page reaches the iPhone camera only through a file input with `capture`. iOS offers
