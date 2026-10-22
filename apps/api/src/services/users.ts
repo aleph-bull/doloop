@@ -136,6 +136,7 @@ export function toUser(row: UserRow): User {
     xp: row.xp,
     level: row.level,
     streak: row.streak,
+    devAccount: row.devAccount,
   };
 }
 

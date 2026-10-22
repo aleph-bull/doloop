@@ -34,6 +34,7 @@ import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
+import { SignOutButton } from './SignOutButton';
 
 /**
  * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
@@ -297,6 +298,9 @@ export function AppShell() {
   // The profile is not a tab: it sits where Sign out used to, at the end of the nav, shown
   // as the person's picture once they have chosen one.
   const profileShown = settings?.features?.social !== false;
+  // Sign out sits in the nav when there is no profile to hold it, and always for a dev
+  // account, which gets swapped for another often.
+  const signOutShown = !profileShown || me.data?.user.devAccount === true;
   const avatarUrl = useAvatar().data?.dataUrl ?? null;
   const main = shown.filter((l) => l.group === 'main');
   const more = shown.filter((l) => l.group === 'more');
@@ -551,7 +555,11 @@ export function AppShell() {
               </a>
             )}
             <RailLink to="/settings" label="Settings" icon={SettingsIcon} />
-            {/* Your profile takes the sign-out row; signing out is on the profile itself. */}
+            {/*
+              Your profile takes the sign-out row; signing out is on the profile itself. With
+              Social off there is no profile, so Sign out is back (and always for a dev account).
+            */}
+            {signOutShown && <SignOutButton rail />}
             {profileShown && (
               <NavLink to="/profile" className="sidenav-link" title="Your profile">
                 <span className="sidenav-icon" aria-hidden>
@@ -692,6 +700,7 @@ export function AppShell() {
           <NavLink to="/settings" className="nav-icon" aria-label="Settings" title="Settings">
             <SettingsIcon size={18} aria-hidden />
           </NavLink>
+          {signOutShown && <SignOutButton />}
           {profileShown && (
             <NavLink
               to="/profile"

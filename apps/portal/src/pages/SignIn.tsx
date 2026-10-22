@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input, LogoMark, useToast } from '@komogon/ui';
-import { friendlyAuthError, serverGoogleClientId, useAuth } from '../lib/auth';
+import {
+  clearSignInNotice,
+  friendlyAuthError,
+  readSignInNotice,
+  serverDevLogin,
+  serverGoogleClientId,
+  useAuth,
+} from '../lib/auth';
 import { LocalTestAccounts } from '../components/LocalTestAccounts';
 import { LocalMailInbox } from '../components/LocalMailInbox';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
@@ -9,8 +16,11 @@ import { GoogleSignInButton } from '../components/GoogleSignInButton';
 export function SignIn() {
   const auth = useAuth();
   const { toast } = useToast();
-  // Set by the auth callback or the invite check when a sign-in was turned away.
-  const turnedAway = (useLocation().state as { error?: string } | null)?.error ?? null;
+  // Why a sign-in was turned away or ended: from the auth callback, or left by the app
+  // when it signed someone out (an expired dev account, a suspension).
+  const [notice] = useState(readSignInNotice);
+  useEffect(clearSignInNotice, []);
+  const turnedAway = (useLocation().state as { error?: string } | null)?.error ?? notice;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [creating, setCreating] = useState(useLocation().pathname === '/signup');
@@ -21,11 +31,17 @@ export function SignIn() {
 
   /** Server mode: set when the API offers "Continue with Google". */
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  /** Server mode: "I'm a dev" is offered, and whether its password field is open. */
+  const [devOffered, setDevOffered] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const [devPassword, setDevPassword] = useState('');
+  const [devKind, setDevKind] = useState<'fresh' | 'jerry'>('fresh');
 
   useEffect(() => {
     if (auth.mode !== 'server') return;
     let cancelled = false;
     void serverGoogleClientId().then((id) => !cancelled && setGoogleClientId(id));
+    void serverDevLogin().then((on) => !cancelled && setDevOffered(on));
     return () => {
       cancelled = true;
     };
@@ -242,6 +258,63 @@ export function SignIn() {
               only.
             </p>
           )}
+          {auth.mode === 'server' &&
+            devOffered &&
+            !sent &&
+            (devOpen ? (
+              <form
+                className="flex flex-col gap-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBusy(true);
+                  // Which button sent it; Enter in the field means a fresh account.
+                  const submitter = (e.nativeEvent as SubmitEvent).submitter;
+                  const kind = submitter?.getAttribute('value') === 'jerry' ? 'jerry' : 'fresh';
+                  setDevKind(kind);
+                  try {
+                    await auth.signInAsDev(devPassword, kind);
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : 'Could not start a dev account.');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <div className="divider" style={{ margin: 0 }} />
+                <Input
+                  label="Dev password"
+                  type="password"
+                  autoComplete="off"
+                  value={devPassword}
+                  onChange={(e) => setDevPassword(e.target.value)}
+                  required
+                  autoFocus
+                  hint="Throwaway accounts, deleted after a day. Jerry has months of study and friends."
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    type="submit"
+                    value="fresh"
+                    loading={busy && devKind === 'fresh'}
+                    disabled={busy}
+                  >
+                    Fresh account
+                  </Button>
+                  <Button
+                    type="submit"
+                    value="jerry"
+                    loading={busy && devKind === 'jerry'}
+                    disabled={busy}
+                  >
+                    Jerry
+                  </Button>
+                </div>
+              </form>
+            ) : (
+              <button type="button" className="dev-link" onClick={() => setDevOpen(true)}>
+                I'm a dev
+              </button>
+            ))}
           <LocalTestAccounts />
         </Glass>
       </main>

@@ -57,7 +57,9 @@ export async function listAccounts(db: Db): Promise<AdminAccount[]> {
   ]);
   const withPassword = new Set(passwords.map((p) => p.userId));
   const totals = new Map(counts.map((c) => [c.userId, c]));
+  // Throwaway dev accounts come and go by themselves; the list is for real people.
   return rows
+    .filter((u) => !u.devAccount)
     .map((u) => ({
       id: u.id,
       email: u.email,

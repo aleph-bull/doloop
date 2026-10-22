@@ -4,7 +4,13 @@ import { Spinner } from '@komogon/ui';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary, ErrorPanel } from './components/ErrorState';
 import { ApiError } from './lib/api';
-import { NOT_INVITED_MESSAGE, SUSPENDED_MESSAGE, useAuth } from './lib/auth';
+import {
+  NOT_INVITED_MESSAGE,
+  SUSPENDED_MESSAGE,
+  authMode,
+  leaveSignInNotice,
+  useAuth,
+} from './lib/auth';
 import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
@@ -82,6 +88,7 @@ function TurnedAway({ message }: { message: string }) {
   useEffect(() => {
     // Go on once signed out: RequireAuth then sends the signed-out app to sign in in this
     // component's place, so the <Navigate> below would never get to say why.
+    leaveSignInNotice(message);
     void signOut().then(() => navigate('/signin', { replace: true, state: { error: message } }));
   }, [signOut, navigate, message]);
   if (auth.status === 'signed-in')
@@ -100,6 +107,18 @@ function Gate({ children }: { children: ReactNode }) {
   const refused = me.error instanceof ApiError && me.error.status === 403 ? me.error.message : null;
   if (refused === 'invite_only') return <TurnedAway message={NOT_INVITED_MESSAGE} />;
   if (refused === 'account_suspended') return <TurnedAway message={SUSPENDED_MESSAGE} />;
+  // The API no longer takes this sign-in (a dev account that has expired, a session ended
+  // elsewhere): sign out and say so, rather than claim the API can't be reached.
+  if (me.error instanceof ApiError && me.error.status === 401 && authMode !== 'supabase')
+    return (
+      <TurnedAway
+        message={
+          me.error.message.endsWith('Sign in again.')
+            ? me.error.message
+            : 'Your sign-in has run out. Sign in again.'
+        }
+      />
+    );
   if (me.isError && !me.data)
     return (
       <Centered>

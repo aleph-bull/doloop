@@ -16,6 +16,7 @@ import { notFound } from '../errors';
 import { loadCompletedSessions } from '../services/pace';
 import type { Person } from '../services/people';
 import { settingsOf } from '../services/users';
+import { sameWorld } from '../services/dev-accounts';
 import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
 import { liveAmong, type LiveMember } from './groups';
@@ -90,8 +91,10 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       userId === req.user.id
         ? req.user
         : await db.query.users.findFirst({ where: eq(users.id, userId) });
-    // An account that never finished onboarding has nothing to show, and no name to show it under.
-    if (!row || row.onboardedAt === null) throw notFound('No such profile');
+    // An account that never finished onboarding has nothing to show, and no name to show it
+    // under. Real people and dev accounts can't see each other.
+    if (!row || row.onboardedAt === null || !sameWorld(req.user, row))
+      throw notFound('No such profile');
     const now = clock();
     const settings = settingsOf(row);
     const [sessions, avatar, page, friends, friendship] = await Promise.all([

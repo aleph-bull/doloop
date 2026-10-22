@@ -16,7 +16,8 @@ import {
 } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { jamMembers, jams, nodes, routines, sessions } from '../db/schema';
+import { jamMembers, jams, nodes, routines, sessions, users } from '../db/schema';
+import { sameWorld } from '../services/dev-accounts';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
@@ -313,7 +314,14 @@ export function jamRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.post('/api/social/jams/join', async (req) => {
     const { code } = z.object({ code: z.string().trim().toUpperCase().length(6) }).parse(req.body);
     const row = await db.query.jams.findFirst({ where: eq(jams.code, code) });
-    if (!row) throw notFound('No jam with that code');
+    const host =
+      row &&
+      (await db.query.users.findFirst({
+        where: eq(users.id, row.hostId),
+        columns: { devWorld: true },
+      }));
+    // A code from the other side (real people, or a dev world) reads as no jam at all.
+    if (!row || !sameWorld(req.user, host)) throw notFound('No jam with that code');
     return join(row, req.user.id, dt(clock()), req.user.timezone);
   });
 
