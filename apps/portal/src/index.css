@@ -368,9 +368,11 @@
   border-radius: 2px;
   background: var(--accent);
 }
+/* Never squeezed: a round button short of room turns into an oval. */
 .nav-icon {
   display: grid;
   place-items: center;
+  flex: none;
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -505,6 +507,27 @@
 }
 @media (max-width: 400px) {
   .brand > span:last-child {
+    display: none;
+  }
+}
+/*
+ * A phone's top bar has no room for the wordmark beside the counters and round buttons, and
+ * under 400px, with a third round button (Admin), none for the level's progress line either.
+ */
+@media (max-width: 519px) {
+  .nav-inner {
+    gap: 4px;
+  }
+  .nav-inner > .brand {
+    padding-right: 0;
+    margin-right: 0;
+  }
+  .nav-inner > .brand > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 399px) {
+  .nav-inner:has(> .nav-icon ~ .nav-icon ~ .nav-icon) .nav-level-bar {
     display: none;
   }
 }
