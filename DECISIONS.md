@@ -1941,6 +1941,29 @@ The owner asked for four things in one message: a preview before a post goes out
 - `targetsFor` (a preset's layouts for the editor) moved from `TimelapsePresets.tsx` into `TimelapseLayoutEditor.tsx` so the dialog can use it without a circular import.
 - Checked in the sandbox with a fake camera (a canvas stream): looks in Settings and on the focus screen, the end card in a made video (4.6 s from 1.6 s of stills), the Social preview posting without the hours (201, on the feed without the time), the Instagram preview at computer and phone widths, and "Change layout?" remaking the video in the new look with new words. The share menu, the clipboard on a real phone, and the sites' own pages weren't tried; the owner will have to try those.
 
+## The homepage below the devices, redone, 2026-10-22 (user request)
+
+The owner liked the hero, laptop and phone, but said the rest of `apps/site` looked bad: the
+words were right, the layout of text and pictures wasn't, the screenshots were from an older
+app, and their own timelapses should be on it. They asked for something like other clean
+start-up sites without losing the brand.
+
+- **Words unchanged**, every heading and paragraph as they were.
+- **One pattern per section:** the heading on the left and its paragraph on the right (stacked
+  on phones), then the pictures on the same 1120 px container. The alternating left-right
+  splits and the narrow screenshots are gone.
+- **Plain screenshots, cropped tight**, all with the same 24px corner and no shadow or frame
+  (the owner rejected photo stages behind sections before). New captures from the current
+  app (sidebar, Social, the new profile era), Jerry's seeded sandbox: Analytics' week view;
+  the focus screen as a wide band; the feed beside the Leaderboard tab, sized so both are one
+  height.
+- **The owner's timelapses** (10-18, and both from 10-20) under the focus screen, three across,
+  each a whole session in ten seconds. They play only while on screen, and wait on a poster
+  with controls under reduced motion. On phones they are a row to swipe. The 10-17 one was
+  left out because someone else is in the background for a stretch of it.
+- **Closing:** the logo, "Better than last time.", the line and the two buttons straight on
+  the page, without the white card.
+
 ## Live clip: a moment of the timelapse at real speed, 2026-10-22 (user request)
 
 The owner wanted to be able to be silly in a timelapse now and then and show the camera something: an option that films the camera at full speed and plays that part at 1x. They asked for a 1-2 word name; it's **Live clip**.
