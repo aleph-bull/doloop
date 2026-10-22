@@ -49,3 +49,23 @@ if (!still && 'IntersectionObserver' in window) {
   );
   for (const el of items) if (!inHero(el)) io.observe(el);
 }
+
+// The timelapses play while they're on screen and pause off it, so they load only when
+// someone gets that far. With reduced motion they wait on their poster with controls.
+const clips = [...document.querySelectorAll('video.clip')];
+if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  for (const v of clips) v.controls = true;
+} else if ('IntersectionObserver' in window) {
+  const watch = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) e.target.play().catch(() => {});
+        else e.target.pause();
+      }
+    },
+    { threshold: 0.25 },
+  );
+  for (const v of clips) watch.observe(v);
+} else {
+  for (const v of clips) v.play().catch(() => {});
+}

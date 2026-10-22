@@ -9,7 +9,7 @@
 
 /** The pieces a timelapse can show. The camera and the screen are pictures; the rest are drawn. */
 export type TimelapseElementId =
-  'camera' | 'screen' | 'clock' | 'elapsed' | 'title' | 'progress' | 'watermark';
+  'camera' | 'screen' | 'clock' | 'elapsed' | 'title' | 'note' | 'progress' | 'watermark';
 
 /** The order they are listed in, in the settings and the editor. */
 export const TIMELAPSE_ELEMENTS: readonly TimelapseElementId[] = [
@@ -18,6 +18,7 @@ export const TIMELAPSE_ELEMENTS: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
   'title',
+  'note',
   'progress',
   'watermark',
 ];
@@ -32,6 +33,7 @@ export const TIMELAPSE_TEXT_ELEMENTS: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
   'title',
+  'note',
   'watermark',
 ];
 
@@ -42,6 +44,7 @@ export const TIMELAPSE_ELEMENT_LABELS: Record<TimelapseElementId, string> = {
   clock: 'Current time',
   elapsed: 'Time elapsed',
   title: 'Task name',
+  note: 'Your text',
   progress: 'Progress bar',
   watermark: 'Komodon mark',
 };
@@ -181,7 +184,8 @@ export function fitBoxToRatio(
  * A starting layout for a shape, after the owner's sketch: the time of day top left, the
  * screen top right, the time elapsed bottom left, the task bottom right, the camera behind.
  * Tall videos stack the same pieces instead. The screen starts out of the layout, waiting
- * under the editor to be added.
+ * under the editor to be added. The person's own text sits under the time of day; it is
+ * drawn only once there is some.
  */
 export function defaultTimelapseLayout(
   ratio = 16 / 9,
@@ -195,6 +199,7 @@ export function defaultTimelapseLayout(
       clock: box(0.05, 0.035, 0.3, 0.04),
       elapsed: box(0.05, 0.86, 0.25, 0.045),
       title: box(0.05, 0.8, 0.6, 0.045),
+      note: box(0.05, 0.085, 0.7, 0.04),
       progress: box(0, 0.988, 1, 0.012),
       watermark: box(0.62, 0.93, 0.33, 0.03, true, 'right'),
     };
@@ -206,6 +211,7 @@ export function defaultTimelapseLayout(
       clock: box(0.05, 0.05, 0.3, 0.06),
       elapsed: box(0.05, 0.86, 0.2, 0.065),
       title: box(0.05, 0.77, 0.5, 0.065),
+      note: box(0.05, 0.125, 0.6, 0.055),
       progress: box(0, 0.986, 1, 0.014),
       watermark: box(0.72, 0.89, 0.23, 0.045, true, 'right'),
     };
@@ -216,6 +222,7 @@ export function defaultTimelapseLayout(
     clock: box(0.04, 0.06, 0.2, 0.08),
     elapsed: box(0.04, 0.84, 0.12, 0.08),
     title: box(0.5, 0.76, 0.46, 0.08, true, 'right'),
+    note: box(0.04, 0.16, 0.5, 0.07),
     progress: box(0, 0.982, 1, 0.018),
     watermark: box(0.7, 0.88, 0.26, 0.055, true, 'right'),
   };

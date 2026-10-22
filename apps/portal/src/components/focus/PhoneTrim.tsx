@@ -64,9 +64,15 @@ export function PhoneTrim({
   const thumbs = useMemo(() => {
     const n = Math.min(THUMBS, stills.length);
     return Array.from({ length: n }, (_, k) => {
-      const s = stills[Math.round((k * (stills.length - 1)) / Math.max(1, n - 1))];
+      // Spread by time, so a live clip's many frames take no more of the strip than its seconds.
+      const t = first + (k * span) / Math.max(1, n - 1);
+      let i = 0;
+      while (i < stills.length - 1 && times[i]! < t) i++;
+      const s = stills[i];
       return s?.blob ?? s?.screen ?? null;
     });
+    // The times only change with the stills.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stills]);
   const [urls, setUrls] = useState<Array<string | null>>([]);
   useEffect(() => {
@@ -119,6 +125,8 @@ export function PhoneTrim({
     };
   }, [bitmap, startAt]);
 
+  const keptFrom = times[startAt] ?? 0;
+  const keptSpan = (times[Math.max(startAt, endAt - 1)] ?? keptFrom) - keptFrom;
   const drawAt = useCallback(
     async (i: number) => {
       latest.current = i;
@@ -138,12 +146,14 @@ export function PhoneTrim({
           clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
           elapsed: clockText(still, look.breakClock),
           title: still.title,
-          progress: endAt - startAt > 1 ? (i - startAt) / (endAt - 1 - startAt) : 1,
+          note: look.noteText?.trim() || null,
+          // By time, so the bar holds through a live clip as it does in the video.
+          progress: keptSpan > 0 ? ((times[i] ?? keptFrom) - keptFrom) / keptSpan : 1,
         },
         { mark: '#ffffff' },
       );
     },
-    [stills, bitmap, vw, vh, look, startAt, endAt],
+    [stills, times, bitmap, vw, vh, look, keptFrom, keptSpan],
   );
 
   useEffect(() => {

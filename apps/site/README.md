@@ -13,11 +13,21 @@ pnpm build      # static output in dist/
 
 - `index.html` and `src/styles.css`: the app's default photograph (Cotton Candy, frostroomhead
   on Pexels) runs edge to edge behind the hero and fades out at the bottom into a light
-  gradient page. The real dashboard screenshot sits in a glass window over it; the sections
-  below show the profile, leaderboard and focus screen as screenshots.
+  gradient page. The real dashboard screenshot sits on a CSS laptop and phone over it. Below,
+  each section has its heading on the left and its paragraph on the right, then plain
+  screenshots with one corner (`.panel`): Analytics; the focus screen over three timelapses;
+  the feed beside the leaderboard.
 - `public/fonts`: Satoshi for headings and the wordmark. Inter loads from rsms.me like the app.
 - `public/shots/*.webp`: screenshots of the portal from a seeded sandbox account (Jerry, dark
   mode). To retake them, see below. Replacing a file with the same name is all the page needs.
+  The section shots are crops of 1280x800 captures at 2x (in device pixels: analytics
+  472,40 1928x1084; focus 0,220 2560x1100; feed from Social 952,184 904x950; leaderboard from
+  Social › Leaderboard 492,184 1888x1416). Keep a new crop's shape, or change its
+  `width`/`height` in `index.html` and, for the two Social shots, the column ratio in
+  `.share-grid`.
+- `public/clips`: the owner's own timelapses, each a whole session sped up to ten seconds,
+  720 px wide, H.264 with no sound (about 1 MB each), and a webp poster from 3 s in.
+  `main.js` plays them only while they're on screen.
 
 ## Retaking the screenshots
 

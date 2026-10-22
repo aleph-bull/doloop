@@ -14,6 +14,7 @@ const SAMPLE: Omit<ComposeFrame, 'camera' | 'screen'> = {
   clock: '2:14 PM',
   elapsed: '42:17',
   title: 'Your task name',
+  note: 'Your text',
   progress: 0.6,
 };
 
@@ -123,7 +124,7 @@ function LookPicture({
   const ref = useRef<HTMLCanvasElement>(null);
   const { w, h } = videoSize(ratio, 360);
   const said = { ...SAMPLE, ...sample };
-  const { clock, elapsed, title, progress } = said;
+  const { clock, elapsed, title, note, progress } = said;
   useEffect(() => {
     const ctx = ref.current?.getContext('2d');
     if (!ctx) return;
@@ -133,12 +134,12 @@ function LookPicture({
         w,
         h,
         layout,
-        { camera: camera ?? cameraStandIn(), screen, clock, elapsed, title, progress },
+        { camera: camera ?? cameraStandIn(), screen, clock, elapsed, title, note, progress },
         { mark: '#ffffff', placeholders: true },
       );
     paint();
     // The wordmark is in Satoshi, which may arrive after the first paint.
     void document.fonts?.load('600 24px Satoshi').then(paint, () => undefined);
-  }, [w, h, layout, camera, screen, clock, elapsed, title, progress]);
+  }, [w, h, layout, camera, screen, clock, elapsed, title, note, progress]);
   return <canvas ref={ref} width={w} height={h} aria-hidden />;
 }

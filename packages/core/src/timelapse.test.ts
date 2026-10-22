@@ -13,6 +13,7 @@ import {
   trimIndices,
   fmtBytes,
   TIMELAPSE_DEFAULT_STILL_BYTES,
+  type LiveMark,
   type TimelapseOptions,
 } from './timelapse';
 
@@ -103,6 +104,120 @@ describe('planning the video', () => {
 
   it('handles nothing captured', () => {
     expect(planTimelapse(0, 0, AUTO).frames).toEqual([]);
+  });
+});
+
+/** Marks for `before` ordinary stills, a clip of `frames` at 30 a second, then `after` more. */
+function withClip(before: number, frames: number, after: number): LiveMark[] {
+  return [
+    ...Array<LiveMark>(before).fill(null),
+    ...Array.from({ length: frames }, (_, k) => ({ clip: 1, at: 100_000 + (k * 1000) / 30 })),
+    ...Array<LiveMark>(after).fill(null),
+  ];
+}
+
+describe('live clips', () => {
+  it('thinning keeps every frame of a clip and counts only the ordinary stills', () => {
+    const isClip = (s: string) => s.startsWith('c');
+    expect(thinStills(['a', 'b', 'c1', 'c2', 'c3', 'd', 'e'], isClip)).toEqual([
+      'a',
+      'c1',
+      'c2',
+      'c3',
+      'd',
+    ]);
+    // Four ordinary stills and a long clip: not full at a cap of four.
+    expect(thinIfFull(['a', 'c1', 'c2', 'c3', 'b', 'd', 'e'], 4, isClip)).toBeNull();
+    expect(thinIfFull(['a', 'c1', 'b', 'd', 'e', 'f'], 4, isClip)).toEqual(['a', 'c1', 'd', 'f']);
+  });
+
+  it('a clip plays at real speed where it was filmed, after the ordinary stills before it', () => {
+    // 300 ordinary stills, a 3 s clip (90 frames at 30 a second), 300 more.
+    const marks = withClip(300, 90, 300);
+    const p = planTimelapse(690, 3600, AUTO, marks);
+    expect(p.liveSeconds).toBe(3);
+    // 600 ordinary frames at 30 fps is 20 s, and the clip adds its own 3.
+    expect(p.durationSeconds).toBe(23);
+    expect(p.frames).toHaveLength(690);
+    expect(p.live!.filter(Boolean)).toHaveLength(90);
+    // In order: the first 300, then the clip frame by frame, then the rest.
+    expect(p.frames[299]).toEqual([299, 300]);
+    expect(p.live![299]).toBe(false);
+    expect(p.frames[300]).toEqual([300, 301]);
+    expect(p.live![300]).toBe(true);
+    expect(p.frames[389]).toEqual([389, 390]);
+    expect(p.frames[390]).toEqual([390, 391]);
+    expect(p.live![390]).toBe(false);
+  });
+
+  it('a clip keeps real speed whatever the frame rate, repeating or skipping frames', () => {
+    const marks = withClip(0, 90, 0);
+    // 60 fps from a 30-a-second clip shows each frame twice.
+    const fast = planTimelapse(90, 3, { ...AUTO, fps: 60 }, marks);
+    expect(fast.frames).toHaveLength(180);
+    expect(fast.frames[0]).toEqual([0, 1]);
+    expect(fast.frames[1]).toEqual([0, 1]);
+    expect(fast.frames[2]).toEqual([1, 2]);
+    // 15 fps skips every other one; still 3 s.
+    const slow = planTimelapse(90, 3, { ...AUTO, fps: 15 }, marks);
+    expect(slow.durationSeconds).toBe(3);
+    expect(slow.frames[1]).toEqual([2, 3]);
+  });
+
+  it('a set length is for the ordinary stills, and a blended frame never reaches across a clip', () => {
+    // 502 before the clip, so a blended frame would straddle it.
+    const marks = withClip(502, 60, 498);
+    const p = planTimelapse(
+      1060,
+      3600,
+      { ...AUTO, lengthMode: 'length', lengthSeconds: 10 },
+      marks,
+    );
+    expect(p.durationSeconds).toBe(12);
+    for (let j = 0; j < p.frames.length; j++) {
+      const [from, to] = p.frames[j]!;
+      if (p.live![j]) continue;
+      // An ordinary frame holds ordinary stills only.
+      for (let i = from; i < to; i++) expect(marks[i]).toBeNull();
+    }
+  });
+
+  it('a speed counts only the ordinary stills, and keeps the asked rate for the clip', () => {
+    // An hour at 300x is 12 s; the 3 s clip is part of that hour but plays at 1x.
+    const marks = withClip(90, 90, 90);
+    const p = planTimelapse(270, 3603, { ...AUTO, lengthMode: 'speed', fps: 30 }, marks);
+    expect(p.fps).toBe(30);
+    expect(p.liveSeconds).toBe(3);
+    expect(p.durationSeconds).toBe(15);
+  });
+
+  it('two clips back to back stay two clips, each at its own times', () => {
+    const marks: LiveMark[] = [
+      null,
+      { clip: 1, at: 0 },
+      { clip: 1, at: 1000 },
+      { clip: 2, at: 60_000 },
+      { clip: 2, at: 61_000 },
+      null,
+    ];
+    const p = planTimelapse(6, 120, { ...AUTO, fps: 1 }, marks);
+    expect(p.frames).toEqual([
+      [0, 1],
+      [1, 2],
+      [2, 3],
+      [3, 4],
+      [4, 5],
+      [5, 6],
+    ]);
+    expect(p.liveSeconds).toBe(4);
+  });
+
+  it('without clips the plan is what it always was', () => {
+    const plain = planTimelapse(900, 3600, AUTO);
+    const marked = planTimelapse(900, 3600, AUTO, Array<LiveMark>(900).fill(null));
+    expect(marked).toEqual(plain);
+    expect(plain.live).toBeUndefined();
+    expect(plain.liveSeconds).toBe(0);
   });
 });
 

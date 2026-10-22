@@ -526,6 +526,12 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   share back up after it is stopped from the browser's bar.
 - Saying no to the screen leaves the full camera picture: when a still has no screen image,
   nothing is drawn in the screen's box. There is never a black space for it.
+- **Live clip** (2026-10-22): while recording, a button on the recording pill (L on a
+  computer, a pill on the phone's camera screen) films the camera at full speed, up to 30
+  frames a second, for up to 30 s a clip and 60 s a recording, and the video plays that part
+  at real speed. Clip frames are stills with `clip` set, never thinned; `planTimelapse`
+  takes `liveMarks(stills)` and slots each clip in where it was filmed. The why and the
+  details are in DECISIONS.md, "Live clip".
 
 **The layout (Settings › Timelapse, `/settings#timelapse`).**
 - **Two presets, Phone and Computer**, each folded until clicked (`/settings#timelapse-phone`
@@ -584,17 +590,20 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
   are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
-- **Every post is previewed first** (`PostPreview.tsx`): on Social, the post as the feed
-  shows it, with a line to say and a switch for the hours (`showTime: false` posts no minutes
-  or task); elsewhere, the video with its caption (copied to paste, or written into X's
-  composer). **Words at the end** (`endText` on each preset) add a 3-second card over the
-  last frame; empty adds nothing. **Looks** (`timelapse-styles.ts`: Classic, Big timer,
-  Headline, Corner, Clean) place the pieces for any shape; `matchTimelapseStyle` reads a
-  saved layout back as its look. **"Change layout?"** beside a made video opens the layout
-  editor in a dialog over a moment of that video (`RelayoutDialog.tsx`; not the Settings
-  page, which would drop the stills) and remakes the video with what was saved. All of it:
-  DECISIONS.md, "The timelapse: a preview before posting, words at the end, looks, and
-  Change layout?".
+- **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
+  with a line to say and a switch for the hours (`showTime: false` posts no minutes or task).
+  The text box must stay quick: the post beside it follows a deferred copy of the text in a
+  memoised card, and its video doesn't play until pressed. Instagram, TikTok and X have **no
+  preview** (owner, 2026-10-22): their buttons go straight to the app or site, where the post
+  is written. **Your text** (`noteText` on each preset, the layout's `note` piece) is the
+  person's own line on the video the whole way through, like the clocks; empty, it's left
+  out. There is no end card (built, then removed the same day). **Looks**
+  (`timelapse-styles.ts`: Classic, Big timer, Headline, Corner, Clean) place the pieces for
+  any shape; `matchTimelapseStyle` reads a saved layout back as its look. **"Change
+  layout?"** beside a made video opens the layout editor in a dialog over a moment of that
+  video (`RelayoutDialog.tsx`; not the Settings page, which would drop the stills) and
+  remakes the video with what was saved. DECISIONS.md has both 2026-10-22 timelapse
+  sections.
 
 **Links.** The focus screen's controls, the "Record a timelapse?" question ("Change what it
 looks like"), the screen question and the export card link to `/settings#timelapse`. From
@@ -889,7 +898,12 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   photograph runs edge to edge behind the hero and fades out at the bottom only, into a
   light gradient page. The dashboard screenshot sits on a CSS-drawn laptop with the phone
   view in front (no island on the phone); the Track, Focus and Share sections show plain
-  screenshots of the portal. Satoshi for headings, Inter for everything else; no eyebrow
+  screenshots of the portal. Below the devices (redone 2026-10-22: the owner liked the hero
+  and devices, but called the rest bad and asked for a clean start-up look that keeps the
+  brand): each section is its heading left and paragraph right, then tightly cropped
+  screenshots with one corner, and Focus has three of the owner's own timelapses under the
+  focus screen. The closing is the logo, heading and buttons on the page, no card.
+  Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
   the devices about 1.3 s later or on the first scroll, each section as it arrives.
 - **Rejected, in order:** hand-built UI mockups ("fake"), the photo feathered on every side,

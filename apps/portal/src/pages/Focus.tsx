@@ -334,6 +334,23 @@ export function Focus() {
   // The phone's camera stops when its screen locks, so the screen stays on while filming.
   useWakeLock(cameraScreen);
 
+  // L starts and stops a live clip while recording, without going for the mouse. Not while
+  // typing, with a modifier held, or with a dialog up.
+  const toggleClip = recorder.toggleClip;
+  useEffect(() => {
+    if (!recording) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'l' && e.key !== 'L') return;
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('dialog[open], [role="dialog"]')) return;
+      toggleClip();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [recording, toggleClip]);
+
   /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
   const tlPending = recorder.count > 0 && recorder.count !== tlSavedAt;
 
@@ -781,6 +798,7 @@ export function Focus() {
               Your session keeps running.
               <br />
               Esc to leave · Space to pause · H to hide the clock
+              {recording && ' · L for a live clip'}
             </span>
           </section>
         </Glass>

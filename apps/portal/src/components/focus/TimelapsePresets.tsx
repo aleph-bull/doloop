@@ -3,7 +3,8 @@ import { ChevronDown, Laptop, Smartphone } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Reveal } from '@komogon/ui';
 import { isPhone } from '../../lib/device';
-import { presetOf, TimelapseSettings } from './Timelapse';
+import { NoteField } from './NoteField';
+import { presetOf, presetPatch, TimelapseSettings } from './Timelapse';
 import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -117,6 +118,11 @@ export function TimelapsePresets({
                     onChange={onChange}
                     screen={d === 'computer'}
                     active={open[d]}
+                    noteText={presetOf(settings, d).noteText}
+                  />
+                  <NoteField
+                    value={presetOf(settings, d).noteText}
+                    onChange={(noteText) => onChange(presetPatch(d, { noteText }))}
                   />
                   <div className="divider" />
                   <h3 className="font-medium">Recording</h3>

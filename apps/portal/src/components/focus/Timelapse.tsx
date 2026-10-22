@@ -1,17 +1,14 @@
 import {
   applyTimelapseStyle,
   aspectRatio,
-  cleanEndText,
-  endCardFrames,
   fmtBytes,
+  LIVE_CLIP_MAX_SECONDS,
   phoneAspectRatio,
   planTimelapse,
   POST_PLATFORM_INFO,
   POST_PLATFORMS,
   postElsewhereNote,
   TIMELAPSE_DEFAULT_STILL_BYTES,
-  TIMELAPSE_END_SECONDS,
-  TIMELAPSE_END_TEXT_MAX,
   timelapseClock,
   timelapseLook,
   timelapseSizeEstimate,
@@ -23,8 +20,16 @@ import {
   type TimelapsePreset,
   type UserSettings,
 } from '@komogon/core';
-import { Download, LayoutTemplate, MonitorUp, Share2, Square, Video } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Clapperboard,
+  Download,
+  LayoutTemplate,
+  MonitorUp,
+  Share2,
+  Square,
+  Video,
+} from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import {
   Button,
@@ -45,7 +50,9 @@ import { PlatformMark } from '../PlatformMark';
 import {
   DEFAULT_SCREEN_BYTES,
   freeStorageBytes,
+  isClipStill,
   knownCameraRatio,
+  liveMarks,
   knownScreenRatio,
   measuredScreenBytes,
   measuredStillBytes,
@@ -53,6 +60,7 @@ import {
   screenSupported,
   timelapseFileName,
   videoSupported,
+  clipTime,
   clockText,
   timeOfDayText,
   type RecorderStatus,
@@ -62,8 +70,9 @@ import {
   type TimelapseRecorder,
   type TimelapseSources,
 } from '../../lib/timelapse';
+import { NoteField } from './NoteField';
 import { PhoneTrim } from './PhoneTrim';
-import { PostPreview, type PostTarget } from './PostPreview';
+import { PostPreview } from './PostPreview';
 import { RelayoutDialog } from './RelayoutDialog';
 import { TimelapseStylePicker } from './TimelapseStylePicker';
 
@@ -221,8 +230,8 @@ export interface TimelapseBadgeProps {
 }
 
 /**
- * The top bar's "recording" pill: a dot, a tiny mirror of the camera, a button to share the
- * screen when the share is waiting for a click or was stopped, and a stop.
+ * The top bar's "recording" pill: a dot, a tiny mirror of the camera, Live clip, a button to
+ * share the screen when the share is waiting for a click or was stopped, and a stop.
  */
 export function TimelapseBadge({
   recorder,
@@ -234,8 +243,9 @@ export function TimelapseBadge({
   useEffect(() => {
     if (ref.current) ref.current.srcObject = recorder.stream;
   }, [recorder.stream]);
+  const { clip } = recorder;
   return (
-    <span className="timelapse-badge" role="status">
+    <span className={`timelapse-badge${clip ? ' is-clip' : ''}`} role="status">
       {recorder.stream && (
         <video ref={ref} className="timelapse-preview" autoPlay muted playsInline />
       )}
@@ -244,9 +254,31 @@ export function TimelapseBadge({
         aria-hidden
       />
       <span className="tabular">
-        {!recorder.live ? 'Waiting for the screen' : capturing ? 'Recording' : 'Waiting for focus'}{' '}
-        · {recorder.count}
+        {clip
+          ? `Live clip ${clipTime(clip)}`
+          : `${!recorder.live ? 'Waiting for the screen' : capturing ? 'Recording' : 'Waiting for focus'} · ${recorder.count}`}
       </span>
+      {clip ? (
+        <Button variant="ghost" size="sm" onClick={recorder.toggleClip}>
+          Stop clip
+        </Button>
+      ) : (
+        (recorder.canClip || recorder.clipsFull) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={recorder.toggleClip}
+            disabled={recorder.clipsFull}
+            title={
+              recorder.clipsFull
+                ? 'This recording has used up its live clips.'
+                : `Films the camera at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds. L starts and stops it.`
+            }
+          >
+            <Clapperboard size={14} aria-hidden /> Live clip
+          </Button>
+        )
+      )}
       {onShareScreen && SCREEN_OFFER.has(recorder.screenStatus) && (
         <Button variant="ghost" size="sm" onClick={onShareScreen}>
           <MonitorUp size={14} aria-hidden /> Share screen
@@ -353,6 +385,11 @@ export function TimelapseSettings({
           Each time a recording starts, you are asked whether to record your screen too.
         </p>
       )}
+      <p className="field-hint">
+        {device === 'phone'
+          ? `While recording, Live clip on the camera screen films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`
+          : `While recording, Live clip in the top bar (or the L key) films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`}
+      </p>
       {linkToLayout && (
         <p className="field-hint">
           {device === 'phone'
@@ -367,7 +404,9 @@ export function TimelapseSettings({
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
       <LengthFields value={value} onChange={set} />
       <SizeNote options={value} screen={device === 'computer' && value.layout.screen.visible} />
-      <EndTextField value={value.endText} onChange={(endText) => set({ endText })} />
+      {linkToLayout && (
+        <NoteField value={value.noteText} onChange={(noteText) => set({ noteText })} />
+      )}
       <Toggle
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
@@ -457,65 +496,6 @@ function QuickLooks({
             sidewaysLayout: applyTimelapseStyle(id, ratioSide, p.sidewaysLayout),
           },
         })
-      }
-    />
-  );
-}
-
-/**
- * The person's words for the end of the video. Saved a moment after typing stops, and on
- * leaving the field; empty, the video has no end card.
- */
-export function EndTextField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (text: string) => void;
-}) {
-  const [text, setText] = useState(value);
-  const focused = useRef(false);
-  const timer = useRef<number | null>(null);
-  // A change saved elsewhere shows here, unless it is being typed in right now.
-  useEffect(() => {
-    if (!focused.current) setText(value);
-  }, [value]);
-  const save = useCallback(
-    (next: string) => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-      timer.current = null;
-      const clean = cleanEndText(next);
-      if (clean !== value) onChange(clean);
-    },
-    [value, onChange],
-  );
-  useEffect(
-    () => () => {
-      if (timer.current !== null) window.clearTimeout(timer.current);
-    },
-    [],
-  );
-  return (
-    <Input
-      label="Words at the end"
-      value={text}
-      maxLength={TIMELAPSE_END_TEXT_MAX}
-      placeholder="Day 12 of finals"
-      onFocus={() => (focused.current = true)}
-      onChange={(e) => {
-        const next = e.target.value;
-        setText(next);
-        if (timer.current !== null) window.clearTimeout(timer.current);
-        timer.current = window.setTimeout(() => save(next), 700);
-      }}
-      onBlur={() => {
-        focused.current = false;
-        save(text);
-      }}
-      hint={
-        cleanEndText(text)
-          ? `Shown over the last moment for ${TIMELAPSE_END_SECONDS} seconds as the video ends.`
-          : 'Your own words on a card at the end. Leave it empty for none.'
       }
     />
   );
@@ -708,8 +688,8 @@ export function TimelapseExport({
   const { toast } = useToast();
   const share = useCreatePost();
   const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
-  /** Where the preview before posting is open for, if it is. */
-  const [postTarget, setPostTarget] = useState<PostTarget | null>(null);
+  /** The preview before sharing to Social is open. */
+  const [previewOpen, setPreviewOpen] = useState(false);
   /** "Change layout?" is open over a moment of the video. */
   const [relayoutOpen, setRelayoutOpen] = useState(false);
   // The time of day in the video reads in the account's timezone, not the computer's.
@@ -741,19 +721,24 @@ export function TimelapseExport({
   const span = kept >= 2 ? times[endAt - 1]! - times[startAt]! : 0;
   const trimmed = trim.from !== null || trim.to !== null;
   const plan = useMemo(
-    () => planTimelapse(kept, span, value),
-    // The plan follows the stills kept; the span only changes with them.
+    () => planTimelapse(kept, span, value, liveMarks(all.slice(startAt, endAt))),
+    // The plan follows the stills kept; the span and the clips only change with them.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [kept, startAt, value.lengthMode, value.lengthSeconds, value.speed, value.fps],
   );
+  // Live clips in what is kept: how many frames, and how many clips.
+  const clipStills = useMemo(
+    () => all.slice(startAt, endAt).filter(isClipStill),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kept, startAt],
+  );
+  const clipCount = new Set(clipStills.map((s) => s.clip)).size;
   // A phone's video keeps the shape it starts in: the first kept still says which way up.
   const upright = all[startAt]?.portrait ?? true;
   const look: TimelapseLook = {
     ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
     timeZone,
   };
-  /** Seconds the words at the end add, for these words. */
-  const endSeconds = (text: string | undefined) => endCardFrames(text, plan.fps) / plan.fps;
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
   const middle = all[middleAt];
@@ -809,7 +794,7 @@ export function TimelapseExport({
         url: URL.createObjectURL(blob),
         mime,
         blob,
-        seconds: plan.durationSeconds + endSeconds(using.endText),
+        seconds: plan.durationSeconds,
       });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
@@ -841,26 +826,18 @@ export function TimelapseExport({
   };
 
   /**
-   * Hand the video and its caption to Instagram, TikTok or X, from the preview's button. On
-   * a phone the share sheet holds the apps and takes both along. A page can't pass a file to
-   * another site, so elsewhere the video downloads and the site opens in a new tab, with the
-   * caption written in where the site takes it (X) and copied to paste otherwise. Runs
-   * straight from the click, which the sheet, the copy and the new tab all need.
+   * Hand the video to Instagram, TikTok or X, where the post is written in the site's own
+   * composer. On a phone the share sheet holds the apps and takes the video along. A page
+   * can't pass a file to another site, so elsewhere the video downloads, the site opens in a
+   * new tab, and a toast says what to do there. Called straight from the click, which the
+   * sheet and the new tab both need.
    */
-  const postTo = async (platform: PostPlatform, caption: string) => {
+  const postTo = async (platform: PostPlatform) => {
     if (!video) return;
     const site = POST_PLATFORM_INFO[platform];
-    // Copied first, in the click: apps often drop the words a share menu hands them.
-    const copied =
-      caption && (shareSheet || !site.withCaption)
-        ? (navigator.clipboard?.writeText(caption).then(
-            () => true,
-            () => false,
-          ) ?? null)
-        : null;
     if (shareSheet) {
       try {
-        await navigator.share({ files: [videoFile(video)], ...(caption ? { text: caption } : {}) });
+        await navigator.share({ files: [videoFile(video)] });
         onSaved?.();
         return;
       } catch (err) {
@@ -869,19 +846,9 @@ export function TimelapseExport({
       }
     }
     downloadVideo(video);
-    window.open(
-      caption && site.withCaption ? site.withCaption(caption) : site.uploadUrl,
-      '_blank',
-      'noopener,noreferrer',
-    );
+    window.open(site.uploadUrl, '_blank', 'noopener,noreferrer');
     onSaved?.();
-    const pasted = copied ? await copied : false;
-    toast(
-      pasted
-        ? `The video is in your downloads and the caption is copied. ${site.nextStep} Paste the caption there.`
-        : `The video is in your downloads. ${site.nextStep}`,
-      { durationMs: 9000 },
-    );
+    toast(`The video is in your downloads. ${site.nextStep}`, { durationMs: 8000 });
   };
 
   /**
@@ -916,7 +883,7 @@ export function TimelapseExport({
     abort.current?.abort();
     if (video) URL.revokeObjectURL(video.url);
     setVideo(null);
-    setPostTarget(null);
+    setPreviewOpen(false);
     setTrim({ from: null, to: null });
     recorder.clear();
   };
@@ -948,11 +915,12 @@ export function TimelapseExport({
         <h3 className="font-medium">Your timelapse</h3>
       </div>
       <p className="muted text-sm">
-        {kept} stills from {fmtMinutes(span / 60)} of{' '}
-        {timeKey === 'totalSeconds' ? 'the session' : 'focus'}
-        {trimmed ? ', trimmed' : ''}. It comes out{' '}
-        {Math.max(1, Math.round(plan.durationSeconds + endSeconds(value.endText)))} s at {plan.fps}{' '}
-        fps
+        {kept - clipStills.length} stills
+        {clipCount > 0 &&
+          ` and ${clipCount === 1 ? 'a live clip' : `${clipCount} live clips`} (${Math.max(1, Math.round(plan.liveSeconds))} s)`}{' '}
+        from {fmtMinutes(span / 60)} of {timeKey === 'totalSeconds' ? 'the session' : 'focus'}
+        {trimmed ? ', trimmed' : ''}. It comes out {Math.max(1, Math.round(plan.durationSeconds))} s
+        at {plan.fps} fps
         {plan.short && ', shorter than asked: there are not enough stills yet'}.
       </p>
       <p className="field-hint">
@@ -980,7 +948,7 @@ export function TimelapseExport({
             <Button variant="primary" onClick={() => void download()}>
               <Download size={14} aria-hidden /> Save the video
             </Button>
-            <Button variant="secondary" onClick={() => setPostTarget('social')}>
+            <Button variant="secondary" onClick={() => setPreviewOpen(true)}>
               <Share2 size={14} aria-hidden /> Share to Social
             </Button>
             <Button variant="ghost" onClick={() => setRelayoutOpen(true)}>
@@ -1007,7 +975,7 @@ export function TimelapseExport({
                 <Button
                   key={p}
                   size="sm"
-                  onClick={() => setPostTarget(p)}
+                  onClick={() => void postTo(p)}
                   aria-label={`Post it on ${POST_PLATFORM_INFO[p].name}`}
                 >
                   <PlatformMark platform={p} /> {POST_PLATFORM_INFO[p].name}
@@ -1016,21 +984,18 @@ export function TimelapseExport({
             </div>
           </div>
           <p className="field-hint">
-            Each shows the post first, to add words and look it over before it goes.
+            {shareSheet
+              ? 'They open your phone’s share menu. Pick the app there.'
+              : 'The video downloads and the site opens in a new tab.'}
             {postNote && ` ${postNote}`}
           </p>
           <PostPreview
-            target={postTarget}
-            video={{
-              ...video,
-              seconds: played?.url === video.url ? played.seconds : video.seconds,
-            }}
+            open={previewOpen}
+            video={video}
             session={session}
-            shareSheet={shareSheet}
             maxBytes={limits.videoMaxBytes}
             onShare={shareToSocial}
-            onPostTo={(p, caption) => void postTo(p, caption)}
-            onClose={() => setPostTarget(null)}
+            onClose={() => setPreviewOpen(false)}
           />
         </>
       ) : progress !== null ? (
@@ -1082,9 +1047,9 @@ export function TimelapseExport({
             onChange={(p) => onChange(presetPatch(device, p))}
             maxFps={plan.maxFps}
           />
-          <EndTextField
-            value={value.endText}
-            onChange={(endText) => onChange(presetPatch(device, { endText }))}
+          <NoteField
+            value={value.noteText}
+            onChange={(noteText) => onChange(presetPatch(device, { noteText }))}
           />
           <div className="flex gap-2 flex-wrap">
             <Button variant="primary" onClick={() => void make()} disabled={kept < 2}>

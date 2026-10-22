@@ -11,7 +11,7 @@ import {
   type TimelapseAspect,
   type TimelapseLayout,
 } from './timelapse-layout';
-import { cleanEndText } from './timelapse-styles';
+import { cleanNoteText } from './timelapse-styles';
 import type { TimelapsePreset, UserSettings } from './types';
 
 export type TimelapseDevice = 'phone' | 'computer';
@@ -59,7 +59,7 @@ export function defaultPhoneTimelapse(): UserSettings['timelapsePhone'] {
     layout: upright,
     sidewaysAspect: 'camera',
     sidewaysLayout: sideways,
-    endText: '',
+    noteText: '',
   };
 }
 
@@ -70,7 +70,7 @@ export function defaultPhoneTimelapse(): UserSettings['timelapsePhone'] {
  */
 export function normalizePhoneTimelapse(
   merged: UserSettings['timelapsePhone'],
-  saved: Partial<Record<'layout' | 'sidewaysLayout', unknown>> | undefined,
+  saved: Partial<Record<'layout' | 'sidewaysLayout' | 'noteText' | 'endText', unknown>> | undefined,
 ): UserSettings['timelapsePhone'] {
   const d = defaultPhoneTimelapse();
   const fix = (raw: unknown, fallback: TimelapseLayout) => {
@@ -86,8 +86,18 @@ export function normalizePhoneTimelapse(
       : 'camera',
     layout: fix(saved?.layout, d.layout),
     sidewaysLayout: fix(saved?.sidewaysLayout, d.sidewaysLayout),
-    endText: cleanEndText(merged.endText),
+    noteText: noteTextOf(saved),
   };
+}
+
+/**
+ * The text on the video from a saved preset. For a day it was words on a card at the end
+ * (`endText`); a preset with those and no text of its own shows them on the video instead.
+ */
+export function noteTextOf(
+  saved: Partial<Record<'noteText' | 'endText', unknown>> | undefined,
+): string {
+  return cleanNoteText(saved?.noteText !== undefined ? saved.noteText : saved?.endText);
 }
 
 /**
