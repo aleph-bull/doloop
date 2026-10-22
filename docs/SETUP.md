@@ -7,12 +7,11 @@ Everything the build needs from you, grouped by the phase that first needs it. N
 - Node 22+ (you have 24), pnpm 12 (installed via `npm i -g pnpm`), git.
 - No Docker or local Postgres needed. Supabase hosts the database.
 
-### Local test accounts and landing page
+### Local test accounts
 
 Run `pnpm sandbox:test:api` and `pnpm sandbox:test:portal` in separate terminals.
-Open `http://127.0.0.1:5184/`. Signed-out visitors see the landing page; `/signup`
-creates an account and `/signin` signs in. `/welcome` previews the landing page even
-while signed in.
+Open `http://127.0.0.1:5184/`. Signed-out visitors go to sign in; `/signup` creates an
+account and `/signin` signs in.
 
 Expand **Local test accounts** on the sign-in or signup page:
 

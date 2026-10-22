@@ -9,7 +9,6 @@ import { useCachePersistence } from './lib/local-state';
 import { useMe } from './lib/queries';
 import { SignIn } from './pages/SignIn';
 import { Today } from './pages/Today';
-import { Landing } from './pages/Landing';
 
 // Route-level code splitting keeps the first paint small (spec §9: LCP < 2 s).
 const AuthCallback = lazy(() =>
@@ -58,7 +57,7 @@ const fallback = (
   </div>
 );
 
-function RequireAuth({ children, landing = false }: { children: ReactNode; landing?: boolean }) {
+function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth();
   const location = useLocation();
   if (auth.status === 'loading')
@@ -67,7 +66,6 @@ function RequireAuth({ children, landing = false }: { children: ReactNode; landi
         <Spinner />
       </Centered>
     );
-  if (auth.status === 'signed-out' && landing && location.pathname === '/') return <Landing />;
   if (auth.status === 'signed-out')
     return <Navigate to="/signin" state={{ from: location }} replace />;
   return <>{children}</>;
@@ -82,7 +80,7 @@ function TurnedAway({ message }: { message: string }) {
   const { signOut } = auth;
   const navigate = useNavigate();
   useEffect(() => {
-    // Go on once signed out: at "/" the signed-out app shows the landing page in this
+    // Go on once signed out: RequireAuth then sends the signed-out app to sign in in this
     // component's place, so the <Navigate> below would never get to say why.
     void signOut().then(() => navigate('/signin', { replace: true, state: { error: message } }));
   }, [signOut, navigate, message]);
@@ -130,7 +128,8 @@ export function App() {
         <Routes>
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignIn />} />
-          <Route path="/welcome" element={<Landing />} />
+          {/* The app's own landing page was removed (2026-10-21); signed-out visitors sign in. */}
+          <Route path="/welcome" element={<Navigate to="/signin" replace />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route
@@ -156,7 +155,7 @@ export function App() {
           />
           <Route
             element={
-              <RequireAuth landing>
+              <RequireAuth>
                 <Gate>
                   <AppShell />
                 </Gate>
