@@ -30,6 +30,14 @@ export function focusContext(
   return { subject: ancestors[0]!, child: node.title };
 }
 
+/**
+ * The context on one line, "RSM222 · Assignment": at most the course and the task, never
+ * the units between. The timelapse and posts on Social use it.
+ */
+export function focusLabel({ subject, child }: FocusContext): string {
+  return child ? `${subject} · ${child}` : subject;
+}
+
 export interface FocusProgress {
   /** Work logged on the task before this session: the white part of the bar. */
   priorSeconds: number;

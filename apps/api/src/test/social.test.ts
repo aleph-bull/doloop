@@ -85,6 +85,35 @@ describe('posts on the feed', () => {
     expect(res.body).not.toContain('@example.com');
   });
 
+  it('names a task in a course as "Course · Task", leaving out the units between', async () => {
+    const [course] = await t.db
+      .insert(nodes)
+      .values({ userId: USER_A.id, title: 'RSM222', kind: 'course' })
+      .returning();
+    const [unit] = await t.db
+      .insert(nodes)
+      .values({ userId: USER_A.id, title: 'Week 6', kind: 'task', parentId: course!.id })
+      .returning();
+    const [task] = await t.db
+      .insert(nodes)
+      .values({ userId: USER_A.id, title: 'Assignment', kind: 'task', parentId: unit!.id })
+      .returning();
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_A.id, '2026-09-23T08:00:00Z', 1800, task!.id))
+      .returning();
+    const res = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: s!.id },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().post.session).toEqual({ minutes: 30, subject: 'RSM222 · Assignment' });
+    // Gone again, so the feed tests below see only the first post.
+    const del = await t.api({ method: 'DELETE', url: `/api/posts/${res.json().post.id}` });
+    expect(del.statusCode).toBeLessThan(300);
+  });
+
   it("refuses someone else's session, a wrong video type and a poster alone", async () => {
     const theirs = await t.api({
       method: 'POST',

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import {
   addDays,
   dayOfWeek,
+  focusLabel,
   levelForXp,
   startTimer,
   toLocalDate,
@@ -186,6 +187,9 @@ export async function buildJerryWorld(
     return identity;
   };
 
+  /** Each task's course title, by task id, for what the posts say. */
+  const courseOf = new Map<string, string>();
+
   /**
    * Finished sessions, written in batches, with their calendar records and XP. `plan` is a
    * list of [days ago, minutes, task id, task title]. Returns the sessions by day.
@@ -287,14 +291,17 @@ export async function buildJerryWorld(
         })),
       );
     }
-    for (const r of rows)
-      if (!byDay.has(r.daysAgo))
-        byDay.set(r.daysAgo, {
-          id: r.row.id,
-          minutes: r.row.workSeconds / 60,
-          subject: r.subject,
-          endedAt: r.row.endedAt,
-        });
+    for (const r of rows) {
+      if (byDay.has(r.daysAgo)) continue;
+      const course = courseOf.get(r.row.nodeId);
+      byDay.set(r.daysAgo, {
+        id: r.row.id,
+        minutes: r.row.workSeconds / 60,
+        // As a real post names it: "Course · Task".
+        subject: course ? focusLabel({ subject: course, child: r.subject }) : r.subject,
+        endedAt: r.row.endedAt,
+      });
+    }
     const xp = rows.reduce((sum, r) => sum + r.row.xpAwarded, 0);
     await db
       .update(users)
@@ -358,6 +365,7 @@ export async function buildJerryWorld(
       )
       .returning({ id: nodes.id, title: nodes.title });
     openTasks.push(...open);
+    for (const t of open) courseOf.set(t.id, c.title);
     for (let w = 1; w < windows; w++) {
       // Window w covers 14w to 14w+13 days ago; older windows have the lower numbers.
       const done = w * WINDOW - 1;
@@ -376,6 +384,7 @@ export async function buildJerryWorld(
         })
         .returning({ id: nodes.id, title: nodes.title });
       pastTasks.set(w, [...(pastTasks.get(w) ?? []), past!]);
+      courseOf.set(past!.id, c.title);
     }
   }
 
@@ -462,6 +471,7 @@ export async function buildJerryWorld(
         })),
       )
       .returning({ id: nodes.id, title: nodes.title });
+    for (const t of tasks) courseOf.set(t.id, f.course);
     const fPlan: Array<[number, number, string, string]> = [];
     for (let d = Math.min(55, f.joinedDaysAgo - 1); d >= 1; d--) {
       if (rand() >= f.days / 56) continue;

@@ -3,6 +3,7 @@ import {
   buildIndex,
   expectedMinutes,
   focusContext,
+  focusLabel,
   focusProgress,
   visualizerPalette,
   visualizerTuning,
@@ -267,10 +268,7 @@ export function Focus() {
   // The task's name, as the focus screen shows it, for the task name drawn into the video.
   const nodeIndex = useMemo(() => buildIndex(nodes.data?.nodes ?? []), [nodes.data]);
   const tlTitle = session
-    ? (() => {
-        const c = focusContext(nodeIndex.byId, session.session.nodeId, session.nodeTitle);
-        return c.child ? `${c.subject} · ${c.child}` : c.subject;
-      })()
+    ? focusLabel(focusContext(nodeIndex.byId, session.session.nodeId, session.nodeTitle))
     : null;
   const sessionRef = useRef(session);
   const settingsRef = useRef(settings);
@@ -748,9 +746,11 @@ export function Focus() {
               sessionId={summary.session.id}
               postSession={{
                 minutes: Math.round(summary.session.workSeconds / 60),
-                subject: summary.session.nodeId
-                  ? (nodeIndex.byId.get(summary.session.nodeId)?.title ?? null)
-                  : null,
+                // Named as the post will be, "Course · Task".
+                subject:
+                  summary.session.nodeId && nodeIndex.byId.has(summary.session.nodeId)
+                    ? focusLabel(focusContext(nodeIndex.byId, summary.session.nodeId, ''))
+                    : null,
               }}
             />
             <div className="focus-actions" style={{ marginTop: 20 }}>

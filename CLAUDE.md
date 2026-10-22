@@ -402,7 +402,8 @@ every card has the standard 20px (`--card-pad`, see the Look rules), since 12-16
 the rounded corners. The small leaderboard also has more room between its rows.
 
 **Posts.** A post is always about one finished session (`sessionId` is required, the
-composer's Post button waits for one) and carries the session's minutes and the task's title
+composer's Post button waits for one) and carries the session's minutes and what it was on,
+"Course · Task" (root course and the task itself, never the units between; `focusLabel`),
 as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
 (500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
 makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare

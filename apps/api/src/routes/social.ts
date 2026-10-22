@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { withDefaults, type UserSettings } from '@komogon/core';
+import { focusLabel, withDefaults, type UserSettings } from '@komogon/core';
 import { and, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -130,6 +130,24 @@ function parseDataUrl(
 /** Settings › Social, with the defaults filled in. */
 export const socialOf = (settings: Partial<UserSettings> | null | undefined) =>
   withDefaults(settings).social;
+
+/**
+ * What a post says the session was on, "RSM222 · Assignment": the task's root course and
+ * the task itself, never the units between (`focusLabel`). A task with no parent is just
+ * its title.
+ */
+async function taskLabel(db: Db, nodeId: string): Promise<string | null> {
+  const node = await db.query.nodes.findFirst({ where: eq(nodes.id, nodeId) });
+  if (!node) return null;
+  let root = node;
+  // The cap only guards against a parent loop, which the app never saves.
+  for (let hops = 0; root.parentId && hops < 32; hops++) {
+    const parent = await db.query.nodes.findFirst({ where: eq(nodes.id, root.parentId) });
+    if (!parent) break;
+    root = parent;
+  }
+  return focusLabel({ subject: root.title, child: root === node ? null : node.title });
+}
 
 /** The ids of everyone you are friends with, either way round. */
 export async function friendIds(db: Db, userId: string): Promise<string[]> {
@@ -356,10 +374,8 @@ export function socialRoutes(
       if (!s || !s.endedAt) throw notFound('No such session');
       minutes = Math.round(s.workSeconds / 60);
       if (!input.showTime) minutes = null;
-      else if (s.nodeId) {
-        const n = await db.query.nodes.findFirst({ where: eq(nodes.id, s.nodeId) });
-        subject = n?.title ?? null;
-      } else if (s.routineId) {
+      else if (s.nodeId) subject = await taskLabel(db, s.nodeId);
+      else if (s.routineId) {
         const r = await db.query.routines.findFirst({ where: eq(routines.id, s.routineId) });
         subject = r?.title ?? null;
       }

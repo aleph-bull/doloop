@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { expectedMinutes, focusContext, focusProgress } from './focus';
+import { expectedMinutes, focusContext, focusLabel, focusProgress } from './focus';
 
 const tree = new Map([
   ['course', { title: 'Financial Accounting', parentId: null }],
@@ -33,6 +33,15 @@ describe('focusContext', () => {
       subject: 'Something',
       child: null,
     });
+  });
+});
+
+describe('focusLabel', () => {
+  it('puts the course and the task on one line, skipping the units between', () => {
+    expect(focusLabel(focusContext(tree, 'task', 'x'))).toBe(
+      'Financial Accounting · Adjusting Entries',
+    );
+    expect(focusLabel(focusContext(tree, 'lone', 'x'))).toBe('Read the syllabus');
   });
 });
 

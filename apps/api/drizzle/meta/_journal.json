@@ -183,6 +183,13 @@
       "when": 1792636886601,
       "tag": "0025_dev_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792692725613,
+      "tag": "0026_post_course_subject",
+      "breakpoints": true
     }
   ]
 }

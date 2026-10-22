@@ -2011,3 +2011,11 @@ The owner saw the first version (section above) and changed three things.
 - The owner asked for the visualizer settings on their account to become the defaults, except for the way audio gets picked up. Read from their screenshots: opacity 0.5 (was 0.85), colour Custom #ffd1e3 (was Accent), Waves off (was on). Cloud mist, the beat drop circle and "Calm when silent" were already at the defaults.
 - **Listening keeps its defaults** (Bass heavy and the custom sliders under it), as asked; the owner uses Balanced. "Enable audio visualizer" and "Never ask again" stay off too: they are on/off choices, not the look.
 - Accounts that finished onboarding before this keep the full set of settings stored then, so this reaches new accounts, and "Reset the visualizer to its defaults" (which reads `DEFAULT_SETTINGS`).
+
+## Posts say the course with the task: "RSM222 · Assignment", 2026-10-22 (owner request)
+
+The owner saw "1 h on Slides Review" on a post and asked for the course too: "RSM222 · Assignment". "Ignore middle children, just parent and child task that was done directly, so only 2 things at most at all times."
+
+- The label is the task's root course, a dot, and the task the session was on, never the units between; a task with no parent (or a course itself) is just its title; a routine is its title as before. It is the line the focus screen and the timelapse already show, now one helper in core, `focusLabel(focusContext(...))`.
+- The API still snapshots it into `posts.subject` when the post is made (`taskLabel` in `routes/social.ts`), so renaming or deleting the task later doesn't change a post. The Social preview before sharing a timelapse shows the same label, and the "I'm a dev" Jerry world's posts are seeded with it.
+- Posts made before: migration `0026_post_course_subject` puts the root course in front of the task title they were shared with (a recursive walk up `nodes`; posts on a routine, without the time, or whose task has no parent are left alone). Checked on the seeded sandbox, with a unit between too.
