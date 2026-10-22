@@ -99,11 +99,12 @@ export function createR2Store(opts: R2Options): MediaStore {
  * Delete files and carry on whatever happens: a miss leaves a stray file, which costs a
  * fraction of a cent, while failing the request would leave the person stuck.
  */
-export async function removeAll(
-  store: MediaStore,
-  keys: string[],
-  log: { warn: (obj: object, msg: string) => void },
-): Promise<void> {
+/** Where a failed delete is reported: a request's logger, or the console. */
+export interface MediaLog {
+  warn: (obj: object, msg: string) => void;
+}
+
+export async function removeAll(store: MediaStore, keys: string[], log: MediaLog): Promise<void> {
   for (const key of keys) {
     try {
       await store.remove(key);

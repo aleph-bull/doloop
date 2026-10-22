@@ -13,6 +13,7 @@ import {
   setAccountPassword,
 } from '../services/admin';
 import { exportUserData } from '../services/export';
+import type { MediaStore } from '../services/media-store';
 import {
   blockEmail,
   deleteAccount,
@@ -49,7 +50,13 @@ const emailSchema = z.object({ email: z.string().trim().email().max(320) });
  * blocking an address. Testers are told on the sign-in page that the person running it can
  * see accounts and study data.
  */
-export function adminRoutes(app: FastifyInstance, db: Db, admins: string[], clock: () => string) {
+export function adminRoutes(
+  app: FastifyInstance,
+  db: Db,
+  admins: string[],
+  clock: () => string,
+  store: MediaStore | null = null,
+) {
   const requireAdmin = (req: FastifyRequest) => {
     if (!isAdmin(req.user.email, admins)) throw forbidden('Admins only');
   };
@@ -169,7 +176,7 @@ export function adminRoutes(app: FastifyInstance, db: Db, admins: string[], cloc
       .parse(req.query);
     const user = await account(id);
     notAnAdmin(user.email, 'deleted');
-    await deleteAccount(db, id, { block: block === 'true', now: clock() });
+    await deleteAccount(db, id, { block: block === 'true', now: clock(), store, log: req.log });
     return reply.code(204).send();
   });
 

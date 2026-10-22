@@ -2,6 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { blockedEmails, users, type UserRow } from '../db/schema';
 import { HttpError, badRequest, notFound } from '../errors';
+import type { MediaLog, MediaStore } from './media-store';
 import { deleteUser } from './users';
 
 /**
@@ -109,7 +110,7 @@ export async function liftSuspension(db: Db, user: UserRow): Promise<void> {
 export async function deleteAccount(
   db: Db,
   userId: string,
-  opts: { block: boolean; now: string },
+  opts: { block: boolean; now: string; store?: MediaStore | null; log?: MediaLog },
 ): Promise<void> {
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) throw notFound('No such account');
@@ -119,5 +120,5 @@ export async function deleteAccount(
       .values({ email: normaliseEmail(user.email), createdAt: new Date(opts.now) })
       .onConflictDoNothing();
   }
-  await deleteUser(db, userId);
+  await deleteUser(db, userId, opts.store ?? null, opts.log);
 }

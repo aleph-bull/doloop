@@ -22,6 +22,8 @@ import { and, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { AuthUser } from '../auth/verify';
 import type { Db } from '../db/client';
 import {
+  postMedia,
+  posts,
   restDayPolicies,
   sessions,
   streakEvents,
@@ -30,6 +32,7 @@ import {
   type UserRow,
 } from '../db/schema';
 import type { SettingsPatch } from '../validation';
+import { removeAll, type MediaLog, type MediaStore } from './media-store';
 import { dt, toSession } from './sessions-mapper';
 
 export function newIcsToken(): string {
@@ -313,8 +316,30 @@ export async function regenerateIcsToken(db: Db, userId: string): Promise<string
   return token;
 }
 
-export async function deleteUser(db: Db, userId: string): Promise<void> {
+/**
+ * Delete an account and everything in it. The rows go with the user by cascade; files in
+ * R2 (post videos and pictures) have to be deleted by name, so they are listed first.
+ */
+export async function deleteUser(
+  db: Db,
+  userId: string,
+  store: MediaStore | null = null,
+  log: MediaLog = console,
+): Promise<void> {
+  const files = store
+    ? await db
+        .select({ key: postMedia.key })
+        .from(postMedia)
+        .innerJoin(posts, eq(posts.id, postMedia.postId))
+        .where(and(eq(posts.userId, userId), isNotNull(postMedia.key)))
+    : [];
   await db.delete(users).where(eq(users.id, userId));
+  if (store && files.length)
+    await removeAll(
+      store,
+      files.map((f) => f.key!),
+      log,
+    );
 }
 
 export { DEFAULT_SETTINGS };

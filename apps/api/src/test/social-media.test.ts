@@ -244,6 +244,48 @@ describe('post media without R2', () => {
   });
 });
 
+describe('an admin deleting an account', () => {
+  const r2 = memoryStore();
+  let t: TestApp;
+  beforeAll(async () => {
+    t = await createTestApp('2026-09-23T14:00:00.000Z', {
+      mediaStore: r2.store,
+      adminEmails: [USER_B.email],
+    });
+    for (const token of [t.tokenA, t.tokenB]) await t.api({ method: 'GET', url: '/api/me', token });
+  });
+  afterAll(() => t.close());
+
+  it("deletes the account's files from R2 too", async () => {
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_A.id, '2026-09-23T10:00:00Z', 3600))
+      .returning();
+    const link = await t.api({
+      method: 'POST',
+      url: '/api/social/uploads',
+      payload: { mime: 'image/png', bytes: 3 },
+    });
+    const { key } = link.json() as { key: string };
+    r2.put(key, 'image/png', Buffer.from('png'));
+    const post = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: s!.id, upload: key },
+    });
+    expect(post.statusCode).toBe(201);
+    expect([...r2.files.keys()].some((k) => k.startsWith(`posts/${USER_A.id}/`))).toBe(true);
+
+    const res = await t.api({
+      method: 'DELETE',
+      url: `/api/admin/accounts/${USER_A.id}`,
+      token: t.tokenB,
+    });
+    expect(res.statusCode).toBe(204);
+    expect([...r2.files.keys()].some((k) => k.startsWith(`posts/${USER_A.id}/`))).toBe(false);
+  });
+});
+
 describe('the R2 client', () => {
   const r2 = createR2Store({
     accountId: 'acct123',

@@ -241,8 +241,8 @@ export function socialRoutes(
   const uploadLimiter = new RateLimiter({ max: 30, windowMs: 60 * 60 * 1000 });
 
   /**
-   * Whether the viewer may see a post's file: the same rule as the feed (a post kept to
-   * friends shows only to the author's friends).
+   * Whether the viewer may see a post's file: the same rules as the feed (a post kept to
+   * friends shows only to the author's friends; a suspended account's posts to nobody).
    */
   const canSeePost = async (viewerId: string, postId: string): Promise<boolean> => {
     const post = await db.query.posts.findFirst({
@@ -253,9 +253,10 @@ export function socialRoutes(
     if (post.userId === viewerId) return true;
     const author = await db.query.users.findFirst({
       where: eq(users.id, post.userId),
-      columns: { settings: true },
+      columns: { settings: true, bannedAt: true },
     });
-    if (socialOf(author?.settings).posts !== 'friends') return true;
+    if (!author || author.bannedAt) return false;
+    if (socialOf(author.settings).posts !== 'friends') return true;
     return (await friendshipWith(db, viewerId, post.userId)).status === 'friends';
   };
 
