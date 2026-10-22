@@ -469,6 +469,15 @@ export function useFeed(scope: FeedScope) {
   });
 }
 
+/** How big a post's file may be here; it only changes when the API's setup does. */
+export function useMediaLimits() {
+  return useQuery({
+    queryKey: ['social', 'media-limits'],
+    queryFn: () => api.mediaLimits(),
+    staleTime: 60 * 60_000,
+  });
+}
+
 export function useCreatePost() {
   const qc = useQueryClient();
   return useMutation({

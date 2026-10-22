@@ -1,7 +1,7 @@
 import type { FastifyInstance, InjectOptions, LightMyRequestResponse } from 'fastify';
 import { createHsVerifier, signDevToken } from '../auth/verify';
 import { createPgliteDb, type Db } from '../db/client';
-import { buildServer } from '../server';
+import { buildServer, type BuildOptions } from '../server';
 
 export const TEST_SECRET = 'test-secret-do-not-use';
 export const USER_A = { id: '11111111-1111-4111-8111-111111111111', email: 'a@example.com' };
@@ -18,13 +18,17 @@ export interface TestApp {
   close: () => Promise<void>;
 }
 
-export async function createTestApp(startAt = '2026-09-21T14:00:00.000Z'): Promise<TestApp> {
+export async function createTestApp(
+  startAt = '2026-09-21T14:00:00.000Z',
+  extra: Partial<BuildOptions> = {},
+): Promise<TestApp> {
   const { db, close } = await createPgliteDb();
   const clock = { now: startAt };
   const app = await buildServer({
     db,
     verifier: createHsVerifier(TEST_SECRET),
     clock: () => clock.now,
+    ...extra,
   });
   await app.ready();
   const tokenA = await signDevToken(TEST_SECRET, USER_A);

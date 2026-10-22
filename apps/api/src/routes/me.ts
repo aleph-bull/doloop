@@ -23,8 +23,14 @@ import { settingsSchema, updateMeSchema } from '../validation';
 import { exportUserData } from '../services/export';
 import { and, eq } from 'drizzle-orm';
 import { userAssets } from '../db/schema';
+import type { MediaStore } from '../services/media-store';
 
-export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function meRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  store: MediaStore | null = null,
+) {
   app.get('/api/me', async (req) => {
     const now = clock();
     const streak = await syncStreak(db, req.user, now);
@@ -114,7 +120,7 @@ export function meRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   });
 
   app.delete('/api/me', async (req, reply) => {
-    await deleteUser(db, req.user.id);
+    await deleteUser(db, req.user.id, store, req.log);
     return reply.code(204).send();
   });
 }

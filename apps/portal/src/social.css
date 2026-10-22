@@ -322,8 +322,17 @@
 .composer-foot > .btn-primary {
   margin-left: auto;
 }
+/* A file over the limit, with the offer to compress it. */
+.compress-offer {
+  display: grid;
+  gap: 8px;
+}
+.composer .compress-offer {
+  padding-left: 50px;
+}
 @media (max-width: 600px) {
-  .composer-foot {
+  .composer-foot,
+  .composer .compress-offer {
     padding-left: 0;
   }
 }

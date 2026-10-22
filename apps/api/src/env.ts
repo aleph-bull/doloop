@@ -61,6 +61,17 @@ export interface Env {
    * or a v3 API key. Without either, the equivalents fall back to listed runtimes and icons.
    */
   tmdb: { readToken: string | undefined; apiKey: string | undefined };
+  /**
+   * Cloudflare R2 for post videos and pictures (`R2_*`). Without it they stay in Postgres,
+   * which caps videos at 5 MB. `R2_ENDPOINT` is only for an EU bucket or a local stand-in.
+   */
+  r2: {
+    accountId: string | undefined;
+    accessKeyId: string | undefined;
+    secretAccessKey: string | undefined;
+    bucket: string | undefined;
+    endpoint: string | undefined;
+  };
 }
 
 export function loadEnv(): Env {
@@ -110,5 +121,12 @@ export function loadEnv(): Env {
     tokenEncryptionKey: str('TOKEN_ENCRYPTION_KEY'),
     portalUrl: str('PORTAL_URL', 'http://localhost:5173')!,
     tmdb: { readToken: str('TMDB_READ_TOKEN'), apiKey: str('TMDB_API_KEY') },
+    r2: {
+      accountId: str('R2_ACCOUNT_ID'),
+      accessKeyId: str('R2_ACCESS_KEY_ID'),
+      secretAccessKey: str('R2_SECRET_ACCESS_KEY'),
+      bucket: str('R2_BUCKET'),
+      endpoint: str('R2_ENDPOINT'),
+    },
   };
 }

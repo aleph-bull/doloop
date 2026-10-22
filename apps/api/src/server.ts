@@ -33,6 +33,7 @@ import { compareRoutes } from './routes/compare';
 import { groupRoutes } from './routes/groups';
 import { universityRoutes } from './routes/university';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
+import type { MediaStore } from './services/media-store';
 import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
 import { emailAuthRoutes } from './routes/email-auth';
 import type { Mailer } from './services/mailer';
@@ -68,6 +69,8 @@ export interface BuildOptions {
   tmdb?: TmdbCredentials | null;
   /** Injectable fetch for the TMDB lookups, for tests. */
   tmdbFetch?: FetchLike;
+  /** Cloudflare R2 for post videos and pictures; null keeps them in Postgres. */
+  mediaStore?: MediaStore | null;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -156,11 +159,11 @@ export async function buildServer(opts: BuildOptions) {
     passwordAuth: !!opts.passwordAuth,
   };
   emailAuthRoutes(app, opts.db, clock, email);
-  meRoutes(app, opts.db, clock);
-  adminRoutes(app, opts.db, admins, clock);
+  meRoutes(app, opts.db, clock, opts.mediaStore ?? null);
+  adminRoutes(app, opts.db, admins, clock, opts.mediaStore ?? null);
   leaderboardRoutes(app, opts.db, clock);
   profileRoutes(app, opts.db, clock);
-  socialRoutes(app, opts.db, clock);
+  socialRoutes(app, opts.db, clock, opts.mediaStore ?? null);
   jamRoutes(app, opts.db, clock);
   compareRoutes(app, opts.db, clock);
   groupRoutes(app, opts.db, clock);

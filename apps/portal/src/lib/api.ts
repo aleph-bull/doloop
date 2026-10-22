@@ -327,10 +327,27 @@ export type FeedScope = 'everyone' | 'friends';
 export interface NewPost {
   body?: string;
   sessionId?: string;
-  /** A video as a data URL (mp4 or webm, under 5 MB). */
+  /** The file as a data URL, when the API keeps files itself (no R2; videos under 5 MB). */
   media?: string;
+  /** The key of a file already uploaded to R2 (`startUpload`). */
+  upload?: string;
   /** A small JPEG data URL shown before the video loads. */
   poster?: string;
+}
+
+/** What a post's file may be, which depends on whether the API has R2. */
+export interface MediaLimits {
+  /** True when the file is uploaded to R2 first; false when it goes with the post. */
+  direct: boolean;
+  videoMaxBytes: number;
+  imageMaxBytes: number;
+}
+
+/** Where to PUT a file so it goes straight to R2. */
+export interface UploadLink {
+  key: string;
+  url: string;
+  headers: Record<string, string>;
 }
 
 export interface FriendsResponse {
@@ -715,7 +732,13 @@ export const api = {
   createPost: (input: NewPost) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
-  /** The video behind a post, as a blob to play from an object URL. */
+  mediaLimits: () => request<MediaLimits>('GET', '/api/social/uploads'),
+  startUpload: (mime: string, bytes: number) =>
+    request<UploadLink>('POST', '/api/social/uploads', { mime, bytes }),
+  /** A short-lived link to a post's file in R2, or null when the API keeps the bytes. */
+  postMediaUrl: (id: string) =>
+    request<{ url: string | null; expiresIn: number | null }>('GET', `/api/posts/${id}/media/url`),
+  /** The file behind a post, as a blob to play from an object URL (files kept by the API). */
   postMedia: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/api/posts/${id}/media`, { headers: await authHeaders() });
     if (!res.ok) throw new ApiError(res.status, res.statusText);

@@ -1777,6 +1777,17 @@ The owner asked that a phone open "the Apple timelapse feature" instead of the f
 
 - **Signed-out visitors to the app go straight to sign in.** The portal's landing page ("Keep your coursework and study time together.") showed on a first visit from a new computer; the owner asked to delete it entirely so it never shows again. `pages/Landing.tsx` and its styles are gone, and `/welcome` (its preview) now redirects to sign in. The marketing site in `apps/site` is untouched.
 
+## Post files on Cloudflare R2, 40 MB videos, and compressing what's too big, 2026-10-21 (user request)
+
+The owner asked what hosting videos for Social would cost and whether it could be free. Kept in Postgres and served through the API, a video costs Neon storage (about 150 fit in the free 1 GB) and Render bandwidth on every play (the free 5 GB a month is about 1,000 plays, then Render suspends the API or bills $0.15/GB). They chose Cloudflare R2 (10 GB free, downloads never charged), then asked for the video limit to go to 40 MB and for files over it to be accepted and compressed rather than refused.
+
+- **R2 behind signed links.** The browser uploads straight to the bucket through a 15-minute link the API signs for that exact type and size, and plays from one-hour links. Nothing passes through Render either way. The bucket stays private; a post kept to friends gives no link to anyone else (the bytes route now checks this too).
+- **Uploads land under `uploads/`, posts live under `posts/`.** Making the post copies the file across inside the bucket; a lifecycle rule empties `uploads/` after a day, so a file nobody posted never stays. Deleting a post or an account deletes its files.
+- **Postgres stays the fallback.** Without the `R2_*` variables, files go with the post as before and videos stay at 5 MB (base64 in a database row). Posts made before R2 keep playing from Postgres; there is no migration of old files.
+- **40 MB for videos with R2**, 2 MB for pictures as before.
+- **Over the limit, it offers to compress.** "This video is 62 MB, and posts take up to 40 MB." with Compress it and Cancel, in the composer and under "Share to Social". Videos are re-encoded in the browser (mediabunny over WebCodecs): the bitrate comes from the length, the size and frame rate drop when the bitrate is low, sound is kept, and it tries once more if the result still comes out too big. Pictures are redrawn as JPEG. A video too long to fit even at a low bitrate is refused with "A shorter clip would."
+- Setup steps and how to check them: docs/R2.md (`node scripts/r2-check.mjs https://komogon.app`).
+
 ## Tags on tasks, a Tags card, and sessions on a whole course, 2026-10-21 (user request)
 
 The owner asked for tags on their parent tasks (the courses at the top of Tasks), tags on "the another card on tasks" (read as the dashboard's Tasks row of cards), and to be able to start a session on a top-level task. Then, the same night, to drop the colour sort and add a card below the table with a tags manager.
@@ -1788,4 +1799,4 @@ The owner asked for tags on their parent tasks (the courses at the top of Tasks)
 - **Narrow tables.** The column needs about 960px of table. With less (a small window, a phone) the tags take their own line under the title and the row actions gain a Tags button; Due and Status give up 16px each so names don't lose room to that button.
 - **Dashboard cards.** Each task card in the Tasks row shows its own tags and the ones it inherits from the course and units above it.
 - **Sessions on a course.** Every unfinished row on Tasks now has the play button, courses included; a session on a course counts toward the whole course, as it already did when picked in the start dialog. A folded course's item count moves after its title, as other rows with a play button already had it. Finished rows keep the count in the play slot.
-- **Migration** `0023_task_tags`, after the admin tools' 0021 and the calendar feeds' 0022. The unpushed `username` branch also made a 0021 and must regenerate its migration before it lands (see the admin tools note on Drizzle's `when` ordering).
+- **Migration** `0024_task_tags`, after the admin tools' 0021, the calendar feeds' 0022 and the R2 post files' 0023. The unpushed `username` branch also made a 0021 and must regenerate its migration before it lands (see the admin tools note on Drizzle's `when` ordering).
