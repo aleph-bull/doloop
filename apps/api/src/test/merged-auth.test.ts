@@ -26,6 +26,7 @@ beforeAll(async () => {
       google: {
         clientId: 'merged-client',
         verify: async (email) => ({ email, emailVerified: true }),
+        verifyAccessToken: async (email) => ({ email, emailVerified: true }),
       },
     },
     mailer,

@@ -3484,6 +3484,29 @@
   text-decoration: underline;
   cursor: pointer;
 }
+/* "Continue with Google" on the sign-in page, our own button (Google's turned into "Continue
+   as <name>"). The light grey and dark label are the owner's reference, 2026-10-22: the one
+   button with a dark label. */
+.google-button {
+  gap: 10px;
+  background: linear-gradient(#cdd3d1, #b8c1be);
+  border-color: #dee2e0;
+  color: #111312;
+  font-weight: 600;
+}
+.google-button:hover:not(:disabled) {
+  background: linear-gradient(#d6dbd9, #c3cbc8);
+}
+/* Waiting for Google's script: no greyed flash on every visit. */
+.google-button:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.google-button svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
 /* "I'm a dev" on the sign-in page: there for the owner, quiet for everyone else. */
 .dev-link {
   align-self: flex-start;

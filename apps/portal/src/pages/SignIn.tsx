@@ -243,9 +243,9 @@ export function SignIn() {
               <div className="divider" style={{ margin: 0 }} />
               <GoogleSignInButton
                 clientId={googleClientId}
-                onCredential={(credential) =>
+                onAccessToken={(accessToken) =>
                   auth
-                    .signInWithGoogleCredential(credential)
+                    .signInWithGoogleToken(accessToken)
                     .catch((e) => toast(friendlyAuthError(e.message)))
                 }
                 onError={toast}

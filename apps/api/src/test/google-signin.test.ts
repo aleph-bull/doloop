@@ -4,7 +4,7 @@ import { createHsVerifier } from '../auth/verify';
 import { createPgliteDb, type Db } from '../db/client';
 import { buildServer } from '../server';
 import { HttpError } from '../errors';
-import type { GoogleIdentity } from '../services/google-signin';
+import { createGoogleAccessTokenVerifier, type GoogleIdentity } from '../services/google-signin';
 
 const SECRET = 'google-signin-test-secret';
 
@@ -29,7 +29,7 @@ describe('continue with Google', () => {
       allowedEmails: ['@example.com'],
       passwordAuth: {
         secret: SECRET,
-        google: { clientId: 'test-client', verify: fakeVerify },
+        google: { clientId: 'test-client', verify: fakeVerify, verifyAccessToken: fakeVerify },
       },
     });
     await app.ready();
@@ -63,6 +63,15 @@ describe('continue with Google', () => {
     expect(await userId(again.json().token)).toBe(await userId(first.json().token));
   });
 
+  it("takes an access token from Google's popup for the same account", async () => {
+    const first = await post('/api/auth/google', { credential: 'ok:popup@example.com' });
+    const popup = await post('/api/auth/google', { accessToken: 'ok:popup@example.com' });
+    expect(popup.statusCode).toBe(200);
+    expect(await userId(popup.json().token)).toBe(await userId(first.json().token));
+    expect((await post('/api/auth/google', { accessToken: 'forged' })).statusCode).toBe(401);
+    expect((await post('/api/auth/google', {})).statusCode).toBe(400);
+  });
+
   it('joins the account that already has a password for the email', async () => {
     const up = await post('/api/auth/signup', { email: 'pw@example.com', password: 'hunter22' });
     const viaGoogle = await post('/api/auth/google', { credential: 'ok:pw@example.com' });
@@ -77,6 +86,44 @@ describe('continue with Google', () => {
     const outsider = await post('/api/auth/google', { credential: 'ok:who@elsewhere.org' });
     expect(outsider.statusCode).toBe(403);
     expect(outsider.json().error).toBe('invite_only');
+  });
+});
+
+describe("checking an access token with Google's tokeninfo", () => {
+  const answering =
+    (status: number, body: Record<string, unknown>): typeof fetch =>
+    async () =>
+      new Response(JSON.stringify(body), { status });
+  const info = { aud: 'our-client', email: 'Ada@Example.com', email_verified: 'true' };
+
+  it('reads the email when the token was issued to our client', async () => {
+    const verify = createGoogleAccessTokenVerifier('our-client', answering(200, info));
+    expect(await verify('t')).toEqual({ email: 'Ada@Example.com', emailVerified: true });
+  });
+
+  it("refuses another site's token, a token Google rejects and a failed request", async () => {
+    const other = createGoogleAccessTokenVerifier(
+      'our-client',
+      answering(200, { ...info, aud: 'someone-else' }),
+    );
+    await expect(other('t')).rejects.toMatchObject({ status: 401 });
+    const rejected = createGoogleAccessTokenVerifier(
+      'our-client',
+      answering(400, { error: 'invalid_token' }),
+    );
+    await expect(rejected('t')).rejects.toMatchObject({ status: 401 });
+    const offline = createGoogleAccessTokenVerifier('our-client', async () => {
+      throw new TypeError('fetch failed');
+    });
+    await expect(offline('t')).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('passes on an unconfirmed email as unconfirmed', async () => {
+    const verify = createGoogleAccessTokenVerifier(
+      'our-client',
+      answering(200, { ...info, email_verified: 'false' }),
+    );
+    expect((await verify('t')).emailVerified).toBe(false);
   });
 });
 

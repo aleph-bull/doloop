@@ -26,8 +26,14 @@ const credentialsSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-/** The ID token Google's sign-in button hands the portal. */
-const googleSchema = z.object({ credential: z.string().min(1).max(4096) });
+/**
+ * The access token from Google's account popup (the portal's own button), or the ID token
+ * Google's ready-made button gave portals from before 2026-10-22.
+ */
+const googleSchema = z.union([
+  z.object({ accessToken: z.string().min(1).max(4096) }),
+  z.object({ credential: z.string().min(1).max(4096) }),
+]);
 
 /** Sign-ins last 30 days; signing in again starts a new 30. */
 
@@ -43,7 +49,13 @@ export interface PasswordAuthOptions {
   clock?: () => string;
 
   /** "Continue with Google" (`GOOGLE_SIGNIN_CLIENT_ID`); left out, only passwords work. */
-  google?: { clientId: string; verify: GoogleTokenVerifier } | null;
+  google?: {
+    clientId: string;
+    /** Checks an ID token. */
+    verify: GoogleTokenVerifier;
+    /** Checks an access token. */
+    verifyAccessToken: GoogleTokenVerifier;
+  } | null;
   /** Limits on tries, to slow down password guessing; null turns them off (tests). */
   limits?: AuthLimits | null;
 }
@@ -166,9 +178,13 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
   }));
   if (!google) return;
   app.post('/api/auth/google', { config: { public: true } }, async (req) => {
-    const { credential } = googleSchema.parse(req.body);
+    const body = googleSchema.parse(req.body);
     if (signInIp) checkLimits([[signInIp, req.ip]]);
-    const identity = await google.verify(credential).catch((err: unknown) => {
+    const checked =
+      'accessToken' in body
+        ? google.verifyAccessToken(body.accessToken)
+        : google.verify(body.credential);
+    const identity = await checked.catch((err: unknown) => {
       signInIp?.hit(req.ip);
       throw err;
     });

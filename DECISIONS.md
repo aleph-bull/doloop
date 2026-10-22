@@ -2076,3 +2076,14 @@ Two changes from the owner: of "Text on the video", "this should be after the se
 - Routines were already a card on Home; the page itself is under Tasks.
 - Computers are unchanged: the sidebar or top bar still lists every page, and a crowded top bar still turns into the all-pages icon bar.
 - Still no "More" menu: every page is two taps away at most, inside the place it belongs to.
+
+## Our own "Continue with Google" button, 2026-10-22 (owner's request)
+
+"When it goes continue with zachary or whatever it looks ugly, just make your own button", with a screenshot of a light grey pill as the look. Google's ready-made button (Identity Services) can't be restyled, turns into "Continue as <name>" with a picture once Google knows you, and on our dark page sat in a white box.
+
+- **The button is ours** (`GoogleSignInButton`, `.google-button` in index.css): the size and pill of the other buttons, the reference's light grey and Google's "G", with a dark label. That label is the one exception to white labels on buttons, because it is the owner's reference and white wouldn't read on light grey.
+- **It opens Google's account popup** (the token flow, `google.accounts.oauth2.initTokenClient`, scope `openid email`), the way Google supports custom buttons. No new keys: the same `GOOGLE_SIGNIN_CLIENT_ID` and its allowed origins. People pick an account and, the first time, agree to share their email.
+- **The API checks the access token with Google** (`createGoogleAccessTokenVerifier`): Google's tokeninfo must say it was issued to our client id, or a token another site got for the same person could sign in here. Then the same rules as before (confirmed email, invites, blocked addresses, joining the account with that email).
+- `POST /api/auth/google` still takes the old ID token (`credential`), so a sign-in page left open from before the deploy keeps working.
+- Closing the popup says nothing; a blocked popup asks to allow pop-ups.
+- Checked in a sandbox: the look in both themes and on a phone, the click opening Google's popup, and the API refusing a junk token through Google's real tokeninfo. A real sign-in needs the real client id, so it is tried on komogon.app.

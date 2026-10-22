@@ -49,10 +49,12 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   (scrypt hashes), `POST /api/auth/signup|signin`, tokens signed with `AUTH_SECRET`. The
   portal uses them when no Supabase and no dev variables are set (`authMode` `'server'` in
   `apps/portal/src/lib/auth.tsx`). Supabase sign-in still works if both sides get its keys.
-- "Continue with Google" for those accounts: Google's own button (Identity Services) gives
-  the portal an ID token, `POST /api/auth/google` checks it against Google's keys and
-  `GOOGLE_SIGNIN_CLIENT_ID`, and joins the account with that email or starts one. The
-  portal shows the button only when `GET /api/auth/google` answers a client id. Try it in
+- "Continue with Google" for those accounts: our own button (not Google's, which turned into
+  "Continue as <name>") opens Google's account popup (Identity Services' token client) and
+  gets an access token; `POST /api/auth/google` asks Google's tokeninfo whether it was issued
+  to `GOOGLE_SIGNIN_CLIENT_ID` (it still takes the older ID token too), and joins the account
+  with that email or starts one. The portal shows the button only when
+  `GET /api/auth/google` answers a client id. Try it in
   the `sandbox-google` sandbox (8800/5186; placeholder id, so the popup itself fails).
 - Sign-in tries are limited in memory (`services/rate-limit.ts`): failed sign-ins per email
   and per address, sign-ups per address, 429 with Retry-After. Addresses come from
