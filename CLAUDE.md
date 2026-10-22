@@ -34,9 +34,9 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
    cron-job.org pings `/api/health` every 10 minutes so Render's free plan doesn't sleep.
 2. **The always-on copy is gone** (removed 2026-10-21 at the owner's request; they study on
    komogon.app now). It was a frozen build on localhost:5173 and :8787 started at sign-in.
-   Its data is still in `~/.komogon/pglite` with backups in `~/.komogon/backups`, and the
-   `pnpm local:*` scripts are still in the repo. Don't start it again unless the owner asks,
-   and don't delete that folder: it is their study history from before the move.
+   The owner then deleted its data folder (`~/.komogon/pglite`); only the backups in
+   `~/.komogon/backups` remain, and the `pnpm local:*` scripts are still in the repo. Don't
+   start it again or offer `local:update` unless the owner asks.
 3. **Sandboxes** for checking changes in a browser, with throwaway data (launch configs in
    `.claude/launch.json`): `sandbox-api`/`sandbox` (8797/5183, dev sign-in),
    `sandbox-2-api`/`sandbox-2` (8798/5184), `sandbox-password-api`/`sandbox-password`
@@ -231,6 +231,57 @@ Keep the owner's own wording verbatim, "!" included.
   (they used to sit in Pace and streaks).
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
+
+## Streaks: how they work (weekly streak added 2026-10-21)
+
+There are two streaks, a daily one and a weekly one, and both count the same thing: **streak
+days**. All the logic is in `packages/core/src/streak.ts`; the API only loads and saves.
+
+- **A streak day** is a day with at least one finished session of
+  `settings.streak.minMinutes` of work (default 15), credited to the day the session started.
+  The day begins at `settings.streak.dayStartHour` (0 to 8, default 4), so 1:30am still counts
+  for the night before (`streakDay`, `qualifyingDays`). The server lets that hour change
+  once a day, so it can't be moved around to save a streak. Calendar and analytics keep
+  midnight; only the streaks use the day start.
+- **Daily streak** (`evaluateStreak`): streak days in a row. A missed day spends a streak
+  freeze if one is held (bought in the shop), otherwise the streak resets. Today stays open
+  until it ends, so a quiet morning never shows a broken streak. Milestones (7, 14, 30, 60,
+  100) feed the end-of-session line and confetti.
+- **Weekly streak** (`evaluateWeekStreak`): Monday-to-Sunday weeks in a row with at least
+  `settings.streak.daysPerWeek` streak days (1 to 7, default 1, "Days a week for the weekly
+  streak" in Settings › Pace and streaks). A week counts the moment it reaches its days; the
+  current week stays open until Sunday ends; a week that ends short resets the run. Freezes
+  are the daily streak's only. No milestones or banners for weeks.
+- **Rest days don't protect either streak** (owner's choice, 2026-10-21, over removing rest
+  days altogether). Weekly rest days, vacations and break days still shape the daily plan and
+  pace (`pace.ts`, `scheduler.ts`), but a quiet rest day is missed like any other, and a
+  week of vacation ends the weekly streak. So shop break days now only give the plan a day
+  off. Don't bring back rest-day protection, or copy that promises it, without asking.
+- **Stored, not recomputed.** Both live in the `users.streak` jsonb (`StreakState`):
+  `current`, `longest`, `lastCountedDate`, `freezesHeld`, `breakDaysHeld`, and `weeks`
+  (`current`, `longest`, `lastCountedWeek`, a Monday). There is no table of days.
+  `syncStreak` (`apps/api/src/services/users.ts`) brings them up to date lazily: on every
+  `/api/me` read, the analytics, recap and shop routes, and at session end. It loads finished
+  sessions from the earlier of the last judged day and the first unjudged week (two days
+  earlier for time zones), judges every day and week since, and writes only when something
+  changed. `lastCountedDate` and `lastCountedWeek` move past every judged day or week
+  (counted, frozen or reset), so running it twice changes nothing.
+- **Old rows.** A streak saved before 2026-10-21 has no `weeks`. The first sync reads every
+  session once and works the weekly streak and its best out of the whole history. That is why
+  `weeks` is optional in the type: read it with `weekStreakNumbers()` in the API, and with
+  `?.` / `?? 0` in the portal, whose offline query cache (IndexedDB, `lib/persist.ts`) can
+  hand back a response from before.
+- **Settings changes** (minimum minutes, days per week) apply to days and weeks not yet
+  judged. What already counted stays counted.
+- **Events.** Only the daily streak's freeze uses and resets are logged (`streak_events`),
+  and `describeStreakEvents` turns them into the dashboard banner. Weekly resets are silent.
+- **Where they show:** the top bar flame and the sidebar pill (the day count; the tooltip
+  names both), the dashboard's numbers (Daily streak beside Weekly streak), the Analytics
+  "Streaks and consistency" card (flame, then a calendar badge once there has been a counted
+  week), the end-of-session summary (weekly only when above zero) and the profile. The
+  leaderboard, Compare and groups use the daily streak only.
+- **Tests:** `packages/core/src/streak.test.ts` (both evaluators) and
+  `apps/api/src/test/weekly-streak.test.ts` (through the API, with a moving clock).
 
 ## Social: how it works (built 2026-10-21)
 
