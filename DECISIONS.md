@@ -1772,3 +1772,7 @@ The owner asked that a phone open "the Apple timelapse feature" instead of the f
 - **Trimming on a phone is like the Photos app**: a viewer showing the frame as it will come out (the clocks and the mark included), a strip of nine stills with a handle at each end, a playhead that can be dragged between them, and a play button that runs through the kept part at the video's speed (without the blending, so it is quick). Computers keep the Start and End sliders.
 - **Saving on a phone** opens the share sheet, so "Save Video" puts it in Photos; a plain download only reached Files. Closing the sheet saves nothing; if sharing files isn't possible it downloads as before.
 - Back camera and wake lock were in IDEAS.md (2026-10-21) and are built as part of this. The Photos import stays an idea.
+
+## The app's own landing page removed, 2026-10-21 (user request)
+
+- **Signed-out visitors to the app go straight to sign in.** The portal's landing page ("Keep your coursework and study time together.") showed on a first visit from a new computer; the owner asked to delete it entirely so it never shows again. `pages/Landing.tsx` and its styles are gone, and `/welcome` (its preview) now redirects to sign in. The marketing site in `apps/site` is untouched.
