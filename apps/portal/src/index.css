@@ -7758,6 +7758,9 @@
 }
 .tl-look-pic {
   display: grid;
+  /* The row is the box's own height: sized to the canvas, it grew with the screen's pixel
+     density (three times as tall on an iPhone) and ran into the line under the looks. */
+  grid-template-rows: minmax(0, 100%);
   place-items: center;
   width: 100%;
   height: 72px;
