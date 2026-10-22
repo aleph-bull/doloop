@@ -152,8 +152,15 @@
     {
       "idx": 21,
       "version": "7",
-      "when": 1792630685183,
-      "tag": "0021_calendar_feeds",
+      "when": 1792630224177,
+      "tag": "0021_admin_moderation",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1792633343828,
+      "tag": "0022_calendar_feeds",
       "breakpoints": true
     }
   ]

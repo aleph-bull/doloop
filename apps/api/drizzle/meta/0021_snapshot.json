@@ -1,5 +1,5 @@
 {
-  "id": "4309c19e-1a7f-45dd-8927-705b342ef9ab",
+  "id": "5e35fac2-6f9a-4523-a5ac-90d92bfd2eb5",
   "prevId": "11400d16-41e2-43f0-9eca-a15d0c9fd12d",
   "version": "7",
   "dialect": "postgresql",
@@ -79,78 +79,15 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.calendar_feeds": {
-      "name": "calendar_feeds",
+    "public.blocked_emails": {
+      "name": "blocked_emails",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
+        "email": {
+          "name": "email",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
           "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "url_enc": {
-          "name": "url_enc",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "url_hash": {
-          "name": "url_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "host": {
-          "name": "host",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tasks": {
-          "name": "tasks",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "events": {
-          "name": "events",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "last_sync_at": {
-          "name": "last_sync_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "checked_at": {
-          "name": "checked_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_error": {
-          "name": "last_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -160,44 +97,8 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "calendar_feeds_user_url_idx": {
-          "name": "calendar_feeds_user_url_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "url_hash",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "calendar_feeds_user_id_users_id_fk": {
-          "name": "calendar_feeds_user_id_users_id_fk",
-          "tableFrom": "calendar_feeds",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -4221,6 +4122,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "banned_at": {
+          "name": "banned_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

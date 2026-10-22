@@ -88,6 +88,14 @@
   gap: 10px;
   padding: 12px 14px;
 }
+/* The board has more room around it and between its rows than the other side cards. */
+.side-card.is-board {
+  gap: 14px;
+  padding: 18px 20px;
+}
+.side-card.is-board .side-board {
+  gap: 6px;
+}
 .side-head {
   display: flex;
   align-items: center;
@@ -155,7 +163,9 @@
   padding: 8px 0 0;
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* One equal column per figure, so however many there are they sit centred. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 .side-stats li {
   display: flex;
@@ -1022,6 +1032,10 @@
 }
 .side-row-btn:disabled {
   opacity: 0.5;
+}
+/* Nudged already: the crossed-out bell, quieter until they can be nudged again. */
+.side-row-btn.is-off {
+  color: var(--fg-subtle);
 }
 .side-add {
   height: 24px;
