@@ -142,7 +142,12 @@ export async function buildServer(opts: BuildOptions) {
       google: opts.passwordAuth.google,
     });
   if (opts.passwordAuth && opts.devLogin)
-    devLoginRoutes(app, opts.db, { ...opts.devLogin, secret: opts.passwordAuth.secret, clock });
+    devLoginRoutes(app, opts.db, {
+      ...opts.devLogin,
+      secret: opts.passwordAuth.secret,
+      clock,
+      store: opts.mediaStore ?? null,
+    });
 
   await app.register(authPlugin, {
     db: opts.db,

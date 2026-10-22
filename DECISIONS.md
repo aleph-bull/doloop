@@ -2093,6 +2093,19 @@ Two changes from the owner: of "Text on the video", "this should be after the se
   - The render clamps the same way, so a percentage saved on another device or for another shape can't make anything smaller.
 - Checked in the sandbox with a fake 1280 × 720 camera: the card's slider (100% to 50%, the line at the stop, saved), videos made at 100% (1280 × 720, 1.0 MB for 2.8 s) and 50% (640 × 360, 373 KB), a remembered 320 × 180 camera moving the stop to 25% (320 × 180, 134 KB), and both presets in Settings.
 
+## Upload limits: 250 MB a day each, and nothing past 10 GB in the bucket, 2026-10-22 (owner request)
+
+"to prevent someone from inflating my r2 server put a limit of 250mb of uploads per day", "per account", then "add rule to stop all uploads when my r2 bucket has 10 gb of media".
+
+- **Counted when the upload link is handed out** (`POST /api/social/uploads`), not when the post is made. A link is signed for one exact size, so that is the most it can put in the bucket, and a file uploaded but never posted still sits in `uploads/` for a day. Each link is a row in `media_uploads` (migration 0027_upload_quota), kept two days. The logic is `services/upload-quota.ts`.
+- **250 MB a day per account**, over any 24 hours rather than from midnight (no double allowance either side of midnight, and no time zone to pick). A link that would go past it is a 429 with Retry-After: "You can upload 250 MB a day. This one fits again in about 5 hours.", the time being when enough of the oldest uploads turn a day old. That is six 40 MB videos, or about twenty compressed timelapses. A failed upload that is tried again counts each time.
+- **10 GB in the bucket stops every upload**, for everyone (R2's free storage; 10 × 1024³ bytes, the same 1024s as the app's MB). Posts without a file still go. The message (503): "Videos and pictures are paused for now. You can still post without one."
+  - The bucket is measured from R2 itself (ListObjectsV2, every file's size added up), so files the database has lost track of count too. A measurement is trusted for ten minutes, plus every link handed out since, so nothing slips through between measurements and deleted files free room within ten minutes. Listing costs a request per thousand files, at most every ten minutes and only when someone asks for an upload link.
+  - If R2 won't list (the token can't, or R2 is down), the API counts from Postgres instead: every posted file plus every link of the last two days. It logs a warning. `scripts/r2-check.mjs` gained a "measure the whole bucket" step to check the token can list.
+- **Found on the way: expired dev accounts left their files in R2 for good.** `sweepDevAccounts` deleted them without the store, so their rows went and their videos stayed with nothing pointing at them. It now gets the store, like every other way an account is deleted.
+- Both limits reach people through the toast the composer and "Share to Social" already show for API errors; no portal change.
+- Unchanged: 30 links an hour, the 40 MB and 2 MB file limits, and posting without R2 (files in Postgres, 5 MB).
+
 ## Our own "Continue with Google" button, 2026-10-22 (owner's request)
 
 "When it goes continue with zachary or whatever it looks ugly, just make your own button", with a screenshot of a light grey pill as the look. Google's ready-made button (Identity Services) can't be restyled, turns into "Continue as <name>" with a picture once Google knows you, and on our dark page sat in a white box.

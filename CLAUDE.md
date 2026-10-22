@@ -427,7 +427,9 @@ as they were when shared (`posts.minutes`, `posts.subject`), optionally a line o
 makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
 [docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
-the bytes never pass through Render. Without R2, and for posts made before it, the bytes are
+the bytes never pass through Render. Uploads are capped at 250 MB a day per account and stop
+for everyone once the bucket holds 10 GB (`services/upload-quota.ts`, see docs/R2.md); any new
+way of putting files in R2 must go through the same quota. Without R2, and for posts made before it, the bytes are
 in `post_media.data` as base64 (videos capped at 5 MB) and the portal fetches them with the
 token into a blob URL. `GET /api/social/uploads` tells the portal which applies. A file over
 the limit is not refused: the composer and "Share to Social" offer to compress it in the

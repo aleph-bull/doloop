@@ -23,6 +23,7 @@ import { removeAll, type MediaStore } from '../services/media-store';
 import { loadPeople, type Person } from '../services/people';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
 import { dt } from '../services/sessions-mapper';
+import { uploadQuota } from '../services/upload-quota';
 import { uuid } from '../validation';
 import { NUDGE_EVERY_MS } from './groups';
 
@@ -259,6 +260,8 @@ export function socialRoutes(
   const limits = mediaLimits(store);
   // Upload links cost nothing to ask for, so each person gets a sane number an hour.
   const uploadLimiter = new RateLimiter({ max: 30, windowMs: 60 * 60 * 1000 });
+  // And 250 MB a day each, with everything stopping once the bucket holds 10 GB.
+  const quota = store ? uploadQuota(db, store) : null;
 
   /**
    * Whether the viewer may see a post's file: the same rules as the feed (a post kept to
@@ -330,14 +333,17 @@ export function socialRoutes(
    * `posts/`, so a file nobody posted doesn't stay.
    */
   app.post('/api/social/uploads', async (req) => {
-    if (!store) throw conflict('Files go with the post here');
+    if (!store || !quota) throw conflict('Files go with the post here');
     const input = z
       .object({ mime: z.string().max(40), bytes: z.number().int().min(1) })
       .parse(req.body);
     const mime = input.mime.toLowerCase();
     checkMedia(mime, input.bytes, limits);
     checkLimits([[uploadLimiter, req.user.id]]);
+    const now = dt(clock());
+    await quota.check(req.user.id, input.bytes, now, req.log);
     uploadLimiter.hit(req.user.id);
+    await quota.record(req.user.id, input.bytes, now);
     const key = `uploads/${req.user.id}/${randomUUID()}`;
     const url = await store.uploadUrl(key, mime, input.bytes, UPLOAD_LINK_SECONDS);
     return { key, url, headers: { 'content-type': mime } };

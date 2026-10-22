@@ -51,8 +51,11 @@ export class RateLimiter {
 }
 
 export class TooManyTries extends HttpError {
-  constructor(public retryAfterSeconds: number) {
-    super(429, 'There have been too many tries. Please wait a few minutes and try again.');
+  constructor(
+    public retryAfterSeconds: number,
+    message = 'There have been too many tries. Please wait a few minutes and try again.',
+  ) {
+    super(429, message);
   }
 }
 

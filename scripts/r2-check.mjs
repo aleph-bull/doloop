@@ -1,7 +1,7 @@
 /**
  * Checks a Cloudflare R2 setup end to end with the same code the API uses: upload through
- * a signed link, read it back, copy, delete, and whether the bucket's CORS lets the portal
- * upload from the browser. Reads R2_* from apps/api/.env (or the environment). Leaves
+ * a signed link, read it back, copy, delete, measure the bucket, and whether the bucket's
+ * CORS lets the portal upload from the browser. Reads R2_* from apps/api/.env (or the environment). Leaves
  * nothing behind in the bucket.
  *
  * Run: node scripts/r2-check.mjs [portal address, e.g. https://komogon.app]
@@ -101,6 +101,11 @@ if (uploaded) {
     if ((await store.head(upload)) || (await store.head(kept))) throw new Error('still there');
   });
 }
+// The API lists the bucket to stop uploads at 10 GB; without this it counts from Postgres.
+await step('measure the whole bucket', async () => {
+  const bytes = await store.usage();
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB of 10240 MB`;
+});
 
 const origins = [...process.argv.slice(2), ...(process.env.CORS_ORIGINS ?? '').split(',')]
   .map((s) => s.trim().replace(/\/+$/, ''))
