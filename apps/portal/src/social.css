@@ -86,18 +86,20 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
-/* The board has more room around it and between its rows than the other side cards. */
+/* The board has more room between its rows than the other side cards. */
 .side-card.is-board {
   gap: 14px;
-  padding: 18px 20px;
 }
 .side-card.is-board .side-board {
   gap: 6px;
 }
+/* Wraps rather than overflowing: in a narrow column the board's Global/Friends toggle goes
+   under the title instead of past the card's edge. */
 .side-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -254,7 +256,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .composer-row {
   display: flex;
@@ -342,7 +344,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .post-head {
   display: flex;
@@ -868,7 +870,7 @@
   color: var(--fg);
 }
 .board-list {
-  padding: 8px 18px;
+  padding: var(--card-pad);
 }
 .board-rows {
   list-style: none;
@@ -1075,7 +1077,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 10px 12px;
+  padding: var(--card-pad);
 }
 .jam-form:not(.is-code) {
   flex: 1 1 380px;
@@ -1113,7 +1115,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .jam.is-ended {
   opacity: 0.85;
@@ -1218,7 +1220,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .board-note {
   margin-bottom: 2px;
@@ -1235,7 +1237,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .everyone-head {
   display: flex;
@@ -1308,7 +1310,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .live-head {
   display: flex;
@@ -1431,7 +1433,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .group-head {
   display: flex;
@@ -1609,7 +1611,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 14px;
+  padding: var(--card-pad);
 }
 .nudges-head {
   display: flex;
@@ -1646,7 +1648,7 @@
 /* ----- round two of looks: roomier posts, lighter figures, requests folded ----- */
 .post {
   gap: 12px;
-  padding: 16px 18px;
+  padding: var(--card-pad);
 }
 .post-session-figure {
   font-size: 1.1rem;
@@ -1823,7 +1825,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 16px;
+  padding: var(--card-pad);
 }
 .lb-tile-head {
   display: flex;

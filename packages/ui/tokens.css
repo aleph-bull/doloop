@@ -61,6 +61,12 @@
   --radius-lg: 22px;
   --radius-xl: 30px;
   --radius-pill: 999px;
+  /*
+   * Room between a card's edge and its content. A card has the --radius-lg corner, and
+   * anything closer than this sits inside the curve and looks cramped (owner, 2026-10-21).
+   * Every card uses it, dense ones too: they stay dense through smaller pictures and text.
+   */
+  --card-pad: 20px;
 
   /* ---------- Motion ---------- */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);

@@ -30,7 +30,7 @@ export function Elapsed({ since, resting }: { since: string; resting?: boolean }
   );
 }
 
-/** "12 min", "1 h 5 min": how long they've been at it, updated every half minute. */
+/** "12 min", then "1.5 h" like the leaderboard: how long they've been at it, kept short. */
 export function StudyingFor({ since }: { since: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -38,11 +38,7 @@ export function StudyingFor({ since }: { since: string }) {
     return () => window.clearInterval(id);
   }, []);
   const m = Math.max(1, Math.floor((now - Date.parse(since)) / 60_000));
-  return (
-    <span className="tabular">
-      {m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`}
-    </span>
-  );
+  return <span className="tabular">{m < 60 ? `${m} min` : `${(m / 60).toFixed(1)} h`}</span>;
 }
 
 /** "On a break" or "Paused" while not focusing; nothing while they are. */

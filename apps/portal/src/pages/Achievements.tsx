@@ -107,7 +107,7 @@ export function Achievements() {
           Shop
         </h2>
         <div className="card-grid">
-          <Panel className="p-4 flex flex-col gap-3">
+          <Panel className="p-5 flex flex-col gap-3">
             <div>
               <div className="font-medium">Streak freeze</div>
               <div className="muted text-sm">
@@ -129,7 +129,7 @@ export function Achievements() {
             </div>
           </Panel>
 
-          <Panel className="p-4 flex flex-col gap-3">
+          <Panel className="p-5 flex flex-col gap-3">
             <div>
               <div className="font-medium">Break day</div>
               <div className="muted text-sm">

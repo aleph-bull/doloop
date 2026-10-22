@@ -127,6 +127,14 @@ Keep the owner's own wording verbatim, "!" included.
 
 - Matte and flat: no glossy sheens, glows, or gradients inside panels. Every card on a page
   uses the same surface.
+- **Cards keep their content 20px from every edge**: `padding: var(--card-pad)` (the token in
+  `packages/ui/tokens.css`, beside the 22px `--radius-lg` corner every card has). Anything
+  closer sits inside the rounded corner and looks cramped (the owner, 2026-10-21, on the
+  Social cards at 12-14px). Use the token on every new card, dense ones too: a card stays
+  dense through smaller pictures and text, never tighter padding. A grid or table that runs
+  edge to edge (the calendar, the Tasks table) keeps its text 20px in from the sides and top
+  instead. A card's header that might not fit wraps (`flex-wrap`) rather than running past
+  the edge.
 - Never black text on buttons or the logo; accent buttons keep white labels and the fill
   deepens instead. Solid accent fills are muted (saturation capped at 45%).
 - No all-caps labels (except on the focus screen); labels are in sentence case.
@@ -340,9 +348,10 @@ queries on `.feed-wrap`): your card and the friends card on the left, the compos
 posts in the middle, the first five of the leaderboard on the right (Global or Friends). Under
 880px of page width the left column moves under the posts (it holds the requests, so it must
 stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
-dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
-The owner called the first version "massive"; don't let it grow back. The one exception is
-the small leaderboard, which they asked to have roomier (18px 20px padding, 2026-10-21).
+dense: 40px pictures on posts and the composer, 26px in lists, 14px text. The owner called
+the first version "massive"; don't let it grow back. Padding is not where density comes from:
+every card has the standard 20px (`--card-pad`, see the Look rules), since 12-16px crowded
+the rounded corners. The small leaderboard also has more room between its rows.
 
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and the task's title
