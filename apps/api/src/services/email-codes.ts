@@ -20,16 +20,19 @@ export async function emailLimit(
 ) {
   const at = new Date(now),
     expiresAt = new Date(at.getTime() + windowMs);
+  // As text inside sql``: the hosted database's driver can't send a Date there.
+  const atText = at.toISOString(),
+    expiresText = expiresAt.toISOString();
   const rows = await db
     .insert(emailRateLimits)
     .values({ key, hits: 1, expiresAt })
     .onConflictDoUpdate({
       target: emailRateLimits.key,
       set: {
-        hits: sql`case when ${emailRateLimits.expiresAt} <= ${at} then 1 else ${emailRateLimits.hits} + 1 end`,
-        expiresAt: sql`case when ${emailRateLimits.expiresAt} <= ${at} then ${expiresAt} else ${emailRateLimits.expiresAt} end`,
+        hits: sql`case when ${emailRateLimits.expiresAt} <= ${atText} then 1 else ${emailRateLimits.hits} + 1 end`,
+        expiresAt: sql`case when ${emailRateLimits.expiresAt} <= ${atText} then ${expiresText}::timestamptz else ${emailRateLimits.expiresAt} end`,
       },
-      setWhere: sql`${emailRateLimits.expiresAt} <= ${at} or ${emailRateLimits.hits} < ${limit}`,
+      setWhere: sql`${emailRateLimits.expiresAt} <= ${atText} or ${emailRateLimits.hits} < ${limit}`,
     })
     .returning();
   if (!rows.length) throw new HttpError(429, 'Too many requests. Please try again later.');
@@ -71,16 +74,14 @@ export async function issueEmailCode(
   const id = randomUUID(),
     code = String(randomInt(0, 1_000_000)).padStart(6, '0');
   const email = normalEmail(input.email);
-  await db
-    .insert(emailCodes)
-    .values({
-      ...input,
-      id,
-      email,
-      codeHash: hash(secret, `${id}:${code}`),
-      expiresAt: new Date(Date.parse(now) + 10 * 60_000),
-      createdAt: new Date(now),
-    });
+  await db.insert(emailCodes).values({
+    ...input,
+    id,
+    email,
+    codeHash: hash(secret, `${id}:${code}`),
+    expiresAt: new Date(Date.parse(now) + 10 * 60_000),
+    createdAt: new Date(now),
+  });
   try {
     await mailer.send({
       to: email,
