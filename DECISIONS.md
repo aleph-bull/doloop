@@ -2040,3 +2040,11 @@ The owner saw "1 h on Slides Review" on a post and asked for the course too: "RS
 
 - Both pickers are removed. The task dialog no longer sends a colour, so saving a task leaves whatever it had; a template saved from now on drops its old colour default, and new items don't take one any more.
 - Nothing is deleted: tasks coloured before keep their colour on the calendar and their dot on Tasks (`effectiveColor`, the `nodes.color` column and the API field all stay). Everything else on the calendar uses the accent, as uncoloured tasks always did.
+
+## A phone held sideways keeps the phone's nav, 2026-10-22 (owner report)
+
+"Fix the phone layout when horizontal, I can't see the full sidebar", and "the cards are all right leaning instead of centered when horizontal". Sideways, a phone is wider than 768px, so the app took it for a computer: it showed the sidebar, whose rows ran off the bottom of a 390px-tall screen, and moved the page right to clear the open sidebar (236px on the left, nothing on the right).
+
+- **A phone is a phone either way up.** `PHONE_QUERY` in `lib/media.ts` (phone-width, or a touch screen under 600px tall) decides the nav: on a phone AppShell leaves the sidebar out whatever Settings says, and shows the top bar and the bottom bar. index.css uses the same query for the phone's top bar, so it keeps clear of the notch sideways.
+- Held sideways, the bottom bar is the computer's centred pill (up to 560px), not the full width.
+- Upright phones and computers are unchanged; tablets (taller than 600px sideways) still count as computers.

@@ -25,3 +25,11 @@ export function useMediaQuery(query: string): boolean {
  * width the design system's sheets switch at (packages/ui styles.css, `.modal`).
  */
 export const NARROW_QUERY = '(max-width: 560px)';
+
+/**
+ * A phone either way up, for the nav: phone-width, or a touch screen too short for the
+ * computer's layout (a phone held sideways is wider than 768px, and the sidebar would run off
+ * its bottom). Phones get the top bar and the bottom bar, never the sidebar. index.css uses the
+ * same query for the phone's top bar.
+ */
+export const PHONE_QUERY = '(max-width: 767px), (pointer: coarse) and (max-height: 599px)';

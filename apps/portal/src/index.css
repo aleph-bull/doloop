@@ -408,7 +408,8 @@
 .tabbar {
   display: none;
 }
-@media (max-width: 767px) {
+/* A phone either way up: the same query as PHONE_QUERY in lib/media.ts. */
+@media (max-width: 767px), (pointer: coarse) and (max-height: 599px) {
   .nav {
     top: max(8px, env(safe-area-inset-top));
     margin-top: max(8px, env(safe-area-inset-top));
@@ -591,7 +592,8 @@
  * ---------- Sidebar (Settings › Appearance › Navigation): a slim column of icons ----------
  * Chosen instead of the top bar on a computer. It opens over the page to show labels on
  * hover or keyboard focus, and can be kept open, which moves the page over instead.
- * Phones keep the top bar and the tab bar either way.
+ * Phones keep the top bar and the tab bar either way, held sideways too (AppShell leaves the
+ * sidebar out on them, so data-nav is never set there).
  */
 .sidenav {
   display: none;

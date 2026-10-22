@@ -29,6 +29,7 @@ import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
+import { PHONE_QUERY, useMediaQuery } from '../lib/media';
 import { preloadPage, preloadPages } from '../lib/page-loaders';
 import { useAvatar, useMe } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
@@ -346,7 +347,9 @@ export function AppShell() {
   const avatarUrl = useAvatar().data?.dataUrl ?? null;
   const main = shown.filter((l) => l.group === 'main');
   const more = shown.filter((l) => l.group === 'more');
-  const sidebar = settings?.nav?.style === 'sidebar';
+  // The sidebar is a computer's choice; a phone keeps the bottom bar either way up.
+  const phone = useMediaQuery(PHONE_QUERY);
+  const sidebar = settings?.nav?.style === 'sidebar' && !phone;
   const [pinned, setPinned] = usePinnedRail();
   // After Collapse is clicked the pointer is still over the sidebar, which would hold it
   // open over the page that has just moved under it. It rests shut until the pointer leaves.
@@ -454,18 +457,12 @@ export function AppShell() {
   // The bottom bar shows on phones, and on a computer whose top bar is crowded.
   useLayoutEffect(() => {
     const root = document.documentElement;
-    const phone = window.matchMedia('(max-width: 767px)');
-    const apply = () => {
-      if (phone.matches || crowded) root.dataset.tabbar = '1';
-      else delete root.dataset.tabbar;
-    };
-    apply();
-    phone.addEventListener('change', apply);
+    if (phone || crowded) root.dataset.tabbar = '1';
+    else delete root.dataset.tabbar;
     return () => {
-      phone.removeEventListener('change', apply);
       delete root.dataset.tabbar;
     };
-  }, [crowded]);
+  }, [phone, crowded]);
 
   // The current tab should never sit scrolled out of sight: not on arrival, and not when
   // the counters beside the tabs appear and take some of the room.
