@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { addDays, startOfWeekMonday, toLocalDate } from '@komogon/core';
-import { and, desc, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { sessions, userAssets, users } from '../db/schema';
@@ -100,6 +100,7 @@ export function leaderboardRoutes(
         and(
           isNotNull(sessions.endedAt),
           eq(users.isTestAccount, false),
+          isNull(users.bannedAt),
           ...(scope === 'friends'
             ? [
                 inArray(sessions.userId, [req.user.id, ...friends]),
@@ -167,6 +168,7 @@ export function leaderboardRoutes(
     const from28 = addDays(today, -27);
     const onBoard = and(
       eq(users.isTestAccount, false),
+      isNull(users.bannedAt),
       sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'global') in ('global', 'true')`,
     );
     // Everyone on the board, with their streak; then every finished session of theirs from

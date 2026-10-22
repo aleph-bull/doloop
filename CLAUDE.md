@@ -62,6 +62,15 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
   data, and setting a new password. Testers are told on the sign-in page that the owner can
   see accounts and study data, and are asked not to reuse a personal password.
+- Admin tools (2026-10-21): each account's Manage dialog adds study time, takes time off or
+  deletes a session, restarts onboarding, and suspends or deletes the account; the page also
+  has Dev tools (go through onboarding again on your own account) and Blocked emails. A
+  suspension is `users.banned_at` plus the address in `blocked_emails`, kept in step
+  (`services/moderation.ts`); it is checked where every sign-in token is issued
+  (`accountSession`) and on every request (the auth plugin answers 403
+  `account_suspended`, and the portal signs out with a message). Suspended accounts are left
+  off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
+  blocked from there.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.

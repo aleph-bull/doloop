@@ -213,6 +213,8 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       )!,
     );
     if (q.scope === 'friends') conds.push(inArray(posts.userId, circle));
+    // A suspended account's posts leave the feed with it.
+    conds.push(sql`(select u.banned_at from users u where u.id = posts.user_id) is null`);
     const page = await loadPosts(
       db,
       req.user.id,
@@ -452,6 +454,7 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       .where(
         and(
           sql`${users.onboardedAt} is not null`,
+          sql`${users.bannedAt} is null`,
           sql`${users.id} <> ${req.user.id}`,
           sql`${name} ilike ${'%' + q.replace(/[%_\\]/g, '\\$&') + '%'}`,
         ),

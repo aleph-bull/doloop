@@ -48,6 +48,17 @@ export const users = pgTable('users', {
   isTestAccount: boolean('is_test_account').notNull().default(false),
   emailVerifiedAt: ts('email_verified_at'),
   authVersion: integer('auth_version').notNull().default(0),
+  /** Suspended by an admin: every request is refused until they lift it. */
+  bannedAt: ts('banned_at'),
+});
+
+/**
+ * Addresses an admin has blocked: no sign-up, no sign-in. Kept apart from accounts so a
+ * deleted account's email can stay blocked. Stored lowercased.
+ */
+export const blockedEmails = pgTable('blocked_emails', {
+  email: text('email').primaryKey(),
+  createdAt: ts('created_at').notNull().defaultNow(),
 });
 
 export const emailCodes = pgTable(
@@ -839,6 +850,7 @@ export const schema = {
   emailRateLimits,
   socialProfiles,
   users,
+  blockedEmails,
   passwordAccounts,
   nodes,
   sessions,
