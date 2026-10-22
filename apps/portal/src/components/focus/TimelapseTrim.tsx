@@ -1,6 +1,6 @@
 import { aspectRatio, timelapseClock, videoSize, type TimelapsePlan } from '@komogon/core';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@komogon/ui';
 import {
   clockText,
@@ -11,12 +11,22 @@ import {
 } from '../../lib/timelapse';
 import { composeFrame } from '../../lib/timelapse-compose';
 
-/** How many stills the strip shows, spread over the whole recording. */
+/** How many stills a phone's strip shows, spread over the whole recording. */
 const THUMBS = 9;
+/** On a computer's wider card, as many as fit at the stills' own shape, within these. */
+const WIDE_THUMBS_MIN = 5;
+const WIDE_THUMBS_MAX = 14;
 /** Decoded stills kept for the viewer at once. */
 const CACHE = 12;
 
-export interface PhoneTrimProps {
+/** One still's pictures, decoded for the viewer. */
+type Pictures = { camera: ImageBitmap | null; screen: ImageBitmap | null };
+
+const decode = (blob: Blob | null | undefined) =>
+  blob ? createImageBitmap(blob).catch(() => null) : Promise.resolve(null);
+const shapeOf = (b: ImageBitmap | null) => (b && b.height > 0 ? b.width / b.height : null);
+
+export interface TimelapseTrimProps {
   stills: Still[];
   /** Each still's place in the session, in seconds, in order. */
   times: number[];
@@ -32,16 +42,18 @@ export interface PhoneTrimProps {
   /** The video as it would come out of the kept stills. */
   plan: TimelapsePlan;
   look: TimelapseLook;
+  /** A computer's card: the strip fits its stills at their own shape, the viewer is sharper. */
+  wide?: boolean;
   onChange: (from: number, to: number) => void;
 }
 
 /**
- * The trim on a phone, like the Photos app's: a strip of stills with a handle at each end,
- * a playhead, and a viewer above that shows the frame under a handle while it is dragged
- * and plays the kept part with its clocks and mark. The play-through skips the blending, so
- * it is quick; the made video is smoother.
+ * The trim, like the Photos app's: a strip of stills with a handle at each end, a playhead,
+ * and a viewer above that shows the frame under a handle while it is dragged and plays the
+ * kept part with its clocks, screen and mark. The play-through skips the blending, so it is
+ * quick; the made video is smoother. A phone and a computer share it; the computer's is wide.
  */
-export function PhoneTrim({
+export function TimelapseTrim({
   stills,
   times,
   first,
@@ -52,78 +64,147 @@ export function PhoneTrim({
   endAt,
   plan,
   look,
+  wide = false,
   onChange,
-}: PhoneTrimProps) {
+}: TimelapseTrimProps) {
   const span = Math.max(1, last - first);
   // At least a few seconds of session between the two ends, so something is always kept.
   const gap = Math.max(1, Math.min(10, span / 20));
   const pct = (t: number) => Math.max(0, Math.min(100, ((t - first) / span) * 100));
   const trimmed = from > first || to < last;
 
-  /* ----- the strip's pictures ----- */
-  const thumbs = useMemo(() => {
-    const n = Math.min(THUMBS, stills.length);
-    return Array.from({ length: n }, (_, k) => {
-      // Spread by time, so a live clip's many frames take no more of the strip than its seconds.
-      const t = first + (k * span) / Math.max(1, n - 1);
-      let i = 0;
-      while (i < stills.length - 1 && times[i]! < t) i++;
-      const s = stills[i];
-      return s?.blob ?? s?.screen ?? null;
-    });
-    // The times only change with the stills.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stills]);
-  const [urls, setUrls] = useState<Array<string | null>>([]);
-  useEffect(() => {
-    const made = thumbs.map((b) => (b ? URL.createObjectURL(b) : null));
-    setUrls(made);
-    return () => made.forEach((u) => u && URL.revokeObjectURL(u));
-  }, [thumbs]);
-
-  /* ----- the viewer ----- */
-  const [cameraRatio, setCameraRatio] = useState<number | null>(null);
-  const ratio = aspectRatio(look.aspect, cameraRatio, knownScreenRatio());
-  const { w: vw, h: vh } = videoSize(ratio, 640);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const cache = useRef(new Map<number, ImageBitmap | null>());
-  const latest = useRef(-1);
-  const [viewAt, setViewAt] = useState(startAt);
-  const [playing, setPlaying] = useState(false);
-
+  /* ----- decoded stills ----- */
+  // Kept by still rather than by place: while recording, thinning moves every still along.
+  const cache = useRef(new Map<Still, Promise<Pictures>>());
   useEffect(
     () => () => {
-      for (const b of cache.current.values()) b?.close();
+      for (const p of cache.current.values())
+        void p.then(({ camera, screen }) => {
+          camera?.close();
+          screen?.close();
+        });
       cache.current.clear();
     },
     [],
   );
+  const pictures = useCallback((still: Still) => {
+    const c = cache.current;
+    let p = c.get(still);
+    if (p) {
+      // The most recently used goes last, so the oldest is the one let go.
+      c.delete(still);
+    } else {
+      p = Promise.all([decode(still.blob), decode(still.screen)]).then(([camera, screen]) => ({
+        camera,
+        screen,
+      }));
+    }
+    c.set(still, p);
+    while (c.size > CACHE) {
+      const [oldest, gone] = c.entries().next().value!;
+      c.delete(oldest);
+      void gone.then(({ camera, screen }) => {
+        camera?.close();
+        screen?.close();
+      });
+    }
+    return p;
+  }, []);
 
-  const bitmap = useCallback(
-    async (i: number) => {
-      const c = cache.current;
-      if (!c.has(i)) {
-        const blob = stills[i]?.blob;
-        c.set(i, blob ? await createImageBitmap(blob).catch(() => null) : null);
-        while (c.size > CACHE) {
-          const oldest = c.keys().next().value as number;
-          c.get(oldest)?.close();
-          c.delete(oldest);
-        }
-      }
-      return c.get(i) ?? null;
-    },
-    [stills],
-  );
-
-  // The video's shape follows the first kept still when it matches the camera.
+  // The video's shape follows the first kept still, as the made video does.
+  const [shapes, setShapes] = useState<{ camera: number | null; screen: number | null }>({
+    camera: null,
+    screen: null,
+  });
+  const firstKept = stills[startAt];
   useEffect(() => {
+    if (!firstKept) return;
     let live = true;
-    void bitmap(startAt).then((b) => live && b && setCameraRatio(b.width / b.height));
+    void pictures(firstKept).then((p) => {
+      if (!live) return;
+      const camera = shapeOf(p.camera);
+      const screen = shapeOf(p.screen);
+      setShapes((s) => (s.camera === camera && s.screen === screen ? s : { camera, screen }));
+    });
     return () => {
       live = false;
     };
-  }, [bitmap, startAt]);
+  }, [pictures, firstKept]);
+
+  /* ----- the strip's pictures ----- */
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [strip, setStrip] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = stripRef.current;
+    if (!wide || !el) return;
+    const measure = () => setStrip({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [wide]);
+  const thumbShape = shapes.camera ?? shapes.screen ?? 16 / 9;
+  const thumbCount = Math.min(
+    stills.length,
+    wide && strip && strip.h > 0
+      ? Math.max(
+          WIDE_THUMBS_MIN,
+          Math.min(WIDE_THUMBS_MAX, Math.round(strip.w / (strip.h * thumbShape))),
+        )
+      : THUMBS,
+  );
+  const thumbs = useMemo(
+    () =>
+      Array.from({ length: thumbCount }, (_, k) => {
+        // Spread by time, so a live clip's many frames take no more of the strip than its seconds.
+        const t = first + (k * span) / Math.max(1, thumbCount - 1);
+        let i = 0;
+        while (i < stills.length - 1 && times[i]! < t) i++;
+        const s = stills[i];
+        return s?.blob ?? s?.screen ?? null;
+      }),
+    // The times only change with the stills.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stills, thumbCount],
+  );
+  // A picture keeps its address while it stays in the strip, so a growing recording only
+  // loads the stills that are new to it.
+  const thumbUrls = useRef(new Map<Blob, string>());
+  const [urls, setUrls] = useState<Array<string | null>>([]);
+  useEffect(() => {
+    const made = thumbUrls.current;
+    const next = thumbs.map((b) => {
+      if (!b) return null;
+      let u = made.get(b);
+      if (!u) {
+        u = URL.createObjectURL(b);
+        made.set(b, u);
+      }
+      return u;
+    });
+    const shown = new Set(thumbs);
+    for (const [b, u] of made)
+      if (!shown.has(b)) {
+        URL.revokeObjectURL(u);
+        made.delete(b);
+      }
+    setUrls(next);
+  }, [thumbs]);
+  useEffect(
+    () => () => {
+      for (const u of thumbUrls.current.values()) URL.revokeObjectURL(u);
+      thumbUrls.current.clear();
+    },
+    [],
+  );
+
+  /* ----- the viewer ----- */
+  const ratio = aspectRatio(look.aspect, shapes.camera, shapes.screen ?? knownScreenRatio());
+  const { w: vw, h: vh } = videoSize(ratio, wide ? 960 : 640);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const latest = useRef(-1);
+  const [viewAt, setViewAt] = useState(startAt);
+  const [playing, setPlaying] = useState(false);
 
   const keptFrom = times[startAt] ?? 0;
   const keptSpan = (times[Math.max(startAt, endAt - 1)] ?? keptFrom) - keptFrom;
@@ -131,18 +212,19 @@ export function PhoneTrim({
     async (i: number) => {
       latest.current = i;
       const still = stills[i];
-      const b = await bitmap(i);
+      if (!still) return;
+      const p = await pictures(still);
       const ctx = canvasRef.current?.getContext('2d');
       // A newer frame was asked for while this one decoded: let that one draw.
-      if (!ctx || !still || latest.current !== i) return;
+      if (!ctx || latest.current !== i) return;
       composeFrame(
         ctx,
         vw,
         vh,
         look.layout,
         {
-          camera: b,
-          screen: null,
+          camera: p.camera,
+          screen: look.layout.screen.visible ? p.screen : null,
           clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
           elapsed: clockText(still, look.breakClock),
           title: still.title,
@@ -153,7 +235,7 @@ export function PhoneTrim({
         { mark: '#ffffff' },
       );
     },
-    [stills, times, bitmap, vw, vh, look, keptFrom, keptSpan],
+    [stills, times, pictures, vw, vh, look, keptFrom, keptSpan],
   );
 
   useEffect(() => {
@@ -168,27 +250,32 @@ export function PhoneTrim({
     );
   }, [drawAt, startAt]);
 
-  // Playing: through the kept part at the video's speed, a frame of the plan at a time.
+  // Playing: through the kept part at the video's speed, a frame of the plan at a time. The
+  // plan grows while a recording goes on; playing carries on through it rather than restart.
+  const playFrom = useRef({ plan, startAt });
   useEffect(() => {
-    if (!playing || plan.frames.length === 0) return;
+    playFrom.current = { plan, startAt };
+  }, [plan, startAt]);
+  useEffect(() => {
+    if (!playing) return;
     let raf = 0;
     const t0 = performance.now();
     const tick = () => {
-      const j = Math.floor(((performance.now() - t0) / 1000) * plan.fps);
-      if (j >= plan.frames.length) {
+      const { plan: p, startAt: s } = playFrom.current;
+      const j = Math.floor(((performance.now() - t0) / 1000) * p.fps);
+      if (j >= p.frames.length) {
         setPlaying(false);
-        setViewAt(startAt);
+        setViewAt(s);
         return;
       }
-      setViewAt(startAt + plan.frames[j]![1] - 1);
+      setViewAt(s + p.frames[j]![1] - 1);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing, plan, startAt]);
+  }, [playing]);
 
   /* ----- dragging ----- */
-  const stripRef = useRef<HTMLDivElement>(null);
   const timeAt = (clientX: number) => {
     const r = stripRef.current!.getBoundingClientRect();
     return first + Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * span;
@@ -235,7 +322,7 @@ export function PhoneTrim({
     else moveEnd(to + d);
   };
 
-  // A touch on the strip between the handles moves the playhead there.
+  // A press on the strip between the handles moves the playhead there.
   const scrub = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
     setPlaying(false);
@@ -252,7 +339,7 @@ export function PhoneTrim({
     <span
       role="slider"
       tabIndex={0}
-      className={`ptrim-handle is-${which}`}
+      className={`tl-trim-handle is-${which}`}
       aria-label={which === 'start' ? 'Where the video starts' : 'Where the video ends'}
       aria-valuemin={Math.round(first)}
       aria-valuemax={Math.round(last)}
@@ -271,20 +358,20 @@ export function PhoneTrim({
   );
 
   return (
-    <div className="field ptrim">
+    <div className="field tl-trim">
       <span className="field-label">Trim</span>
       <canvas
         ref={canvasRef}
         width={vw}
         height={vh}
-        className="ptrim-view"
+        className="tl-trim-view"
         style={{ aspectRatio: `${vw} / ${vh}`, width: `min(100%, ${(46 * vw) / vh}vh)` }}
         aria-label="The trimmed timelapse"
       />
-      <div className="ptrim-bar">
+      <div className="tl-trim-bar">
         <button
           type="button"
-          className="ptrim-play"
+          className="tl-trim-play"
           aria-label={playing ? 'Pause' : 'Play the trimmed part'}
           onClick={() => {
             if (!playing && viewAt >= endAt - 1) setViewAt(startAt);
@@ -293,25 +380,30 @@ export function PhoneTrim({
         >
           {playing ? <Pause size={18} aria-hidden /> : <Play size={18} aria-hidden />}
         </button>
-        <div ref={stripRef} className="ptrim-strip" onPointerDown={scrub} onPointerMove={scrubMove}>
-          <div className="ptrim-thumbs" aria-hidden>
+        <div
+          ref={stripRef}
+          className="tl-trim-strip"
+          onPointerDown={scrub}
+          onPointerMove={scrubMove}
+        >
+          <div className="tl-trim-thumbs" aria-hidden>
             {urls.map((u, k) =>
               u ? <img key={k} src={u} alt="" draggable={false} /> : <span key={k} />,
             )}
           </div>
-          <span className="ptrim-shade is-left" style={{ left: 0, width: `${pct(from)}%` }} />
-          <span className="ptrim-shade is-right" style={{ left: `${pct(to)}%`, right: 0 }} />
+          <span className="tl-trim-shade is-left" style={{ left: 0, width: `${pct(from)}%` }} />
+          <span className="tl-trim-shade is-right" style={{ left: `${pct(to)}%`, right: 0 }} />
           <div
-            className={`ptrim-frame${trimmed ? ' is-trimmed' : ''}`}
+            className={`tl-trim-frame${trimmed ? ' is-trimmed' : ''}`}
             style={{ left: `${pct(from)}%`, width: `${pct(to) - pct(from)}%` }}
           >
             {handle('start')}
             {handle('end')}
           </div>
-          <span className="ptrim-head" style={{ left: `${head}%` }} aria-hidden />
+          <span className="tl-trim-head" style={{ left: `${head}%` }} aria-hidden />
         </div>
       </div>
-      <div className="ptrim-times field-hint tabular">
+      <div className="tl-trim-times field-hint tabular">
         <span>{timelapseClock(from)}</span>
         <span>
           {trimmed

@@ -529,8 +529,8 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - `apps/portal/src/pages/Focus.tsx`: wires it together (when to ask, the task name, the
   screen answer for the session, phone or computer, the camera screen).
 - `apps/portal/src/components/focus/PhoneCamera.tsx`: the phone's camera screen.
-  `PhoneTrim.tsx`: the Photos-style trim on a phone. `TimelapsePresets.tsx`: the two folded
-  presets in Settings › Timelapse.
+  `TimelapseTrim.tsx`: the Photos-style trim, on a phone and a computer.
+  `TimelapsePresets.tsx`: the two folded presets in Settings › Timelapse.
 - `packages/core/src/timelapse-presets.ts`: phone or computer, upright or sideways
   (`timelapseLook`, `phoneAspectRatio`, the phone's shapes and defaults). Tests beside it.
 - `apps/portal/src/lib/device.ts`: `isPhone`, `isUpright`, `useWakeLock`.
@@ -610,10 +610,13 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 
 **Making the video.**
 - The "Your timelapse" card (end-of-session screen and the focus screen's controls) shows
-  the stills, a **Trim** (Start and End sliders over the session, with the first and last
-  kept still shown, "Keep it all" to undo), the length settings, then Make the video.
+  the stills, a **Trim** (`TimelapseTrim`, the same on a phone and a computer: a viewer, a
+  strip of stills with a handle at each end, a playhead and play; "Keep it all" to undo),
+  the length settings, the text on the video (once the recording has stopped), then Make
+  the video.
 - The trim is held in session seconds, not still indices, because thinning halves the
-  stills while recording; an end never moved follows the recording as it grows.
+  stills while recording; an end never moved follows the recording as it grows. The viewer
+  keeps its decoded stills by still for the same reason.
 - `renderTimelapse` blends the stills behind each frame for the camera and the screen
   separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
   the frame. The mark is black or white, picked from the brightness behind it on frame 30.
@@ -629,9 +632,11 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   The text box must stay quick: the post beside it follows a deferred copy of the text in a
   memoised card, and its video doesn't play until pressed. Instagram, TikTok and X have **no
   preview** (owner, 2026-10-22): their buttons go straight to the app or site, where the post
-  is written. **Your text** (`noteText` on each preset, the layout's `note` piece) is the
-  person's own line on the video the whole way through, like the clocks; empty, it's left
-  out. There is no end card (built, then removed the same day). **Looks**
+  is written. **Your text** (the layout's `note` piece) is the person's own line on the
+  video the whole way through, like the clocks; empty, it's left out. It is written after
+  the session, on the card and in "Change layout?", and belongs to that one video (owner,
+  2026-10-22): the presets' `noteText` is kept but no longer used. There is no end card
+  (built, then removed the same day). **Looks**
   (`timelapse-styles.ts`: Classic, Big timer, Headline, Corner, Clean) place the pieces for
   any shape; `matchTimelapseStyle` reads a saved layout back as its look. **"Change
   layout?"** beside a made video opens the layout editor in a dialog over a moment of that
@@ -697,10 +702,11 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
     it again, and it restarts when the page becomes visible), `mute` stops stills until
     `unmute`. `restartCamera()` starts it again.
   - Phones never get the screen question (iPhones have no `getDisplayMedia` anyway).
-  - **After the session**, `TimelapseExport` shows `PhoneTrim` on a phone instead of the
-    sliders: a viewer drawn with `composeFrame` (no blending, so playing is quick), nine
-    stills in a strip, a handle at each end, a playhead, play. "Save the video" opens the
-    share sheet on a phone (where "Save Video" goes to Photos) and falls back to a download.
+  - **After the session**, `TimelapseExport` shows `TimelapseTrim`: a viewer drawn with
+    `composeFrame` (no blending, so playing is quick), stills in a strip (nine on a phone; on
+    a computer, `wide`, as many as fit at the camera's shape), a handle at each end, a
+    playhead, play. "Save the video" opens the share sheet on a phone (where "Save Video"
+    goes to Photos) and falls back to a download.
 - **Not built.** Importing an Apple Time-Lapse from Photos is still in `docs/IDEAS.md`.
 - **Testing the camera screen in the preview.** The pane has no camera, so give it one before
   the recording starts: replace `navigator.mediaDevices.getUserMedia` with a function that
