@@ -20,6 +20,8 @@ export interface Env {
   resendApiKey: string | undefined;
   mailFrom: string;
   localTestAccounts: boolean;
+  /** "I'm a dev" sign-in; on unless `DEV_LOGIN=off`. */
+  devLogin: boolean;
   port: number;
   host: string;
   corsOrigins: string[];
@@ -79,6 +81,7 @@ export function loadEnv(): Env {
     resendApiKey: str('RESEND_API_KEY'),
     mailFrom: str('MAIL_FROM', 'Komodon <noreply@komogon.app>')!,
     localTestAccounts: process.env.LOCAL_TEST_ACCOUNTS === 'true',
+    devLogin: process.env.DEV_LOGIN !== 'off',
     outlook: {
       clientId: str('OUTLOOK_CLIENT_ID'),
       clientSecret: str('OUTLOOK_CLIENT_SECRET'),

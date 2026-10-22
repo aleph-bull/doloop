@@ -15,8 +15,10 @@ import {
   routines,
   sessions,
   users,
+  type UserRow,
 } from '../db/schema';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
+import { inWorldOf, ownerInWorldOf, sameWorld } from '../services/dev-accounts';
 import { removeAll, type MediaStore } from '../services/media-store';
 import { loadPeople, type Person } from '../services/people';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
@@ -242,22 +244,23 @@ export function socialRoutes(
 
   /**
    * Whether the viewer may see a post's file: the same rules as the feed (a post kept to
-   * friends shows only to the author's friends; a suspended account's posts to nobody).
+   * friends shows only to the author's friends; a suspended account's posts to nobody; a
+   * dev account's only inside its own world).
    */
-  const canSeePost = async (viewerId: string, postId: string): Promise<boolean> => {
+  const canSeePost = async (viewer: UserRow, postId: string): Promise<boolean> => {
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, postId),
       columns: { userId: true },
     });
     if (!post) return false;
-    if (post.userId === viewerId) return true;
+    if (post.userId === viewer.id) return true;
     const author = await db.query.users.findFirst({
       where: eq(users.id, post.userId),
-      columns: { settings: true, bannedAt: true },
+      columns: { settings: true, bannedAt: true, devWorld: true },
     });
-    if (!author || author.bannedAt) return false;
+    if (!author || author.bannedAt || !sameWorld(viewer, author)) return false;
     if (socialOf(author.settings).posts !== 'friends') return true;
-    return (await friendshipWith(db, viewerId, post.userId)).status === 'friends';
+    return (await friendshipWith(db, viewer.id, post.userId)).status === 'friends';
   };
 
   /* ---------- the feed ---------- */
@@ -283,6 +286,8 @@ export function socialRoutes(
     if (q.scope === 'friends') conds.push(inArray(posts.userId, circle));
     // A suspended account's posts leave the feed with it.
     conds.push(sql`(select u.banned_at from users u where u.id = posts.user_id) is null`);
+    // Real people and dev accounts never see each other's posts.
+    conds.push(ownerInWorldOf(req.user, posts.userId));
     const page = await loadPosts(
       db,
       req.user.id,
@@ -443,9 +448,9 @@ export function socialRoutes(
     return reply.code(204).send();
   });
 
-  const mediaRow = async (viewerId: string, postId: string) => {
+  const mediaRow = async (viewer: UserRow, postId: string) => {
     const row = await db.query.postMedia.findFirst({ where: eq(postMedia.postId, postId) });
-    if (!row || !(await canSeePost(viewerId, postId))) throw notFound('No video on this post');
+    if (!row || !(await canSeePost(viewer, postId))) throw notFound('No video on this post');
     return row;
   };
 
@@ -455,7 +460,7 @@ export function socialRoutes(
    */
   app.get('/api/posts/:id/media/url', async (req) => {
     const { id } = idParam.parse(req.params);
-    const row = await mediaRow(req.user.id, id);
+    const row = await mediaRow(req.user, id);
     if (!row.key || !store) return { url: null, expiresIn: null };
     return {
       url: await store.readUrl(row.key, READ_LINK_SECONDS),
@@ -469,7 +474,7 @@ export function socialRoutes(
    */
   app.get('/api/posts/:id/media', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const row = await mediaRow(req.user.id, id);
+    const row = await mediaRow(req.user, id);
     let bytes: Buffer;
     if (row.data !== null) bytes = Buffer.from(row.data, 'base64');
     else if (row.key && store) {
@@ -482,8 +487,12 @@ export function socialRoutes(
 
   /* ---------- likes and comments ---------- */
 
-  const postExists = async (id: string) => {
-    const row = await db.query.posts.findFirst({ where: eq(posts.id, id), columns: { id: true } });
+  /** A post the viewer can reach: it exists, and its author is in the viewer's world. */
+  const postExists = async (id: string, viewer: UserRow) => {
+    const row = await db.query.posts.findFirst({
+      where: and(eq(posts.id, id), ownerInWorldOf(viewer, posts.userId)),
+      columns: { id: true },
+    });
     if (!row) throw notFound('No such post');
   };
 
@@ -500,7 +509,7 @@ export function socialRoutes(
 
   app.post('/api/posts/:id/like', async (req) => {
     const { id } = idParam.parse(req.params);
-    await postExists(id);
+    await postExists(id, req.user);
     await db
       .insert(postLikes)
       .values({ postId: id, userId: req.user.id, createdAt: dt(clock()) })
@@ -510,7 +519,7 @@ export function socialRoutes(
 
   app.delete('/api/posts/:id/like', async (req) => {
     const { id } = idParam.parse(req.params);
-    await postExists(id);
+    await postExists(id, req.user);
     await db
       .delete(postLikes)
       .where(and(eq(postLikes.postId, id), eq(postLikes.userId, req.user.id)));
@@ -528,7 +537,7 @@ export function socialRoutes(
 
   app.get('/api/posts/:id/comments', async (req) => {
     const { id } = idParam.parse(req.params);
-    await postExists(id);
+    await postExists(id, req.user);
     const rows = await db.query.postComments.findMany({
       where: eq(postComments.postId, id),
       orderBy: [postComments.createdAt],
@@ -546,7 +555,7 @@ export function socialRoutes(
     const { body } = z
       .object({ body: z.string().trim().min(1).max(COMMENT_MAX_LENGTH) })
       .parse(req.body);
-    await postExists(id);
+    await postExists(id, req.user);
     const [row] = await db
       .insert(postComments)
       .values({ postId: id, userId: req.user.id, body, createdAt: dt(clock()) })
@@ -625,6 +634,7 @@ export function socialRoutes(
         and(
           sql`${users.onboardedAt} is not null`,
           sql`${users.bannedAt} is null`,
+          inWorldOf(req.user),
           sql`${users.id} <> ${req.user.id}`,
           sql`${name} ilike ${'%' + q.replace(/[%_\\]/g, '\\$&') + '%'}`,
         ),
@@ -651,9 +661,10 @@ export function socialRoutes(
     if (userId === me) throw badRequest('That is you');
     const other = await db.query.users.findFirst({
       where: eq(users.id, userId),
-      columns: { id: true, onboardedAt: true, settings: true },
+      columns: { id: true, onboardedAt: true, settings: true, devWorld: true },
     });
-    if (!other || other.onboardedAt === null) throw notFound('No such person');
+    if (!other || other.onboardedAt === null || !sameWorld(req.user, other))
+      throw notFound('No such person');
     if (!socialOf(other.settings).requests) throw forbidden('Not taking friend requests');
     const current = await friendshipWith(db, me, userId);
     if (current.status === 'friends') throw conflict('You are already friends');

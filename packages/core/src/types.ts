@@ -374,6 +374,11 @@ export interface User {
   xp: number;
   level: number;
   streak: StreakState;
+  /**
+   * A throwaway "I'm a dev" account: kept out of Social, deleted a day after it was made.
+   * Optional because the portal's offline cache can hold a user from before it existed.
+   */
+  devAccount?: boolean;
 }
 
 /**

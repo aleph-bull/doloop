@@ -51,6 +51,15 @@ export const users = pgTable('users', {
   authVersion: integer('auth_version').notNull().default(0),
   /** Suspended by an admin: every request is refused until they lift it. */
   bannedAt: ts('banned_at'),
+  /** A throwaway "I'm a dev" account (services/dev-accounts.ts). */
+  devAccount: boolean('dev_account').notNull().default(false),
+  /**
+   * The dev accounts made together (a fresh one alone, or Jerry and his friends) share a
+   * world: they see only each other, and real people never see them. Null for real people.
+   */
+  devWorld: uuid('dev_world'),
+  /** When a dev account and everything in it is deleted. */
+  devExpiresAt: ts('dev_expires_at'),
 });
 
 /**

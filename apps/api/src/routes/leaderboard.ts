@@ -4,6 +4,7 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { sessions, userAssets, users } from '../db/schema';
+import { inWorldOf } from '../services/dev-accounts';
 import { compareRow } from './compare';
 import { loadCompletedSessions } from '../services/pace';
 import { friendIds } from './social';
@@ -100,6 +101,7 @@ export function leaderboardRoutes(
         and(
           isNotNull(sessions.endedAt),
           eq(users.isTestAccount, false),
+          inWorldOf(req.user),
           isNull(users.bannedAt),
           ...(scope === 'friends'
             ? [
@@ -168,6 +170,7 @@ export function leaderboardRoutes(
     const from28 = addDays(today, -27);
     const onBoard = and(
       eq(users.isTestAccount, false),
+      inWorldOf(me),
       isNull(users.bannedAt),
       sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'global') in ('global', 'true')`,
     );

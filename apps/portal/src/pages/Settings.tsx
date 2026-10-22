@@ -569,7 +569,7 @@ export function Settings() {
                 <span className="field-label">Navigation</span>
                 <Segmented
                   ariaLabel="Navigation"
-                  value={s.nav?.style ?? 'top'}
+                  value={s.nav?.style ?? 'sidebar'}
                   onChange={(style) => patch({ nav: { style } })}
                   options={[
                     { value: 'top', label: 'Top bar' },

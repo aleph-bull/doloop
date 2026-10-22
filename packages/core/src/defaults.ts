@@ -134,7 +134,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     live: true,
   },
   dashboard: { focusOnly: false },
-  nav: { style: 'top' },
+  nav: { style: 'sidebar' },
   focusScreen: { openOnStart: 'ask' },
   timelapse: {
     record: 'ask',
