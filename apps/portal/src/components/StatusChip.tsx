@@ -2,7 +2,7 @@ import type { PaceStatus } from '@komogon/core';
 import { Chip, type ChipTone } from '@komogon/ui';
 
 const MAP: Record<PaceStatus, { label: string; tone: ChipTone }> = {
-  done: { label: 'Estimate met', tone: 'ok' },
+  done: { label: 'Estimate met', tone: 'info' },
   'on-track': { label: 'On track', tone: 'ok' },
   behind: { label: 'Behind', tone: 'warn' },
   critical: { label: 'Critical', tone: 'bad' },

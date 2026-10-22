@@ -11,8 +11,6 @@ export interface NodeCardProps {
   courseTitle?: string;
   /** Its tags and the ones it inherits from the course above it. */
   tags?: Tag[];
-  /** Future planned minutes for this node (from /api/pace). */
-  plannedMinutes?: number;
   onStart?: (node: StudyNode) => void;
   onOpen?: (node: StudyNode) => void;
 }
@@ -29,15 +27,7 @@ const KIND_LABEL: Record<StudyNode['kind'], string> = {
  * bottom: where it lives, what it is, how far along, and when it is due, with the play
  * button where the thumb lands.
  */
-export function NodeCard({
-  node,
-  pace,
-  courseTitle,
-  tags,
-  plannedMinutes,
-  onStart,
-  onOpen,
-}: NodeCardProps) {
+export function NodeCard({ node, pace, courseTitle, tags, onStart, onOpen }: NodeCardProps) {
   const est = pace?.estimatedMinutes ?? node.estimatedMinutes;
   const needLine =
     pace?.requiredPerDay != null && pace.status !== 'done'
@@ -45,10 +35,6 @@ export function NodeCard({
       : pace?.remainingMinutes != null && pace.status !== 'done'
         ? `${fmtMinutes(pace.remainingMinutes)} left`
         : null;
-  const planLine =
-    plannedMinutes !== undefined && pace?.remainingMinutes != null && pace.status !== 'done'
-      ? `Planned ${fmtMinutes(plannedMinutes)} of ${fmtMinutes(pace.remainingMinutes)} needed`
-      : null;
 
   return (
     <Glass as="article" id={`task-${node.id}`} className="node-card" aria-label={node.title}>
@@ -108,7 +94,6 @@ export function NodeCard({
             {node.completedAt ? `Done ${fmtDate(node.completedAt)}` : fmtDue(node.dueAt)}
           </span>
           {needLine && <span>{needLine}</span>}
-          {planLine && <span>{planLine}</span>}
         </div>
         {onStart && !node.completedAt && (
           <button

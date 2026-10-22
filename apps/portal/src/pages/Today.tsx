@@ -264,7 +264,6 @@ function FullDashboard() {
               key={n.id}
               node={n}
               pace={pace.data.pace[n.id]}
-              plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
               courseTitle={courseOf(n)}
               tags={tagsOf(inheritedTagIds(n.id, nodesById), tagsById)}
               onStart={(node) => setStartFor({ node, minutes: null })}

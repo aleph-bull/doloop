@@ -1834,3 +1834,12 @@ The owner asked for a quick way for them and the agents to see and test changes 
 ## The sidebar is the default, 2026-10-21 (user request)
 
 The owner asked for the sidebar as the default. `DEFAULT_SETTINGS.nav.style` is now `'sidebar'`, so new accounts, and anyone who never picked one in Settings, get the sidebar on a computer. Phones keep the bottom bar. This replaces "Top bar stays the default" from earlier; Settings still offers both.
+
+## Coming up and the task cards, trimmed, 2026-10-21 (user request)
+
+The owner found the dashboard's task cards and Coming up "too much text" and asked what "Estimate met" means: you have studied as long as you estimated, but haven't ticked the task off (ticked ones already leave Coming up).
+
+- **Task cards lose "Planned X of Y needed".** The card ends at the due line and "Need N per day". `NodeCard` no longer takes `plannedMinutes`.
+- **"Estimate met" stays, in blue** (`info` tone) instead of green, so it no longer looks like "On track". The Tasks table's dot for it is blue too.
+- **Coming up says what was studied.** A row with its estimate met reads "Studied 1 h 35 min" where the others read "35 min left".
+- **Coming up is laid out as columns**: when, title, time, status, every column left-aligned (the owner tried the times and then the tags right-aligned, and settled on everything left). The tags have 40px of room before them, which pulls the times a little closer to the titles. When the card is narrow (phones, or beside Routines) each row takes two lines: title and status, then when and the time under the status.

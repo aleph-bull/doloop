@@ -63,10 +63,15 @@ export function UpcomingDue({ nodes, pace, days = 14, max = 5 }: UpcomingDueProp
                 {fmtDue(n.dueAt)}
               </span>
               <span className="due-title">{n.title}</span>
-              {p?.remainingMinutes != null && p.status !== 'done' && (
-                <span className="muted text-xs tabular">{fmtMinutes(p.remainingMinutes)} left</span>
-              )}
-              {p && <StatusChip status={p.status} />}
+              {/* Always there, empty or not, so the times line up as a column. */}
+              <span className="due-time muted text-xs tabular">
+                {p?.status === 'done'
+                  ? `Studied ${fmtMinutes(p.loggedWorkMinutes)}`
+                  : p?.remainingMinutes != null
+                    ? `${fmtMinutes(p.remainingMinutes)} left`
+                    : null}
+              </span>
+              <span className="due-status">{p && <StatusChip status={p.status} />}</span>
             </li>
           );
         })}
