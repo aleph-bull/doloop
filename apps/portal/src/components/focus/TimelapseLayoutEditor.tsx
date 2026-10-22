@@ -137,6 +137,9 @@ export function targetsFor(settings: UserSettings, device: TimelapseDevice): Lay
 
 type Draft = { aspect: TimelapseAspect; layout: TimelapseLayout };
 
+/** What the text piece says in the preview until the person writes some. */
+const NOTE_STAND_IN = 'Your text';
+
 /** What a footer given to the editor works with, in place of the unsaved bubble. */
 export interface LayoutEditorControls {
   /** Something differs from what is saved. */
@@ -265,6 +268,8 @@ export interface TimelapseLayoutEditorProps {
   active?: boolean;
   /** What the task name shows in the preview. */
   sampleTitle?: string;
+  /** The person's text on the video; empty shows a stand-in so the piece can be placed. */
+  noteText?: string;
   /**
    * A still to arrange the pieces over, in place of the live camera: a frame of a video just
    * made. The preview then shows that frame, and the camera button goes.
@@ -292,6 +297,7 @@ export function TimelapseLayoutEditor({
   screen: withScreen = true,
   active = true,
   sampleTitle = 'Your task name',
+  noteText = '',
   backdrop = null,
   sample,
   footer,
@@ -454,6 +460,7 @@ export function TimelapseLayoutEditor({
         clock: timeOfDayText(now, timeZone),
         elapsed: '42:17',
         title: sampleTitle,
+        note: noteText.trim() || NOTE_STAND_IN,
         progress: 0.6,
         ...sample,
       },
@@ -474,7 +481,7 @@ export function TimelapseLayoutEditor({
       });
       return same ? prev : next;
     });
-  }, [camera, cw, ch, layout, sampleTitle, timeZone, now, backdrop, sample]);
+  }, [camera, cw, ch, layout, sampleTitle, noteText, timeZone, now, backdrop, sample]);
 
   useEffect(() => {
     draw();
@@ -732,7 +739,7 @@ export function TimelapseLayoutEditor({
         screenRatio={screenRatio}
         camera={backdrop?.camera ?? null}
         screen={backdrop?.screen ?? null}
-        sample={{ title: sampleTitle, ...sample }}
+        sample={{ title: sampleTitle, note: noteText.trim() || NOTE_STAND_IN, ...sample }}
         onPick={(_, next) => {
           setSelected(null);
           saveLayout(next);
@@ -871,8 +878,8 @@ export function TimelapseLayoutEditor({
       </div>
       <span className="field-hint">
         {withScreen
-          ? 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the screen, the clocks and the task name keep their shape as they grow. Add the screen to choose where it goes; each session asks whether to record it. Nothing changes until you save.'
-          : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the task name keep their shape as they grow. Nothing changes until you save.'}
+          ? 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the screen, the clocks and the texts keep their shape as they grow. Add the screen to choose where it goes; each session asks whether to record it. Your text shows only once you write some. Nothing changes until you save.'
+          : 'The camera fills the video behind everything. Drag a piece to move it and pull a corner to resize it; the clocks and the texts keep their shape as they grow. Your text shows only once you write some. Nothing changes until you save.'}
       </span>
 
       {footer?.({ dirty, saving, save: commit, revert })}

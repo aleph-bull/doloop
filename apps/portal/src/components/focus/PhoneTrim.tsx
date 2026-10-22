@@ -146,6 +146,7 @@ export function PhoneTrim({
           clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
           elapsed: clockText(still, look.breakClock),
           title: still.title,
+          note: look.noteText?.trim() || null,
           // By time, so the bar holds through a live clip as it does in the video.
           progress: keptSpan > 0 ? ((times[i] ?? keptFrom) - keptFrom) / keptSpan : 1,
         },

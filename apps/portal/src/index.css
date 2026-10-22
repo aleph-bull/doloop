@@ -7823,6 +7823,8 @@
   flex-direction: column;
   gap: 6px;
   min-width: 0;
+  /* A line typed into the box beside it lays out and repaints this card alone. */
+  contain: layout paint;
 }
 .post-preview-label {
   font-size: var(--text-xs);

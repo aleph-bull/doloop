@@ -232,6 +232,7 @@ const timelapseLayout = z
     clock: timelapseBox,
     elapsed: timelapseBox,
     title: timelapseBox,
+    note: timelapseBox,
     progress: timelapseBox,
     watermark: timelapseBox,
   })
@@ -250,7 +251,10 @@ const timelapsePreset = {
   breakClock: z.enum(['break', 'running']),
   dim: z.number().min(0).max(0.9),
   layout: timelapseLayout,
-  // TIMELAPSE_END_TEXT_MAX in core; empty leaves the end card out.
+  // TIMELAPSE_NOTE_MAX in core; empty leaves the text off the video.
+  noteText: z.string().trim().max(100),
+  // Words for an end card, for the day it existed: still taken from an open older portal,
+  // and read as the text on the video when there is none.
   endText: z.string().trim().max(140),
 };
 
