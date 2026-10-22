@@ -240,6 +240,33 @@ describe('settings: timelapse', () => {
     expect(tooDark.statusCode).toBe(400);
   });
 
+  it('keeps a resolution on each preset, in whole percents up to 100', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.timelapse.resolution).toBe(100);
+    expect(me.json().user.settings.timelapsePhone.resolution).toBe(100);
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { resolution: 60 }, timelapsePhone: { resolution: 75 } },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().settings.timelapse.resolution).toBe(60);
+    expect(ok.json().settings.timelapsePhone.resolution).toBe(75);
+    for (const resolution of [0, 101, 55.5]) {
+      const bad = await api({
+        method: 'PATCH',
+        url: '/api/me/settings',
+        payload: { timelapse: { resolution } },
+      });
+      expect(bad.statusCode).toBe(400);
+    }
+    await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { resolution: 100 }, timelapsePhone: { resolution: 100 } },
+    });
+  });
+
   it('keeps a phone preset of its own, with a shape for each way the phone is held', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
     const phone = me.json().user.settings.timelapsePhone;

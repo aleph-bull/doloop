@@ -256,7 +256,15 @@ describe('timelapseSizeEstimate', () => {
     const e = timelapseSizeEstimate({ ...base, lengthMode: 'length', lengthSeconds: 180 }, 150_000);
     expect(e.peakStills).toBe(TIMELAPSE_MAX_STILLS);
     expect(e.big).toBe(true);
-    expect(e.videoBytes).toBe(180_000_000);
+    // Compressed: 180 s at 2.5 Mbps.
+    expect(e.videoBytes).toBe(56_250_000);
+  });
+
+  it('sizes a smaller video smaller', () => {
+    const minute: TimelapseOptions = { ...base, lengthMode: 'length', lengthSeconds: 60 };
+    const full = timelapseSizeEstimate(minute);
+    const half = timelapseSizeEstimate({ ...minute, resolution: 50 });
+    expect(half.videoBytes).toBeLessThan(full.videoBytes / 2);
   });
 
   it('falls back to the default still size', () => {

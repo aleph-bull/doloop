@@ -7,8 +7,10 @@ import {
   startIntervalMs,
   stillCap,
   thinIfFull,
+  timelapseBitrate,
   timelapseClock,
-  videoSize,
+  timelapseOutputSize,
+  type CameraSize,
   type LiveMark,
   type TimelapseAspect,
   type TimelapseLayout,
@@ -100,6 +102,8 @@ const SCREEN_QUALITY = 0.8;
 const STILL_BYTES_KEY = 'komogon.timelapse.stillBytes';
 const SCREEN_BYTES_KEY = 'komogon.timelapse.screenBytes';
 const CAMERA_RATIO_KEY = 'komogon.timelapse.cameraRatio';
+const CAMERA_WIDTH_KEY = 'komogon.timelapse.cameraWidth';
+const CAMERA_HEIGHT_KEY = 'komogon.timelapse.cameraHeight';
 const SCREEN_RATIO_KEY = 'komogon.timelapse.screenRatio';
 const FACING_KEY = 'komogon.timelapse.facing';
 /** A screen still before any has been measured: a 1280 px wide JPEG of a busy desktop. */
@@ -146,8 +150,19 @@ export function knownCameraRatio(): number | null {
   return readNumber(CAMERA_RATIO_KEY);
 }
 
-export function rememberCameraRatio(w: number, h: number) {
-  if (w > 0 && h > 0) writeNumber(CAMERA_RATIO_KEY, Math.round((w / h) * 10_000) / 10_000);
+/** The size the camera records at, once it has been seen in this browser. */
+export function knownCameraSize(): CameraSize | null {
+  const w = readNumber(CAMERA_WIDTH_KEY);
+  const h = readNumber(CAMERA_HEIGHT_KEY);
+  return w && h ? { w, h } : null;
+}
+
+/** Keep the camera's shape and size, for the layout and for how small the video can go. */
+export function rememberCamera(w: number, h: number) {
+  if (!(w > 0 && h > 0)) return;
+  writeNumber(CAMERA_RATIO_KEY, Math.round((w / h) * 10_000) / 10_000);
+  writeNumber(CAMERA_WIDTH_KEY, w);
+  writeNumber(CAMERA_HEIGHT_KEY, h);
 }
 
 /**
@@ -416,7 +431,7 @@ export function useTimelapseRecorder({
         await video.play().catch(() => undefined);
         if (cancelled) return;
         cameraVideo.current = video;
-        rememberCameraRatio(video.videoWidth, video.videoHeight);
+        rememberCamera(video.videoWidth, video.videoHeight);
         setStream(s);
         setStatus('on');
         const track = s.getVideoTracks()[0];
@@ -754,6 +769,8 @@ export interface TimelapseLook {
   timeZone?: string;
   /** The video's shape. */
   aspect: TimelapseAspect;
+  /** How big it is made, in percent of full size; full when absent. */
+  resolution?: number;
   /** Where each piece goes. */
   layout: TimelapseLayout;
   /** The person's own line of text on every frame; empty or absent leaves it out. */
@@ -1044,11 +1061,12 @@ async function watermarkTone(
 
 const AVC_CODECS = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
 
-/** An H.264 config this browser can encode at this size, or null to fall back. */
+/** An H.264 config this browser can encode at this size and rate, or null to fall back. */
 async function pickEncoderConfig(
   w: number,
   h: number,
   fps: number,
+  bitrate: number,
 ): Promise<VideoEncoderConfig | null> {
   if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') return null;
   for (const codec of AVC_CODECS) {
@@ -1056,7 +1074,7 @@ async function pickEncoderConfig(
       codec,
       width: w,
       height: h,
-      bitrate: 8_000_000,
+      bitrate,
       framerate: fps,
       avc: { format: 'avc' },
     };
@@ -1073,7 +1091,9 @@ async function pickEncoderConfig(
  * Turn the stills into a video. Where the browser has WebCodecs, each frame is encoded with
  * its own timestamp, so the video is exactly the planned length however long a frame takes
  * to draw, and it is made faster than real time. Elsewhere the canvas is recorded in real
- * time, which runs long when drawing can't keep up.
+ * time, which runs long when drawing can't keep up. Either way it comes out compressed, at
+ * the look's resolution (`timelapseOutputSize`, with the camera this browser remembers) and
+ * the bitrate for that size (`timelapseBitrate`).
  */
 export async function renderTimelapse(
   stills: Still[],
@@ -1081,7 +1101,7 @@ export async function renderTimelapse(
   look: TimelapseLook,
   onProgress: (fraction: number) => void,
   signal?: AbortSignal,
-): Promise<{ blob: Blob; mime: string }> {
+): Promise<{ blob: Blob; mime: string; w: number; h: number }> {
   if (stills.length === 0 || plan.frames.length === 0) throw new Error('Nothing to make yet');
   const firstCamera = await firstBitmap(stills, 'blob');
   const firstScreen = await firstBitmap(stills, 'screen');
@@ -1089,13 +1109,13 @@ export async function renderTimelapse(
   if (!shapeFrom) throw new Error('Nothing to make yet');
   const cameraSize = firstCamera ? sourceSize(firstCamera) : null;
   const screenSize = firstScreen ? sourceSize(firstScreen) : null;
-  const { w, h } = videoSize(
-    aspectRatio(
-      look.aspect,
-      cameraSize ? cameraSize.w / cameraSize.h : null,
-      screenSize ? screenSize.w / screenSize.h : knownScreenRatio(),
-    ),
+  const ratio = aspectRatio(
+    look.aspect,
+    cameraSize ? cameraSize.w / cameraSize.h : null,
+    screenSize ? screenSize.w / screenSize.h : knownScreenRatio(),
   );
+  const { w, h } = timelapseOutputSize(ratio, look.resolution ?? 100, knownCameraSize());
+  const bitrate = timelapseBitrate(w, h, plan.fps);
   const buffers = { camera: blendBuffer(firstCamera), screen: blendBuffer(firstScreen) };
   firstCamera?.close();
   firstScreen?.close();
@@ -1115,10 +1135,11 @@ export async function renderTimelapse(
   };
   const count = plan.frames.length;
   try {
-    const config = await pickEncoderConfig(w, h, plan.fps);
-    if (config)
-      return await encodeFrames(canvas, config, plan.fps, count, drawFrame, onProgress, signal);
-    return await recordFrames(canvas, plan.fps, count, drawFrame, onProgress, signal);
+    const config = await pickEncoderConfig(w, h, plan.fps, bitrate);
+    const made = config
+      ? await encodeFrames(canvas, config, plan.fps, count, drawFrame, onProgress, signal)
+      : await recordFrames(canvas, plan.fps, bitrate, count, drawFrame, onProgress, signal);
+    return { ...made, w, h };
   } finally {
     draw.dispose();
   }
@@ -1177,6 +1198,7 @@ async function encodeFrames(
 async function recordFrames(
   canvas: HTMLCanvasElement,
   fps: number,
+  bitrate: number,
   count: number,
   draw: (j: number) => Promise<void>,
   onProgress: (fraction: number) => void,
@@ -1185,7 +1207,7 @@ async function recordFrames(
   const stream = canvas.captureStream(0);
   const track = stream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
   const mime = pickMime();
-  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+  const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitrate });
   const chunks: Blob[] = [];
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);

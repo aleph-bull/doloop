@@ -1,3 +1,4 @@
+import { timelapseBitrate, timelapseOutputSize } from './timelapse-output';
 import type { TimelapseLengthMode } from './types';
 
 /**
@@ -39,6 +40,8 @@ export interface TimelapseOptions {
   lengthSeconds: number;
   speed: number;
   fps: number;
+  /** How big the video is made, in percent of full size; full when absent. */
+  resolution?: number;
 }
 
 const clampFps = (fps: number) =>
@@ -323,8 +326,6 @@ export function timelapseClock(seconds: number): string {
 
 /** A still at the capture size before any webcam has been measured: 960 px wide JPEG. */
 export const TIMELAPSE_DEFAULT_STILL_BYTES = 90_000;
-/** Bits per second the finished video is encoded at. */
-export const TIMELAPSE_VIDEO_BITRATE = 8_000_000;
 /** Above this, holding the stills is worth a word before recording starts. */
 export const TIMELAPSE_BIG_BYTES = 300_000_000;
 /** The session a speed estimate assumes, since its stills grow with the session. */
@@ -367,10 +368,12 @@ export function timelapseSizeEstimate(
   const bytes =
     Number.isFinite(stillBytes) && stillBytes > 0 ? stillBytes : TIMELAPSE_DEFAULT_STILL_BYTES;
   const peakBytes = Math.round(peakStills * bytes);
+  // The video's shape isn't known here; the usual 16:9 is near enough for a size.
+  const { w, h } = timelapseOutputSize(16 / 9, opts.resolution ?? 100);
   return {
     peakStills,
     peakBytes,
-    videoBytes: Math.round((videoSeconds * TIMELAPSE_VIDEO_BITRATE) / 8),
+    videoBytes: Math.round((videoSeconds * timelapseBitrate(w, h, fps)) / 8),
     big: peakBytes > TIMELAPSE_BIG_BYTES,
   };
 }
