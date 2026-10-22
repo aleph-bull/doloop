@@ -1,5 +1,7 @@
 import {
+  inheritedTagIds,
   standsInForChildren,
+  tagsOf,
   type NodePace,
   type RoutineOccurrence,
   type Session,
@@ -32,7 +34,7 @@ import { useTip } from '../lib/use-tip';
 import { openFocusTab } from '../lib/focus-tab';
 import { fmtMinutes } from '../lib/format';
 import { useGreeting } from '../lib/greeting';
-import { useActiveSession, useMe, useNodes, usePace, useSessions } from '../lib/queries';
+import { useActiveSession, useMe, useNodes, usePace, useSessions, useTags } from '../lib/queries';
 
 // Stable empty references, so the greeting is not recomputed on every render while the
 // queries are still in flight.
@@ -49,6 +51,7 @@ function FullDashboard() {
   const me = useMe();
   const nodes = useNodes();
   const pace = usePace();
+  const tags = useTags();
   const active = useActiveSession();
   const sessions = useSessions(undefined, 50);
   const [startFor, setStartFor] = useState<{
@@ -88,6 +91,10 @@ function FullDashboard() {
   const nodesById = useMemo(
     () => new Map((nodes.data?.nodes ?? []).map((n) => [n.id, n])),
     [nodes.data],
+  );
+  const tagsById = useMemo(
+    () => new Map((tags.data?.tags ?? []).map((t) => [t.id, t])),
+    [tags.data],
   );
   const settings = me.data?.user.settings;
   const sessionCount = sessions.data?.sessions.filter((s) => s.endedAt).length ?? 0;
@@ -257,6 +264,7 @@ function FullDashboard() {
               pace={pace.data.pace[n.id]}
               plannedMinutes={pace.data.plannedMinutes?.[n.id] ?? 0}
               courseTitle={courseOf(n)}
+              tags={tagsOf(inheritedTagIds(n.id, nodesById), tagsById)}
               onStart={(node) => setStartFor({ node, minutes: null })}
             />
           ))}

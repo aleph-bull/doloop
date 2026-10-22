@@ -1,4 +1,4 @@
-import type { NodePace, StudyNode } from '@komogon/core';
+import { sortByTagColor, tagsOf, type NodePace, type StudyNode, type Tag } from '@komogon/core';
 import {
   Check,
   ChevronRight,
@@ -7,26 +7,49 @@ import {
   Pencil,
   Play,
   Plus,
+  Tag as TagIcon,
 } from 'lucide-react';
-import { useMemo, useState, type HTMLAttributes, type ReactNode, type CSSProperties } from 'react';
-import { Button, EmptyState, Panel, Reveal, Spinner, useToast } from '@komogon/ui';
+import {
+  useCallback,
+  useMemo,
+  useState,
+  type HTMLAttributes,
+  type ReactNode,
+  type CSSProperties,
+} from 'react';
+import { Button, EmptyState, Panel, Reveal, Segmented, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { NodeDialog } from '../components/NodeDialog';
 import { StartSessionDialog } from '../components/StartSessionDialog';
+import { TagChip, TagPicker } from '../components/Tags';
 import { TemplateDialog } from '../components/TemplateDialog';
 import { fmtDate, fmtDue, fmtMinutes, fmtPerDay } from '../lib/format';
-import { useNodes, usePace, useUpdateNode } from '../lib/queries';
+import { useNodes, usePace, useTags, useUpdateNode } from '../lib/queries';
+
+type SortKey = 'manual' | 'color';
+const SORT_KEY = 'komogon.tasks.sort';
+
+function readSort(): SortKey {
+  try {
+    return localStorage.getItem(SORT_KEY) === 'color' ? 'color' : 'manual';
+  } catch {
+    return 'manual';
+  }
+}
 
 interface RowProps {
   node: StudyNode;
   depth: number;
   childrenOf: Map<string, StudyNode[]>;
   pace: Record<string, NodePace>;
+  tagsById: Map<string, Tag>;
   onEdit: (n: StudyNode) => void;
   onAdd: (parentId: string) => void;
   onStart: (n: StudyNode) => void;
   onToggleDone: (n: StudyNode) => void;
   onTemplate: (n: StudyNode) => void;
+  /** Open the tag menu for `n`, beside `anchor`. */
+  onTag: (n: StudyNode, anchor: HTMLElement) => void;
   /** The drag grip, for a course. */
   grip?: ReactNode;
   /** Drop handling and drag state for a course's whole item, subtree included. */
@@ -45,19 +68,21 @@ const STATUS_WORD: Record<NodePace['status'], string> = {
 
 /**
  * One line of the task table, Notion-style: the toggle, tick and play at the left, the title,
- * then Due, Time and Status as columns, with the editing actions showing on hover. Every
- * row starts folded, so the page opens as a list of courses.
+ * then Tags, Due, Time and Status as columns, with the editing actions showing on hover.
+ * Every row starts folded, so the page opens as a list of courses.
  */
 function Row({
   node,
   depth,
   childrenOf,
   pace,
+  tagsById,
   onEdit,
   onAdd,
   onStart,
   onToggleDone,
   onTemplate,
+  onTag,
   grip,
   itemProps,
 }: RowProps) {
@@ -65,6 +90,7 @@ function Row({
   const kids = childrenOf.get(node.id) ?? [];
   const p = pace[node.id];
   const done = !!node.completedAt;
+  const tags = tagsOf(node.tagIds, tagsById);
   // Finished items step out of the way into a folded "Done" group at the bottom.
   const activeKids = kids.filter((k) => !k.completedAt);
   const doneKids = kids.filter((k) => k.completedAt);
@@ -75,13 +101,18 @@ function Row({
       depth={depth + 1}
       childrenOf={childrenOf}
       pace={pace}
+      tagsById={tagsById}
       onEdit={onEdit}
       onAdd={onAdd}
       onStart={onStart}
       onToggleDone={onToggleDone}
       onTemplate={onTemplate}
+      onTag={onTag}
     />
   );
+  const tagLabel = tags.length
+    ? `Tags on ${node.title}: ${tags.map((t) => t.name).join(', ')}. Change them`
+    : `Add a tag to ${node.title}`;
   // Finished is finished: a done item says when, never that it is overdue.
   // Like a table cell, an empty due date is just empty.
   const due =
@@ -139,11 +170,12 @@ function Row({
           </button>
           {/*
             Starting something is the point of the page, so play sits beside the tick and stays
-            visible rather than waiting for a hover the way the editing actions do. Rows without
-            one keep the space, so titles line up down the table, and a folded course shows how
-            many items it holds there, in one left-aligned column.
+            visible rather than waiting for a hover the way the editing actions do. A course
+            has one too: a session on it counts toward the whole course. Finished rows keep
+            the space, so titles line up down the table, and a folded one shows how many
+            items it holds there, in one left-aligned column.
           */}
-          {node.kind !== 'course' && !done ? (
+          {!done ? (
             <button
               type="button"
               className="row-start"
@@ -177,16 +209,43 @@ function Row({
               </span>
             )}
             {/* Rows with a play button keep their count after the title. */}
-            {kids.length > 0 && !open && node.kind !== 'course' && !done && (
+            {kids.length > 0 && !open && !done && (
               <span className="tt-count tabular">{kids.length}</span>
             )}
           </span>
+          {/* Where the Tags column doesn't fit, the tags take a line under the title. */}
+          {tags.length > 0 && (
+            <button
+              type="button"
+              className="tt-tags-inline"
+              aria-label={tagLabel}
+              onClick={(e) => onTag(node, e.currentTarget)}
+            >
+              {tags.map((t) => (
+                <TagChip key={t.id} tag={t} />
+              ))}
+            </button>
+          )}
           {/* On a phone the columns fold into one quiet line under the title. */}
           <span className="tt-meta tabular">
             {[due, time, perDay, status && status !== 'on-track' ? STATUS_WORD[status] : null]
               .filter(Boolean)
               .join(' · ')}
           </span>
+        </div>
+        <div className="tt-cell tt-tags">
+          <button
+            type="button"
+            className="tt-tags-button"
+            aria-label={tagLabel}
+            onClick={(e) => onTag(node, e.currentTarget)}
+          >
+            {tags.length ? (
+              tags.map((t) => <TagChip key={t.id} tag={t} />)
+            ) : (
+              <TagIcon size={13} aria-hidden className="tt-tags-empty" />
+            )}
+          </button>
         </div>
         <div className="tt-cell tt-due tabular">{due}</div>
         <div className="tt-cell tt-time tabular" title={perDay ?? undefined}>
@@ -209,6 +268,16 @@ function Row({
           )}
         </div>
         <div className="row-actions">
+          {/* Only where the Tags column is folded away (narrow tables, phones). */}
+          <button
+            type="button"
+            className="tt-action tt-tag-action"
+            aria-label={tagLabel}
+            title="Tags"
+            onClick={(e) => onTag(node, e.currentTarget)}
+          >
+            <TagIcon size={14} aria-hidden />
+          </button>
           <button
             type="button"
             className="tt-action"
@@ -292,6 +361,7 @@ function DoneGroup({
 export function Tasks() {
   const nodes = useNodes();
   const pace = usePace();
+  const tags = useTags();
   const update = useUpdateNode();
   const { toast } = useToast();
   const [dialog, setDialog] = useState<{
@@ -300,6 +370,23 @@ export function Tasks() {
   } | null>(null);
   const [start, setStart] = useState<StudyNode | null>(null);
   const [template, setTemplate] = useState<StudyNode | null>(null);
+  const [tagging, setTagging] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+  const closeTagging = useCallback(() => setTagging(null), []);
+  // Your own order (dragged), or grouped by tag colour; remembered on this device.
+  const [sort, setSortState] = useState<SortKey>(readSort);
+  const setSort = (v: SortKey) => {
+    setSortState(v);
+    try {
+      localStorage.setItem(SORT_KEY, v);
+    } catch {
+      /* Blocked storage: the choice lasts until the page is left. */
+    }
+  };
+  const tagsById = useMemo(
+    () => new Map((tags.data?.tags ?? []).map((t) => [t.id, t])),
+    [tags.data],
+  );
+  const byColor = sort === 'color';
   // Dragging courses: which is being dragged, where it would land, and the new order shown
   // until the server's copy catches up. The optimistic order is tied to the data it was
   // made from, so fresh data replaces it without an effect.
@@ -316,13 +403,16 @@ export function Tasks() {
       arr.push(n);
       m.set(n.parentId, arr);
     }
-    for (const arr of m.values()) arr.sort((a, b) => a.sortOrder - b.sortOrder);
+    for (const [id, arr] of m) {
+      arr.sort((a, b) => a.sortOrder - b.sortOrder);
+      if (byColor) m.set(id, sortByTagColor(arr, tagsById));
+    }
     return m;
-  }, [list]);
+  }, [list, byColor, tagsById]);
   const sortedRoots = list
     .filter((n) => !n.parentId || !list.some((x) => x.id === n.parentId))
     .sort((a, b) => a.sortOrder - b.sortOrder);
-  const roots =
+  const manualRoots =
     optimistic && optimistic.basis === nodes.data
       ? [
           ...optimistic.ids
@@ -331,6 +421,9 @@ export function Tasks() {
           ...sortedRoots.filter((r) => !optimistic.ids.includes(r.id)),
         ]
       : sortedRoots;
+  const roots = byColor ? sortByTagColor(manualRoots, tagsById) : manualRoots;
+  const anyTagged = list.some((n) => tagsOf(n.tagIds, tagsById).length > 0);
+  const taggingNode = tagging ? list.find((n) => n.id === tagging.id) : undefined;
 
   if (nodes.isError)
     return (
@@ -363,12 +456,12 @@ export function Tasks() {
    * its new neighbours, so only the moved course is written, and Ctrl+Z moves it back.
    */
   const moveCourse = async (id: string, to: number) => {
-    const from = roots.findIndex((r) => r.id === id);
+    const from = manualRoots.findIndex((r) => r.id === id);
     if (from < 0) return;
-    const target = Math.max(0, Math.min(roots.length - 1, to));
+    const target = Math.max(0, Math.min(manualRoots.length - 1, to));
     if (target === from) return;
-    const next = roots.filter((r) => r.id !== id);
-    next.splice(target, 0, roots[from]!);
+    const next = manualRoots.filter((r) => r.id !== id);
+    next.splice(target, 0, manualRoots[from]!);
     const before = next[target - 1];
     const after = next[target + 1];
     const sortOrder =
@@ -390,8 +483,8 @@ export function Tasks() {
 
   const dropOn = (targetId: string, before: boolean) => {
     if (!dragId || dragId === targetId) return;
-    const from = roots.findIndex((r) => r.id === dragId);
-    let to = roots.findIndex((r) => r.id === targetId) + (before ? 0 : 1);
+    const from = manualRoots.findIndex((r) => r.id === dragId);
+    let to = manualRoots.findIndex((r) => r.id === targetId) + (before ? 0 : 1);
     if (from < to) to -= 1;
     void moveCourse(dragId, to);
   };
@@ -460,9 +553,22 @@ export function Tasks() {
     <div className="flex flex-col gap-6">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <h1 className="page-title">Tasks</h1>
-        <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
-          <Plus size={16} aria-hidden /> New course
-        </Button>
+        <div className="tasks-head-actions">
+          {anyTagged && roots.length > 1 && (
+            <Segmented
+              ariaLabel="Sort tasks"
+              value={sort}
+              onChange={setSort}
+              options={[
+                { value: 'manual', label: 'Your order' },
+                { value: 'color', label: 'Colour' },
+              ]}
+            />
+          )}
+          <Button variant="primary" onClick={() => setDialog({ parentId: null })}>
+            <Plus size={16} aria-hidden /> New course
+          </Button>
+        </div>
       </div>
 
       <Panel className="task-table">
@@ -480,6 +586,7 @@ export function Tasks() {
           <>
             <div className="tt-head" aria-hidden>
               <span>Name</span>
+              <span className="tt-tags">Tags</span>
               <span>Due</span>
               <span>Time</span>
               <span>Status</span>
@@ -512,21 +619,36 @@ export function Tasks() {
                   key={r.id}
                   node={r}
                   depth={0}
-                  grip={roots.length > 1 ? courseGrip(r, i) : undefined}
-                  itemProps={courseItemProps(r)}
+                  // Sorted by colour, the order isn't yours to drag.
+                  grip={roots.length > 1 && !byColor ? courseGrip(r, i) : undefined}
+                  itemProps={byColor ? undefined : courseItemProps(r)}
                   childrenOf={childrenOf}
                   pace={pace.data?.pace ?? {}}
+                  tagsById={tagsById}
                   onEdit={(n) => setDialog({ node: n })}
                   onAdd={(parentId) => setDialog({ parentId })}
                   onStart={setStart}
                   onToggleDone={toggleDone}
                   onTemplate={setTemplate}
+                  onTag={(n, anchor) =>
+                    setTagging((t) => (t?.anchor === anchor ? null : { id: n.id, anchor }))
+                  }
                 />
               ))}
             </ul>
           </>
         )}
       </Panel>
+
+      {tagging && taggingNode && (
+        <TagPicker
+          anchor={tagging.anchor}
+          nodeId={taggingNode.id}
+          title={taggingNode.title}
+          selected={taggingNode.tagIds ?? []}
+          onClose={closeTagging}
+        />
+      )}
 
       <NodeDialog
         open={dialog !== null}

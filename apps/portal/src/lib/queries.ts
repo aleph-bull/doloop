@@ -1,4 +1,4 @@
-import type { PlannedBlock, StudyNode, UserSettings } from '@komogon/core';
+import type { PlannedBlock, StudyNode, TagColor, UserSettings } from '@komogon/core';
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -31,6 +31,7 @@ import { recordUndo } from './undo';
 export const keys = {
   me: ['me'] as const,
   nodes: ['nodes'] as const,
+  tags: ['tags'] as const,
   archivedNodes: ['nodes', 'archived'] as const,
   pace: ['pace'] as const,
   active: ['sessions', 'active'] as const,
@@ -80,6 +81,10 @@ export function useMe() {
 
 export function useNodes() {
   return useQuery({ queryKey: keys.nodes, queryFn: () => api.nodes(false), staleTime: 15_000 });
+}
+
+export function useTags() {
+  return useQuery({ queryKey: keys.tags, queryFn: api.tags, staleTime: 60_000 });
 }
 
 export function usePace() {
@@ -734,6 +739,7 @@ function describeNodeEdit(title: string, patch: NodeInput): string {
   if (changed.length === 1 && patch.childDefaults !== undefined)
     return `Changed the template on ${title}`;
   if (changed.length === 1 && patch.sortOrder !== undefined) return `Moved ${title}`;
+  if (changed.length === 1 && patch.tagIds !== undefined) return `Changed the tags on ${title}`;
   return `Edited ${title}`;
 }
 
@@ -778,6 +784,68 @@ export function useUpdateNode() {
         redo: () => api.updateNode(id, patch).then(() => invalidate(...NODE_KEYS)),
       });
     },
+  });
+}
+
+/**
+ * Set a node's tags, shown at once: the cache changes before the server answers, so the
+ * picker and the table keep up with quick clicks. A failure puts the old tags back.
+ */
+export function useSetNodeTags() {
+  const invalidate = useInvalidate();
+  const qc = useQueryClient();
+  const write = (id: string, tagIds: string[]) =>
+    qc.setQueryData<{ nodes: StudyNode[] }>(keys.nodes, (d) =>
+      d ? { ...d, nodes: d.nodes.map((n) => (n.id === id ? { ...n, tagIds } : n)) } : d,
+    );
+  return useMutation({
+    mutationFn: async ({ id, tagIds }: { id: string; tagIds: string[] }) => {
+      const before = cachedNode(qc, id);
+      write(id, tagIds);
+      try {
+        const res = await api.updateNode(id, { tagIds });
+        return { res, before };
+      } catch (err) {
+        if (before) write(id, before.tagIds ?? []);
+        throw err;
+      }
+    },
+    onSuccess: ({ res, before }, { id, tagIds }) => {
+      invalidate(keys.nodes);
+      if (!before) return;
+      const old = before.tagIds ?? [];
+      recordUndo({
+        label: `Changed the tags on ${res.node.title}`,
+        undo: () => api.updateNode(id, { tagIds: old }).then(() => invalidate(keys.nodes)),
+        redo: () => api.updateNode(id, { tagIds }).then(() => invalidate(keys.nodes)),
+      });
+    },
+  });
+}
+
+export function useCreateTag() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (input: { name: string; color?: TagColor }) => api.createTag(input),
+    onSuccess: () => invalidate(keys.tags),
+  });
+}
+
+export function useUpdateTag() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: { name?: string; color?: TagColor } }) =>
+      api.updateTag(id, patch),
+    onSuccess: () => invalidate(keys.tags),
+  });
+}
+
+/** Deleting a tag takes it off every task, so the tasks are fetched again too. */
+export function useDeleteTag() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.deleteTag(id),
+    onSuccess: () => invalidate(keys.tags, keys.nodes),
   });
 }
 

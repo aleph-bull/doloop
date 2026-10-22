@@ -5,6 +5,8 @@ import type {
   RestDayPolicy,
   Session,
   StudyNode,
+  Tag,
+  TagColor,
   TimerState,
   TimerView,
   User,
@@ -236,6 +238,8 @@ export interface NodeInput {
   gradeCredits?: number | null;
   /** The template for items added under this node; null clears it. */
   childDefaults?: StudyNode['childDefaults'];
+  /** The node's tags, in order; null clears them. */
+  tagIds?: string[] | null;
 }
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
@@ -494,6 +498,12 @@ export const api = {
   archiveNode: (id: string) =>
     request<{ archivedIds: string[] }>('POST', `/api/nodes/${id}/archive`),
   deleteNode: (id: string) => request<void>('DELETE', `/api/nodes/${id}`),
+  tags: () => request<{ tags: Tag[] }>('GET', '/api/tags'),
+  createTag: (input: { name: string; color?: TagColor }) =>
+    request<{ tag: Tag }>('POST', '/api/tags', input),
+  updateTag: (id: string, patch: { name?: string; color?: TagColor; sortOrder?: number }) =>
+    request<{ tag: Tag }>('PATCH', `/api/tags/${id}`, patch),
+  deleteTag: (id: string) => request<void>('DELETE', `/api/tags/${id}`),
   pace: () =>
     request<{
       now: string;

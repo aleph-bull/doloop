@@ -8,6 +8,7 @@ import { HttpError } from './errors';
 import { TooManyTries } from './services/rate-limit';
 import { meRoutes } from './routes/me';
 import { nodeRoutes } from './routes/nodes';
+import { tagRoutes } from './routes/tags';
 import { plannedBlockRoutes } from './routes/planned-blocks';
 import { restDayRoutes } from './routes/rest-days';
 import { sessionRoutes } from './routes/sessions';
@@ -165,6 +166,7 @@ export async function buildServer(opts: BuildOptions) {
   // Codes go through the same mailer as account email; with none, verifying is off.
   universityRoutes(app, opts.db, clock, opts.mailer ?? null);
   nodeRoutes(app, opts.db, clock);
+  tagRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);

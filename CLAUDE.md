@@ -195,6 +195,9 @@ Keep the owner's own wording verbatim, "!" included.
 
 ## Recent changes (2026-10-20)
 
+- Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
+  `TAG_COLORS` in core), a Tags column with a tag menu (`components/Tags.tsx`), a Colour sort
+  on Tasks, tags on the dashboard task cards, and a play button on courses. See DECISIONS.md.
 - Calendar (2026-10-21): rebuilt from scratch; see "The calendar" below.
 - Social (2026-10-21): the feed, groups, jams, the leaderboard, nudges and kudos. The whole
   thing is written up in "Social: how it works" below.

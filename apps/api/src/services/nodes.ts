@@ -6,6 +6,7 @@ import { estimateChanges, nodes, type NodeRow } from '../db/schema';
 import { badRequest, notFound } from '../errors';
 import type { createNodeSchema, updateNodeSchema } from '../validation';
 import { dt, dtn, toNode } from './sessions-mapper';
+import { checkTagIds } from './tags';
 
 export async function listNodes(
   db: Db,
@@ -84,6 +85,7 @@ export async function createNode(
       gradeOverall: input.gradeOverall ?? null,
       gradeCredits: input.gradeCredits ?? null,
       childDefaults: input.childDefaults ?? null,
+      tagIds: input.tagIds ? await checkTagIds(db, userId, input.tagIds) : [],
       createdAt: dt(now),
       updatedAt: dt(now),
     })
@@ -146,6 +148,7 @@ export async function updateNode(
   }
   if (patch.outcomeRating !== undefined && patch.outcomeRating !== null)
     set.outcomeAskedAt = dt(now);
+  if (patch.tagIds !== undefined) set.tagIds = await checkTagIds(db, userId, patch.tagIds ?? []);
   const [row] = await db.update(nodes).set(set).where(eq(nodes.id, id)).returning();
   if (set.completedAt !== undefined)
     await cascadeCompletion(db, userId, id, current.completedAt, set.completedAt, now);

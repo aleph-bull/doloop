@@ -3,6 +3,7 @@ export * from './defaults';
 export * from './dates';
 export * from './hash';
 export * from './tree';
+export * from './tags';
 export * from './rest-days';
 export * from './rest-day-changes';
 export * from './pace';

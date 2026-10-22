@@ -1,13 +1,16 @@
-import type { NodePace, StudyNode } from '@komogon/core';
+import type { NodePace, StudyNode, Tag } from '@komogon/core';
 import { Play } from 'lucide-react';
 import { Glass, ProgressBar } from '@komogon/ui';
 import { fmtDate, fmtDue, fmtMinutes, fmtPerDay, pct } from '../lib/format';
 import { StatusChip } from './StatusChip';
+import { TagChip } from './Tags';
 
 export interface NodeCardProps {
   node: StudyNode;
   pace?: NodePace;
   courseTitle?: string;
+  /** Its tags and the ones it inherits from the course above it. */
+  tags?: Tag[];
   /** Future planned minutes for this node (from /api/pace). */
   plannedMinutes?: number;
   onStart?: (node: StudyNode) => void;
@@ -30,6 +33,7 @@ export function NodeCard({
   node,
   pace,
   courseTitle,
+  tags,
   plannedMinutes,
   onStart,
   onOpen,
@@ -67,6 +71,13 @@ export function NodeCard({
               node.title
             )}
           </h3>
+          {tags && tags.length > 0 && (
+            <div className="node-card-tags">
+              {tags.map((t) => (
+                <TagChip key={t.id} tag={t} />
+              ))}
+            </div>
+          )}
         </div>
         {pace && <StatusChip status={pace.status} />}
       </div>

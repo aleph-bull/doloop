@@ -50,6 +50,7 @@ export function toNode(row: NodeRow): StudyNode {
     gradeOverall: row.gradeOverall,
     gradeCredits: row.gradeCredits,
     childDefaults: row.childDefaults ?? null,
+    tagIds: row.tagIds ?? [],
   };
 }
 
