@@ -102,6 +102,9 @@ function derivedColumns(t: TimerState) {
   };
 }
 
+/** How often a running session that is being watched refreshes its last_seen_at. */
+const SEEN_EVERY_MS = 60_000;
+
 /**
  * Save the timer. The write that ends a session only lands if no other request ended it
  * first, and `claimed` says whether this one did: only the claimant finalizes, so a
@@ -144,6 +147,17 @@ async function view(db: Db, user: UserRow, row: SessionRow, now: string): Promis
   const advanced = advance(normalizeTimer(row.timer), now, opts);
   const { row: persisted, claimed } = await persistTimer(db, row, advanced, now);
   if (claimed) await finalize(db, user, persisted, { review: null }, now);
+  // A timer that hasn't changed isn't saved, but someone is still looking at it. Friends see
+  // a session as live by `last_seen_at`, so an open-ended session must keep reporting in.
+  if (
+    persisted === row &&
+    !row.endedAt &&
+    Date.parse(now) - row.lastSeenAt.getTime() > SEEN_EVERY_MS
+  )
+    await db
+      .update(sessions)
+      .set({ lastSeenAt: dt(now) })
+      .where(and(eq(sessions.id, row.id), isNull(sessions.endedAt)));
   return {
     session: toSession(persisted),
     timer: advanced,

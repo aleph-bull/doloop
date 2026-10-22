@@ -386,6 +386,17 @@ study once every two hours per pair (a second one inside the window is a 409 tha
 "Nudge" appears next to a group member under half the group's average. The nudged person
 sees them on the dashboard until "Got it", and they expire after a day.
 
+**Studying now (2026-10-21).** Friends in a session show on the feed ("Live now" above the
+composer, `components/social/LiveNow.tsx`, shared with the Groups tab), first in the friends
+card with a dot and "Studying · 24 min", and as a pill on their profile. `GET
+/api/social/live` (in `routes/groups.ts`, beside `liveAmong`) and the profile's `live` field
+carry them; each has `state` (`focus`, `break`, `paused`). Settings › Social › "Show friends
+when I'm studying" (`settings.social.live`) hides you from friends everywhere except your
+groups' own cards (`sharingLive`). "Live" means `last_seen_at` within ten minutes; the
+session view refreshes it once a minute (`SEEN_EVERY_MS` in `services/sessions.ts`) because
+an open-ended timer never changes and so was never saved, and `useActiveSession` keeps
+polling from a background tab while a session runs. Tests: `live.test.ts`.
+
 **Traps.**
 
 - Drizzle drops the table from `posts.id` in a select list, so the count subqueries in
@@ -662,7 +673,8 @@ Needs are rounded down to 15 minutes. Something fully covered stays listed as "S
 listens on window and asks the grid's `hit`) makes a block straight away, one block long
 (45 to 120 min from the pace suggestion; 60 for a plan). Clicking one opens the block dialog on
 the first free slot, found with `planWeek` for just that item. The "Connect Google or Outlook"
-link at the foot shows only while neither is connected and the server can connect one.
+link at the foot ("Add your timetable to plan around your classes") shows while no calendar
+is added or connected.
 
 ### Plan my week (`planWeek`)
 
@@ -695,6 +707,36 @@ then "N more"; assessments carry a flag), the time studied on days gone by (with
 time planned on days ahead, both on today, and rest-day shading. Days outside the month are
 dimmed. Clicking a day opens its week. `DueList` beside it lists the month's deadlines grouped
 by week ("This week", "Next week", "Last week", or the dates).
+
+### Calendars added by link (2026-10-21)
+
+Settings › Calendar › "Your calendars" (`components/CalendarFeedsSettings.tsx`, styles in
+`components/calendar-feeds.css`). Paste an .ics or webcal link; the events become
+commitments like Google or Outlook ones (block source and import provider `'ics'`, the
+`calendar_feeds` row's id as the calendar id). Why: Google and Outlook need OAuth keys on
+the server, which komogon.app doesn't have, so their rows now hide until it does.
+
+- API: `routes/calendar.ts` (`/api/calendar/feeds`: list, add, PATCH name or tasks, `/sync`,
+  DELETE) and `services/calendar-feeds.ts` (the safe fetch, `syncFeed`, `removeFeed`). The
+  worker refreshes each feed when `checked_at` is over 15 minutes old.
+- The link is encrypted with a key derived from the calendar `stateSecret`
+  (`TOKEN_ENCRYPTION_KEY`, else `AUTH_SECRET`, else the dev secret). Changing that secret
+  makes stored links unreadable; the feed then says "This calendar needs adding again."
+  The portal never gets the link back, only the host.
+- The fetch refuses private, loopback, link-local and other internal addresses at connect
+  time (`safeLookup`), odd ports, links with passwords, over 5 MB and over 15 seconds, and
+  re-checks every redirect. Node's `BlockList` matches IPv4 against the IPv4-mapped IPv6
+  range, so v4 and v6 live in separate lists; keep them apart.
+- `importCalendarSnapshot` takes `{ calendarId, tasks }`: a feed is imported on its own, so
+  one feed's refresh never cancels another's events, and `tasks: false` skips recognition.
+  `free` events (TRANSP:TRANSPARENT) and due moments under a minute long aren't commitments.
+- The reader is `readIcsFeed` in `packages/core/src/ics-feed.ts` (tests beside it): time
+  zones, repeats, exceptions. `parseIcs` in `ics-parse.ts` is the older, narrower reader for
+  turning a file into routines; they share the line helpers.
+- Tests: `calendar-feeds.test.ts` (through the API, with a fake fetcher passed as
+  `calendar.fetchFeed` to `buildServer`).
+- In the portal, `isImported(source)` in `lib/calendar.ts` is the one test for "an imported
+  event"; use it rather than listing the sources.
 
 ### Checking it
 

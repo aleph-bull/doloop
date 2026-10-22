@@ -31,6 +31,7 @@ import { api, apiBaseUrl, authHeaders } from '../lib/api';
 import { fmtDate, fmtTime } from '../lib/format';
 import { GoogleCalendarSettings } from '../components/GoogleCalendarSettings';
 import { OutlookCalendarSettings } from '../components/OutlookCalendarSettings';
+import { CalendarFeedsSettings } from '../components/CalendarFeedsSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
 import { ProfileFields } from '../components/ProfileFields';
 import { SignOutButton } from '../components/SignOutButton';
@@ -482,6 +483,12 @@ export function Settings() {
                 checked={s.social.requests}
                 onChange={(v) => patch({ social: { requests: v } })}
                 label="Take friend requests"
+              />
+              <Toggle
+                checked={s.social.live}
+                onChange={(v) => patch({ social: { live: v } })}
+                label="Show friends when I’m studying"
+                description="While a session runs, friends see how long you’ve been at it and on what. People in your groups and jams see it either way."
               />
             </Section>
 
@@ -965,6 +972,7 @@ export function Settings() {
             </Section>
 
             <Section id="calendar" title="Calendar">
+              <CalendarFeedsSettings />
               <GoogleCalendarSettings />
               <OutlookCalendarSettings />
               <p className="field-hint">
@@ -974,7 +982,7 @@ export function Settings() {
               </p>
               <div className="divider" />
               <div className="flex flex-col gap-2">
-                <span className="field-label">Subscribe from any calendar app (.ics)</span>
+                <span className="field-label">See your plan in another calendar app (.ics)</span>
                 <div className="flex gap-2 items-center flex-wrap">
                   <Input
                     readOnly

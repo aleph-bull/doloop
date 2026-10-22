@@ -1,4 +1,4 @@
-export type CalendarProvider = 'google' | 'outlook';
+export type CalendarProvider = 'google' | 'outlook' | 'ics';
 
 export interface AcademicEvent {
   id: string;
@@ -10,6 +10,8 @@ export interface AcademicEvent {
   end: string;
   allDay: boolean;
   cancelled?: boolean;
+  /** Marked as free time in its calendar: imported, but nothing is planned around it. */
+  free?: boolean;
 }
 
 const assessment = /\b(?:mid[ -]?term|exam(?:ination)?|finals?|quiz|test)\b/i;

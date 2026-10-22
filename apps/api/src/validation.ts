@@ -337,6 +337,7 @@ export const settingsSchema = z
         stats: z.boolean(),
         leaderboard: z.enum(['global', 'friends', 'off']),
         requests: z.boolean(),
+        live: z.boolean(),
       })
       .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),

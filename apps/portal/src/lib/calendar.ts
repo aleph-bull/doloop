@@ -14,6 +14,11 @@ import {
 } from '@komogon/core';
 import type { PlanSummary } from './api';
 
+/** An event from someone's own calendar (Google, Outlook or one added by link): time taken. */
+export function isImported(source: PlannedBlock['source']): boolean {
+  return source === 'google' || source === 'outlook' || source === 'ics';
+}
+
 /** Minutes in a day column. */
 export const DAY_MIN = 24 * 60;
 /** Local hours "Plan my week" and "find a time" plan within, like the free-slot suggester. */
@@ -164,7 +169,7 @@ export function buildItems(
       block: b,
       proposalKey: null,
     };
-    if (b.source === 'google' || b.source === 'outlook') {
+    if (isImported(b.source)) {
       whole.push({ ...base, kind: 'commitment', title: b.title ?? 'Busy', sub: null, color: null });
       continue;
     }

@@ -1712,3 +1712,24 @@ The owner called the old page "a mess, ugly and useless" and asked for the best 
 - **Start from a block.** A planned block today that hasn't ended gets a play button; the start dialog opens on that task with the minutes left in the block.
 - **Month is the deadline overview.** Due chips on each day (assessments carry a flag), studied time on days gone by and planned time on days ahead, rest days shaded; a click on a day opens its week. Beside it, "Due this month" lists the deadlines a week at a time ("This week", "Next week"), so a crunch shows before it arrives. A click on any deadline opens the task.
 - The block and free/busy queries keep the last range on screen while the next loads, so moving between weeks doesn't flash a spinner.
+
+## Adding calendars by link, 2026-10-21 (user request)
+
+The owner asked for "the ability to add calendars". Settings › Calendar showed only Google and Outlook, both "Not configured" on komogon.app (connecting them needs OAuth keys from Google Cloud and Microsoft Entra on Render), with Google's two switches showing anyway.
+
+- **Add a calendar by its link.** "Your calendars" at the top of Settings › Calendar, with "Add a calendar": paste the calendar's .ics or webcal link (Google's "Secret address in iCal format", Outlook's published ICS link, an iCloud public calendar, Moodle or Canvas exports), optionally name it, and choose whether its exams and deadlines become tasks (on by default, like Google and Outlook). It works on any server with no setup. Up to ten per account; the same link twice is refused.
+- **Its events are commitments**, like Google and Outlook ones: grey blocks on the week, never study time, planned around by Plan my week. A new block source and import provider, `'ics'`. Time the calendar marks as free (most all-day events) is imported but not planned around, and a due moment with no length (Moodle's deadlines) goes in the due row rather than the grid.
+- **Refreshed every 15 minutes** by the existing calendar worker, or with the refresh button. A failed read keeps the events as they were and shows why under the calendar. Removing a calendar removes its events; tasks made from it are kept.
+- **The link is a secret** (it opens the whole calendar), so it is stored encrypted (a key derived from the server's existing secret, so no new setting) and never sent back to the portal; the page shows the host only. The API fetches it with no internal addresses (checked when connecting, so DNS tricks don't get past), only ports 80 and 443, at most 5 MB, 15 seconds and four redirects.
+- **The reader** (`readIcsFeed` in core) places events in their own time zone (IANA, Windows names from Outlook, the calendar's X-WR-TIMEZONE, then the account's), expands repeats (daily, weekly, monthly, yearly; COUNT, UNTIL, BYDAY, BYMONTHDAY, BYSETPOS), and honours EXDATE, moved and cancelled occurrences and RDATE. It reads a month back and six months ahead, at most 3000 events.
+- **Google and Outlook rows hide** when the server can't connect them and they aren't connected; they come back as soon as the keys are set. The feed going the other way was relabelled "See your plan in another calendar app (.ics)" so it isn't mistaken for adding one. The calendar page's foot link now reads "Add your timetable to plan around your classes" and shows while no calendar is added or connected.
+
+## Seeing when friends are studying, 2026-10-21 (user request)
+
+The owner asked to see when their friends are actively working and studying. The Groups tab already had "Live now"; it now shows where people look first.
+
+- **On the feed**, "Live now" sits above the composer whenever a friend is in a session: their picture with a red dot, a clock running since they started, what they're on, and "On a break" or "Paused" (with a grey dot and clock) when the timer is. It refreshes every 30 seconds.
+- **In the friends card**, friends in a session come first, with the dot on their picture and "Studying · 24 min", "On a break · …" or "Paused · …" under the name. Their nudge bell is hidden while they study.
+- **On a friend's profile**, a "Studying now" pill with the clock.
+- **A sharing setting**, Settings › Social › "Show friends when I'm studying" (`settings.social.live`, on by default like the others). Off, friends see nothing on the feed, the friends card, the profile or the Groups tab's friends list; people in a group with you still see you in that group's card, since joining is the consent.
+- **Live stays live.** A session counts as live while it reports in within ten minutes. An open-ended session never changed its timer, so it stopped reporting in and dropped out of "Live now" ten minutes in (the Groups tab had this too). Now each look at the running session refreshes `last_seen_at` once a minute, and the portal keeps checking in from a background tab while a session runs.

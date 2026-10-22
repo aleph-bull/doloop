@@ -15,9 +15,10 @@ export type SessionMode = 'pomodoro' | 'unlimited' | 'scheduled';
  * - 'app': study time the user scheduled in Komodon. The only kind pushed to Google.
  * - 'google': an imported commitment - a lecture, a shift, a dentist. Shown so the user
  *   can plan around it; never treated as study time and never used to tell them to study.
+ * - 'outlook', 'ics': the same as 'google', from Outlook or from a calendar added by link.
  * - 'session': study that actually happened, logged after the timer ended.
  */
-export type PlannedBlockSource = 'app' | 'google' | 'outlook' | 'session';
+export type PlannedBlockSource = 'app' | 'google' | 'outlook' | 'ics' | 'session';
 export type Distracted = 'no' | 'a-little' | 'a-lot';
 export type PaceStatus = 'done' | 'overdue' | 'critical' | 'behind' | 'on-track' | 'no-estimate';
 
@@ -268,6 +269,8 @@ export interface UserSettings {
     leaderboard: 'global' | 'friends' | 'off';
     /** Take friend requests. */
     requests: boolean;
+    /** Friends can see when you are in a session, for how long, and on what. */
+    live: boolean;
   };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };

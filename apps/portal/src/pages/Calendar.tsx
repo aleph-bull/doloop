@@ -34,6 +34,7 @@ import {
   busyByDay,
   dayRange,
   deadlinesByDay,
+  isImported,
   isoAt,
   localTz,
   minutesByDay,
@@ -55,6 +56,7 @@ import {
   useActiveSession,
   useBlocks,
   useBusy,
+  useCalendarFeeds,
   useCreateBlock,
   useGoogleStatus,
   useMe,
@@ -102,6 +104,7 @@ export function Calendar() {
   const restDays = useRestDays();
   const active = useActiveSession();
   const google = useGoogleStatus();
+  const feeds = useCalendarFeeds();
   const outlook = useQuery({
     queryKey: ['calendar', 'outlook'],
     queryFn: api.outlookStatus,
@@ -357,9 +360,7 @@ export function Calendar() {
       })),
       busy: [
         ...(busy.data?.busy ?? []),
-        ...all
-          .filter((b) => b.source === 'google' || b.source === 'outlook')
-          .map((b) => ({ start: b.startAt, end: b.endAt })),
+        ...all.filter((b) => isImported(b.source)).map((b) => ({ start: b.startAt, end: b.endAt })),
         ...(runningUntil ? [{ start: new Date(now).toISOString(), end: runningUntil }] : []),
       ],
       planned: all
@@ -518,7 +519,9 @@ export function Calendar() {
         ? periodLabel('day', anchor, anchor)
         : periodLabel('week', weekDays[0]!, weekDays[6]!);
   const unit = view === 'month' ? 'month' : phone ? 'day' : 'week';
-  const connected = Boolean(google.data?.connected || outlook.data?.connected);
+  const connected = Boolean(
+    google.data?.connected || outlook.data?.connected || feeds.data?.feeds.length,
+  );
   const proposalMinutes = (proposals ?? []).reduce(
     (a, p) => a + (Date.parse(p.endAt) - Date.parse(p.startAt)) / 60_000,
     0,
@@ -700,7 +703,7 @@ export function Calendar() {
             today={today}
             open={!weekOver}
             // Only where this server can connect one; otherwise the link leads nowhere.
-            showConnect={!connected && Boolean(google.data?.available || outlook.data?.available)}
+            showConnect={!connected && feeds.isSuccess}
             onGrab={grabTray}
             onPick={pickTray}
           />

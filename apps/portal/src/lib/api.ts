@@ -148,6 +148,23 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/** A calendar added by its link. The link itself never comes back from the API. */
+export interface CalendarFeed {
+  id: string;
+  name: string;
+  host: string;
+  /** Exams and deadlines in it become tasks. */
+  tasks: boolean;
+  events: number;
+  lastSyncAt: string | null;
+  lastError: string | null;
+}
+
+export interface CalendarFeedResponse {
+  feed: CalendarFeed;
+  result: { status: string; courses: number; tasks: number; events: number } | null;
+}
+
 export interface MeResponse {
   user: User;
   onboarded: boolean;
@@ -379,6 +396,13 @@ export interface LiveMember {
   userId: string;
   startedAt: string;
   subject: string | null;
+  /** Missing from responses cached before 2026-10-21; read it as 'focus'. */
+  state?: 'focus' | 'break' | 'paused';
+}
+export interface LiveResponse {
+  /** Friends in a session right now, the one at it longest first. */
+  live: LiveMember[];
+  people: Record<string, Person>;
 }
 export interface GroupMemberWeek {
   userId: string;
@@ -472,6 +496,8 @@ export interface ProfileResponse {
   weekday: RhythmProfile | null;
   posts: FeedPost[];
   people: Record<string, Person>;
+  /** A friend in a session right now, if they share it. Optional for older cached copies. */
+  live?: LiveMember | null;
 }
 
 export const api = {
@@ -727,6 +753,7 @@ export const api = {
     request<{ jam: Jam; people: Record<string, Person> }>('POST', `/api/social/jams/${id}/end`),
   leaderboardStats: () => request<GlobalStats>('GET', '/api/leaderboard/stats'),
   groups: () => request<GroupsResponse>('GET', '/api/social/groups'),
+  liveFriends: () => request<LiveResponse>('GET', '/api/social/live'),
   createGroup: (name: string) =>
     request<{ group: Group; people: Record<string, Person> }>('POST', '/api/social/groups', {
       name,
@@ -818,6 +845,14 @@ export const api = {
       '/api/calendar/outlook/sync',
     ),
   outlookDisconnect: () => request<void>('DELETE', '/api/calendar/outlook'),
+  calendarFeeds: () => request<{ feeds: CalendarFeed[] }>('GET', '/api/calendar/feeds'),
+  addCalendarFeed: (body: { url: string; name?: string; tasks?: boolean }) =>
+    request<CalendarFeedResponse>('POST', '/api/calendar/feeds', body),
+  updateCalendarFeed: (id: string, body: { name?: string; tasks?: boolean }) =>
+    request<CalendarFeedResponse>('PATCH', `/api/calendar/feeds/${id}`, body),
+  syncCalendarFeed: (id: string) =>
+    request<CalendarFeedResponse>('POST', `/api/calendar/feeds/${id}/sync`),
+  removeCalendarFeed: (id: string) => request<void>('DELETE', `/api/calendar/feeds/${id}`),
   busy: (from: string, to: string) =>
     request<{ busy: Array<{ start: string; end: string }> }>(
       'GET',
