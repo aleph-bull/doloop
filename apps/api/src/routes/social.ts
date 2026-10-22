@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { withDefaults, type UserSettings } from '@komogon/core';
-import { and, desc, eq, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {
   friendships,
   nodes,
+  nudges,
   postComments,
   postLikes,
   postMedia,
@@ -18,6 +19,7 @@ import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
+import { NUDGE_EVERY_MS } from './groups';
 
 export const POST_MAX_LENGTH = 500;
 export const COMMENT_MAX_LENGTH = 500;
@@ -424,12 +426,27 @@ export function socialRoutes(app: FastifyInstance, db: Db, clock: () => string) 
       where: or(eq(friendships.requesterId, me), eq(friendships.addresseeId, me)),
       orderBy: [desc(friendships.createdAt)],
     });
+    // Friends you nudged in the last two hours, and when each can be nudged again.
+    const now = Date.now();
+    const recent = await db.query.nudges.findMany({
+      where: and(eq(nudges.fromId, me), gte(nudges.at, new Date(now - NUDGE_EVERY_MS))),
+      columns: { toId: true, at: true },
+    });
+    const nudgedAt = new Map<string, number>();
+    for (const n of recent) {
+      nudgedAt.set(n.toId, Math.max(nudgedAt.get(n.toId) ?? 0, n.at.getTime()));
+    }
     const friends = rows
       .filter((r) => r.status === 'accepted')
-      .map((r) => ({
-        userId: r.requesterId === me ? r.addresseeId : r.requesterId,
-        since: (r.respondedAt ?? r.createdAt).toISOString(),
-      }));
+      .map((r) => {
+        const userId = r.requesterId === me ? r.addresseeId : r.requesterId;
+        const last = nudgedAt.get(userId);
+        return {
+          userId,
+          since: (r.respondedAt ?? r.createdAt).toISOString(),
+          nudgeAgainAt: last ? new Date(last + NUDGE_EVERY_MS).toISOString() : null,
+        };
+      });
     const incoming = rows
       .filter((r) => r.status === 'pending' && r.addresseeId === me)
       .map((r) => ({ id: r.id, userId: r.requesterId, at: r.createdAt.toISOString() }));

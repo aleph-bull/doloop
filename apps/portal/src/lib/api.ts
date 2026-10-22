@@ -313,7 +313,8 @@ export interface NewPost {
 }
 
 export interface FriendsResponse {
-  friends: Array<{ userId: string; since: string }>;
+  /** `nudgeAgainAt`: while you can't nudge them yet, when you can (missing in older caches). */
+  friends: Array<{ userId: string; since: string; nudgeAgainAt?: string | null }>;
   incoming: Array<{ id: string; userId: string; at: string }>;
   outgoing: Array<{ id: string; userId: string; at: string }>;
   people: Record<string, Person>;

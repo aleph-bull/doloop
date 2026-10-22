@@ -163,7 +163,9 @@
   padding: 8px 0 0;
   border-top: 1px solid var(--border);
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* One equal column per figure, so however many there are they sit centred. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
 }
 .side-stats li {
   display: flex;
@@ -1030,6 +1032,10 @@
 }
 .side-row-btn:disabled {
   opacity: 0.5;
+}
+/* Nudged already: the crossed-out bell, quieter until they can be nudged again. */
+.side-row-btn.is-off {
+  color: var(--fg-subtle);
 }
 .side-add {
   height: 24px;

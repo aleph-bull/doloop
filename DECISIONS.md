@@ -1733,3 +1733,5 @@ The owner asked for dev tools such as starting onboarding again without losing d
 ## Social side cards, 2026-10-21 (user request)
 
 - **The small leaderboard beside the feed is roomier.** The owner asked for larger margins and padding on it: 18px 20px padding (the other side cards keep 12px 14px), 14px between its parts and 6px between rows. It is the one exception to the dense side cards.
+- **A nudged friend shows a crossed-out bell** until they can be nudged again (two hours, the same window the API already enforced). `GET /api/social/friends` now gives each friend `nudgeAgainAt` while that window is open, so it survives a reload; the bell comes back by itself when the time passes. Clicking the crossed-out bell says when they can be nudged again rather than sending anything.
+- **Your card's figures are centred.** Days and level sat in the first two of three columns; the row now has one column per figure.

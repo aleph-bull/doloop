@@ -652,9 +652,17 @@ export function useLeaveGroup() {
   return useGroupMutation((id: string) => api.leaveGroup(id));
 }
 export function useNudge() {
-  return useGroupMutation(({ userId, groupId }: { userId: string; groupId?: string }) =>
-    api.nudge(userId, groupId),
-  );
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, groupId }: { userId: string; groupId?: string }) =>
+      api.nudge(userId, groupId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.groups });
+      // The friends card swaps the bell for a crossed-out one until they can be nudged
+      // again; stay pending until that has loaded so the bell doesn't flash back first.
+      return qc.invalidateQueries({ queryKey: keys.friends });
+    },
+  });
 }
 export function useNudges() {
   return useQuery({
