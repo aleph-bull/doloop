@@ -10,6 +10,7 @@ import {
   SOUND_EVENT_LABELS,
   SOUND_PRESETS,
   STREAK_DAY_START,
+  WEEK_STREAK_DAYS,
   type UserSettings,
 } from '@komogon/core';
 import { useEffect, useState } from 'react';
@@ -48,6 +49,7 @@ import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseSettings } from '../components/focus/Timelapse';
+import { TimelapseLayoutEditor } from '../components/focus/TimelapseLayoutEditor';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
@@ -683,9 +685,20 @@ export function Settings() {
               <div className="divider" />
               <h3 className="font-medium">Timelapse</h3>
               <p className="field-hint">
-                Records you from the camera while you focus, as a short video. The stills stay on
-                this computer.
+                What the timelapse records and how its video is laid out are in{' '}
+                <a href="#timelapse">Timelapse</a>.
               </p>
+            </Section>
+
+            <Section id="timelapse" title="Timelapse">
+              <p className="field-hint">
+                Records you from the camera, and your screen if you like, while you focus, as a
+                short video. The stills stay on this computer.
+              </p>
+              <h3 className="font-medium">Layout</h3>
+              <TimelapseLayoutEditor value={s.timelapse} onChange={patch} />
+              <div className="divider" />
+              <h3 className="font-medium">Recording</h3>
               <TimelapseSettings value={s.timelapse} onChange={patch} />
             </Section>
 
@@ -773,6 +786,14 @@ export function Settings() {
                 max={240}
                 onCommit={(v) => patch({ streak: { minMinutes: v } })}
               />
+              <NumberField
+                label="Days a week for the weekly streak"
+                value={s.streak.daysPerWeek}
+                min={WEEK_STREAK_DAYS.MIN}
+                max={WEEK_STREAK_DAYS.MAX}
+                hint="Weeks run Monday to Sunday."
+                onCommit={(v) => patch({ streak: { daysPerWeek: v } })}
+              />
               <DayStartField
                 hour={s.streak.dayStartHour}
                 changedAt={s.streak.dayStartChangedAt}
@@ -791,8 +812,8 @@ export function Settings() {
 
             <Section id="rest-days" title="Rest days">
               <p className="muted text-sm">
-                Rest days never break a streak. Weekly changes take effect next Monday. Vacations
-                need 48 hours notice and can be removed anytime.{' '}
+                Your daily plan works around rest days. Weekly changes take effect next Monday.
+                Vacations need 48 hours notice and can be removed anytime.{' '}
                 {restDays.data && (
                   <strong>
                     {restDays.data.editsRemaining} change

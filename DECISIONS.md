@@ -1627,6 +1627,27 @@ The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked throug
 - **First visit:** "Add a course and what's due in it, and Today plans your day."
 - **Greetings cut:** "Brand new. Let's see what this button does.", "{hours} banked this week." and "The week is at {hours}." The other greetings flagged in the audit were kept on purpose.
 
+## Timelapse: screen recording, a layout editor, shape, task name and progress bar, 2026-10-21 (user request)
+
+The owner sent a sketch of the video: the time of day top left, the screen top right, the time elapsed bottom left, the task name bottom right, the camera behind, with arrows for moving and resizing.
+
+- **The timelapse has its own Settings group, `/settings#timelapse`.** It was a block inside Focus screen; it moved so links can land on it. Focus screen keeps a one-line link. The focus screen's controls, the "Record a timelapse?" question and the export card link to it, opening in a new tab, since leaving the focus screen would drop the stills.
+- **Layout editor.** The preview is drawn with the same code as the video (`lib/timelapse-compose.ts`), so it shows what comes out. Each piece (camera, screen, current time, time elapsed, task name, progress bar, Komodon mark) is a box in fractions of the frame: drag to move, pull a corner to resize, the cross removes it, and removed pieces wait under the preview as "Add back" chips. Edges settle onto the frame's edges, margins and middle; Alt places freely. Arrow keys move the chosen box, Shift resizes, Delete removes. The mark can't be removed, and one of camera or screen always stays.
+- **Screen recording.** The screen piece doubles as the switch: in the layout, it is recorded (also "Record my screen too" in the settings). The browser's share picker needs a click, so a session that starts recording on its own shows a Share screen button in the recording pill; the same button picks a share back up after it is stopped from the browser's bar. Screen stills are kept 1280 px wide for readable text. Without the camera, the screen alone is recorded.
+- **Shape.** 16:9, 9:16, 1:1, 4:5, 4:3, or Match camera, which asks for the camera once to read its shape (remembered in this browser). Videos are 1280 px on the long side. A layout still at a shape's starting places moves to the new shape's; an edited one stays, with Reset the layout to start over.
+- **Task name and progress bar.** Each still carries the focus screen's task name; the progress bar fills as the video plays through the session.
+- **"Show time studied" and "Show the time of day" are now the layout's two clock pieces.** A saved row without a layout seeds them from those switches, which stay in the type only for that.
+
+## Timelapse follow-up: fixed camera, exact boxes, the screen asked each session, trim, 2026-10-21 (user request)
+
+- **The camera can't be moved or removed.** It always fills the frame behind everything and has no box in the editor (a full-frame camera box sat over the screen and swallowed every click, so the screen couldn't be moved). Stored layouts are mended to a full camera.
+- **No snapping.** Pieces go exactly where they are dropped.
+- **Boxes hug what is drawn.** The editor's boxes come from where each piece was actually drawn. A text piece (clocks, task name, mark) is placed by its top left and sized by its height; its width is the text's, and it is moved in if a longer real task name would run off the frame. The screen, the texts and the mark keep their shape when a corner is pulled; the progress bar stretches freely.
+- **The screen's shape.** The screen box starts at the screen's own shape (the last shared screen, or the monitor's, which needs no permission). "Fit the screen to its shape" reshapes it, and changing the video's shape refits it. There is a "Match screen" video shape beside "Match camera".
+- **"Match camera" is the default shape.**
+- **The screen starts under "Add back".** Recording it is asked every time a recording starts in a session ("Record your screen this time?": Record my screen / Just the camera). The persistent "Record my screen too" switch is gone. Saying no leaves the whole camera picture: no space is drawn for the screen. Saying yes with the screen not in the layout adds it where it was last placed. The recording pill offers Share screen whenever the screen isn't being shared.
+- **Trim.** The "Your timelapse" card has Start and End sliders over the recorded session, with the first and last kept still shown above them and "Keep it all" to undo. The trim is held in session seconds, so it survives the stills thinning while recording; an end never moved follows the recording as it grows.
+
 ## Copy audit, batch 2: starting and running a session, 2026-10-21 (user request)
 
 - **Time to focus screen:** the "Your session" card lost "Start now and stop whenever you like."; its toggles read "Pomodoro" and "Timelapse" (no "Enable"). "A little space for what you want to do." was kept on purpose.
@@ -1649,6 +1670,34 @@ The owner asked for an audit of wordy, abrupt or AI-sounding copy, worked throug
 - **Audio sharing:** one paragraph: "The visualizer needs to hear your music. Share a tab, window or your screen, and tick share audio in the browser's picker. We don't record anything, and it's optional."
 - **Delete time:** "You'd have stopped at 3:10 AM." / "That's 1 h of focus, 10 min of breaks gone, and 120 XP off (25 left)." The achievements note and the "Time comes off the end…" hint were removed at the owner's request.
 - **Session history:** "Finished sessions show up here." / "Left one running? Delete time trims the end, and the XP that came with it."
+
+## Admins on the leaderboard, 2026-10-21 (user request)
+
+The owner (zachzhao2015@gmail.com, the only `ADMIN_EMAILS` entry on Render) wasn't on either leaderboard: the earlier rule left configured admins off it along with test accounts. They asked to be on it. Admins are now ranked like anyone else on both boards and in `/api/leaderboard/stats`; test accounts (`is_test_account`, which both seeded local accounts carry) stay off. `leaderboardRoutes` no longer takes the admin list.
+
+## Ticking a task ticks everything under it, 2026-10-21 (user request)
+
+Marking a task done (the Tasks checkbox, or ending a session with "mark done") marks every unfinished item under it done at the same moment, at every depth. A subtask unticked afterwards stays open and the parent stays done. Unticking the parent reopens only the items finished with it (same timestamp), so subtasks finished earlier keep their own dates and Ctrl+Z puts everything back as it was. It lives in the API (`cascadeCompletion` in `services/nodes.ts`), so every client gets it.
+
+## Closing a tip asks "Disable tips?", 2026-10-21 (user request)
+
+Closing a tip on the dashboard raises a toast from the bottom: "Disable tips?" with a check and an X. The check turns off Settings › Pages › Dashboard › "Tips about the app" (the same `quote.appTips` switch); the X, or no answer within 8 seconds, keeps tips on. It asks every time a tip is closed. To make it, `toast()` in `@komogon/ui` now returns a function that takes that toast away early.
+
+## Timelapse layout: line-up buttons, and Save and Revert, 2026-10-21 (user request)
+
+- **Line up.** The chosen piece (screen, clocks, task name, progress bar, mark) has Left, Centre and Right buttons under the preview: against the left side, in the middle, or against the right side, 4% in from the edge. A text piece also remembers that side (`align` on its box), so a longer real task name grows away from it: a right-aligned name grows leftwards. The default task name and mark hold to the right.
+- **Nothing saves until Save.** Moves, resizes, shape changes, add and remove all wait in a draft. After the first change a bubble stays at the bottom of the window ("You have unsaved changes to the timelapse layout.", Revert and Save) until one is pressed; ordinary toasts rise above it meanwhile, and closing the tab with changes asks first. The other timelapse settings below the editor still save as they change.
+
+## Weekly streaks, and rest days out of the streaks, 2026-10-21 (user request)
+
+- **A weekly streak sits beside the daily one.** A Monday-to-Sunday week counts once it has enough streak days, judged exactly as the daily streak judges a day (the minimum minutes, the day start hour). "Days a week for the weekly streak" in Settings › Pace and streaks sets how many, 1 to 7, default 1, the way running apps count a week with one run. This week counts as soon as it has its days and otherwise stays open until Sunday ends; a week short of its days ends the run. Freezes stay the daily streak's.
+- **Stored with the daily streak**, in `users.streak.weeks` (current, longest, lastCountedWeek), and brought up to date lazily by `syncStreak` (`evaluateWeekStreak` in packages/core), so no migration. A streak saved before this has no `weeks`; the first sync reads every session once and fills in the best run from history.
+- **Where it shows:** the dashboard's numbers (Daily streak beside Weekly streak), the Analytics streaks card (a calendar badge under the flame, once there has been a week), the end-of-session summary (when above zero) and the profile. The top bar and sidebar pills still show the day count; their tooltips name both.
+- **Rest days no longer protect either streak.** The owner chose this over removing rest days altogether. They still shape the daily plan and pace, and vacations and break days work as before, but a quiet rest day is missed like any other: a freeze covers it or the daily streak ends, and a week of vacation ends the weekly streak. This replaces "rest days never break a streak"; the copy that promised it now reads "Your daily plan works around rest days." Days judged before the change stay as they were. Break days from the shop now only give the plan a day off; their price and description are unchanged for now.
+
+## The always-on local copy is gone, 2026-10-21 (user request)
+
+The owner asked to remove the always-on copy (the frozen build on 5173/8787 that started at sign-in). It was stopped and its startup shortcut moved to `~/.komogon/Komogon.lnk.disabled`. They study on komogon.app now; the last thing done on the local copy came before the snapshot that seeded the hosted data, so nothing was left behind. The data folder and the `pnpm local:*` scripts stay. CLAUDE.md no longer tells agents to keep their hands off it.
 
 ## The calendar, rebuilt, 2026-10-21 (user request)
 

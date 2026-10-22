@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { addDays, startOfWeekMonday, toLocalDate } from '@komogon/core';
-import { and, desc, eq, gte, inArray, isNotNull, notInArray, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { sessions, userAssets, users } from '../db/schema';
@@ -67,12 +67,12 @@ export interface LeaderboardEntry {
  * the global board, or just you and your friends. Only the chosen name, picture and the
  * total are shared; someone who hasn't chosen a name shows as "Someone". Settings › Social
  * decides who is on which board: 'global' is both, 'friends' only the friends board, 'off'
- * neither (older rows hold true or false, which read as 'global' and 'off').
+ * neither (older rows hold true or false, which read as 'global' and 'off'). Test accounts
+ * are never on it; admins are, like anyone else (the owner asked to be on it).
  */
 export function leaderboardRoutes(
   app: FastifyInstance,
   db: Db,
-  admins: string[] = [],
   clock: () => string = () => new Date().toISOString(),
 ) {
   app.get('/api/leaderboard', async (req) => {
@@ -106,14 +106,6 @@ export function leaderboardRoutes(
                 sql`${joined} in ('global', 'friends', 'true')`,
               ]
             : [sql`${joined} in ('global', 'true')`]),
-          ...(admins.length
-            ? [
-                notInArray(
-                  sql`lower(${users.email})`,
-                  admins.map((email) => email.trim().toLowerCase()),
-                ),
-              ]
-            : []),
         ),
       )
       .groupBy(sessions.userId, users.settings, userAssets.mime, userAssets.data)
@@ -176,14 +168,6 @@ export function leaderboardRoutes(
     const onBoard = and(
       eq(users.isTestAccount, false),
       sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'global') in ('global', 'true')`,
-      ...(admins.length
-        ? [
-            notInArray(
-              sql`lower(${users.email})`,
-              admins.map((email) => email.trim().toLowerCase()),
-            ),
-          ]
-        : []),
     );
     // Everyone on the board, with their streak; then every finished session of theirs from
     // the last five weeks (enough for last week and the 28 days), bucketed in your weeks.

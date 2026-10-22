@@ -262,3 +262,20 @@ export function fmtBytes(bytes: number): string {
   if (bytes >= 1e6) return `${Math.max(1, Math.round(bytes / 1e6))} MB`;
   return `${Math.max(1, Math.round(bytes / 1e3))} KB`;
 }
+
+/**
+ * The stills kept by a trim: those taken between `from` and `to` (seconds into the
+ * session, inclusive), as [first, end). A null end is left open, so a trim that was never
+ * moved keeps following the recording as it grows. The times are in order.
+ */
+export function trimIndices(
+  times: readonly number[],
+  from: number | null,
+  to: number | null,
+): [number, number] {
+  let a = 0;
+  let b = times.length;
+  if (from !== null) while (a < b && times[a]! < from) a++;
+  if (to !== null) while (b > a && times[b - 1]! > to) b--;
+  return [a, b];
+}

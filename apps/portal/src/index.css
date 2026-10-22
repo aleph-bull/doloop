@@ -368,9 +368,11 @@
   border-radius: 2px;
   background: var(--accent);
 }
+/* Never squeezed: a round button short of room turns into an oval. */
 .nav-icon {
   display: grid;
   place-items: center;
+  flex: none;
   width: 38px;
   height: 38px;
   border-radius: 50%;
@@ -505,6 +507,27 @@
 }
 @media (max-width: 400px) {
   .brand > span:last-child {
+    display: none;
+  }
+}
+/*
+ * A phone's top bar has no room for the wordmark beside the counters and round buttons, and
+ * under 400px, with a third round button (Admin), none for the level's progress line either.
+ */
+@media (max-width: 519px) {
+  .nav-inner {
+    gap: 4px;
+  }
+  .nav-inner > .brand {
+    padding-right: 0;
+    margin-right: 0;
+  }
+  .nav-inner > .brand > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 399px) {
+  .nav-inner:has(> .nav-icon ~ .nav-icon ~ .nav-icon) .nav-level-bar {
     display: none;
   }
 }
@@ -3392,6 +3415,142 @@
   border-radius: var(--radius-md);
   background: #000;
 }
+.timelapse-link {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/*
+ * The timelapse layout editor: the video drawn on a canvas, with a box over each piece to
+ * drag, resize and remove. The boxes are invisible until hovered or chosen, so the preview
+ * reads as the video itself.
+ */
+.tl-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tl-stage {
+  position: relative;
+  margin-top: 22px;
+  border-radius: var(--radius-md);
+  touch-action: none;
+  user-select: none;
+}
+.tl-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+}
+.tl-box {
+  position: absolute;
+  cursor: move;
+  touch-action: none;
+  border-radius: 4px;
+  outline: 1px dashed transparent;
+  outline-offset: -1px;
+}
+.tl-box:hover {
+  outline-color: rgba(255, 255, 255, 0.5);
+}
+.tl-box.is-selected,
+.tl-box:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.tl-box-name {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  /*
+   * A darker shade of the panel it sits in, not the accent. A panel near pure black (OKLCH
+   * lightness under 0.15) has no darker shade to give, so there it goes a little lighter
+   * instead. The clamp is a step: 0 below the threshold, 1 above it.
+   */
+  background: color-mix(in srgb, var(--panel-fill) 82%, #000);
+  background: oklch(
+    from var(--panel-fill) calc(l + 0.1 - 0.17 * clamp(0, (l - 0.15) * 1000, 1)) c h / 1
+  );
+  color: var(--fg);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.tl-box-name.is-below {
+  top: calc(100% + 4px);
+  bottom: auto;
+}
+.tl-box-remove {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--glass-solid);
+  color: var(--fg);
+  cursor: pointer;
+  z-index: 2;
+}
+.tl-box-remove:hover {
+  background: color-mix(in srgb, var(--status-bad) 30%, var(--glass-solid));
+}
+.tl-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: #fff;
+  border: 2px solid var(--accent);
+}
+.tl-handle.is-nw {
+  top: -5px;
+  left: -5px;
+  cursor: nwse-resize;
+}
+.tl-handle.is-ne {
+  top: -5px;
+  right: -5px;
+  cursor: nesw-resize;
+}
+.tl-handle.is-sw {
+  bottom: -5px;
+  left: -5px;
+  cursor: nesw-resize;
+}
+.tl-handle.is-se {
+  bottom: -5px;
+  right: -5px;
+  cursor: nwse-resize;
+}
+.tl-hidden {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.tl-chip:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
 
 /* The controls sheet, anchored under the gear. */
 .focus-sheet {
@@ -4384,6 +4543,11 @@
     justify-items: start;
   }
 }
+.rc-streak-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 .rc-streak-main {
   display: flex;
   align-items: center;
@@ -4676,6 +4840,39 @@
     transform: scale(0.82);
     opacity: 0;
   }
+}
+/* "Disable tips?" in a toast after a tip is closed: the question, then yes and no. */
+.tips-off-ask {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -4px -10px -4px 0;
+}
+.tips-off-ask .tips-off-btn:first-of-type {
+  margin-left: 6px;
+}
+.tips-off-btn {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: var(--fg-muted);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.tips-off-btn:hover {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.tips-off-btn.is-yes {
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.tips-off-btn.is-yes:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
 }
 @media (min-width: 768px) {
   .dash {
@@ -6549,4 +6746,73 @@
 }
 .local-test-account code {
   font-size: 12px;
+}
+
+/* Trimming the timelapse: the first and last kept stills, side by side, over two sliders. */
+.tl-trim-frames {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.tl-trim-frame {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.tl-trim-frame img,
+.tl-trim-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+
+/* The layout editor's line-up buttons for the chosen piece. */
+.tl-align {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.tl-align .field-hint {
+  margin-right: 4px;
+}
+.tl-align .btn.is-on {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  color: var(--fg);
+}
+
+/*
+ * Unsaved timelapse layout: a toast-style bubble that stays at the bottom of the window
+ * until the changes are saved or reverted. Ordinary toasts rise above it meanwhile.
+ */
+.tl-unsaved-stack {
+  position: fixed;
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 59;
+  display: flex;
+  justify-content: center;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+}
+.toast.tl-unsaved {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  padding: 6px 6px 6px 18px;
+  max-width: none;
+}
+.tl-unsaved-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+:root:has(.tl-unsaved-stack) .toast-stack {
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px) + 60px);
 }

@@ -3,6 +3,8 @@
  * Clients render in the user's timezone (stored on the user).
  */
 
+import type { TimelapseAspect, TimelapseLayout } from './timelapse-layout';
+
 export type ISODateTime = string; // e.g. "2026-09-20T15:04:05.000Z"
 export type ISODate = string; // e.g. "2026-09-20" (calendar day in the user's timezone)
 
@@ -77,6 +79,8 @@ export interface UserSettings {
     dayStartHour: number;
     /** When dayStartHour last changed, set by the server; it may change once a day. */
     dayStartChangedAt: ISODateTime | null;
+    /** Streak days a Monday-to-Sunday week needs to count toward the weekly streak (1-7). */
+    daysPerWeek: number;
   };
   /** What the dashboard ring and the Analytics week measure against. */
   goals: { weeklyMinutes: number };
@@ -299,6 +303,14 @@ export interface UserSettings {
      * ('break'), or the session's running time, counting on through it ('running').
      */
     breakClock: 'break' | 'running';
+    /** The video's shape; 'camera' follows the camera's own. */
+    aspect: TimelapseAspect;
+    /**
+     * Where each piece sits in the video and whether it is shown. The camera's and the
+     * screen's visibility also decide what is recorded. Replaces showTimer and
+     * showClockTime, which only seed it for a row saved before it existed.
+     */
+    layout: TimelapseLayout;
   };
   dismissed: string[];
 }
@@ -322,6 +334,16 @@ export interface StreakState {
   lastCountedDate: ISODate | null;
   freezesHeld: number;
   breakDaysHeld: number;
+  /** The weekly streak. Absent on rows saved before it existed, until the next sync. */
+  weeks?: WeekStreakState;
+}
+
+/** Weeks in a row with enough streak days (see evaluateWeekStreak). */
+export interface WeekStreakState {
+  current: number;
+  longest: number;
+  /** Monday of the last week judged (counted or ended), or null. */
+  lastCountedWeek: ISODate | null;
 }
 
 export interface User {

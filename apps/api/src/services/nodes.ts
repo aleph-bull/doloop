@@ -1,5 +1,5 @@
 import type { StudyNode } from '@komogon/core';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';
 import { estimateChanges, nodes, type NodeRow } from '../db/schema';
@@ -147,7 +147,47 @@ export async function updateNode(
   if (patch.outcomeRating !== undefined && patch.outcomeRating !== null)
     set.outcomeAskedAt = dt(now);
   const [row] = await db.update(nodes).set(set).where(eq(nodes.id, id)).returning();
+  if (set.completedAt !== undefined)
+    await cascadeCompletion(db, userId, id, current.completedAt, set.completedAt, now);
   return toNode(row!);
+}
+
+/**
+ * Carry a node's done state down to everything under it. Done marks every unfinished
+ * descendant done at the same moment. Not done reopens only the ones finished with it (same
+ * moment), so a subtask finished on its own keeps its date, one unticked since stays
+ * unticked, and undoing a tick puts the subtasks back as they were.
+ */
+export async function cascadeCompletion(
+  db: Db,
+  userId: string,
+  id: string,
+  from: Date | null,
+  to: Date | null,
+  now: string,
+): Promise<void> {
+  if ((from === null) === (to === null)) return;
+  const all = await db.query.nodes.findMany({
+    where: and(eq(nodes.userId, userId), eq(nodes.archived, false)),
+  });
+  const under: NodeRow[] = [];
+  const stack = [id];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    for (const n of all) {
+      if (n.parentId !== cur || under.includes(n)) continue;
+      under.push(n);
+      stack.push(n.id);
+    }
+  }
+  const ids = under
+    .filter((n) => (to ? !n.completedAt : n.completedAt?.getTime() === from!.getTime()))
+    .map((n) => n.id);
+  if (!ids.length) return;
+  await db
+    .update(nodes)
+    .set({ completedAt: to, updatedAt: dt(now) })
+    .where(inArray(nodes.id, ids));
 }
 
 /** Archive a node and its descendants (soft delete). */

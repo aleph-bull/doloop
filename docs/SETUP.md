@@ -23,8 +23,8 @@ Expand **Local test accounts** on the sign-in or signup page:
 
 **Reset and start onboarding** clears only that test account and signs in fresh.
 The admin account is already set up and opens `/admin`. Both test accounts are marked
-in the database and excluded from the leaderboard. Configured admin accounts are also
-excluded. Personal study records still work for testing.
+in the database and excluded from the leaderboard. Configured admin accounts are on it
+like anyone else. Personal study records still work for testing.
 
 These credentials are intentionally public, local test fixtures. The dedicated API
 script binds to loopback and stores data in `apps/api/.pglite-sandbox-testing`, never
@@ -87,8 +87,8 @@ The badge confirms access to an email domain, not an official school name or rol
 Profiles are private by default. People can explicitly share their name and organization
 with others who verified the exact same domain. Directory responses omit email addresses
 and study data. Removing or replacing the organization verification hides the profile
-until sharing is enabled again. Test accounts and configured admins are excluded from
-the directory and leaderboard. No invitations or messages are sent to other people.
+until sharing is enabled again. Test accounts are excluded from the directory and
+leaderboard. No invitations or messages are sent to other people.
 
 ## Phase 2: Supabase project
 

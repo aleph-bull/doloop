@@ -148,4 +148,39 @@ describe('settings: timelapse', () => {
     });
     expect(bad.statusCode).toBe(400);
   });
+
+  it('saves a shape and a layout, and keeps the other pieces when one is moved', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    const layout = me.json().user.settings.timelapse.layout;
+    expect(layout.camera.visible).toBe(true);
+    expect(layout.screen.visible).toBe(false);
+    const moved = {
+      ...layout,
+      screen: { ...layout.screen, visible: true },
+      title: { x: 0.1, y: 0.1, w: 0.5, h: 0.08, visible: true },
+    };
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { aspect: '9:16', layout: moved } },
+    });
+    expect(ok.statusCode).toBe(200);
+    const saved = ok.json().settings.timelapse;
+    expect(saved.aspect).toBe('9:16');
+    expect(saved.layout.title).toEqual({ x: 0.1, y: 0.1, w: 0.5, h: 0.08, visible: true });
+    expect(saved.layout.screen.visible).toBe(true);
+    expect(saved.layout.clock).toEqual(layout.clock);
+    const badShape = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { aspect: '21:9' } },
+    });
+    expect(badShape.statusCode).toBe(400);
+    const offFrame = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { layout: { title: { ...moved.title, x: 1.4 } } } },
+    });
+    expect(offFrame.statusCode).toBe(400);
+  });
 });

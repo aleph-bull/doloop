@@ -132,6 +132,46 @@ describe('nodes', () => {
     expect(changes.filter((c) => c.nodeId === n.id).map((c) => c.toMinutes)).toEqual([60, 90]);
   });
 
+  it('marks the subtasks done with their parent, and reopens only those', async () => {
+    const make = async (title: string, parentId?: string) =>
+      (await t.api({ method: 'POST', url: '/api/nodes', payload: { title, parentId } })).json().node
+        .id as string;
+    const done = (id: string, completedAt: string | null) =>
+      t.api({ method: 'PATCH', url: `/api/nodes/${id}`, payload: { completedAt } });
+    const state = async () => {
+      const list = (await t.api({ method: 'GET', url: '/api/nodes' })).json().nodes as Array<{
+        id: string;
+        completedAt: string | null;
+      }>;
+      return new Map(list.map((n) => [n.id, n.completedAt]));
+    };
+    const parent = await make('Essay');
+    const a = await make('Outline', parent);
+    const b = await make('Draft', parent);
+    const deep = await make('Intro', b);
+    const early = await make('Sources', parent);
+    await done(early, '2026-09-19T12:00:00.000Z');
+
+    await done(parent, '2026-09-20T18:00:00.000Z');
+    let s = await state();
+    for (const id of [a, b, deep]) expect(s.get(id)).toBe('2026-09-20T18:00:00.000Z');
+    // Finished on its own before, so it keeps its own date.
+    expect(s.get(early)).toBe('2026-09-19T12:00:00.000Z');
+
+    // Unticking a subtask leaves the parent done.
+    await done(a, null);
+    s = await state();
+    expect(s.get(a)).toBeNull();
+    expect(s.get(parent)).toBe('2026-09-20T18:00:00.000Z');
+
+    // Reopening the parent reopens what was finished with it, nothing else.
+    await done(parent, null);
+    s = await state();
+    for (const id of [parent, a, b, deep]) expect(s.get(id)).toBeNull();
+    expect(s.get(early)).toBe('2026-09-19T12:00:00.000Z');
+    await t.api({ method: 'DELETE', url: `/api/nodes/${parent}` });
+  });
+
   it('leaves kind alone when a patch does not mention it', async () => {
     // The create schema defaults kind to 'task'. That default must not survive into the
     // patch schema, or renaming a course would quietly demote it to a task.

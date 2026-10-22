@@ -605,7 +605,7 @@ describe('dashboardStats', () => {
       timezone: TZ,
       now: NOW,
       goalMinutes: 300,
-      streak: streak(4, 9),
+      streak: { ...streak(4, 9), weeks: { current: 2, longest: 5, lastCountedWeek: '2026-09-21' } },
     });
     expect(d.totalMinutes).toBe(210);
     expect(d.weekMinutes).toBe(90);
@@ -613,6 +613,17 @@ describe('dashboardStats', () => {
     expect(d.sparkline.length).toBe(7);
     expect(d.sparkline[6]!.date).toBe('2026-09-23');
     expect(d.sparkline[5]!.minutes).toBe(90);
-    expect(d.streak).toEqual({ current: 4, longest: 9 });
+    expect(d.streak).toEqual({ current: 4, longest: 9, weeks: { current: 2, longest: 5 } });
+  });
+
+  it('reads a streak saved before weekly streaks as no weeks yet', () => {
+    const d = dashboardStats({
+      sessions: [],
+      timezone: TZ,
+      now: NOW,
+      goalMinutes: 300,
+      streak: streak(4, 9),
+    });
+    expect(d.streak.weeks).toEqual({ current: 0, longest: 0 });
   });
 });

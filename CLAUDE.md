@@ -32,11 +32,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
    `apps/portal/vercel.json`), API on Render (`render.yaml`), data in Neon Postgres, domain
    on Cloudflare. A push to `main` on GitHub (`aleph-bull/doloop`) redeploys both.
    cron-job.org pings `/api/health` every 10 minutes so Render's free plan doesn't sleep.
-2. **The owner's always-on copy** on their own PC: a frozen build on localhost:5173 and :8787
-   with their real data in `~/.komogon/pglite`. **Do not stop, restart or update it
-   (`pnpm local:stop|start|update`) without asking first.** They study on it, sometimes
-   while you are working. To read its data, copy the folder or use a backup in
-   `~/.komogon/backups`; never point scripts or tests at the live folder.
+2. **The always-on copy is gone** (removed 2026-10-21 at the owner's request; they study on
+   komogon.app now). It was a frozen build on localhost:5173 and :8787 started at sign-in.
+   The owner then deleted its data folder (`~/.komogon/pglite`); only the backups in
+   `~/.komogon/backups` remain, and the `pnpm local:*` scripts are still in the repo. Don't
+   start it again or offer `local:update` unless the owner asks.
 3. **Sandboxes** for checking changes in a browser, with throwaway data (launch configs in
    `.claude/launch.json`): `sandbox-api`/`sandbox` (8797/5183, dev sign-in),
    `sandbox-2-api`/`sandbox-2` (8798/5184), `sandbox-password-api`/`sandbox-password`
@@ -143,8 +143,8 @@ Keep the owner's own wording verbatim, "!" included.
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
-  local scripts, the startup shortcut and the komogon.app domain. Renaming them would drop
-  saved browser state or break the always-on copy. Only the name people see is Komodon.
+  local scripts and the komogon.app domain. Renaming them would drop saved browser state.
+  Only the name people see is Komodon.
 
 ## Checks and traps
 
@@ -153,8 +153,6 @@ Keep the owner's own wording verbatim, "!" included.
   crash at random; it's not the code).
 - After changing the database schema, run `npx drizzle-kit generate --name <what>` in
   `apps/api` and commit the new SQL and snapshot.
-- Never pipe `pnpm local:start|update` output: the servers inherit the pipe and the command
-  never returns.
 - `python` is the Windows Store alias here and hangs. Write helper scripts in Node.
 - Inline `node -e` with backticks gets mangled by the shell; write scripts to a file.
 - Files may have CRLF line endings; match them when editing by script.
@@ -192,35 +190,8 @@ Keep the owner's own wording verbatim, "!" included.
 ## Recent changes (2026-10-20)
 
 - Calendar (2026-10-21): rebuilt from scratch; see "The calendar" below.
-- Social (2026-10-21, later the same day): `/social` is a page tab with `?tab=` views: Feed
-  (`components/social/Feed.tsx`, posts with a shared session, a video and likes and
-  comments), Friends (requests, friends, search by name), Compare (you beside your friends,
-  `GET /api/social/compare`) and Leaderboard (moved from Analytics, with a podium). The API
-  is `routes/social.ts`; profiles are `/profile` and `/profile/:id` and list the person's
-  posts. Videos: `post_media` holds base64, `GET /api/posts/:id/media` serves bytes, and
-  the portal plays them from an object URL after fetching with the token (a video tag cannot
-  send the header). Drizzle drops the table from `posts.id` in a select list, so the count
-  subqueries there are written by hand with aliases. Seed a sandbox with people on it:
-  `cd apps/api && npx tsx seed-social-demo.tmp.ts`, then the `social-sandbox-api` and
-  `social-sandbox` launch configs (8802/5188; they run from the `social` worktree folder).
-  The feed is three columns (`.feed-layout`, container queries on `.feed-wrap`): your
-  card, the posts, a five-row leaderboard. Settings › Social (`settings.social`) is what a
-  person shares; the API enforces it in `routes/social.ts`, `profiles.ts` and
-  `leaderboard.ts`, so a new place that shows someone's numbers must check it too.
-  The leaderboard has a global and a friends scope (`?scope=`); the setting is three-way
-  ('global' | 'friends' | 'off', older true/false normalised in `withDefaults`). Posts
-  carry a video or a picture; sample media for the seed is made with a scratch
-  `ffmpeg-static` and passed as `SEED_MEDIA_DIR` (there is no ffmpeg on this PC).
-  Jams (`routes/jams.ts`, `components/social/JamsTab.tsx`) replaced Compare: a timed game
-  people join by friendship or by code; minutes count from each person's joining time.
-  Friends have no tab: they are the `FriendsCard` beside the feed. The owner wants these
-  cards dense (40px pictures on posts, 26px in lists, 12-14px padding); don't let them grow.
-  Groups (`routes/groups.ts`, `GroupsTab.tsx`): lasting groups with this week's lines and
-  ranks, "Live now" (sessions with `last_seen_at` in the last ten minutes) and nudges
-  (`nudges` table, one per pair per two hours; `NudgesCard` shows them on the dashboard).
-  Posts have kudos (the like routes, relabelled). The leaderboard tab also carries
-  `GET /api/leaderboard/stats` (you against everyone, people under 15 min a week left out,
-  last week when this week is empty) and, on the friends scope, the Compare bento.
+- Social (2026-10-21): the feed, groups, jams, the leaderboard, nudges and kudos. The whole
+  thing is written up in "Social: how it works" below.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,
@@ -261,6 +232,309 @@ Keep the owner's own wording verbatim, "!" included.
   (they used to sit in Pace and streaks).
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
+
+## Streaks: how they work (weekly streak added 2026-10-21)
+
+There are two streaks, a daily one and a weekly one, and both count the same thing: **streak
+days**. All the logic is in `packages/core/src/streak.ts`; the API only loads and saves.
+
+- **A streak day** is a day with at least one finished session of
+  `settings.streak.minMinutes` of work (default 15), credited to the day the session started.
+  The day begins at `settings.streak.dayStartHour` (0 to 8, default 4), so 1:30am still counts
+  for the night before (`streakDay`, `qualifyingDays`). The server lets that hour change
+  once a day, so it can't be moved around to save a streak. Calendar and analytics keep
+  midnight; only the streaks use the day start.
+- **Daily streak** (`evaluateStreak`): streak days in a row. A missed day spends a streak
+  freeze if one is held (bought in the shop), otherwise the streak resets. Today stays open
+  until it ends, so a quiet morning never shows a broken streak. Milestones (7, 14, 30, 60,
+  100) feed the end-of-session line and confetti.
+- **Weekly streak** (`evaluateWeekStreak`): Monday-to-Sunday weeks in a row with at least
+  `settings.streak.daysPerWeek` streak days (1 to 7, default 1, "Days a week for the weekly
+  streak" in Settings › Pace and streaks). A week counts the moment it reaches its days; the
+  current week stays open until Sunday ends; a week that ends short resets the run. Freezes
+  are the daily streak's only. No milestones or banners for weeks.
+- **Rest days don't protect either streak** (owner's choice, 2026-10-21, over removing rest
+  days altogether). Weekly rest days, vacations and break days still shape the daily plan and
+  pace (`pace.ts`, `scheduler.ts`), but a quiet rest day is missed like any other, and a
+  week of vacation ends the weekly streak. So shop break days now only give the plan a day
+  off. Don't bring back rest-day protection, or copy that promises it, without asking.
+- **Stored, not recomputed.** Both live in the `users.streak` jsonb (`StreakState`):
+  `current`, `longest`, `lastCountedDate`, `freezesHeld`, `breakDaysHeld`, and `weeks`
+  (`current`, `longest`, `lastCountedWeek`, a Monday). There is no table of days.
+  `syncStreak` (`apps/api/src/services/users.ts`) brings them up to date lazily: on every
+  `/api/me` read, the analytics, recap and shop routes, and at session end. It loads finished
+  sessions from the earlier of the last judged day and the first unjudged week (two days
+  earlier for time zones), judges every day and week since, and writes only when something
+  changed. `lastCountedDate` and `lastCountedWeek` move past every judged day or week
+  (counted, frozen or reset), so running it twice changes nothing.
+- **Old rows.** A streak saved before 2026-10-21 has no `weeks`. The first sync reads every
+  session once and works the weekly streak and its best out of the whole history. That is why
+  `weeks` is optional in the type: read it with `weekStreakNumbers()` in the API, and with
+  `?.` / `?? 0` in the portal, whose offline query cache (IndexedDB, `lib/persist.ts`) can
+  hand back a response from before.
+- **Settings changes** (minimum minutes, days per week) apply to days and weeks not yet
+  judged. What already counted stays counted.
+- **Events.** Only the daily streak's freeze uses and resets are logged (`streak_events`),
+  and `describeStreakEvents` turns them into the dashboard banner. Weekly resets are silent.
+- **Where they show:** the top bar flame and the sidebar pill (the day count; the tooltip
+  names both), the dashboard's numbers (Daily streak beside Weekly streak), the Analytics
+  "Streaks and consistency" card (flame, then a calendar badge once there has been a counted
+  week), the end-of-session summary (weekly only when above zero) and the profile. The
+  leaderboard, Compare and groups use the daily streak only.
+- **Tests:** `packages/core/src/streak.test.ts` (both evaluators) and
+  `apps/api/src/test/weekly-streak.test.ts` (through the API, with a moving clock).
+
+## Social: how it works (built 2026-10-21)
+
+Social is the part of the app where people see each other: a feed of shared sessions, study
+groups, jams (timed games), the leaderboard, friends, nudges and kudos. It was built in one
+day from the owner's instructions and reshaped several times; this is the state as pushed.
+
+**Pages and routes (portal).**
+
+- `/social` is a nav tab (after Analytics; Settings › Pages › Social hides it along with
+  the profile link). `pages/Social.tsx` reads `?tab=`: `feed` (default), `groups`,
+  `jams`, `leaderboard`. Old `?tab=friends` goes to the feed and `?tab=compare` to
+  jams. The Feed tab shows a count of friend requests waiting; Jams shows how many are
+  running.
+- `/profile` is your own profile, `/profile/:id` someone else's (`pages/Profile.tsx`;
+  `/social/:id` still redirects). A profile is the head card (picture, name, university,
+  joined, friend count), then three panels (the day grid, strongest days, totals), then the
+  person's posts. On someone else's profile the `FriendButton` sits in the head: Add friend,
+  Requested (click takes it back), Accept and Decline, or a Friends chip that opens a small
+  card with "Friends since <date>" and a Remove friend that asks "Are you sure?" first.
+- Everything under `components/social/`: `Feed.tsx` (the three-column layout),
+  `FeedSide.tsx` (your card, the friends card, the small leaderboard), `Composer.tsx`,
+  `PostCard.tsx`, `GroupsTab.tsx`, `JamsTab.tsx`, `LeaderboardTab.tsx`,
+  `CompareBento.tsx`, `DayLines.tsx` (the shared running-total line chart),
+  `FriendButton.tsx`, `Avatar.tsx`. The dashboard's `components/NudgesCard.tsx` shows
+  nudges in both dashboard layouts. Styles are all in `apps/portal/src/social.css`,
+  imported from `index.css`.
+- Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
+  `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
+  mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys
+  carry a version number (`['leaderboard', 2, scope]`): the persisted query cache once
+  served an older response shape and crashed the tab, so bump the number when a response
+  shape changes.
+
+**The feed.** Three columns like LinkedIn's home, sized by the page's own width (container
+queries on `.feed-wrap`): your card and the friends card on the left, the composer and
+posts in the middle, the first five of the leaderboard on the right (Global or Friends). Under
+880px of page width the left column moves under the posts (it holds the requests, so it must
+stay reachable); under 660px the board goes (it has its own tab). Cards are deliberately
+dense: 40px pictures on posts and the composer, 26px in lists, 12-16px padding, 14px text.
+The owner called the first version "massive"; don't let it grow back.
+
+**Posts.** A post is always about one finished session (`sessionId` is required, the
+composer's Post button waits for one) and carries the session's minutes and the task's title
+as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
+(500 characters) and one file: a video (MP4/WebM under 5 MB, with a JPEG poster the portal
+makes from a frame) or a picture (JPEG/PNG/WebP under 2 MB). The bytes live in `post_media`
+as base64; `GET /api/posts/:id/media` serves them, and the portal fetches with the token and
+plays or shows a blob URL, because a plain `<video src>` cannot send the header. The focus
+screen's timelapse export has "Share to Social", which posts the video with the session
+attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+`post_comments` (500 characters, deletable by their author or the post's author). Only the
+author deletes a post. Counts come with every post; liking patches the caches rather than
+refetching (`patchPost` in queries.ts).
+
+**Friends.** `friendships` holds one row per pair with `status` pending or accepted;
+declining deletes the row so the same person can be asked again, and asking someone who
+already asked you is the same as accepting. The friends card beside the feed: search by name
+(`GET /api/social/people?q=`), the friends list (each with a nudge bell and a remove), then
+"Friend requests" split into Inbound (the first three, the rest fading behind "Show all") and
+Outgoing (folded until opened). The API refuses a request to someone who turned requests off.
+
+**Sharing settings (Settings › Social, `settings.social`).** Who sees your posts
+(everyone signed in or friends only; the feed and profiles both filter), study totals on
+your profile (off, the profile answers null for stats, grid and weekdays and the page says
+they keep their study time to themselves), which leaderboards count you (`'global'` = both,
+`'friends'` = only your friends' boards, `'off'` = neither; older rows held true/false,
+normalised in `withDefaults`), and whether you take friend requests. Everything is on by
+default. The API enforces each of these in `routes/social.ts`, `profiles.ts` and
+`leaderboard.ts`: any new place that shows someone's numbers must check them too. Jams and
+groups have no setting because joining is the consent.
+
+**Leaderboard.** `GET /api/leaderboard?scope=global|friends`: all-time focused time, top
+ten, test accounts and admins left out of the global board. Each row carries eight weeks of
+minutes, this week, the streak and days of the last 28, so the tab shows the first three as
+tiles with a sparkline and the rest as rows with a small one. Under the global board,
+"You and everyone" (`GET /api/leaderboard/stats`): your focused time and days this week
+against the average, plus session length and streak as plain figures. The average is over
+people with at least 15 minutes in the week; when nobody else reaches that this week, last
+week's numbers are used and the card says so; session length and streak averages are over
+the same people. Under the friends board, the Compare bento (`routes/compare.ts`,
+`GET /api/social/compare`): your weeks beside your friends' in Monday weeks in your timezone.
+
+**Jams (`routes/jams.ts`, tables `jams`, `jam_members`).** A timed game, like a
+Spotify jam: start one for a day, three days or a week; friends see it under "Friends are in"
+and join; anyone with its six-letter code (no vowels or confusable letters, `newJamCode`)
+joins from outside. Focused minutes count from the moment each person joined, so a late
+joiner has no head start. The host can end it early; members can leave; the most minutes at
+the end wins and the card names the winner. Each member comes with `byDay` (running total
+over the jam's days) and their top subjects, shown when the card is opened with its chevron.
+
+**Groups (`routes/groups.ts`, tables `groups`, `group_members`, `nudges`).** A
+lasting set of friends. A group's card is the last seven days ending today (a group younger
+than that starts on its first day): the total "together", a line per person of their running
+total (`DayLines`, yours in the accent, the others in greys, starting on the first day's
+value so there is no climb from zero), and everyone ranked with their minutes and a segmented
+bar of their biggest subjects named beneath. "Live now" lists friends in a session right
+now: a session with no end and `last_seen_at` within ten minutes, with a clock running since
+it started and what they are on. Nudges: a friend or a fellow group member can be nudged to
+study once every two hours per pair (a second one inside the window is a 409 that says when);
+"Nudge" appears next to a group member under half the group's average. The nudged person
+sees them on the dashboard until "Got it", and they expire after a day.
+
+**Traps.**
+
+- Drizzle drops the table from `posts.id` in a select list, so the count subqueries in
+  `loadPosts` are written by hand with aliases (`post_comments c where c.post_id =
+  posts.id`); a bare `"id"` there would be the comment's own.
+- The side columns on the feed must not be scroll boxes (overflow clips the glass shadows);
+  the board is sticky, your card and friends scroll with the page.
+- Panels take the page's full width (see the Look rules); the first Jams page was a narrow
+  centred column and read as chopped.
+- The API tests for these are `social.test.ts`, `groups.test.ts`, `jams.test.ts`,
+  `compare.test.ts`, `leaderboard.test.ts` and `profiles.test.ts`.
+
+**Sandbox with people on it.** `apps/api/seed-social-demo.tmp.ts` (untracked, like the
+site seed) wipes and rebuilds `apps/api/.pglite-sandbox-social` with six people, eight weeks
+of sessions, friendships, posts, a group, jams, a nudge and two live sessions; pass
+`SEED_MEDIA_DIR` pointing at a folder of `v1.mp4`..`v3.mp4` with `v*-poster.jpg` and
+`pic1.jpg`, `pic2.jpg` to get media posts (there is no ffmpeg on this PC; a scratch
+`ffmpeg-static` made the samples). Then the `social-sandbox-api` / `social-sandbox`
+launch configs (8802/5188) and sign in as jerry@komodon.demo. The configs run from the
+`social` worktree folder; point them at the checkout you are working in.
+
+## The timelapse (built 2026-10-21), and why it can't use the iPhone's camera
+
+The owner asked for this in one long chat that was then deleted; this section is the record.
+The decisions, in order, are in DECISIONS.md under the three "Timelapse" sections of
+2026-10-21.
+
+**The files.**
+- `packages/core/src/timelapse.ts`: pacing, thinning, the plan from stills to frames,
+  deflicker, size estimates, `trimIndices`. Tests beside it.
+- `packages/core/src/timelapse-layout.ts`: the layout model (pieces, boxes, shapes,
+  defaults, `normalizeTimelapseLayout`, `alignBox`, `fitBoxToRatio`). Tests beside it.
+- `apps/portal/src/lib/timelapse.ts`: `useTimelapseRecorder` (camera and screen capture)
+  and `renderTimelapse` (stills to MP4).
+- `apps/portal/src/lib/timelapse-compose.ts`: `composeFrame`, which draws one frame. The
+  video and the settings preview both use it, so the preview is exactly what comes out.
+- `apps/portal/src/components/focus/TimelapseLayoutEditor.tsx`: the editor in Settings ›
+  Timelapse.
+- `apps/portal/src/components/focus/Timelapse.tsx`: the two questions, the recording pill,
+  the recording settings, and the "Your timelapse" export card with trim.
+- `apps/portal/src/pages/Focus.tsx`: wires it together (when to ask, the task name, the
+  screen answer for the session).
+- Settings live in `settings.timelapse` (`packages/core/src/types.ts`, defaults in
+  `defaults.ts`, API schema in `apps/api/src/validation.ts`).
+
+**Recording.**
+- On the focus screen, `useTimelapseRecorder` takes JPEG stills from the camera (960 px
+  wide), plus a shared screen (1280 px wide, `getDisplayMedia`) when the person said yes to
+  it this session. It takes them during focus only, unless "Record breaks too" is on. The
+  stills stay in the tab's memory: nothing is uploaded, and closing the tab loses them (the
+  focus screen asks before it closes with unsaved stills).
+- Each still carries the session's focused time, break time, running time, the time of day,
+  and the task name as the focus screen shows it ("Course · Task").
+- Pacing works like a phone timelapse. Auto mode starts at one still every 0.5 s. Each time
+  the stills reach twice the target (600), every other one is dropped and the interval
+  doubles, so a session of any length ends up as a video of about 20-40 s. "Set length" and
+  "Speed" modes exist too.
+- **When it asks.** `timelapse.record` is ask / always / never. With ask, "Record a
+  timelapse?" opens once per session. Then, whenever a recording starts in a session, "Record
+  your screen this time?" opens (Record my screen / Just the camera). That answer lasts for
+  the session only; there is no saved screen setting, on purpose (the owner wants to be asked
+  every time). The browser's screen picker needs a click, so the Yes button calls
+  `recorder.requestScreen()` inside the click. A recording that started on its own and
+  missed the click shows "Share screen" in the recording pill instead, which also picks a
+  share back up after it is stopped from the browser's bar.
+- Saying no to the screen leaves the full camera picture: when a still has no screen image,
+  nothing is drawn in the screen's box. There is never a black space for it.
+
+**The layout (Settings › Timelapse, `/settings#timelapse`).**
+- The **camera is a fixed backdrop**: it always fills the whole frame and can't be moved,
+  resized or removed (the owner was emphatic). It has no box in the editor. Stored layouts
+  are mended to a full-frame camera by `normalizeTimelapseLayout`.
+- On top sit the **screen**, **current time**, **time elapsed**, **task name**, **progress
+  bar** (fills as the video plays through the session) and the **Komodon mark** (can't be
+  removed). Each is a box in fractions of the frame (0-1), so one layout fits any size.
+- The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
+  each one, and the boxes come from that. Text pieces are placed by their top left and sized
+  by their height; their width is the text's. Resizing from a corner keeps the shape of the
+  screen, the texts and the mark; the progress bar stretches freely. There is **no
+  snapping** (removed at the owner's request).
+- **Line up:** the chosen piece has Left, Centre and Right buttons (4% in from the edge).
+  Text pieces store that side as `align`, so a real task name longer than the preview's
+  grows away from it (a right-aligned name grows leftwards), and a piece that would run off
+  the frame is pushed back in.
+- **Add back:** removed pieces wait as chips under the preview. The screen starts there.
+- **Shape:** Match camera (the default), Match screen, 16:9, 9:16, 1:1, 4:5, 4:3. The video
+  is 1280 px on its long side. The camera's and screen's shapes are remembered in
+  localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`); the screen falls back to
+  the monitor's shape (`window.screen`), which needs no permission. The screen box keeps the
+  screen's shape, refits when the video's shape changes, and has "Fit the screen to its
+  shape". A layout still at a shape's starting places moves to the new shape's defaults; an
+  arranged one stays, and "Reset the layout" starts over.
+- **Save and Revert:** nothing in the editor saves until Save. A toast-style bubble stays at
+  the bottom of the window after the first change, with Revert and Save, and closing the tab
+  with changes asks first. On Save each text piece is stored exactly where it was drawn. The
+  recording settings below the editor (length, fps, breaks, smooth, deflicker) still save
+  on change.
+- `showTimer` / `showClockTime` are old switches kept in the type only so a row saved
+  before the layout existed seeds the two clock pieces.
+
+**Making the video.**
+- The "Your timelapse" card (end-of-session screen and the focus screen's controls) shows
+  the stills, a **Trim** (Start and End sliders over the session, with the first and last
+  kept still shown, "Keep it all" to undo), the length settings, then Make the video.
+- The trim is held in session seconds, not still indices, because thinning halves the
+  stills while recording; an end never moved follows the recording as it grows.
+- `renderTimelapse` blends the stills behind each frame for the camera and the screen
+  separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
+  the frame. The mark is black or white, picked from the brightness behind it on frame 30.
+  Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
+  elsewhere MediaRecorder records the canvas in real time. The person can download it or
+  "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still).
+
+**Links.** The focus screen's controls, the "Record a timelapse?" question ("Change what it
+looks like"), the screen question and the export card link to `/settings#timelapse`. From
+the focus screen they open in a **new tab**, because leaving the focus screen drops the
+stills; the setting reaches the focus tab when it is looked at again (TanStack Query
+refetches on focus). Settings › Focus screen keeps a one-line link to the Timelapse group.
+
+**Testing it.**
+- The Claude browser pane blocks the camera and the screen picker, so a real recording and a
+  real share can't be tested there; the owner has to try those. Everything else can be: the
+  editor works in the preview, and `renderTimelapse` can be run from the page with fake
+  stills made from the background photos (`fetch('/backgrounds/<id>.webp')` gives real
+  image blobs; encoding blobs on a canvas in a hidden pane stalls).
+- A sandbox API runs the code it loaded at start: restart it after changing
+  `validation.ts`, or saves of new layout fields come back 400.
+- The editor redraws on a canvas; to read where boxes are, measure `.tl-box` elements
+  against `.tl-stage` with JavaScript rather than trusting a screenshot.
+
+- **The iPhone camera (owner's question, 2026-10-21).** On a phone, can the site use the
+  iPhone's own camera and Time-Lapse mode instead of ours? No:
+  - A web page reaches the iPhone camera only through a file input with `capture`. iOS offers
+    Photo and Video there, never Time-Lapse, and no link opens the Camera app in Time-Lapse.
+  - Plain Video mode is no substitute. The camera covers the timer, and an hour of footage
+    (3-4 GB) is too much for Safari to turn into a timelapse.
+  - What would work is an import: the person films with the Camera app's Time-Lapse, then
+    picks the video from Photos after the session, and Komodon adds the mark. A running clock
+    can't line up with the study time, because the Camera app can't pause for breaks and
+    chooses its own speed.
+- **Our recorder on phones today.**
+  - It always uses the front camera (`facingMode: 'user'`, in `lib/timelapse.ts` and again in
+    `TimelapseLayoutEditor.tsx`).
+  - Nothing keeps the screen awake, and iOS stops the camera when the screen locks. The camera
+    track isn't watched for `ended` or `mute` (the screen's track is), so a phone left alone
+    probably stops recording at auto-lock without saying anything.
+  - iPhones have no `getDisplayMedia`, so screen recording reports itself unavailable there.
+- **Not built.** The import, a back-camera choice and a wake lock are logged in
+  `docs/IDEAS.md` (2026-10-21).
 
 ## The calendar (`/calendar`, rebuilt 2026-10-21)
 

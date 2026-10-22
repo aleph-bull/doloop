@@ -17,6 +17,7 @@ import {
   pickPhrase,
   startTimer,
   viewTimer,
+  weekStreakNumbers,
   type AdvanceOptions,
   type PaceStatus,
   type Phrase,
@@ -47,7 +48,7 @@ import type {
   sleepSchema,
   startSessionSchema,
 } from '../validation';
-import { getNodeRow } from './nodes';
+import { cascadeCompletion, getNodeRow } from './nodes';
 import { routineForSession, tickFromSession } from './routines';
 import { loadCompletedSessions, paceContext, paceSnapshot } from './pace';
 import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
@@ -284,7 +285,13 @@ export interface EndSummary {
   levelBefore: number;
   levelAfter: number;
   leveledUp: boolean;
-  streak: { current: number; longest: number; message: string | null; milestonesReached: number[] };
+  streak: {
+    current: number;
+    longest: number;
+    message: string | null;
+    milestonesReached: number[];
+    weeks: { current: number; longest: number };
+  };
   statusAfter: PaceStatus;
   nodeCompleted: boolean;
   /** A routine session whose occurrence was ticked off as it ended. */
@@ -659,6 +666,7 @@ async function finishTask(
         .where(eq(nodes.id, node.id))
         .returning()
     )[0]!;
+    await cascadeCompletion(db, user.id, node.id, null, node.completedAt, now);
     nodeCompleted = true;
   }
 
@@ -843,6 +851,7 @@ async function finalize(
       longest: streakSync.streak.longest,
       message: streakSync.message,
       milestonesReached: streakSync.milestonesReached,
+      weeks: weekStreakNumbers(streakSync.streak),
     },
     statusAfter: task.statusAfter,
     nodeCompleted: task.nodeCompleted,

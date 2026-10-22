@@ -42,7 +42,7 @@ function Hours({ minutes }: { minutes: number }) {
 /**
  * The dashboard's numbers, run-tracker style: this week is the hero (the number you can
  * still move), with the goal as a bar, the last seven days as columns, and everything
- * studied and the streak beside the best one underneath. One playful comparison leads on to
+ * studied and the daily and weekly streaks beside their bests underneath. One playful comparison leads on to
  * the full recap.
  */
 export function DashboardStats() {
@@ -84,6 +84,8 @@ export function DashboardStats() {
     );
 
   const peak = Math.max(60, ...d.sparkline.map((x) => x.minutes));
+  // A response from the offline cache may predate weekly streaks.
+  const weeks = (d.streak as Partial<typeof d.streak>).weeks ?? { current: 0, longest: 0 };
   const pct = Math.round(d.goalRatio * 100);
 
   return (
@@ -157,7 +159,7 @@ export function DashboardStats() {
           </dd>
         </div>
         <div className="dash-foot-stat is-streak">
-          <dt className="dash-label">Streak</dt>
+          <dt className="dash-label">Daily streak</dt>
           <dd className="dash-foot-figure">
             <span>
               {d.streak.current}
@@ -165,6 +167,16 @@ export function DashboardStats() {
             </span>
           </dd>
           <dd className="dash-foot-note">Best {d.streak.longest}</dd>
+        </div>
+        <div className="dash-foot-stat is-streak">
+          <dt className="dash-label">Weekly streak</dt>
+          <dd className="dash-foot-figure">
+            <span>
+              {weeks.current}
+              <small>{weeks.current === 1 ? 'week' : 'weeks'}</small>
+            </span>
+          </dd>
+          <dd className="dash-foot-note">Best {weeks.longest}</dd>
         </div>
         {fun && (
           <div className="dash-foot-stat is-fun">

@@ -1,8 +1,10 @@
 import {
+  addDays,
   DEFAULT_SETTINGS,
   describeStreakEvents,
   emptyStreak,
   evaluateStreak,
+  evaluateWeekStreak,
   levelForXp,
   materializePendingRestDays,
   resolveAccent,
@@ -141,23 +143,26 @@ export interface StreakSync {
 }
 
 /**
- * Bring the streak and pending rest-day pattern up to date. Called on every /me read
- * and at session end. Persists only when something changed.
+ * Bring the daily and weekly streaks and the pending rest-day pattern up to date. Called on
+ * every /me read and at session end. Persists only when something changed. Rest days are
+ * the plan's; neither streak reads them.
  */
 export async function syncStreak(db: Db, row: UserRow, now: string): Promise<StreakSync> {
   const settings = settingsOf(row);
   // The streak's own day, which can start a few hours after midnight.
   const dayStartHour = settings.streak.dayStartHour;
   const today = streakDay(now, row.timezone, dayStartHour);
-  let policy = await getPolicy(db, row.id);
+  const policy = await getPolicy(db, row.id);
   const materialized = materializePendingRestDays(policy, today);
-  if (materialized !== policy) {
-    policy = materialized;
-    await savePolicy(db, policy);
-  }
+  if (materialized !== policy) await savePolicy(db, materialized);
 
-  // Only completed sessions since the last judged day matter.
-  const since = row.streak.lastCountedDate ? `${row.streak.lastCountedDate}T00:00:00.000Z` : null;
+  // Only completed sessions since the last judged day, and since the start of the first
+  // unjudged week, matter. A streak saved before weekly streaks reads everything once.
+  const weeks = row.streak.weeks;
+  const fromWeek = weeks?.lastCountedWeek ? addDays(weeks.lastCountedWeek, 7) : null;
+  const fromDay = row.streak.lastCountedDate;
+  const from = fromDay && fromWeek ? (fromDay < fromWeek ? fromDay : fromWeek) : null;
+  const since = from ? `${from}T00:00:00.000Z` : null;
   const rows = await db.query.sessions.findMany({
     where: since
       ? and(
@@ -172,8 +177,16 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
   const result = evaluateStreak({
     state: row.streak,
     sessions: sess,
-    policy,
     minMinutes: settings.streak.minMinutes,
+    today,
+    timezone: row.timezone,
+    dayStartHour,
+  });
+  result.state.weeks = evaluateWeekStreak({
+    state: weeks,
+    sessions: sess,
+    minMinutes: settings.streak.minMinutes,
+    daysPerWeek: settings.streak.daysPerWeek,
     today,
     timezone: row.timezone,
     dayStartHour,
