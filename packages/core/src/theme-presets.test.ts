@@ -48,6 +48,22 @@ describe('theme presets', () => {
     }
   });
 
+  it('keeps your light or dark on a photo, and sets it only on a flat colour', () => {
+    const peak = THEME_PRESETS.find((p) => p.id === 'cherry-peak')!;
+    expect(themePresetPatch(peak)).not.toHaveProperty('mode');
+    expect(matchingThemePreset({ ...theme, ...themePresetPatch(peak), mode: 'dark' })?.id).toBe(
+      'cherry-peak',
+    );
+    expect(matchingThemePreset({ ...theme, ...themePresetPatch(peak), mode: 'light' })?.id).toBe(
+      'cherry-peak',
+    );
+    const inkwell = THEME_PRESETS.find((p) => p.id === 'inkwell')!;
+    expect(themePresetPatch(inkwell).mode).toBe('dark');
+    expect(
+      matchingThemePreset({ ...theme, ...themePresetPatch(inkwell), mode: 'light' }),
+    ).toBeNull();
+  });
+
   it('ignores what does not show', () => {
     const peak = THEME_PRESETS.find((p) => p.id === 'cherry-peak')!;
     const on = { ...theme, ...themePresetPatch(peak) };

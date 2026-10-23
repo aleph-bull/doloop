@@ -272,6 +272,11 @@ and never explain the difference on screen.
   the usual tokens (`--ink`, `--matte-fill`, `--glass-solid`, `--accent-text`), which
   follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
   never use another company's name (owner).
+- **The background never picks light or dark** (owner, 2026-10-23). There is no Recommended
+  mode any more (stored rows follow the system); photo themes keep the mode already chosen,
+  and only the flat colours set one. Text straight on a photo is the mode's own (white in
+  dark, black in light), and the photo is washed darker or lighter under it (`adaptToPhoto`).
+  Don't bring back a switch that follows the photo.
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.
@@ -380,7 +385,9 @@ reasons. What to keep doing:
   pictures, and posts straight on the page (no card), the picture or video big under the head. The
   phone styles are the last block of `social.css`; posts keep the computer's markup, so change
   a phone post in CSS. Your card and the friends card aren't on a phone's feed: the friends
-  button opens the friends card in a sheet.
+  button opens the friends card in a sheet. The whole page sits on one big card
+  (`.social-sheet`, 2026-10-23): the card's colour and blur over the window, faded in on
+  arrival, with card text (`.social-page`) and the cards on it a step lighter or darker.
 
 ## Streaks: how they work (weekly streak added 2026-10-21)
 

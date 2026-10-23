@@ -106,8 +106,8 @@ export interface PhotoAdaptation extends GlassAdaptation {
   /** Chrome (nav, tab bar) opacity: thinner than the cards, never below the theme's own. */
   chromeAlpha: number;
   /**
-   * Text that sits straight on the backdrop (page titles, headings): whichever of black or
-   * white reads better on this photo. The only thing a photo changes about the text.
+   * Text that sits straight on the backdrop (page titles, headings): the mode's own, white
+   * in dark mode and black in light, whatever the photo.
    */
   pageFg: RGB;
   /** Tint of the page wash and the halo behind that text: the opposite of `pageFg`. */
@@ -121,15 +121,21 @@ function readsLight(shown: RGB): boolean {
   return contrastRatio(TEXT_LIGHT, shown) >= contrastRatio(TEXT_DARK, shown);
 }
 
+/** The most of the wash laid over a photo, darkening it in dark mode or lightening it in light. */
+const MAX_PAGE_SCRIM = 0.9;
+
 /**
  * Glass and page text for a photograph in a theme.
  *
- * Panels and everything on them keep the theme's own look: its text and its tint, so dark
- * mode is dark panels on any photo. A busy photo can only make that glass thicker, until
- * the quietest text on it clears 4.5:1. Text straight on the backdrop is the one thing that
- * follows the photo: black on a light one, white on a dark one.
+ * Everything keeps the theme's own look: panels keep its text and tint, and text straight
+ * on the backdrop is white in dark mode and black in light, on any photo (owner, 2026-10-23:
+ * a light photo no longer turns the page's text dark). A busy photo can only make the glass
+ * thicker, until the quietest text on it clears 4.5:1, and the photo itself is darkened (or
+ * lightened, in light mode) until the page's text clears 4.5:1 on it. A flat colour
+ * (`washes` false: the Backdrop lays no wash over one, since that would change the colour
+ * chosen) keeps whichever of black or white reads on it.
  */
-export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark'): PhotoAdaptation {
+export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark', washes = true): PhotoAdaptation {
   const scrim = PHOTO_SCRIM[theme];
   const shown = composite(scrim.color, scrim.alpha, avg);
   const own = THEME_GLASS[theme];
@@ -147,11 +153,14 @@ export function adaptToPhoto(avg: RGB, theme: 'light' | 'dark'): PhotoAdaptation
   }
   const ratio = contrastRatio(fg, composite(fill, alpha, shown));
 
-  const lightText = readsLight(shown);
+  const lightText = washes ? theme === 'dark' : readsLight(shown);
   const pageFg = lightText ? TEXT_LIGHT : TEXT_DARK;
   const pageWash: RGB = lightText ? [20, 22, 36] : [255, 255, 255];
   let pageScrim = 0;
-  while (contrastRatio(pageFg, composite(pageWash, pageScrim, shown)) < 4.5 && pageScrim < 0.6) {
+  while (
+    contrastRatio(pageFg, composite(pageWash, pageScrim, shown)) < 4.5 &&
+    pageScrim < MAX_PAGE_SCRIM
+  ) {
     pageScrim = Math.round((pageScrim + 0.05) * 100) / 100;
   }
   return {
@@ -215,14 +224,6 @@ export function chooseGlass(
     ? contrastRatio(TEXT_LIGHT, card) >= contrastRatio(TEXT_DARK, card)
     : theme === 'dark';
   return { fill, alpha, strongAlpha, chrome: color ? fill : base.chrome, lightText };
-}
-
-/**
- * The theme a backdrop colour suits, for the Recommended mode: light mode on a light
- * background (where black text reads better), dark mode on a dark one.
- */
-export function recommendedThemeFor(avg: RGB): 'light' | 'dark' {
-  return readsLight(avg) ? 'dark' : 'light';
 }
 
 export function hexToRgb(hex: string): RGB {

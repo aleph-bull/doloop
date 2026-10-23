@@ -5,7 +5,6 @@ import {
   Button,
   DEFAULT_BACKGROUND_ID,
   Glass,
-  recommendedTheme,
   resolveExtensionBackdrop,
   resolveTheme,
 } from '@komogon/ui';
@@ -23,17 +22,15 @@ export function Options() {
   const choice = settings
     ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
     : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
-  // An upload is not sampled here, so Recommended follows the system on one.
-  const recommended = choice.customImageUrl ? null : recommendedTheme(choice.backgroundId);
   const backdropId = choice.customImageUrl ? null : choice.backgroundId;
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
-  }, [settings, recommended, backdropId]);
+    if (settings) applyUserTheme(settings, document.documentElement, backdropId);
+  }, [settings, backdropId]);
   return (
     <main style={{ padding: 32, maxWidth: 520 }}>
       <Backdrop
         backgroundId={choice.backgroundId}
-        theme={settings ? resolveTheme(settings.theme.mode, undefined, recommended) : 'dark'}
+        theme={settings ? resolveTheme(settings.theme.mode) : 'dark'}
         customImageUrl={choice.customImageUrl}
         assetBase={portal}
         texture={settings?.theme.texture}

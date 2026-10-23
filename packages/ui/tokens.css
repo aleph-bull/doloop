@@ -314,8 +314,9 @@
   --accent-text-glass: var(--accent-text);
   /*
    * Text straight on the backdrop. The theme's glass text by default; a photo's Backdrop
-   * sets --fg-on-backdrop (and its accent and halo) inline to black or white, whichever
-   * reads on it. Panels never follow it.
+   * sets --fg-on-backdrop (and its accent and halo) inline to the mode's own white or black,
+   * washing the photo under it, and a flat colour's to whichever reads on it. Panels never
+   * follow it.
    */
   --fg-on-backdrop: var(--fg-on-glass);
   --fg-on-backdrop-muted: color-mix(in srgb, var(--fg-on-backdrop) 76%, transparent);

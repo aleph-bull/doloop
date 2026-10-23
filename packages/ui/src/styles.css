@@ -121,7 +121,7 @@ a:hover {
 
 /* ---------- Text contexts ---------- */
 /*
- * Text straight on the backdrop reads the backdrop set, which a photo turns black or white;
+ * Text straight on the backdrop reads the backdrop set (the mode's own on a photo, washed under it);
  * glass, chrome and panels read the theme's own, whatever the photo. Components only ever
  * use --fg, --fg-muted, --fg-subtle, --border and --accent-text, so they are right in
  * either place. The glass rule comes second so a card inside the page resets them.

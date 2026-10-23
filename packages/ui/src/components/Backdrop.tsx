@@ -128,7 +128,9 @@ function applyChosenGlass(
  * wash the photo needs, if any.
  *
  * Panels keep the theme's own colours: a photo can only make their glass thicker. The text
- * that sits straight on the photo is the one thing that switches, to black or white.
+ * that sits straight on the photo keeps the mode's own colour too, and the photo is washed
+ * darker (or lighter) under it instead. A flat colour, which has no wash, keeps the text
+ * that reads on it.
  */
 function applyGlass(
   avg: RGB | null,
@@ -143,7 +145,7 @@ function applyGlass(
     applyChosenGlass(chosen, null, theme, THEME_GLASS[theme]);
     return null;
   }
-  const a = adaptToPhoto(avg, theme);
+  const a = adaptToPhoto(avg, theme, kind === 'photo');
   // Lets text that sits straight on a photo pick up a soft halo (see styles.css). A flat
   // colour has no busy patches to cover, so it gets none.
   root.dataset.backdrop = kind;
