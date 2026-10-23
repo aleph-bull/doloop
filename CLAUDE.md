@@ -246,6 +246,16 @@ and never explain the difference on screen.
 - The glass's colour, weight, blur and colour boost are settings (Appearance › Advanced ›
   Glass, `settings.theme.glass*`); the defaults are the owner's pick, 11px blur and no boost.
   Use `--glass-blur` and `--glass-saturate` in new glass, never fixed numbers.
+- **Glass panes** (2026-10-23, `packages/ui/src/glass-image.ts`): cards on the photo don't
+  blur on every frame; each shows its slice of the photo blurred once, pinned to the window,
+  and the real blur comes back while anything moves. New `.panel` and `.glass` cards get it
+  by themselves. To keep it working: hold no transform on a card or anything around it after
+  an entrance (`backwards`, never `both` or `forwards`); a card under a scroller, filter or
+  mask keeps the real blur; and anything that floats over other content must be
+  `glass-strong`, positioned or in a dialog, and a sticky card must never have content
+  scrolling under it, or it would show the photo instead of what is behind it. Check it in
+  headless Chrome screenshots: deleting `data-glass-image` from <html> brings the real blur
+  back for a side-by-side.
 - **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in
   `packages/core/src/theme-presets.ts` (Dawn Skies is the default, built from
   `DEFAULT_SETTINGS`; only free backgrounds, tested). **Matte panels on a solid colour are

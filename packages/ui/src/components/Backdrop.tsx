@@ -1,7 +1,8 @@
 import type { BackgroundTexture } from '@komogon/core';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { backgroundById, photoScrimCss } from '../backgrounds';
 import { adaptToPhoto, chooseGlass, THEME_GLASS, type GlassChoice, type RGB } from '../contrast';
+import { coverPlacement, makeGlassImage, pinnedGlassWorks, type GlassImage } from '../glass-image';
 import type { ResolvedTheme } from '../theme';
 
 export interface BackdropProps {
@@ -18,7 +19,23 @@ export interface BackdropProps {
   glass?: GlassChoice;
   /** A faint pattern over a solid colour or gradient. Photos and uploads never get one. */
   texture?: BackgroundTexture;
+  /**
+   * The glass's blur and colour boost (Appearance › Advanced). Given, a photo is blurred
+   * once for the cards that sit straight on it (glass-image.ts); the app shell passes it.
+   */
+  frost?: { blur: number; saturate: number };
 }
+
+/** Wait this long after the window stops changing size before blurring the photo again. */
+const RESIZE_SETTLE_MS = 300;
+
+/** What the blurred photo puts on <html> for the cards' panes (styles.css). */
+const GLASS_IMAGE_VARS = [
+  '--glass-image',
+  '--glass-image-size',
+  '--glass-image-x',
+  '--glass-image-y',
+];
 
 /** A tile of fine noise: dark specks on a light background, light ones on a dark. */
 function grainTile(light: boolean): string {
@@ -162,6 +179,7 @@ export function Backdrop({
   assetBase = '',
   glass,
   texture = 'none',
+  frost,
 }: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
@@ -211,8 +229,90 @@ export function Backdrop({
   const photoUrl = photo ? `${assetBase}/${photo.src}` : null;
   const pattern = photo || customImageUrl ? null : textureStyle(texture, variant.luminance);
 
+  // The photo blurred once for the cards' panes (glass-image.ts). Not for a PNG upload,
+  // which may be see-through, and not with a colour boost: those cards keep blurring.
+  const glassSrc = imageUrl?.startsWith('data:image/jpeg') ? imageUrl : imageUrl ? null : photoUrl;
+  const glassBlur = frost && frost.saturate === 100 ? frost.blur : null;
+  const layerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const layer = layerRef.current;
+    if (!glassSrc || glassBlur === null || !layer || !pinnedGlassWorks()) return;
+    const root = document.documentElement;
+    let cancelled = false;
+    let image: GlassImage | null = null;
+    let made = { width: 0, height: 0 };
+    let settle = 0;
+    const size = () => ({ width: layer.clientWidth, height: layer.clientHeight });
+    // Where the photo lies on the backdrop now, so each card's strip shows its own part.
+    const place = () => {
+      if (!image) return;
+      const { width, height } = size();
+      const at = coverPlacement(image, width, height);
+      root.style.setProperty('--glass-image-size', at.size);
+      root.style.setProperty('--glass-image-x', at.x);
+      root.style.setProperty('--glass-image-y', at.y);
+    };
+    const make = () => {
+      made = size();
+      makeGlassImage(glassSrc, glassBlur, made.width, made.height)
+        .then((next) => {
+          if (cancelled || !next) {
+            if (next) URL.revokeObjectURL(next.url);
+            return;
+          }
+          const old = image;
+          image = next;
+          root.style.setProperty('--glass-image', `url("${next.url}")`);
+          place();
+          root.dataset.glassImage = '';
+          // Let the cards take the new image before the old one goes.
+          if (old) window.setTimeout(() => URL.revokeObjectURL(old.url), 1000);
+        })
+        .catch(() => {});
+    };
+    // The photo covers the backdrop, so a much wider or taller window scales it, and the blur
+    // with it: blur it again for the new size once the window settles.
+    const sizes = new ResizeObserver(() => {
+      place();
+      window.clearTimeout(settle);
+      settle = window.setTimeout(() => {
+        const now = size();
+        const dw = Math.abs(now.width / made.width - 1);
+        const dh = Math.abs(now.height / made.height - 1);
+        if (dw > 0.05 || dh > 0.05) make();
+      }, RESIZE_SETTLE_MS);
+    });
+    make();
+    sizes.observe(layer);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(settle);
+      sizes.disconnect();
+      delete root.dataset.glassImage;
+      for (const v of GLASS_IMAGE_VARS) root.style.removeProperty(v);
+      if (image) URL.revokeObjectURL(image.url);
+    };
+  }, [glassSrc, glassBlur]);
+
+  // What the backdrop lays over the photo, laid over the blurred copy the same way.
+  const washCss = wash ? `rgb(${wash.color.join(' ')} / ${wash.alpha})` : null;
+  const glassOver =
+    photo || imageUrl
+      ? [washCss && `linear-gradient(${washCss}, ${washCss})`, photoScrimCss(theme)]
+          .filter(Boolean)
+          .join(', ')
+      : null;
+  useEffect(() => {
+    if (!glassOver) return;
+    const root = document.documentElement;
+    root.style.setProperty('--glass-image-over', glassOver);
+    return () => {
+      root.style.removeProperty('--glass-image-over');
+    };
+  }, [glassOver]);
+
   return (
-    <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
+    <div ref={layerRef} aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
       {/* Base layer: the gradient, or the photo's placeholder while it loads. */}
       <div
         style={{
@@ -249,7 +349,7 @@ export function Backdrop({
           style={{
             position: 'absolute',
             inset: 0,
-            background: `rgb(${wash.color.join(' ')} / ${wash.alpha})`,
+            background: washCss ?? undefined,
           }}
         />
       )}

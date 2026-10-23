@@ -25,7 +25,15 @@ import {
   type LucideIcon,
   Route as RouteIcon,
 } from 'lucide-react';
-import { Backdrop, Glass, LogoMark, Spinner, useToast } from '@komogon/ui';
+import {
+  Backdrop,
+  Glass,
+  LogoMark,
+  pinnedGlassWorks,
+  Spinner,
+  useToast,
+  watchGlassPanes,
+} from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
@@ -639,6 +647,15 @@ export function AppShell() {
     return () => window.removeEventListener('scroll', update);
   }, []);
 
+  // Cards on the page show a slice of the photo blurred once, rather than blurring on every
+  // frame (glass-image.ts); the Backdrop makes that image from `appearance.frost`.
+  const mainRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const main = mainRef.current;
+    // The Analytics equivalents and trophies are glass cards of their own (index.css).
+    if (main && pinnedGlassWorks()) return watchGlassPanes(main, '.eq-card, .trophy');
+  }, []);
+
   useEffect(() => {
     const nav = navRef.current;
     if (!nav) return;
@@ -676,6 +693,7 @@ export function AppShell() {
         customImageUrl={appearance.customImageUrl}
         glass={appearance.glass}
         texture={appearance.texture}
+        frost={appearance.frost}
       />
       <a href="#main" className="skip-link">
         Skip to content
@@ -986,7 +1004,7 @@ export function AppShell() {
         />
       )}
 
-      <main id="main" className="page on-backdrop" tabIndex={-1}>
+      <main id="main" ref={mainRef} className="page on-backdrop" tabIndex={-1}>
         {!online && (
           <Glass className="offline-bar" role="status">
             <WifiOff size={16} aria-hidden />

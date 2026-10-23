@@ -1,4 +1,9 @@
-import { CUSTOM_BACKGROUND_UPLOAD, type BackgroundTexture, type UserSettings } from '@komogon/core';
+import {
+  CUSTOM_BACKGROUND_UPLOAD,
+  DEFAULT_SETTINGS,
+  type BackgroundTexture,
+  type UserSettings,
+} from '@komogon/core';
 import {
   applyUserTheme,
   recommendedTheme,
@@ -19,9 +24,11 @@ export interface Appearance {
   glass: GlassChoice;
   /** The pattern over a plain background, for the Backdrop. */
   texture: BackgroundTexture;
+  /** The glass's blur and colour boost, so the Backdrop can blur the photo once for cards. */
+  frost: { blur: number; saturate: number };
 }
 
-interface Resolved extends Omit<Appearance, 'glass' | 'texture'> {
+interface Resolved extends Omit<Appearance, 'glass' | 'texture' | 'frost'> {
   /** The background's own pick, which the Recommended mode follows; null on a gradient. */
   recommended: ResolvedTheme | null;
 }
@@ -103,5 +110,16 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
       alpha: settings?.theme.glassAlpha ?? null,
     },
     texture: settings?.theme.texture ?? 'none',
+    // Held to the same limits applyGlassFrost puts on the CSS.
+    frost: {
+      blur: Math.min(
+        40,
+        Math.max(0, settings?.theme.glassBlur ?? DEFAULT_SETTINGS.theme.glassBlur),
+      ),
+      saturate: Math.min(
+        200,
+        Math.max(100, settings?.theme.glassSaturate ?? DEFAULT_SETTINGS.theme.glassSaturate),
+      ),
+    },
   };
 }

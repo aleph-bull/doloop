@@ -223,6 +223,71 @@ a:hover {
   box-shadow: var(--glass-border-inner), var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
+/*
+ * Glass panes (glass-image.ts): a card that sits straight on the backdrop photo shows its
+ * slice of one blurred copy of the photo (--glass-image, made by the Backdrop), pinned to the
+ * window like the photo itself, instead of blurring what is behind it on every frame. The
+ * pane covers the card's whole box under its content and repeats the card's own fill, border
+ * and inner line over the slice, so the card looks the same. While the card or anything
+ * around it moves ([data-glass-moving]) the slice would come loose, so the real blur shows
+ * for that moment.
+ */
+.glass-pane {
+  display: none;
+}
+.glass-pane-host {
+  position: relative;
+}
+@media not (prefers-reduced-transparency: reduce) {
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *) {
+    backdrop-filter: none;
+    isolation: isolate;
+  }
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *)
+    > .glass-pane {
+    display: block;
+    position: absolute;
+    /* The card's border box: the border sits over the slice, as it did over the blur. */
+    inset: var(--pane-inset);
+    z-index: -1;
+    border-radius: var(--pane-radius);
+    clip-path: inset(0 round var(--pane-radius));
+    pointer-events: none;
+    /* Passed on to ::after, which lays them over the slice. */
+    background: inherit;
+    border: inherit;
+    box-shadow: inherit;
+  }
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *)
+    > .glass-pane::before {
+    /* A strip as wide as the card and as tall as the window (placePane in glass-image.ts). */
+    content: '';
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: var(--pane-left);
+    width: var(--pane-width);
+    background:
+      var(--glass-image-over, linear-gradient(transparent, transparent)),
+      var(--glass-image) calc(var(--glass-image-x) - var(--pane-left)) var(--glass-image-y) /
+        var(--glass-image-size) no-repeat;
+  }
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *)
+    > .glass-pane::after {
+    content: '';
+    position: absolute;
+    /* Out over the pane's own border, to the card's border box again. */
+    inset: var(--pane-inset);
+    border-radius: inherit;
+    background: inherit;
+    border: inherit;
+    box-shadow: inherit;
+  }
+}
 /* Opaque, custom and matte: glass cards become panels too. */
 :root:not([data-panel='glass']) .glass {
   --fg: var(--ink);
