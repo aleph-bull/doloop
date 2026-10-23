@@ -60,6 +60,8 @@ export const users = pgTable('users', {
   devWorld: uuid('dev_world'),
   /** When a dev account and everything in it is deleted. */
   devExpiresAt: ts('dev_expires_at'),
+  /** When the notifications (the bell on Social) were last opened: anything later is new. */
+  notificationsSeenAt: ts('notifications_seen_at'),
 });
 
 /**

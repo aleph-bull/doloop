@@ -187,16 +187,33 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
 }
 
 /** One post: who, when, the session or video shared, what they said, and the replies. */
-export function PostCard({ post, people }: { post: FeedPost; people: Record<string, Person> }) {
+export function PostCard({
+  post,
+  people,
+  focus,
+}: {
+  post: FeedPost;
+  people: Record<string, Person>;
+  /** Opened from the notifications: scroll to it and outline it, its comments open if asked. */
+  focus?: 'post' | 'comments';
+}) {
   const author = people[post.userId] ?? unknown(post.userId);
   const like = useLikePost();
   const del = useDeletePost();
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(focus === 'comments');
+  const [marked, setMarked] = useState(!!focus);
   const fig = post.session ? figure(post.session.minutes) : null;
 
+  useEffect(() => {
+    if (!focus) return;
+    document.getElementById(`post-${post.id}`)?.scrollIntoView({ block: 'center' });
+    const done = setTimeout(() => setMarked(false), 2400);
+    return () => clearTimeout(done);
+  }, [focus, post.id]);
+
   return (
-    <Panel as="article" className="post">
+    <Panel as="article" id={`post-${post.id}`} className={`post${marked ? ' is-focus' : ''}`}>
       <header className="post-head">
         <Link to={`/profile/${post.userId}`} aria-label={author.name}>
           <Avatar name={author.name} url={author.avatarUrl} size="sm" />
@@ -265,7 +282,6 @@ export function PostCard({ post, people }: { post: FeedPost; people: Record<stri
           onClick={() => like.mutate({ id: post.id, liked: post.liked })}
         >
           <ThumbsUp size={16} aria-hidden fill={post.liked ? 'currentColor' : 'none'} />
-          <span>Kudos</span>
           {post.likes > 0 && <span className="tabular post-count">{post.likes}</span>}
         </button>
         <button

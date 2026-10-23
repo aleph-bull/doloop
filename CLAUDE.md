@@ -402,6 +402,12 @@ day from the owner's instructions and reshaped several times; this is the state 
   `FriendButton.tsx`, `Avatar.tsx`. The dashboard's `components/NudgesCard.tsx` shows
   nudges in both dashboard layouts. Styles are all in `apps/portal/src/social.css`,
   imported from `index.css`.
+- **The bell** (2026-10-22): the third figure on your card beside the feed (`NotificationsBell`
+  in `components/social/Notifications.tsx`) opens kudos, comments and nudges in BeReal's
+  layout (`GET /api/social/notifications`, `routes/notifications.ts`); new means after
+  `users.notifications_seen_at`, set on opening. Its dialog is portalled to the body: a
+  dialog rendered inside a card's text inherits that text's styles. Rows link to
+  `/profile#post-<id>` (`-comments` opens them), which `PostCard`'s `focus` scrolls to.
 - Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
   `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
   mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys
@@ -435,7 +441,7 @@ token into a blob URL. `GET /api/social/uploads` tells the portal which applies.
 the limit is not refused: the composer and "Share to Social" offer to compress it in the
 browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule, and go
 when their post or account does. The focus screen's timelapse export has "Share to Social",
-which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
 author deletes a post. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).

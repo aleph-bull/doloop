@@ -472,6 +472,32 @@ export interface NudgesResponse {
   people: Record<string, Person>;
 }
 
+/** One line under the bell on Social; see the API's routes/notifications.ts. */
+export interface SocialNotification {
+  id: string;
+  kind: 'kudos' | 'comment' | 'nudge';
+  fromId: string;
+  at: string;
+  unread: boolean;
+  postId: string | null;
+  comment: string | null;
+  groupName: string | null;
+}
+export interface NotificationPost {
+  id: string;
+  body: string;
+  subject: string | null;
+  minutes: number | null;
+  mime: string | null;
+  poster: string | null;
+}
+export interface NotificationsResponse {
+  notifications: SocialNotification[];
+  posts: Record<string, NotificationPost>;
+  people: Record<string, Person>;
+  unread: number;
+}
+
 export type LeaderboardScope = 'global' | 'friends';
 
 /** You beside everyone on the global board; see the API's GlobalStats. */
@@ -845,6 +871,8 @@ export const api = {
     }),
   nudges: () => request<NudgesResponse>('GET', '/api/social/nudges'),
   nudgesSeen: () => request<void>('POST', '/api/social/nudges/seen'),
+  notifications: () => request<NotificationsResponse>('GET', '/api/social/notifications'),
+  notificationsSeen: () => request<void>('POST', '/api/social/notifications/seen'),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

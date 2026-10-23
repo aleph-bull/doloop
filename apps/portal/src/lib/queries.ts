@@ -18,6 +18,7 @@ import {
   type DrillInput,
   type NewPost,
   type NodeInput,
+  type NotificationsResponse,
   type Person,
   type PlanInput,
   type PlanPatch,
@@ -71,6 +72,7 @@ export const keys = {
   groups: ['social', 'groups', 2] as const,
   live: ['social', 'live'] as const,
   nudges: ['social', 'nudges'] as const,
+  notifications: ['social', 'notifications'] as const,
   // Versioned: the persisted cache held older shapes of these without the per-row lines.
   leaderboard: (scope: LeaderboardScope) => ['leaderboard', 2, scope] as const,
   university: ['me', 'university'] as const,
@@ -713,6 +715,27 @@ export function useNudgesSeen() {
   return useMutation({
     mutationFn: () => api.nudgesSeen(),
     onSuccess: () => qc.setQueryData(keys.nudges, { nudges: [], people: {} }),
+  });
+}
+
+/** The bell on Social: kudos, comments and nudges, refreshed while the tab is open. */
+export function useNotifications() {
+  return useQuery({
+    queryKey: keys.notifications,
+    queryFn: api.notifications,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+/** The bell was opened: the count goes at once, the dots stay until the list next loads. */
+export function useNotificationsSeen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.notificationsSeen(),
+    onSuccess: () =>
+      qc.setQueryData<NotificationsResponse>(keys.notifications, (old) =>
+        old ? { ...old, unread: 0 } : old,
+      ),
   });
 }
 
