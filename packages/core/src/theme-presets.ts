@@ -146,7 +146,6 @@ export const THEME_PRESETS: ThemePreset[] = [
   photo('desert-night', 'Desert Night', 'night', 'canyon-stars', 'sky'),
   photo('plum-velvet', 'Plum Velvet', 'abstract', 'velvet', 'violet'),
   photo('still-water', 'Still Water', 'abstract', 'lagoon', 'mint'),
-  photo('sorbet', 'Sorbet', 'abstract', 'sherbet', 'custom:320,35,36'),
 ];
 
 /** A solid colour or one of the Minimal gradients: the backgrounds a texture shows on. */

@@ -2453,6 +2453,10 @@ The owner found the app's frame rate low and asked whether it was the app or the
 - **Measured** on the same build with Chrome's CPU renderer while scrolling, frames a second with the real blur → with panes: Home 13 → 43, Settings 17 → 55, Analytics 12 → 44, Social 16 → 52, Profile 9 → 28, Achievements 40 → 59. Rastered tiles: Analytics about 60 MB more, Social about the same.
 - **The owner's laptop** has Intel UHD graphics driving its 165 Hz screen, and an RTX 4050; browsers run on the Intel chip unless Windows is told otherwise (Settings › System › Display › Graphics).
 
+## Sorbet theme removed, 2026-10-23 (owner request)
+
+The owner asked for the Sorbet theme (Abstract, on the Sherbet photo) to go. Only the preset is gone: the Sherbet photo stays in the background picker, and anyone already on that look keeps it (it now reads as their own look rather than a theme).
+
 ## The background never picks light or dark, and Social on a phone is one big card, 2026-10-23 (user request)
 
 The owner, looking at Social on a phone: "it should not become an auto light mode just because of the background", "try keeping dark/ light mode and just increasing darkness/lightness on social specifically", then "maybe all of social should be the colour of one big card when you enter", "just use the colour and blur of one big card and blur it in when you enter it", and "remove the global auto light mode/ dark mode".
