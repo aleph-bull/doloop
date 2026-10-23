@@ -1,0 +1,36 @@
+# Komodon's docs and changelog are for people. AI crawlers and chat assistants
+# (training, search and on-demand fetchers) are asked to stay out of them.
+User-agent: GPTBot
+User-agent: ChatGPT-User
+User-agent: OAI-SearchBot
+User-agent: ClaudeBot
+User-agent: Claude-Web
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: anthropic-ai
+User-agent: Google-Extended
+User-agent: GoogleOther
+User-agent: Applebot-Extended
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: meta-externalagent
+User-agent: Meta-ExternalFetcher
+User-agent: FacebookBot
+User-agent: cohere-ai
+User-agent: cohere-training-data-crawler
+User-agent: Amazonbot
+User-agent: DuckAssistBot
+User-agent: MistralAI-User
+User-agent: YouBot
+User-agent: Diffbot
+User-agent: Timpibot
+User-agent: ImagesiftBot
+User-agent: Omgilibot
+User-agent: PanguBot
+Disallow: /docs/
+Disallow: /changelog/
+
+User-agent: *
+Allow: /

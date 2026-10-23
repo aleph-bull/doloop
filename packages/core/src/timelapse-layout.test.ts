@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { withDefaults } from './defaults';
 import {
   CAMERA_BOX,
+  TIMELAPSE_ELEMENT_LABELS,
   TIMELAPSE_ELEMENTS,
   alignBox,
   aspectRatio,
@@ -135,5 +136,30 @@ describe('lining pieces up', () => {
     });
     expect(l.title.align).toBe('right');
     expect(l.screen.align).toBeUndefined();
+  });
+});
+
+describe('the time elapsed, start and end pieces', () => {
+  it('wait out of the video until added, in every shape', () => {
+    for (const ratio of [16 / 9, 1, 9 / 16]) {
+      const l = defaultTimelapseLayout(ratio);
+      for (const id of ['total', 'start', 'end'] as const) expect(l[id].visible).toBe(false);
+    }
+  });
+
+  it('come back hidden on a layout saved before them', () => {
+    const old = { ...defaultTimelapseLayout() } as Record<string, unknown>;
+    delete old.total;
+    delete old.start;
+    delete old.end;
+    const l = normalizeTimelapseLayout(old);
+    expect([l.total.visible, l.start.visible, l.end.visible]).toEqual([false, false, false]);
+  });
+
+  it('are named plainly, the focus clock as focus', () => {
+    expect(TIMELAPSE_ELEMENT_LABELS.elapsed).toBe('Focus time');
+    expect(TIMELAPSE_ELEMENT_LABELS.total).toBe('Time elapsed');
+    expect(TIMELAPSE_ELEMENT_LABELS.start).toBe('Start time');
+    expect(TIMELAPSE_ELEMENT_LABELS.end).toBe('End time');
   });
 });

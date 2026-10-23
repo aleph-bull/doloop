@@ -233,6 +233,12 @@ export function ReviewDialog({
               <dd className="tabular">{formatClock(stats.breakSeconds)}</dd>
             </div>
           )}
+          {stats.breakSeconds > 0 && (
+            <div className="save-stat">
+              <dt>Elapsed</dt>
+              <dd className="tabular">{formatClock(stats.workSeconds + stats.breakSeconds)}</dd>
+            </div>
+          )}
           {stats.pomodoros !== null && stats.pomodoros > 0 && (
             <div className="save-stat">
               <dt>Pomodoros</dt>

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useLocation, useParams } from 'react-router';
 import type { HeatmapCell } from '@komogon/core';
 import {
   ArrowLeft,
@@ -249,6 +249,8 @@ function TopBadges({ badges, you }: { badges: ProfileBadge[]; you: boolean }) {
 export function Profile() {
   const { id } = useParams();
   const q = useProfile(id ?? 'me');
+  // "#post-<id>" (or "#post-<id>-comments") from the notifications: that post, brought into view.
+  const hash = useLocation().hash.match(/^#post-([0-9a-f-]{36})(-comments)?$/);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (q.isError)
@@ -272,7 +274,7 @@ export function Profile() {
   // of their own: the daily one on the picture, the weekly one at the start of this row.
   const totals: Array<{ label: string; value: number; unit: string }> = [];
   if (stats && studied) {
-    totals.push({ label: 'Studied, all time', ...figure(stats.totalMinutes) });
+    totals.push({ label: 'Focus, all time', ...figure(stats.totalMinutes) });
     totals.push({
       label: 'Sessions',
       value: stats.totalSessions,
@@ -333,7 +335,14 @@ export function Profile() {
           {posts.length === 0 ? (
             <p className="muted text-sm">Nothing shared yet.</p>
           ) : (
-            posts.map((p) => <PostCard key={p.id} post={p} people={people} />)
+            posts.map((p) => (
+              <PostCard
+                key={p.id}
+                post={p}
+                people={people}
+                focus={hash?.[1] === p.id ? (hash[2] ? 'comments' : 'post') : undefined}
+              />
+            ))
           )}
         </div>
       </section>

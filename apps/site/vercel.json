@@ -1,0 +1,12 @@
+{
+  "headers": [
+    {
+      "source": "/(docs|changelog)/(.*)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noai, noimageai" }]
+    },
+    {
+      "source": "/(docs|changelog)",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noai, noimageai" }]
+    }
+  ]
+}

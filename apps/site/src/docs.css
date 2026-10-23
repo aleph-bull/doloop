@@ -282,6 +282,14 @@ html.is-searching .doc-starts {
   background: rgb(27 26 43 / 0.05);
   color: var(--site-ink);
 }
+/* Changelog days too old to show: listed, but they go nowhere. */
+.doc-nav a.is-locked,
+.doc-nav a.is-locked:hover {
+  background: none;
+  color: var(--site-subtle);
+  opacity: 0.55;
+  cursor: default;
+}
 .doc-nav a.is-current {
   background: rgb(91 85 235 / 0.1);
   color: var(--site-accent-strong);
@@ -370,6 +378,37 @@ html.is-searching .doc-starts {
   background: rgb(27 26 43 / 0.04);
   font-size: 15px;
   color: var(--site-muted);
+}
+
+/* ---------- Changelog days ---------- */
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.log-list li {
+  position: relative;
+  padding: 11px 0 11px 22px;
+  color: rgb(27 26 43 / 0.82);
+}
+.log-list li + li {
+  border-top: 1px dashed var(--site-line);
+}
+.log-list li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 21px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--site-accent);
+  opacity: 0.6;
+}
+.log-list strong {
+  color: var(--site-ink);
+  font-weight: 600;
 }
 
 /* ---------- Questions ---------- */

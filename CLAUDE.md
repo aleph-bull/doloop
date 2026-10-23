@@ -114,6 +114,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   unformatted, and it rewrites other sessions' work. Format only the files you changed.
 - Ideas they mention but don't ask to have built go in `docs/IDEAS.md`. Don't build them
   unasked.
+- **The changelog** (`apps/site/src/content/changelog.html`, `/changelog/` on the site) is updated
+  only when the owner tells you to, never as part of other work. It is written by hand from
+  the commits: one entry per day, newest first, in plain words for people using the app, and
+  it only ever calls the app Komodon (never Doloop or any older name). The page shows only the
+  last three days; never delete older entries, they stay in the file and the sidebar on purpose.
 - **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
   to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
   numbered batches. Work on it only when they ask, and tick items off there as they ship.
@@ -133,6 +138,14 @@ talking, never corporate or AI-polished (no narrator sentences, no "X lives here
 em-dash flourishes). Never flirty or salesy, and never pushy (no nagging about rest or gaps).
 Keep the owner's own wording verbatim, "!" included.
 `greetings.test.ts` and `phrases.test.ts` reject "!", emoji and nag words.
+
+**Basic labels, for every feature** (owner, 2026-10-22): "do not explain what the user does
+not need to know and text can be simple and incomplete". A label, not a sentence ("Focus 42
+min", "Start 9:10 AM", "Nothing yet."); no hints that explain a rule or concept.
+
+**Focus and elapsed** (same day): *focus* is work time only; *elapsed* is focus and breaks
+together, never pauses. Label every time shown as one or the other ("focus", "elapsed"),
+and never explain the difference on screen.
 
 **Look.**
 
@@ -410,6 +423,12 @@ day from the owner's instructions and reshaped several times; this is the state 
   `FriendButton.tsx`, `Avatar.tsx`. The dashboard's `components/NudgesCard.tsx` shows
   nudges in both dashboard layouts. Styles are all in `apps/portal/src/social.css`,
   imported from `index.css`.
+- **The bell** (2026-10-22): the third figure on your card beside the feed (`NotificationsBell`
+  in `components/social/Notifications.tsx`) opens kudos, comments and nudges in BeReal's
+  layout (`GET /api/social/notifications`, `routes/notifications.ts`); new means after
+  `users.notifications_seen_at`, set on opening. Its dialog is portalled to the body: a
+  dialog rendered inside a card's text inherits that text's styles. Rows link to
+  `/profile#post-<id>` (`-comments` opens them), which `PostCard`'s `focus` scrolls to.
 - Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
   `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
   mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys
@@ -430,9 +449,17 @@ the rounded corners. The small leaderboard also has more room between its rows.
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and what it was on,
 "Course · Task" (root course and the task itself, never the units between; `focusLabel`),
-as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
-(500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
-makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
+as they were when shared (`posts.minutes`, `posts.subject`), the session's start and end
+(`posts.started_at`, `ended_at`, small at the end of the session row) and, when the post
+asks for it, the time elapsed (`posts.elapsed_minutes`, focus and breaks; the composer's
+"Elapsed" chip, `showElapsed`), optionally a line of text
+(500 characters) and up to four files, one video (MP4/WebM up to 40 MB, with a JPEG poster the
+portal makes from a frame) and three pictures (JPEG/PNG/WebP up to 2 MB each), shown as a
+carousel (2026-10-22: `post_media.position`, `files` on the post, `?n=` on the file routes;
+`media` stays as the first file for older portals). A post can be **friends only**
+(`posts.friends_only`, on top of Settings › Social); every query that shows posts must check
+it. **Only a session that ended in the last 7 days and has no post yet can be posted**
+(`GET /api/social/postable`); never explain that rule on screen (owner). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
 [docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
 the bytes never pass through Render. Uploads are capped at 250 MB a day per account and stop
@@ -443,7 +470,7 @@ token into a blob URL. `GET /api/social/uploads` tells the portal which applies.
 the limit is not refused: the composer and "Share to Social" offer to compress it in the
 browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule, and go
 when their post or account does. The focus screen's timelapse export has "Share to Social",
-which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
 author deletes a post. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).
@@ -601,9 +628,13 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - The **camera is a fixed backdrop**: it always fills the whole frame and can't be moved,
   resized or removed (the owner was emphatic). It has no box in the editor. Stored layouts
   are mended to a full-frame camera by `normalizeTimelapseLayout`.
-- On top sit the **screen**, **current time**, **time elapsed**, **task name**, **progress
-  bar** (fills as the video plays through the session) and the **Komodon mark** (can't be
-  removed). Each is a box in fractions of the frame (0-1), so one layout fits any size.
+- On top sit the **screen**, **current time**, **focus time** (the piece's id is still
+  `elapsed`; it draws "Focus 42:17", "Break 3:10"), **time elapsed** (`total`, "Elapsed
+  51:02": focus and breaks), **start time** and **end time** (`start`, `end`: the
+  session's, "Start 9:10 AM"; until it ends, the end is the last still), **task name**,
+  **progress bar** (fills as the video plays through the session) and the **Komodon mark**
+  (can't be removed). The time elapsed, start and end start out of the layout, as chips to
+  add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
 - The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
   each one, and the boxes come from that. Text pieces are placed by their top left and sized
   by their height; their width is the text's. Resizing from a corner keeps the shape of the
@@ -662,7 +693,8 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X" and "One
   download, and the apps on a phone".
 - **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
-  with a line to say and a switch for the hours (`showTime: false` posts no minutes or task).
+  with a line to say, a "Show time" switch (`showTime: false` posts no minutes, task or
+  times) and a "Time elapsed" switch (`showElapsed`).
   The text box must stay quick: the post beside it follows a deferred copy of the text in a
   memoised card, and its video doesn't play until pressed. Instagram, TikTok and X have **no
   preview** (owner, 2026-10-22): their buttons go straight to the app or site, where the post
@@ -986,8 +1018,9 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   disliked them). The closing reads "The study app." with a hand-drawn underline under
   "The". Three clips are made from YouTube videos the owner downloaded; see
   apps/site/README.md before publishing.
-  The docs live at `apps/site/docs/index.html` (`/docs/`), written from the code: when a
-  feature's labels, defaults or limits change, update its topic there too.
+  The docs' text lives in `apps/site/src/content/docs.html` (`/docs/`), written from the code:
+  when a feature's labels or where it lives change, update its topic there too. Keep formulas,
+  thresholds and planning rules out of it (the owner doesn't want a blueprint for a copy).
   Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
   the devices with it, each section as it arrives, and the pinned scenes (`[data-scrub]`).

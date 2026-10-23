@@ -190,7 +190,7 @@ function Advanced() {
             )}
             <DataTable
               caption={`Sessions on ${node.title}`}
-              columns={['When', 'Work', 'Break', 'Idle', 'Distracted']}
+              columns={['When', 'Focus', 'Break', 'Idle', 'Distracted']}
               rows={node.sessions
                 .slice(0, 30)
                 .map((s) => [

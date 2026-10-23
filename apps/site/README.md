@@ -41,11 +41,19 @@ pnpm build      # static output in dist/
   - **Plan**: pinned. The calendar week (classes from a timetable, finished sessions, what's
     due), then Plan my week's suggestions, then the week with them added; the phone's day
     view rises in at the end. It sits after Share so Social comes first.
-- `docs/index.html`, `src/docs.css`, `src/docs.js`: the docs at `/docs/` (its own page in
-  the Vite build): every feature by area, where to find it in the app, a settings map,
-  shortcuts and the questions people ask. The search filters topics and questions as you
-  type (`/` focuses it, `?q=` links to a search) and marks matches with the CSS Custom
-  Highlight API. Written from the code; when the app changes, change the docs with it.
+- **Docs** at `/docs/` and the **changelog** at `/changelog/`, each its own page in the Vite
+  build (`docs/index.html`, `changelog/index.html`) sharing `src/docs.css` and
+  `src/docs.js`. Their text lives in `src/content/docs.html` and `src/content/changelog.html`
+  and is sealed at build time (the `?sealed` import in `vite.config.js`, opened by
+  `src/sealed.js`), so the pages and scripts never hold it as readable text for bots that only
+  fetch. `public/robots.txt` asks AI crawlers and chat assistants to keep out of both,
+  `vercel.json` adds `X-Robots-Tag: noai`, select-all is off and a copy takes 400
+  characters at most. The search filters topics as you type (`/` focuses it, `?q=` links to
+  a search). The docs say what things do and where they are, not the formulas or thresholds
+  behind them (the owner didn't want them to be a blueprint). The changelog is one entry per
+  day, written from the commits, and only changes when the owner asks. It shows only the last
+  three days (counted from the reader's today; `maxAgeDays` in `src/changelog-page.js`):
+  older days stay in the content file and in the sidebar, greyed, and their links do nothing.
 - `src/main.js`: the entrance motion and the scroll scenes. Each `[data-scrub]` element gets
   `--p` (0 to 1 while pinned), `--enter` and `data-step`; everything moves by transform and
   opacity. With reduced motion (or without the script) nothing pins and the scenes lay out

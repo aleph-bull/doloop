@@ -306,19 +306,46 @@ export interface FriendshipStatus {
   since: string | null;
 }
 
+/** The session on a post, as it was when shared. */
+export interface PostSession {
+  minutes: number;
+  subject: string | null;
+  elapsedMinutes: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
+}
+
 /** A post on Social, with its counts as the viewer sees them. */
 export interface FeedPost {
   id: string;
   userId: string;
   body: string;
   createdAt: string;
-  session: { minutes: number; subject: string | null } | null;
+  /** Focus minutes, focus and breaks together (when shown), and when it started and ended. */
+  session: PostSession | null;
+  /** The first file (all an API from before carousels sends). */
   media: { mime: string; bytes: number; poster: string | null } | null;
+  /** Every file in the carousel's order; missing from an API (or a cached feed) before them. */
+  files?: PostFile[];
+  /** Shown only to the author's friends. */
+  friendsOnly?: boolean;
   likes: number;
   liked: boolean;
   comments: number;
   you: boolean;
 }
+
+/** One video or picture on a post; `n` is its place, 0 first. */
+export interface PostFile {
+  n: number;
+  mime: string;
+  bytes: number;
+  poster: string | null;
+}
+
+/** A post's files, from `files` or, from an older API, the one `media`. */
+export const postFiles = (post: FeedPost): PostFile[] =>
+  post.files ?? (post.media ? [{ n: 0, ...post.media }] : []);
 
 export interface FeedComment {
   id: string;
@@ -342,9 +369,15 @@ export interface NewPost {
   sessionId?: string;
   /** Show the session's minutes and task on the post (the API's default); false leaves them off. */
   showTime?: boolean;
-  /** The file as a data URL, when the API keeps files itself (no R2; videos under 5 MB). */
+  /** Also show the time elapsed: focus and breaks together. */
+  showElapsed?: boolean;
+  /** Only friends see it. */
+  friendsOnly?: boolean;
+  /** Up to one video and three pictures, in order: each a data URL or an R2 key. */
+  files?: Array<{ media?: string; upload?: string }>;
+  /** One file as a data URL, when the API keeps files itself (no R2; videos under 5 MB). */
   media?: string;
-  /** The key of a file already uploaded to R2 (`startUpload`). */
+  /** The key of one file already uploaded to R2 (`startUpload`). */
   upload?: string;
   /** A small JPEG data URL shown before the video loads. */
   poster?: string;
@@ -470,6 +503,32 @@ export interface GroupsResponse {
 export interface NudgesResponse {
   nudges: Array<{ id: string; fromId: string; groupName: string | null; at: string }>;
   people: Record<string, Person>;
+}
+
+/** One line under the bell on Social; see the API's routes/notifications.ts. */
+export interface SocialNotification {
+  id: string;
+  kind: 'kudos' | 'comment' | 'nudge';
+  fromId: string;
+  at: string;
+  unread: boolean;
+  postId: string | null;
+  comment: string | null;
+  groupName: string | null;
+}
+export interface NotificationPost {
+  id: string;
+  body: string;
+  subject: string | null;
+  minutes: number | null;
+  mime: string | null;
+  poster: string | null;
+}
+export interface NotificationsResponse {
+  notifications: SocialNotification[];
+  posts: Record<string, NotificationPost>;
+  people: Record<string, Person>;
+  unread: number;
 }
 
 export type LeaderboardScope = 'global' | 'friends';
@@ -771,12 +830,19 @@ export const api = {
   mediaLimits: () => request<MediaLimits>('GET', '/api/social/uploads'),
   startUpload: (mime: string, bytes: number) =>
     request<UploadLink>('POST', '/api/social/uploads', { mime, bytes }),
-  /** A short-lived link to a post's file in R2, or null when the API keeps the bytes. */
-  postMediaUrl: (id: string) =>
-    request<{ url: string | null; expiresIn: number | null }>('GET', `/api/posts/${id}/media/url`),
-  /** The file behind a post, as a blob to play from an object URL (files kept by the API). */
-  postMedia: async (id: string): Promise<Blob> => {
-    const res = await fetch(`${BASE}/api/posts/${id}/media`, { headers: await authHeaders() });
+  /** Your sessions a post can be about. */
+  postableSessions: () => request<{ sessionIds: string[] }>('GET', '/api/social/postable'),
+  /** A short-lived link to a post's file (`n`, 0 first) in R2, or null when the API keeps the bytes. */
+  postMediaUrl: (id: string, n = 0) =>
+    request<{ url: string | null; expiresIn: number | null }>(
+      'GET',
+      `/api/posts/${id}/media/url?n=${n}`,
+    ),
+  /** A file behind a post, as a blob to play from an object URL (files kept by the API). */
+  postMedia: async (id: string, n = 0): Promise<Blob> => {
+    const res = await fetch(`${BASE}/api/posts/${id}/media?n=${n}`, {
+      headers: await authHeaders(),
+    });
     if (!res.ok) throw new ApiError(res.status, res.statusText);
     return res.blob();
   },
@@ -845,6 +911,8 @@ export const api = {
     }),
   nudges: () => request<NudgesResponse>('GET', '/api/social/nudges'),
   nudgesSeen: () => request<void>('POST', '/api/social/nudges/seen'),
+  notifications: () => request<NotificationsResponse>('GET', '/api/social/notifications'),
+  notificationsSeen: () => request<void>('POST', '/api/social/notifications/seen'),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

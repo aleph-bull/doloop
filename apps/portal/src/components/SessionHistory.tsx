@@ -81,7 +81,7 @@ export function SessionHistory() {
                     </span>
                   </div>
                   <div className="history-figures tabular">
-                    <span title="Focused">{fmtMinutes(s.workSeconds / 60)}</span>
+                    <span>{fmtMinutes(s.workSeconds / 60)} focus</span>
                     <span className="muted">{s.xpAwarded} XP</span>
                     {badges.length > 0 && (
                       <span className="history-badges" title={badges.join(', ')}>

@@ -90,7 +90,7 @@ export function TrackerBoard() {
           ) : (
             <dl className="days-panel-stats">
               <div>
-                <dt>Studied</dt>
+                <dt>Focus</dt>
                 <dd className="tabular">{fmtHours(heatmap.totalMinutes)}</dd>
               </div>
               <div>

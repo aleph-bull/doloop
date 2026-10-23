@@ -2202,6 +2202,58 @@ limits as they are), linked as "Docs" in the homepage nav and footer.
 The closing heading is now "The study app." (owner's words), with a hand-drawn underline
 under "The" that draws itself in.
 
+## Focus time and time elapsed, start and end times, 2026-10-22 (user request)
+
+The owner asked for an option on Social posts to show the total time elapsed ("the time including breaks not including pauses"), a small start and end time on each post, the same as text pieces on the timelapse, and for the app to say plainly which times are focus and which are elapsed, with basic labels and no explanations ("do not explain this rule or concept just use basic labels", meant for every feature from now on).
+
+- **Words.** Focus is work time only. Elapsed is focus and breaks together; pauses never count. Every time shown is labelled one or the other, and nothing on screen explains the difference.
+- **Posts.** Each post shows the session's start and end, small at the right of its session row ("4:29 – 5:29 PM"; on a phone it wraps under). The focus figure says "focus". The time elapsed is an option per post: an "Elapsed" chip in the composer once a session is picked, and a "Time elapsed" switch in the timelapse's Share to Social preview (whose "Show how long I studied" switch is now "Show time", without the line under it). Off by default. New columns `posts.elapsed_minutes`, `started_at`, `ended_at` (migration **0028_post_times**, which also gives every older post that showed its time the start and end of its session). Hiding the time hides the start and end too. The dev world's posts get their times.
+- **The timelapse.** Three new text pieces, waiting as chips under the editor: Time elapsed ("Elapsed 51:02"), Start time and End time ("Start 9:10 AM", the session's; until it ends, the end is the last still). The old "Time elapsed" piece was the focus clock all along, so it is now called Focus time and draws "Focus 42:17" (still "Break 3:10" on a break; with the break clock set to keep counting it says "Elapsed"). The looks leave the three new pieces where they are. The API's layout schema takes them, so Render must run this code before a layout with them saves on komogon.app.
+- **Elsewhere.** "Studied" times became "focus" (dashboard and profile "Focus, all time", tasks, deadlines, the calendar header, the tracker, admin), the analytics session table's "Work" column is "Focus", and the end-of-session screens and the timer card add "Elapsed" beside the breaks when there were any. "Days studied" stays (it counts days, not time).
+- Checked in a sandbox: posts with and without the elapsed time at computer and phone widths, the composer chip, and the three pieces added, drawn and saved in Settings › Timelapse. A real video with them wasn't made (no camera in the preview); the same text code draws the editor and the video.
+
+## A changelog, and docs that aren't a blueprint, 2026-10-22 (owner request)
+
+- **Changelog** at `/changelog/` on the site: one entry per day since the first commit on
+  2026-09-20, newest first, written from the commits in plain words for people using the app.
+  It only ever calls the app Komodon (no older names). It changes only when the owner asks
+  (CLAUDE.md says so).
+- **The docs no longer spell out how things work inside**: no XP formula, level thresholds,
+  shop prices, pace thresholds, Plan my week's rules or drill schedule. They say what each
+  thing does and where it is, "so no one can just copy and paste the contents" and rebuild it.
+- **Kept from AI chat assistants and from wholesale copying** (docs and changelog): the text is
+  sealed at build time and put together in the browser, robots.txt asks AI crawlers and
+  assistants to keep out, the pages and headers say noai, select-all is off, and a copy takes
+  400 characters at most. All of this deters rather than prevents: a person can still read and
+  retype it, and the seal's key ships with the page. Vercel's firewall can also block AI bots
+  outright (a project setting the owner would turn on).
+- **The changelog shows the last three days only** (owner, same day): older days stay in the
+  file and in the sidebar back to September 20, greyed, and clicking them does nothing. Counted
+  from the reader's today, so days drop off on their own; the newest day always shows.
+
+## The bell on Social, and the kudos button without its word, 2026-10-22 (user request)
+
+The owner asked for the "Kudos" text on posts to go, and for notifications on Social: a bell next to the trophy that opens to who gave kudos on which posts, who commented and who nudged, "like BeReal's notifications tab", so it feels familiar.
+
+- **Kudos button:** the thumbs-up and the count only; the word is gone (its label for screen readers stays).
+- **Where the bell is:** a third figure on your card beside the feed, after the streak and the level: the bell, how many are new, "new". A dot on the bell while anything is new. Under 880px of page width that card sits under the posts (it always has), so on a phone the bell is far down the feed; not moved, since the owner asked for it beside the trophy.
+- **The list** (`components/social/Notifications.tsx`): a dialog on a computer, a whole screen on a phone (`Modal phone="full"`). BeReal's layout: Today, Yesterday, This week, Earlier; each row the person's picture with a small badge for what happened, "**Name** gave you kudos" / "commented: …" / "nudged you", then which post (what it was on, else its words) and when, a dot while new, and the post's picture on the right (its poster, or its focus minutes, labelled "focus", when it has none). A row opens your profile at that post (`/profile#post-<id>`, scrolled to and outlined for a moment; a comment opens its comments too); a nudge opens the person's profile. The list is rendered on the page's body, because inside the figures' row it took on their bold, centred text.
+- **What's in it:** kudos and comments on your posts and nudges to you, from the last 30 days, the newest 60 (`GET /api/social/notifications`, `routes/notifications.ts`). It reads the rows Social already keeps; your own kudos and comments on your own posts aren't in it, nor anything from a suspended account. Kudos taken back go away with their row. Friend requests aren't in it (not asked; they have the friends card).
+- **New:** anything after `users.notifications_seen_at` (migration **0029_notifications_seen**). Opening the bell sets it (`POST /api/social/notifications/seen`); the count goes to 0 at once and the dots stay until the list next loads. It is separate from a nudge's "Got it" on the dashboard. The list refreshes every minute while the page is open.
+- Copy kept to plain labels (the owner's rule from the same evening: don't explain, simple and incomplete is fine): an empty list says "Nothing yet."
+- Tests: `notifications.test.ts`. Checked in a sandbox as Jerry: the bell's count, the list on a computer and a phone, a new comment arriving as 1 new, opening clearing it, and a comment row opening the post with its comments.
+
+## Posts: friends only, one post a recent session, and a carousel of a video and three pictures, 2026-10-22 (user request)
+
+The owner asked for three things in one message: an option to post to friends only; a rule, not to be explained anywhere, that only a session less than a week old with no post yet can be posted; and up to one video and three pictures on a post, shown "like Instagram", as a carousel.
+
+- **Friends only** (`posts.friends_only`, migration **0030_post_files**): a "Friends only" chip in the composer once a session is picked (beside "Elapsed"), and a "Friends only" switch in the timelapse's Share to Social preview, whose line explaining who sees the post is gone (the preview's audience chip says Everyone or Friends). Such a post shows only to the author and their friends: the feed, profiles and the file routes all check it. Settings › Social's "friends only" for every post still applies on top; with it on, the chip shows pressed and can't be turned off, and the preview has no switch. A friends-only post says "· Friends" after its time.
+- **Which sessions can be posted:** one that ended within the last 7 days and has no post yet (`POST_SESSION_MAX_AGE_MS`). The composer's "Which session?" lists only those (`GET /api/social/postable`); the API refuses the rest ("Too old to post", 409 "Already posted"). Deleting a post frees its session. Nothing on screen explains the rule (owner's words).
+- **Files:** a post carries up to 4: one video and three pictures, in the order they were picked. `post_media` has a `position` and its key is now (post, position); posts made before keep their one file at position 0. The API takes `files: [{ media | upload }]` (the old single `media`/`upload` still works), checks each like before, copies each R2 upload, deletes them all with the post, and answers `files` (each with `n`, and the poster on the video) beside the old `media` (the first file), so a portal from before still shows something. `GET /api/posts/:id/media(?n=)` and `/media/url?n=` pick a file. With no R2 the post can carry up to 24 MB (its own body limit).
+- **The composer:** "Add photos or a video" picks several at once (then "Add more"); each shows as a chip with a remove button; past one video or three pictures it says "1 video and 3 photos at most." A file too big still gets the compress offer (one at a time). Uploading counts across all the files.
+- **The carousel** (`Carousel` in PostCard.tsx): one frame at the first file's shape, kept between 4:5 and 16:9 (Instagram's range is 4:5 to 1.91:1), swiped on a touch screen (scroll snapping), arrows on hover on a computer, "2/4" in the corner and dots under it. Pictures fill the frame; the video sits in it on black, and pauses when swiped away. One file shows as before.
+- Tests: `post-files.test.ts` (the session rule, the carousel, friends only), an R2 case in `social-media.test.ts`; older tests now post a session each. Checked in a sandbox: a picture, the video and two pictures in one post at computer and phone widths (arrows, swipe, the video pausing), a friends-only post, and the composer listing only the sessions still free.
+
 ## Preset themes, and solid colours that look finished, 2026-10-22 (owner request)
 
 The owner asked for preset themes: the current default named **Dawn Skies**, minimalist

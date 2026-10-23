@@ -775,14 +775,17 @@ export interface TimelapseLook {
   layout: TimelapseLayout;
   /** The person's own line of text on every frame; empty or absent leaves it out. */
   noteText?: string;
+  /** When the session started and ended (epoch ms), for the start and end pieces. */
+  startAt?: number | null;
+  endAt?: number | null;
 }
 
 /** "2:14 PM EST": the time a still was taken, in the account's timezone. */
-export function timeOfDayText(takenAt: number, timeZone?: string): string {
+export function timeOfDayText(takenAt: number, timeZone?: string, zone = true): string {
   const opts: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
-    timeZoneName: 'short',
+    ...(zone ? { timeZoneName: 'short' } : {}),
   };
   try {
     return new Intl.DateTimeFormat('en-US', { ...opts, timeZone }).format(takenAt);
@@ -792,17 +795,36 @@ export function timeOfDayText(takenAt: number, timeZone?: string): string {
   }
 }
 
-/** What the elapsed clock says on a still. */
+/** What the focus clock says on a still: "Focus 42:17", "Break 3:10". */
 export function clockText(
   still: Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds'>,
   breakClock: TimelapseLook['breakClock'],
 ): string {
   if (breakClock === 'running') {
-    const t = timelapseClock(still.totalSeconds);
+    const t = `Elapsed ${timelapseClock(still.totalSeconds)}`;
     return still.breakSeconds !== null ? `${t} · Break` : t;
   }
   if (still.breakSeconds !== null) return `Break ${timelapseClock(still.breakSeconds)}`;
-  return timelapseClock(still.workSeconds);
+  return `Focus ${timelapseClock(still.workSeconds)}`;
+}
+
+/** What every text piece says on a still, as the video draws it. */
+export function stillTexts(
+  still: Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds' | 'takenAt' | 'title'>,
+  look: Pick<TimelapseLook, 'breakClock' | 'timeZone' | 'noteText' | 'startAt' | 'endAt'>,
+) {
+  const at = (label: string, ms: number | null | undefined) =>
+    ms ? `${label} ${timeOfDayText(ms, look.timeZone, false)}` : null;
+  return {
+    // Stills kept from before the time was recorded have none to show.
+    clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
+    elapsed: clockText(still, look.breakClock),
+    total: `Elapsed ${timelapseClock(still.totalSeconds)}`,
+    start: at('Start', look.startAt),
+    end: at('End', look.endAt),
+    title: still.title,
+    note: look.noteText?.trim() || null,
+  };
 }
 
 /** "0:07 of 0:30": how far a live clip has run, and how long it may. */
@@ -1018,11 +1040,7 @@ function frameDrawer(
       {
         camera,
         screen,
-        // Stills kept from before the time was recorded have none to show.
-        clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
-        elapsed: clockText(still, look.breakClock),
-        title: still.title,
-        note: look.noteText?.trim() || null,
+        ...stillTexts(still, look),
         progress: progressAt(j),
       },
       { mark },

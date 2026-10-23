@@ -66,7 +66,7 @@ export function UpcomingDue({ nodes, pace, days = 14, max = 5 }: UpcomingDueProp
               {/* Always there, empty or not, so the times line up as a column. */}
               <span className="due-time muted text-xs tabular">
                 {p?.status === 'done'
-                  ? `Studied ${fmtMinutes(p.loggedWorkMinutes)}`
+                  ? `${fmtMinutes(p.loggedWorkMinutes)} focus`
                   : p?.remainingMinutes != null
                     ? `${fmtMinutes(p.remainingMinutes)} left`
                     : null}
