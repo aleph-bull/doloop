@@ -660,10 +660,14 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
   elsewhere MediaRecorder records the canvas in real time; both at `timelapseBitrate`. The person can download it,
   "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still), or post it
-  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone the share sheet carries the
-  video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
+  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone or tablet the share sheet
+  carries the video to the app (a phone that can't share files downloads it and opens the
+  app by its link, `appLink`); on a computer it downloads and the site's upload page opens
+  in a new tab. **A video downloads once** (`downloadOnce`): whichever of Save, Instagram,
+  TikTok and X asks first downloads it, and the rest say it's already in the downloads.
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
-  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
+  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X" and "One
+  download, and the apps on a phone".
 - **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
   with a line to say, a "Show time" switch (`showTime: false` posts no minutes, task or
   times) and a "Time elapsed" switch (`showElapsed`).
@@ -743,8 +747,8 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
   - **After the session**, `TimelapseExport` shows `TimelapseTrim`: a viewer drawn with
     `composeFrame` (no blending, so playing is quick), stills in a strip (nine on a phone; on
     a computer, `wide`, as many as fit at the camera's shape), a handle at each end, a
-    playhead, play. "Save the video" opens the share sheet on a phone (where "Save Video"
-    goes to Photos) and falls back to a download.
+    playhead, play. "Save the video" opens the share sheet on a phone or tablet (where "Save
+    Video" goes to Photos) and falls back to a download.
 - **Not built.** Importing an Apple Time-Lapse from Photos is still in `docs/IDEAS.md`.
 - **Testing the camera screen in the preview.** The pane has no camera, so give it one before
   the recording starts: replace `navigator.mediaDevices.getUserMedia` with a function that

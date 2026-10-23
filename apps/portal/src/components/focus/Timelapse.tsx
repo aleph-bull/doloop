@@ -1,4 +1,5 @@
 import {
+  appLink,
   applyTimelapseStyle,
   aspectRatio,
   clampTimelapseResolution,
@@ -48,7 +49,7 @@ import {
   Toggle,
   useToast,
 } from '@komogon/ui';
-import { isUpright } from '../../lib/device';
+import { isUpright, mobileOs } from '../../lib/device';
 import { fmtMinutes } from '../../lib/format';
 import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
 import type { PostSession } from '../../lib/api';
@@ -856,6 +857,10 @@ export function TimelapseExport({
     h: number;
   } | null>(null);
   const [played, setPlayed] = useState<{ url: string; seconds: number } | null>(null);
+  // The video downloads once, whichever button asked first (Save, Instagram, TikTok or X):
+  // the others say it's already there rather than adding another copy.
+  const [downloadedUrl, setDownloadedUrl] = useState<string | null>(null);
+  const downloaded = !!video && downloadedUrl === video.url;
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
   // The trim, in seconds into the session; null keeps that end where the recording is.
@@ -932,10 +937,13 @@ export function TimelapseExport({
     return () => making.current?.abort();
   }, []);
 
-  // On a phone the share sheet takes the video to the apps, when this browser can share files.
+  // On a phone or tablet the share sheet takes the video to the apps (on an iPhone, Apple's
+  // share sheet), when this browser can share files.
+  const os = mobileOs();
+  const mobile = device === 'phone' || os !== null;
   const shareSheet = useMemo(
-    () => device === 'phone' && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
-    [device, video],
+    () => mobile && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
+    [mobile, video],
   );
 
   if (count === 0) return null;
@@ -970,51 +978,64 @@ export function TimelapseExport({
     }
   };
 
+  /**
+   * The share sheet with the video. True when it is done with: shared, or closed (which is
+   * not a failure); false when it can't open, so the caller falls back to a download.
+   */
+  const shareVideo = async (): Promise<boolean> => {
+    if (!video) return true;
+    try {
+      await navigator.share({ files: [videoFile(video)] });
+      onSaved?.();
+      return true;
+    } catch (err) {
+      // A quick second tap finds the first sheet still open: that one is enough.
+      return (
+        err instanceof DOMException &&
+        (err.name === 'AbortError' || err.name === 'InvalidStateError')
+      );
+    }
+  };
+
+  /** Download the video unless it already has been. False when it was already there. */
+  const downloadOnce = (): boolean => {
+    if (!video || downloaded) return false;
+    downloadVideo(video);
+    setDownloadedUrl(video.url);
+    onSaved?.();
+    return true;
+  };
+
   const download = async () => {
     if (!video) return;
-    // On a phone the share sheet is the way into Photos ("Save Video"); a download would
-    // only land in Files. Called straight from the click, which the sheet needs.
-    if (device === 'phone') {
-      const file = videoFile(video);
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file] });
-          onSaved?.();
-          return;
-        } catch (err) {
-          // Closing the sheet is not a failure; anything else falls back to a download.
-          if (err instanceof DOMException && err.name === 'AbortError') return;
-        }
-      }
-    }
-    downloadVideo(video);
-    onSaved?.();
+    // On a phone or tablet the share sheet is the way into Photos ("Save Video"); a download
+    // would only land in Files. Called straight from the click, which the sheet needs.
+    if (shareSheet && (await shareVideo())) return;
+    if (!downloadOnce()) toast('It’s already in your downloads.');
   };
 
   /**
-   * Hand the video to Instagram, TikTok or X, where the post is written in the site's own
-   * composer. On a phone the share sheet holds the apps and takes the video along. A page
-   * can't pass a file to another site, so elsewhere the video downloads, the site opens in a
-   * new tab, and a toast says what to do there. Called straight from the click, which the
-   * sheet and the new tab both need.
+   * Hand the video to Instagram, TikTok or X, where the post is written in the app's or site's
+   * own composer. On a phone or tablet the share sheet holds the apps and takes the video
+   * along. Without it the video downloads (once, whichever button asked first): a phone then
+   * opens the app, a computer the site in a new tab, and a toast says what to do there.
+   * Called straight from the click, which the sheet, the app link and the new tab all need.
    */
   const postTo = async (platform: PostPlatform) => {
     if (!video) return;
     const site = POST_PLATFORM_INFO[platform];
-    if (shareSheet) {
-      try {
-        await navigator.share({ files: [videoFile(video)] });
-        onSaved?.();
-        return;
-      } catch (err) {
-        // Closing the sheet is not a failure; anything else falls back to a download.
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-      }
+    if (shareSheet && (await shareVideo())) return;
+    const where = downloadOnce()
+      ? 'The video is in your downloads.'
+      : 'The video is already in your downloads.';
+    if (os) {
+      // After the save has rendered, so the focus screen's "leave this page?" is gone first.
+      window.setTimeout(() => (window.location.href = appLink(platform, os)), 0);
+      toast(`${where} ${site.appNextStep}`, { durationMs: 8000 });
+      return;
     }
-    downloadVideo(video);
     window.open(site.uploadUrl, '_blank', 'noopener,noreferrer');
-    onSaved?.();
-    toast(`The video is in your downloads. ${site.nextStep}`, { durationMs: 8000 });
+    toast(`${where} ${site.nextStep}`, { durationMs: 8000 });
   };
 
   /**
@@ -1169,8 +1190,8 @@ export function TimelapseExport({
           </div>
           <p className="field-hint">
             {shareSheet
-              ? 'They open your phone’s share menu. Pick the app there.'
-              : 'The video downloads and the site opens in a new tab.'}
+              ? `They open your ${device === 'phone' ? 'phone’s' : 'tablet’s'} share menu. Pick the app there.`
+              : `${downloaded ? 'The video is in your downloads, and the' : 'The video downloads and the'} ${os ? 'app opens.' : 'site opens in a new tab.'}`}
             {postNote && ` ${postNote}`}
           </p>
           <PostPreview
