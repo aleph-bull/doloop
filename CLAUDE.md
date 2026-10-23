@@ -273,10 +273,12 @@ and never explain the difference on screen.
   follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
   never use another company's name (owner).
 - **The background never picks light or dark** (owner, 2026-10-23). There is no Recommended
-  mode any more (stored rows follow the system); photo themes keep the mode already chosen,
+  mode any more (0035 gave stored rows the light or dark picked in setup); photo themes keep the mode already chosen,
   and only the flat colours set one. Text straight on a photo is the mode's own (white in
   dark, black in light), and the photo is washed darker or lighter under it (`adaptToPhoto`).
-  Don't bring back a switch that follows the photo.
+  Don't bring back a switch that follows the photo. An account starts on the light or dark it picks in
+  setup (Dark until then or if skipped, never the device's); only a person who picks System
+  follows their device (owner, 2026-10-23).
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.

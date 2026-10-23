@@ -15,7 +15,8 @@ export type ResolvedTheme = 'light' | 'dark';
  * Resolve the theme to apply. Kickoff decision: when the mode is 'system' and the
  * system preference cannot be read, default to dark. 'recommended' was a mode that took
  * light or dark from the background; it was removed (owner, 2026-10-23: the background
- * never picks the mode), and rows that still hold it follow the system.
+ * never picks the mode). Migration 0035 gave the stored ones the light or dark picked in
+ * setup; anything still holding it is dark, the default, never the device's setting.
  */
 export function resolveTheme(
   mode: ThemeMode,
@@ -24,6 +25,7 @@ export function resolveTheme(
     : undefined,
 ): ResolvedTheme {
   if (mode === 'light' || mode === 'dark') return mode;
+  if (mode === 'recommended') return 'dark';
   if (!matchMedia) return 'dark';
   try {
     if (matchMedia('(prefers-color-scheme: light)').matches) return 'light';

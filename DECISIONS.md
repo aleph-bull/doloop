@@ -2477,3 +2477,11 @@ The owner, on a phone: "add a blur on social for mobile and make it the same blu
 
 - **The card moved into the Backdrop** (`sheet` prop, turned on by AppShell for Social at phone width, `.backdrop-sheet` in styles.css). It was a layer the Social page put on the body, which went the moment the page did and leaned on the browser's live blur wherever the photo wasn't blurred once. Now it shows the very image the cards' panes use (`--glass-image`, Chromium); where that isn't made (Safari, or a colour boost), the photo is blurred once in the sheet itself with a CSS filter at the glass's blur, never a live backdrop blur. The cards' colour goes over it. It fades in over 360 ms as Social opens and out as it goes, then hides, so it costs nothing on other pages.
 - **The bottom bar's name is cut off, not "…"**: the name's column slides open from nothing, and with `text-overflow: ellipsis` it read "So…" before "Social". With `clip` the word slides out whole.
+
+## The mode picked in setup, never the device's setting by default, 2026-10-23 (user request)
+
+After Recommended went, it followed the device, so the owner's phone, set to light, turned the app light (Dawn Skies in light mode) the next time it opened, without them choosing it: "just dont default to system like ever for both devices". Then, to a forced dark: "no it should start on whatever theme that the person decides during onboarding".
+
+- **A new account starts on what it picks in setup**: the look step saves Light or Dark with the look, as it already did. Until then, and if that step is skipped, it is Dark (`DEFAULT_SETTINGS.theme.mode`, also the first paint before settings load, so the sign-in page is dark), never the device's setting.
+- **Accounts still on the old Recommended mode take the light or dark they picked in setup** (migration **0035_theme_mode_from_setup**, from `onboarding_answers.look.dark`), or dark when they never answered it. A row that somehow still holds Recommended shows dark (`resolveTheme`, and the Mode switch shows Dark).
+- Only someone who picks System follows their device.

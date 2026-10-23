@@ -29,7 +29,7 @@ export function useResolvedAppearance(settings: UserSettings | undefined): Resol
   const customImageUrl = wantsUpload ? (uploaded.data?.dataUrl ?? null) : null;
   const backgroundId = settings?.theme.backgroundId ?? 'aurora';
   return {
-    theme: resolveTheme(settings?.theme.mode ?? 'system'),
+    theme: resolveTheme(settings?.theme.mode ?? DEFAULT_SETTINGS.theme.mode),
     backgroundId,
     customImageUrl,
   };
@@ -53,8 +53,8 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
     if (settings) applyUserTheme(settings, document.documentElement, backdropId);
   }, [settings, backdropId]);
 
-  // Follow OS theme changes while the system decides (the old Recommended mode does too).
-  const followsSystem = settings?.theme.mode === 'system' || settings?.theme.mode === 'recommended';
+  // Follow OS theme changes while the system decides: only when someone picked System.
+  const followsSystem = settings?.theme.mode === 'system';
   useEffect(() => {
     if (!settings || !followsSystem) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');

@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SETTINGS,
   matchingThemePreset,
   THEME_PRESETS,
   THEME_TAGS,
@@ -50,7 +51,9 @@ const rgb = (c: RGB) => `rgb(${c.join(' ')})`;
  * the mode in use (`current`), which the others keep.
  */
 export function lookTheme(p: ThemePreset, current?: ResolvedTheme): ResolvedTheme {
-  return p.look.mode ? resolveTheme(p.look.mode) : (current ?? resolveTheme('system'));
+  return p.look.mode
+    ? resolveTheme(p.look.mode)
+    : (current ?? resolveTheme(DEFAULT_SETTINGS.theme.mode));
 }
 
 /** The preview's background: the photo's thumbnail, or the colour or gradient with its texture. */

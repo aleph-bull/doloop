@@ -49,7 +49,7 @@ export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
 /**
  * 'recommended' took light or dark from the background; it was removed (2026-10-23) and stays
- * here only so rows that still hold it read. It follows the system now.
+ * here only so rows that still hold it read. It shows dark now, the default.
  */
 export type ThemeMode = 'system' | 'light' | 'dark' | 'recommended';
 export type PanelStyle = 'opaque' | 'glass' | 'custom' | 'matte';

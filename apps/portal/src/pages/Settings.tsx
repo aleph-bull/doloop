@@ -547,8 +547,8 @@ export function Settings() {
                 <span className="field-label">Mode</span>
                 <Segmented
                   ariaLabel="Mode"
-                  // The old Recommended mode follows the system now, so it shows as System.
-                  value={s.theme.mode === 'recommended' ? 'system' : s.theme.mode}
+                  // The old Recommended mode is dark now, so it shows as Dark.
+                  value={s.theme.mode === 'recommended' ? 'dark' : s.theme.mode}
                   onChange={(mode) => patch({ theme: { mode } })}
                   options={[
                     { value: 'system', label: 'System' },
