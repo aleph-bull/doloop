@@ -114,6 +114,11 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   unformatted, and it rewrites other sessions' work. Format only the files you changed.
 - Ideas they mention but don't ask to have built go in `docs/IDEAS.md`. Don't build them
   unasked.
+- **The changelog** (`apps/site/src/content/changelog.html`, `/changelog/` on the site) is updated
+  only when the owner tells you to, never as part of other work. It is written by hand from
+  the commits: one entry per day, newest first, in plain words for people using the app, and
+  it only ever calls the app Komodon (never Doloop or any older name). The page shows only the
+  last three days; never delete older entries, they stay in the file and the sidebar on purpose.
 - **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
   to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
   numbered batches. Work on it only when they ask, and tick items off there as they ship.
@@ -978,8 +983,9 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   disliked them). The closing reads "The study app." with a hand-drawn underline under
   "The". Three clips are made from YouTube videos the owner downloaded; see
   apps/site/README.md before publishing.
-  The docs live at `apps/site/docs/index.html` (`/docs/`), written from the code: when a
-  feature's labels, defaults or limits change, update its topic there too.
+  The docs' text lives in `apps/site/src/content/docs.html` (`/docs/`), written from the code:
+  when a feature's labels or where it lives change, update its topic there too. Keep formulas,
+  thresholds and planning rules out of it (the owner doesn't want a blueprint for a copy).
   Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
   the devices with it, each section as it arrives, and the pinned scenes (`[data-scrub]`).

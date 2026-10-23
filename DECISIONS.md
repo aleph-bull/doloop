@@ -2201,3 +2201,22 @@ limits as they are), linked as "Docs" in the homepage nav and footer.
 
 The closing heading is now "The study app." (owner's words), with a hand-drawn underline
 under "The" that draws itself in.
+
+## A changelog, and docs that aren't a blueprint, 2026-10-22 (owner request)
+
+- **Changelog** at `/changelog/` on the site: one entry per day since the first commit on
+  2026-09-20, newest first, written from the commits in plain words for people using the app.
+  It only ever calls the app Komodon (no older names). It changes only when the owner asks
+  (CLAUDE.md says so).
+- **The docs no longer spell out how things work inside**: no XP formula, level thresholds,
+  shop prices, pace thresholds, Plan my week's rules or drill schedule. They say what each
+  thing does and where it is, "so no one can just copy and paste the contents" and rebuild it.
+- **Kept from AI chat assistants and from wholesale copying** (docs and changelog): the text is
+  sealed at build time and put together in the browser, robots.txt asks AI crawlers and
+  assistants to keep out, the pages and headers say noai, select-all is off, and a copy takes
+  400 characters at most. All of this deters rather than prevents: a person can still read and
+  retype it, and the seal's key ships with the page. Vercel's firewall can also block AI bots
+  outright (a project setting the owner would turn on).
+- **The changelog shows the last three days only** (owner, same day): older days stay in the
+  file and in the sidebar back to September 20, greyed, and clicking them does nothing. Counted
+  from the reader's today, so days drop off on their own; the newest day always shows.
