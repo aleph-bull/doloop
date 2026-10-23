@@ -10,6 +10,8 @@ export interface PopoutProps {
   width?: number;
   /** Room it wants below the button before it opens above instead. */
   room?: number;
+  /** Which edge of the button it lines up with: the left (the default) or the right. */
+  align?: 'start' | 'end';
   className?: string;
   /** The content, given the function that puts it away. */
   children: (close: () => void) => ReactNode;
@@ -28,6 +30,7 @@ export function Popout({
   label,
   width,
   room = 320,
+  align = 'start',
   className,
   children,
 }: PopoutProps) {
@@ -50,7 +53,8 @@ export function Popout({
       const below = window.innerHeight - r.bottom - 14;
       const above = r.top - 14;
       const up = below < room && above > below;
-      pop.style.left = `${Math.min(Math.max(8, r.left), window.innerWidth - w - 8)}px`;
+      const x = align === 'end' ? r.right - w : r.left;
+      pop.style.left = `${Math.min(Math.max(8, x), window.innerWidth - w - 8)}px`;
       pop.style.width = `${w}px`;
       pop.style.top = up ? 'auto' : `${r.bottom + 6}px`;
       pop.style.bottom = up ? `${window.innerHeight - r.top + 6}px` : 'auto';
@@ -78,7 +82,7 @@ export function Popout({
       window.removeEventListener('resize', follow);
       window.removeEventListener('scroll', follow, true);
     };
-  }, [width, room]);
+  }, [width, room, align]);
 
   return (
     <>

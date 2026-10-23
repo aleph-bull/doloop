@@ -2056,6 +2056,32 @@
     width: 100%;
   }
 }
+/* On a computer: the footer, and at its right the pill the pressing tasks pop out of. */
+.start-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 4px;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.start-panel-foot:empty {
+  display: none;
+}
+.start-panel-foot > * {
+  min-width: 0;
+}
+/* The row draws the rule, for the footer and the pill both. */
+.start-panel-foot .divider {
+  display: none;
+}
+.start-pill.start-pressing-pill {
+  flex: none;
+  margin-left: auto;
+  padding: 0 14px;
+  font-weight: 500;
+}
 .start-pressing {
   display: flex;
   flex-direction: column;

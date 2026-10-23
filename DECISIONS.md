@@ -2401,3 +2401,22 @@ version borrows Linear's property pills and the running apps' one big Start.
 - The card went from 446px tall to 283px.
 - **The phone is unchanged** (owner: "do not change the mobile version"), its "Minutes still
   count" included.
+
+## The dashboard's start card: Most pressing beside the quote, in a small pop-out, 2026-10-22 (owner request)
+
+The owner sent a screenshot of how the "Ready when you are" card should look on a computer:
+the title, the day's line and the two buttons on top, one rule, then the quote with "Most
+pressing" at its right. And: "make the drop down a separate small card window that just shows
+the names and tag of on track or not".
+
+- **One rule, two rows.** The pressing list no longer sits between the buttons and the quote
+  under a rule of its own. The quote and a "Most pressing" pill (the count and a chevron) share
+  the row under the one rule, the pill at the right, centred on the quote.
+- **The pill pops out a small card** (`Popout`, lined up with the pill's right edge; it gained
+  an `align` for that): each task's name and its pace tag ("On track", "Behind" and so on, the
+  same `StatusChip`). Where the task sits, its due date and its minutes are gone from it.
+  Clicking a task still closes the card and goes to that task further down. Escape and a click
+  anywhere else close it. It starts shut on every visit; remembering the list open or folded
+  (`komogon.pressing-open`) is the phone's alone now.
+- **The phone is unchanged** (narrower than 560px, as the start dialog): the list still unfolds
+  under Start with where, due and minutes, and the quote keeps its own rule.
