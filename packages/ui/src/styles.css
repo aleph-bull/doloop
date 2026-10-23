@@ -311,6 +311,62 @@ a:hover {
     );
   }
 }
+/*
+ * One card over the whole window (the Backdrop's `sheet`: Social on a phone). The photo
+ * blurred the way the cards show it, then the cards' own colour, fading in and out with the
+ * page. Where the photo is blurred once for the panes (data-glass-image) it is that image;
+ * elsewhere the photo is blurred here, once, at the glass's blur, never live under the page.
+ * Hidden once faded, so it costs nothing on the other pages.
+ */
+.backdrop-sheet {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 360ms var(--ease-out),
+    visibility 0s linear 360ms;
+}
+.backdrop-sheet.is-on {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 360ms var(--ease-out),
+    visibility 0s;
+}
+.backdrop-sheet-photo {
+  position: absolute;
+  /* Out past the edges, so the blur doesn't fade them. */
+  inset: calc(var(--glass-blur) * -2);
+  background:
+    var(--glass-image-over, linear-gradient(transparent, transparent)),
+    var(--sheet-photo) center / cover no-repeat;
+  filter: blur(var(--glass-blur));
+}
+:root[data-glass-image] .backdrop-sheet-photo {
+  inset: 0;
+  filter: none;
+  background:
+    var(--glass-image-over, linear-gradient(transparent, transparent)),
+    var(--glass-image) var(--glass-image-x) var(--glass-image-y) / var(--glass-image-size) no-repeat;
+}
+.backdrop-sheet-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--panel-fill);
+}
+:root[data-panel='glass'] .backdrop-sheet-fill {
+  background: var(--glass-fill);
+}
+:root[data-motion='off'] .backdrop-sheet {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .backdrop-sheet {
+    transition: none;
+  }
+}
 /* Opaque, custom and matte: glass cards become panels too. */
 :root:not([data-panel='glass']) .glass {
   --fg: var(--ink);

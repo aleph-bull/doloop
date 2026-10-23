@@ -24,6 +24,11 @@ export interface BackdropProps {
    * once for the cards that sit straight on it (glass-image.ts); the app shell passes it.
    */
   frost?: { blur: number; saturate: number };
+  /**
+   * One card over the whole window (Social on a phone): the photo blurred as the cards show
+   * it, under the cards' own colour. True fades it in, false fades it out; left out, none.
+   */
+  sheet?: boolean;
 }
 
 /** Wait this long after the window stops changing size before blurring the photo again. */
@@ -182,6 +187,7 @@ export function Backdrop({
   glass,
   texture = 'none',
   frost,
+  sheet,
 }: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
@@ -354,6 +360,19 @@ export function Backdrop({
             background: washCss ?? undefined,
           }}
         />
+      )}
+      {/* The card over everything (styles.css, .backdrop-sheet): the photo blurred, then the
+          cards' colour. The photo blurred once for the panes, where there is one. */}
+      {sheet !== undefined && (
+        <div className={`backdrop-sheet${sheet ? ' is-on' : ''}`}>
+          {(imageUrl || photoUrl) && (
+            <div
+              className="backdrop-sheet-photo"
+              style={{ '--sheet-photo': `url("${imageUrl ?? photoUrl}")` } as CSSProperties}
+            />
+          )}
+          <div className="backdrop-sheet-fill" />
+        </div>
       )}
     </div>
   );

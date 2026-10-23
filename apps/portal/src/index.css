@@ -528,11 +528,12 @@
     grid-template-columns 340ms var(--tab-ease),
     opacity 200ms var(--ease-out);
 }
+/* Cut off, not "…": while the name slides open it would read "So…" before "Social". */
 :root[data-tabbar] .tabbar-label > span {
   min-width: 0;
   overflow: hidden;
   padding-left: 7px;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   white-space: nowrap;
   font-size: var(--text-sm);
   font-weight: 600;

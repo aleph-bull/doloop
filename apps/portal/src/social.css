@@ -2848,45 +2848,11 @@
 /*
  * Laid out like the photo-sharing apps: friends, the title and the bell across the top, the
  * views as plain words, and posts straight on the page instead of in cards, the picture or
- * video big and first. The whole page is one big card (owner, 2026-10-23): the card's own
- * colour and blur over the whole window, blurred in on arrival, so the text keeps the mode's
- * colours on any photo. The computer's feed is unchanged.
+ * video big and first. The whole page is one big card (owner, 2026-10-23): the Backdrop's
+ * sheet (styles.css, .backdrop-sheet), the cards' colour and blur over the whole window, fading
+ * in and out with the page, so the text keeps the mode's colours on any photo. The
+ * computer's feed is unchanged.
  */
-.social-sheet {
-  position: fixed;
-  inset: 0;
-  /* Over the backdrop (also -1, earlier in the page), under everything else. */
-  z-index: -1;
-  pointer-events: none;
-  background: var(--panel-fill);
-  animation: social-sheet-in 360ms var(--ease-out) backwards;
-}
-:root[data-panel='glass'] .social-sheet {
-  background: var(--glass-fill);
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-}
-/* With the photo blurred once (glass-image.ts), the whole of it, like a card's pane. */
-:root[data-panel='glass'][data-glass-image] .social-sheet {
-  backdrop-filter: none;
-  background:
-    linear-gradient(var(--glass-fill), var(--glass-fill)),
-    var(--glass-image-over, linear-gradient(transparent, transparent)),
-    var(--glass-image) var(--glass-image-x) var(--glass-image-y) / var(--glass-image-size) no-repeat;
-}
-/* Holds nothing, so fading it is safe for the cards' glass. */
-@keyframes social-sheet-in {
-  from {
-    opacity: 0;
-  }
-}
-:root[data-motion='off'] .social-sheet {
-  animation: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='on']) .social-sheet {
-    animation: none;
-  }
-}
 /* Text on it is text on a card: the theme's own, never the photo's. */
 .social-page {
   --fg: var(--ink);

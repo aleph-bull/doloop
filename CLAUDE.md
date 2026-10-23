@@ -386,8 +386,9 @@ reasons. What to keep doing:
   phone styles are the last block of `social.css`; posts keep the computer's markup, so change
   a phone post in CSS. Your card and the friends card aren't on a phone's feed: the friends
   button opens the friends card in a sheet. The whole page sits on one big card
-  (`.social-sheet`, 2026-10-23): the card's colour and blur over the window, faded in on
-  arrival, with card text (`.social-page`) and the cards on it a step lighter or darker.
+  (2026-10-23): the Backdrop's `sheet` (`.backdrop-sheet`, turned on by AppShell), the
+  cards' blurred photo and colour over the window, fading in and out with the page, with
+  card text (`.social-page`) and the cards on it a step lighter or darker.
 
 ## Streaks: how they work (weekly streak added 2026-10-21)
 

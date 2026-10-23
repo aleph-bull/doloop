@@ -1,4 +1,3 @@
-import { createPortal } from 'react-dom';
 import { Navigate, useSearchParams } from 'react-router';
 import { Segmented } from '@komogon/ui';
 import { Feed } from '../components/social/Feed';
@@ -52,11 +51,10 @@ export function Social() {
     );
 
   // A phone: friends and the bell at the top beside the title, the views as plain words, all
-  // on one big card that covers the window (social.css, `.social-sheet`).
+  // on one big card that covers the window (the Backdrop's sheet, turned on by AppShell).
   if (phone)
     return (
       <div className="social-page flex flex-col gap-4">
-        {createPortal(<div className="social-sheet" aria-hidden />, document.body)}
         <div className="social-top">
           <FriendsButton />
           <h1 className="page-title social-top-title">Social</h1>
