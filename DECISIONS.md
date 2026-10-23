@@ -2377,6 +2377,50 @@ The owner asked: "add usernames, start with @"; "give all users a username now j
 - No explanation of the rules on screen (the plain-labels rule): the field only says what is wrong when something is ("No spaces.", "No two symbols in a row.") and, while held, "Can change again Nov 5".
 - **No name, then the username is the name, without its @** (owner, the same night: "if someone has username but no name just make their username BIG and remove the name", then "remove the @ if they only have a username and no name"): `personName` in core gives the name, else the bare username, else "Someone", everywhere the API names a person (profiles, people lists, the leaderboard). So the profile's big title is "komodev" and the small @ line under it goes (`showsUsername`: not when the name is the username). The profile's edit dialog reads your own name from your account, since the title can no longer tell "no name" apart.
 
+## The start card on a computer: a task button, three pills, one Start, 2026-10-22 (owner request)
+
+The owner called the computer's "Start a session" card an eyesore: the picker inside it made
+the card taller than the window, so the card scrolled and its list scrolled too. Tried and
+turned down along the way: a two-pane rebuild ("looks like ass"), then the original card with
+the picker behind a button ("the functionality of the card is much better now, but it is so
+ugly"). Asked which apps do this well, the owner said to redo it, keeping the phone as is. This
+version borrows Linear's property pills and the running apps' one big Start.
+
+- **What to study is one big button** (`SubjectButton` in SubjectPicker.tsx): the task and where
+  it lives, or "Choose what to study". It pops the picker (search, the course pages) out under
+  it. No "Studying" label; "No task" stands alone (no "Minutes still count"), and the picker
+  lost its "Nothing chosen yet" line.
+- **Then a pill each for how it runs:** Pomodoro or Continuous (its pop-out has the lengths under
+  Pomodoro and "Change lengths"), how long ("Unlimited", "50 min", "Until 4:30 PM"; its pop-out
+  has the three choices and the minus/plus minutes or the time), and "Timer shown" / "Timer
+  hidden", which flips on a click. No field labels or hints on the card.
+- **One full-width Start**, and an X at the top right in place of Cancel.
+- **Pop-outs** are `Popout.tsx`: a popover in the browser's top layer, since anything portalled
+  outside a modal dialog is inert. Escape and a click anywhere else close it; choosing closes the
+  task and work-style ones.
+- The card went from 446px tall to 283px.
+- **The phone is unchanged** (owner: "do not change the mobile version"), its "Minutes still
+  count" included.
+
+## The dashboard's start card: Most pressing beside the quote, in a small pop-out, 2026-10-22 (owner request)
+
+The owner sent a screenshot of how the "Ready when you are" card should look on a computer:
+the title, the day's line and the two buttons on top, one rule, then the quote with "Most
+pressing" at its right. And: "make the drop down a separate small card window that just shows
+the names and tag of on track or not".
+
+- **One rule, two rows.** The pressing list no longer sits between the buttons and the quote
+  under a rule of its own. The quote and a "Most pressing" pill (the count and a chevron) share
+  the row under the one rule, the pill at the right, centred on the quote.
+- **The pill pops out a small card** (`Popout`, lined up with the pill's right edge; it gained
+  an `align` for that): each task's name and its pace tag ("On track", "Behind" and so on, the
+  same `StatusChip`). Where the task sits, its due date and its minutes are gone from it.
+  Clicking a task still closes the card and goes to that task further down. Escape and a click
+  anywhere else close it. It starts shut on every visit; remembering the list open or folded
+  (`komogon.pressing-open`) is the phone's alone now.
+- **The phone is unchanged** (narrower than 560px, as the start dialog): the list still unfolds
+  under Start with where, due and minutes, and the quote keeps its own rule.
+
 ## A shorter composer and the post card reworked, 2026-10-22 (user request)
 
 The owner, on Social: the composer was "so tall and gross looking make it shorter and make post fill in that empty space"; then, for posts: "make 1h focus in its own little card thing", "make RSM 222 - slides review kinda like a title of sorts", "remove the trash can, add 3 dots at the bottom left where i can edit the post body or delete it", and "put the time ... on the top right on the same line as the @zachary bit".

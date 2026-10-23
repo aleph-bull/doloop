@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, Maximize2, Play } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button, Glass, Reveal } from '@komogon/ui';
 import { fmtDue, fmtMinutes } from '../lib/format';
+import { NARROW_QUERY, useMediaQuery } from '../lib/media';
+import { Popout } from './Popout';
 import { StatusChip } from './StatusChip';
 
 export interface PlanCardProps {
@@ -43,9 +45,11 @@ function writeOpen(open: boolean): void {
 }
 
 /**
- * The dashboard's start panel: one big Start, the focus screen a line under it, and the
- * most pressing tasks of the day in small text, each a link down to its card. The plan
- * itself still comes from getDailyPlan (spec §3); the panel just no longer picks for you.
+ * The dashboard's start panel: one big Start, the focus screen beside it, and the most
+ * pressing tasks of the day, each a link down to its card. On a computer they pop out of a
+ * pill beside the footer, a name and a pace tag each; on a phone they unfold under Start,
+ * with where they sit, the due date and the minutes. The plan itself still comes from
+ * getDailyPlan (spec §3); the panel just no longer picks for you.
  */
 export function PlanCard({
   plan,
@@ -56,6 +60,7 @@ export function PlanCard({
   todayLine,
   footer,
 }: PlanCardProps) {
+  const narrow = useMediaQuery(NARROW_QUERY);
   const pressing = plan.slice(0, PRESSING);
   const [open, setOpen] = useState(readOpen);
   const toggle = () => {
@@ -80,7 +85,52 @@ export function PlanCard({
           </Button>
         </div>
       </div>
-      {pressing.length > 0 && (
+      {!narrow && (
+        <div className="start-panel-foot">
+          {footer}
+          {pressing.length > 0 && (
+            <Popout
+              label="Most pressing tasks"
+              triggerClassName="start-pill start-pressing-pill"
+              className="is-menu"
+              width={300}
+              room={200}
+              align="end"
+              trigger={
+                <>
+                  <span>Most pressing</span>
+                  <span className="start-pressing-count tabular">{pressing.length}</span>
+                  <ChevronRight size={14} aria-hidden className="start-pill-chevron" />
+                </>
+              }
+            >
+              {(close) => (
+                <ul className="start-menu">
+                  {pressing.map((p) => (
+                    <li key={p.nodeId}>
+                      <button
+                        type="button"
+                        className="start-option"
+                        onClick={() => {
+                          close();
+                          onPick(p.nodeId);
+                        }}
+                        title="Go to this task"
+                      >
+                        <span className="start-option-text">
+                          <span className="start-pressing-title">{p.title}</span>
+                        </span>
+                        <StatusChip status={p.status} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Popout>
+          )}
+        </div>
+      )}
+      {narrow && pressing.length > 0 && (
         <div className="start-pressing">
           <button
             type="button"
@@ -128,7 +178,7 @@ export function PlanCard({
           </Reveal>
         </div>
       )}
-      {footer}
+      {narrow && footer}
     </Glass>
   );
 }

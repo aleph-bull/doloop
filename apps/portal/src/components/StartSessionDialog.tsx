@@ -6,11 +6,24 @@ import type {
 } from '@komogon/core';
 import { buildIndex, describeCut, modeForPlan, pathLabel, pomodoroCut } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronRight, Minus, Plus } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Hourglass,
+  Minus,
+  Play,
+  Plus,
+  Timer,
+  X,
+} from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Button, Input, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
+import { Button, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
 import { api, ApiError } from '../lib/api';
+import { fmtTime } from '../lib/format';
 import { isPhone } from '../lib/device';
 import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
 import { NARROW_QUERY, useMediaQuery } from '../lib/media';
@@ -109,12 +122,13 @@ function minutesUntilLocal(time: string): number {
   return Math.round((Date.parse(todayAtLocal(time)) - Date.now()) / 60_000);
 }
 
+import { Popout } from './Popout';
 import { SubjectPages } from './SubjectPages';
 import {
   describeSubject,
   nodeKey,
   routineKey,
-  SubjectPicker,
+  SubjectButton,
   useSubjectIndex,
 } from './SubjectPicker';
 
@@ -486,6 +500,31 @@ export function StartSessionDialog({
   // On a phone, Escape and the system back gesture step back out of the picker first.
   const closeSheet = () => (narrow && pickerOpen ? closePicker() : onClose());
 
+  /** The computer's length pill: how long, in a word or two. */
+  const lengthLabel =
+    duration === 'unlimited'
+      ? 'Unlimited'
+      : duration === 'for'
+        ? plannedMinutes
+          ? fmtLength(plannedMinutes)
+          : 'For a while'
+        : endTime
+          ? `Until ${fmtTime(todayAtLocal(endTime))}`
+          : 'Until a time';
+
+  /** One choice in a pill's pop-out on a computer, ticked when it is the one. */
+  const menuOption = (on: boolean, title: string, sub: string | undefined, pick: () => void) => (
+    <li key={title}>
+      <button type="button" className="start-option" aria-pressed={on} onClick={pick}>
+        <span className="start-option-text">
+          <span>{title}</span>
+          {sub && <span className="start-option-sub">{sub}</span>}
+        </span>
+        {on && <Check size={16} aria-hidden className="start-option-check" />}
+      </button>
+    </li>
+  );
+
   const phoneForm = (
     <div className="ss-form" inert={pickerOpen}>
       {lockSubject && node ? (
@@ -631,28 +670,31 @@ export function StartSessionDialog({
           open={open}
           onClose={onClose}
           title="Start a session"
+          className="start-dialog"
           actions={
-            <>
-              <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={go} loading={start.isPending} disabled={!subject}>
-                {confirmCut ? 'Start anyway' : 'Start'}
-              </Button>
-            </>
+            <Button
+              variant="primary"
+              size="lg"
+              className="start-go"
+              onClick={go}
+              loading={start.isPending}
+              disabled={!subject}
+            >
+              <Play size={16} aria-hidden className="start-go-icon" />
+              {confirmCut ? 'Start anyway' : 'Start'}
+            </Button>
           }
         >
-          <div className="flex flex-col gap-4">
+          <div className="start-body">
             {lockSubject && node ? (
-              <div className="field">
-                <span className="field-label">Studying</span>
-                <div className="start-locked-subject">
-                  <strong>{node.title}</strong>
-                  {lockedPath && <span className="muted">{lockedPath}</span>}
-                </div>
+              <div className="start-subject is-locked">
+                <span className="start-subject-text">
+                  <span className="start-subject-title truncate">{node.title}</span>
+                  {lockedPath && <span className="start-subject-where truncate">{lockedPath}</span>}
+                </span>
               </div>
             ) : (
-              <SubjectPicker
+              <SubjectButton
                 nodes={nodes}
                 routines={routineOptions}
                 today={today}
@@ -661,47 +703,136 @@ export function StartSessionDialog({
               />
             )}
 
-            {styleField}
+            {/* How it runs, a pill each; the first two pop out their choices. */}
+            <div className="start-pills">
+              <Popout
+                label="How you work"
+                triggerClassName="start-pill"
+                className="is-menu"
+                width={260}
+                room={200}
+                trigger={
+                  <>
+                    <Timer size={15} aria-hidden />
+                    {style === 'pomodoro' ? 'Pomodoro' : 'Continuous'}
+                    <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
+                  </>
+                }
+              >
+                {(close) => (
+                  <ul className="start-menu">
+                    {menuOption(
+                      style === 'pomodoro',
+                      'Pomodoro',
+                      settings
+                        ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break`
+                        : undefined,
+                      () => {
+                        setStyle('pomodoro');
+                        setConfirmCut(null);
+                        close();
+                      },
+                    )}
+                    {menuOption(style === 'continuous', 'Continuous', undefined, () => {
+                      setStyle('continuous');
+                      setConfirmCut(null);
+                      close();
+                    })}
+                    <li className="start-menu-foot">
+                      <button
+                        type="button"
+                        className="start-option is-link"
+                        onClick={() => {
+                          // The lengths live in Settings, under Timer; the dialog closes on the way.
+                          onClose();
+                          navigate('/settings#timer');
+                        }}
+                      >
+                        Change lengths
+                      </button>
+                    </li>
+                  </ul>
+                )}
+              </Popout>
 
-            <div className="field">
-              <span className="field-label">How long</span>
-              {lengthChoice}
-              <span className="field-hint">{durationHelp}</span>
+              <Popout
+                label="How long"
+                triggerClassName="start-pill"
+                className="is-menu"
+                width={260}
+                room={240}
+                trigger={
+                  <>
+                    <Hourglass size={15} aria-hidden />
+                    {lengthLabel}
+                    <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
+                  </>
+                }
+              >
+                {(close) => (
+                  <div className="start-length">
+                    <ul className="start-menu">
+                      {menuOption(duration === 'unlimited', 'Unlimited', undefined, () => {
+                        setDuration('unlimited');
+                        setConfirmCut(null);
+                        close();
+                      })}
+                      {menuOption(duration === 'for', 'For a while', undefined, () => {
+                        setDuration('for');
+                        setConfirmCut(null);
+                      })}
+                      {menuOption(duration === 'until', 'Until a time', undefined, () => {
+                        setDuration('until');
+                        setConfirmCut(null);
+                      })}
+                    </ul>
+                    {duration === 'for' && (
+                      <div className="start-length-field">
+                        <MinutesStepper
+                          value={minutes}
+                          onChange={(v) => {
+                            setMinutes(v);
+                            setConfirmCut(null);
+                          }}
+                        />
+                      </div>
+                    )}
+                    {duration === 'until' && (
+                      <div className="start-length-field">
+                        <input
+                          type="time"
+                          className="input"
+                          aria-label="Stop at"
+                          value={endTime}
+                          onChange={(e) => {
+                            setEndTime(e.target.value);
+                            setConfirmCut(null);
+                          }}
+                        />
+                        {untilHint && <span className="field-hint">{untilHint}</span>}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Popout>
+
+              <button
+                type="button"
+                className={`start-pill${showTimer ? '' : ' is-off'}`}
+                aria-pressed={showTimer}
+                onClick={() => setShowTimer(!showTimer)}
+              >
+                {showTimer ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />}
+                {showTimer ? 'Timer shown' : 'Timer hidden'}
+              </button>
             </div>
 
-            {duration === 'for' && (
-              <Input
-                label="Minutes"
-                type="number"
-                min={1}
-                max={1440}
-                step={5}
-                value={minutes}
-                onChange={(e) => {
-                  setMinutes(e.target.value);
-                  setConfirmCut(null);
-                }}
-                hint={plannedMinutes ? fmtLength(plannedMinutes) : undefined}
-              />
-            )}
-
-            {duration === 'until' && (
-              <Input
-                label="Stop at"
-                type="time"
-                value={endTime}
-                onChange={(e) => {
-                  setEndTime(e.target.value);
-                  setConfirmCut(null);
-                }}
-                hint={untilHint}
-              />
-            )}
-
             {cutLine}
-
-            <Toggle checked={showTimer} onChange={setShowTimer} label="Show the timer" />
           </div>
+          {/* Last in the card so the keys reach it after the form; drawn at the top right. */}
+          <button type="button" className="start-close" aria-label="Close" onClick={onClose}>
+            <X size={18} aria-hidden />
+          </button>
         </Modal>
       )}
       <Modal
