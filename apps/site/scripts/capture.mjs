@@ -1,99 +1,208 @@
-// Screenshots of the seeded sandbox portal for the homepage, through the installed Chrome.
-// Needs playwright-core and jose: run from a folder that has them installed (see README).
-import { chromium } from 'playwright-core';
-import { SignJWT } from 'jose';
-import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync } from 'node:fs';
+// Every screenshot the homepage uses, from the seeded sandbox (Jerry). PNGs land in ./out;
+// convert.mjs turns them into the site's webp files.
+import { api, openBrowser, newPage, go, outDir, fakeCamera } from './capture-lib.mjs';
+import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-const APP = 'C:/Users/zachz/Documents/Doloop/Doloop';
-const OUT = 'C:/Users/zachz/Documents/Doloop/komodon-site/public/shots';
-const PORTAL = 'http://localhost:5187';
-const API = 'http://127.0.0.1:8801';
-const EMAIL = 'maya@komodon.demo';
-
-const envText = readFileSync(join(APP, 'apps/api/.env'), 'utf8');
-const SECRET = /^DEV_AUTH_SECRET=(.+)$/m.exec(envText)[1].trim();
-const hex = createHash('sha256').update(EMAIL.toLowerCase()).digest('hex');
-const ID = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
-const token = await new SignJWT({ email: EMAIL })
-  .setProtectedHeader({ alg: 'HS256' })
-  .setSubject(ID)
-  .setIssuedAt()
-  .setExpirationTime('30d')
-  .sign(new TextEncoder().encode(SECRET));
-
-const api = async (method, path, body) => {
-  const res = await fetch(API + path, {
-    method,
-    headers: {
-      authorization: `Bearer ${token}`,
-      'x-timezone': 'America/Toronto',
-      'content-type': 'application/json',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
-  return res.json();
-};
-
-mkdirSync(OUT, { recursive: true });
+const OUT = outDir(process.env.SHOTS_OUT ?? fileURLToPath(new URL('./out', import.meta.url)));
 const only = process.argv.slice(2);
-const want = (n) => only.length === 0 || only.includes(n);
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const want = (n) => only.length === 0 || only.some((o) => n === o || n.startsWith(`${o}-`));
 
-async function shoot(name, path, { width = 1440, height = 900, scale = 2, before } = {}) {
+const BASE_THEME = { mode: 'dark', backgroundId: 'cotton-candy', accent: 'sky', panel: 'glass' };
+const POMODORO = { workMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4 };
+
+await api('PATCH', '/api/me/settings', {
+  quote: { appTips: false },
+  visualizer: { promptDismissed: true },
+  timelapse: { record: 'never' },
+  theme: BASE_THEME,
+  pomodoro: POMODORO,
+});
+// Clear the nudge so the dashboard reads cleanly.
+await api('POST', '/api/social/nudges/seen').catch(() => {});
+
+const browser = await openBrowser();
+
+async function shoot(name, path, opts = {}) {
   if (!want(name)) return;
-  const ctx = await browser.newContext({
-    viewport: { width, height },
-    deviceScaleFactor: scale,
-    colorScheme: 'light',
-    timezoneId: 'America/Toronto',
-  });
-  await ctx.addInitScript(
-    ({ token, email }) => {
-      localStorage.setItem('komogon.dev.token', token);
-      localStorage.setItem('komogon.dev.email', email);
-    },
-    { token, email: EMAIL },
-  );
-  await ctx.addInitScript(() => { document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.id = 'hide-tips'; st.textContent = '.tip-fold, .tip-card, .hint, .hint-card, [class^="hint"], [class*=" hint"] { display: none !important; }'; document.head.appendChild(st); }); });
-  const page = await ctx.newPage();
-  await page.goto(PORTAL + path, { waitUntil: 'networkidle' });
-  await page.evaluate(() => document.fonts.ready);
+  const {
+    width = 1440,
+    height = 900,
+    scale = 2,
+    mobile = false,
+    css = '',
+    init = null,
+    before,
+    wait = 1800,
+  } = opts;
+  const { ctx, page } = await newPage(browser, { width, height, scale, mobile, css, init });
+  await go(page, path, wait);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(300);
   if (before) await before(page);
-  await page.waitForTimeout(1800);
+  await page.mouse.move(width - 6, height - 6);
+  await page.waitForTimeout(900);
   await page.screenshot({ path: join(OUT, `${name}.png`) });
   console.log('shot', name);
   await ctx.close();
 }
 
-await api('PATCH', '/api/me/settings', { quote: { appTips: false } });
-const dismissTip = async (page) => { const found = await page.waitForSelector('button[aria-label="Close this tip"]', { state: 'attached', timeout: 8000 }).then(() => true).catch(() => false); if (found) { await page.evaluate(() => { const b = document.querySelector('button[aria-label="Close this tip"]'); const box = b.closest('.tip-fold') || b.closest('section'); box.remove(); }); console.log('  tip removed'); } else console.log('  no tip'); await page.waitForTimeout(600); };
-await shoot('today', '/', { before: dismissTip });
-await shoot('today-phone', '/', { width: 390, height: 844, scale: 3, before: dismissTip });
+const theme = (t) => api('PATCH', '/api/me/settings', { theme: { ...BASE_THEME, ...t } });
+// ---- The app as it is: the hero and the feature sections ----
+await shoot('today', '/');
+await shoot('today-phone', '/', { width: 390, height: 844, scale: 3, mobile: true });
 await shoot('analytics', '/analytics');
-await shoot('leaderboard', '/analytics', {
+await shoot('start-dialog', '/', {
   before: async (page) => {
-    await page.getByText('Leaderboard', { exact: true }).first().click();
-    await page.waitForLoadState('networkidle');
+    await page.getByRole('button', { name: 'Start a session' }).first().click();
+    await page.waitForTimeout(1500);
   },
 });
-await shoot('profile', '/social');
-await shoot('achievements', '/achievements');
-await shoot('tasks', '/tasks');
+// The calendar: the week as it stands, then the same week with Plan my week's suggestions.
+const morning = (hour) => async (page) =>
+  page.evaluate((h) => {
+    const el = document.querySelector('.cal-scroll');
+    if (el) el.scrollTop = (el.scrollHeight / 24) * h;
+  }, hour);
+// A taller window so a whole day shows. "Add all" saves the blocks, so they are taken off
+// again afterwards and a second run starts from the same week.
+const CAL = { height: 1040, before: morning(8) };
+const planIt = (add) => async (page) => {
+  await page.getByRole('button', { name: 'Plan my week' }).first().click();
+  await page.waitForTimeout(1200);
+  if (add) {
+    await page.getByRole('button', { name: 'Add all' }).first().click();
+    await page.waitForTimeout(5200);
+  }
+  await morning(8)(page);
+};
+await shoot('cal-week', '/calendar', CAL);
+await shoot('cal-plan', '/calendar', { ...CAL, before: planIt(false) });
+if (want('cal-added')) {
+  const ahead = async () => {
+    const from = new Date(Date.now() - 86_400_000).toISOString();
+    const to = new Date(Date.now() + 14 * 86_400_000).toISOString();
+    const { blocks } = await api('GET', `/api/planned-blocks?from=${from}&to=${to}`);
+    return blocks.filter((b) => b.source === 'app').map((b) => b.id);
+  };
+  const before = new Set(await ahead());
+  await shoot('cal-added', '/calendar', { ...CAL, before: planIt(true) });
+  for (const id of await ahead())
+    if (!before.has(id)) await api('DELETE', `/api/planned-blocks/${id}`);
+}
+await shoot('cal-phone', '/calendar', {
+  width: 390,
+  height: 844,
+  scale: 3,
+  mobile: true,
+  before: morning(9),
+});
+await shoot('feed', '/social');
+await shoot('feed-tall', '/social', { height: 1560 });
+await shoot('leaderboard', '/social?tab=leaderboard');
+await shoot('groups', '/social?tab=groups');
+await shoot('jams', '/social?tab=jams');
 
-// The focus screen needs a running session.
-if (want('focus') || want('today-active')) {
+// ---- Looks: the same app dressed differently ----
+const LOOK = { width: 1280, height: 800, scale: 1.5 };
+const looks = [
+  ['look-fuji', '/', { backgroundId: 'fuji' }],
+  ['look-lilac', '/', { mode: 'light', backgroundId: 'lilac-sky', accent: 'rose' }],
+  ['look-milky', '/', { backgroundId: 'milky-way', accent: 'violet' }],
+  ['look-golden', '/analytics', { backgroundId: 'golden-hour', accent: 'amber' }],
+  ['look-seaglass', '/', { mode: 'light', backgroundId: 'sea-glass', accent: 'mint' }],
+  ['look-neon', '/analytics', { backgroundId: 'neon', accent: 'violet' }],
+  ['look-graphite', '/', { backgroundId: 'graphite', panel: 'matte' }],
+  ['look-valley', '/calendar', { mode: 'light', backgroundId: 'cloud-valley' }],
+  ['look-harbour', '/social?tab=groups', { backgroundId: 'harbour-lights', accent: 'amber' }],
+  [
+    'look-panels',
+    '/',
+    { backgroundId: 'blue-ridges', panel: 'custom', panelColor: '#1e2740', panelAlpha: 0.72 },
+  ],
+  [
+    'look-wheat',
+    '/social?tab=leaderboard',
+    { mode: 'light', backgroundId: 'wheatland', accent: 'lemon' },
+  ],
+];
+for (const [name, path, t] of looks) {
+  if (!want(name)) continue;
+  await theme(t);
+  await shoot(name, path, LOOK);
+}
+await theme({});
+
+// ---- The focus screen: a running Pomodoro, then a break ----
 const nodes = (await api('GET', '/api/nodes')).nodes;
-const task = nodes.find((n) => n.title === 'Chapter 6 problem set') ?? nodes[0];
-const started = await api('POST', '/api/sessions', { nodeId: task.id, mode: 'pomodoro' });
-const sessionId = started.active.session.id;
-await shoot('focus', '/focus', { before: async (page) => { for (let i = 0; i < 4; i++) { await page.waitForTimeout(1200); const b = page.getByRole('button', { name: 'Never ask again' }); if (await b.count()) { await b.first().click(); console.log('  declined a prompt'); } else break; } await page.waitForTimeout(2500); } });
-await shoot('today-active', '/', { before: dismissTip });
-// Sessions under a minute cannot be ended, so wait it out, then close it.
-await new Promise((r) => setTimeout(r, 62_000));
-await api('POST', `/api/sessions/${sessionId}/end`, { review: { distracted: 'no', mood: 4 } });
+const task =
+  nodes.find((n) => n.title === 'Problem set 3') ?? nodes.find((n) => n.kind !== 'course');
+if (only.length === 0 || only.some((o) => o.startsWith('focus') || o.startsWith('look-focus'))) {
+  const a = await api('POST', '/api/sessions', { nodeId: task.id, mode: 'pomodoro' });
+  const started = Date.now();
+  await shoot('focus-work', '/focus', { wait: 2600 });
+  // The same screen while a timelapse records it (camera only). CAMERA_PHOTO is the picture
+  // the fake camera shows (any photo of a desk); on a phone that is the camera screen.
+  const photo = process.env.CAMERA_PHOTO
+    ? `data:image/png;base64,${readFileSync(process.env.CAMERA_PHOTO).toString('base64')}`
+    : null;
+  if (want('focus-rec') && photo) {
+    await api('PATCH', '/api/me/settings', { timelapse: { record: 'always' } });
+    await shoot('focus-rec', '/focus', {
+      wait: 2600,
+      init: fakeCamera(photo),
+      before: async (page) => {
+        const camOnly = page.getByRole('button', { name: 'Just the camera' });
+        if (await camOnly.count()) await camOnly.first().click();
+        await page.waitForTimeout(2500);
+      },
+    });
+    await api('PATCH', '/api/me/settings', { timelapse: { record: 'never' } });
+  }
+  if (want('focus-phone') && photo) {
+    await api('PATCH', '/api/me/settings', { timelapse: { record: 'always' } });
+    await shoot('focus-phone', '/focus', {
+      width: 390,
+      height: 844,
+      scale: 3,
+      mobile: true,
+      wait: 4000,
+      init: fakeCamera(photo),
+    });
+    await api('PATCH', '/api/me/settings', { timelapse: { record: 'never' } });
+  }
+  const focusLooks = [
+    ['look-focus-canyon', { backgroundId: 'canyon-stars' }],
+    ['look-focus-rain', { backgroundId: 'rain-front', accent: 'mint' }],
+    ['look-focus-lanterns', { backgroundId: 'lanterns', accent: 'amber' }],
+    ['look-focus-autumn', { backgroundId: 'autumn', accent: 'rose' }],
+    ['look-focus-milky', { backgroundId: 'milky-way', accent: 'violet' }],
+  ];
+  for (const [name, t] of focusLooks) {
+    if (!want(name)) continue;
+    await theme(t);
+    await shoot(name, '/focus', { ...LOOK, wait: 2600 });
+  }
+  await theme({});
+  // Sessions under a minute can't be ended.
+  const left = 62_000 - (Date.now() - started);
+  if (left > 0) await new Promise((r) => setTimeout(r, left));
+  await api('POST', `/api/sessions/${a.active.session.id}/end`, {
+    review: { distracted: 'no', mood: 4 },
+  });
+
+  if (want('focus-break')) {
+    // A one-minute Pomodoro, so the break comes round while we wait.
+    await api('PATCH', '/api/me/settings', { pomodoro: { ...POMODORO, workMin: 1 } });
+    const b = await api('POST', '/api/sessions', { nodeId: task.id, mode: 'pomodoro' });
+    await api('PATCH', '/api/me/settings', { pomodoro: POMODORO });
+    await new Promise((r) => setTimeout(r, 75_000));
+    await shoot('focus-break', '/focus', { wait: 2600 });
+    await api('POST', `/api/sessions/${b.active.session.id}/end`, {
+      review: { distracted: 'no', mood: 4 },
+    });
+  }
 }
 
 await browser.close();

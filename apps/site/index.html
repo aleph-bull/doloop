@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="preload" as="image" href="/backgrounds/cotton-candy.webp" />
+    <link rel="preload" as="image" href="/shots/today.webp" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
@@ -28,6 +29,7 @@
         <a href="#track">Track</a>
         <a href="#focus">Focus</a>
         <a href="#share">Share</a>
+        <a href="/docs/">Docs</a>
       </nav>
       <a class="cta cta-dark cta-sm" href="https://komogon.app">Open the app</a>
     </header>
@@ -48,11 +50,11 @@
             <a class="cta cta-ghost" href="#track">See how it works</a>
           </div>
         </div>
-        <div class="devices rise rise-pop" style="--d: 0ms" aria-label="Komodon on a laptop and a phone">
+        <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
           <div class="laptop">
             <div class="laptop-screen">
               <span class="laptop-notch"></span>
-              <img src="/shots/today.webp" alt="The Komodon dashboard: a greeting, today's most pressing task, and this week's hours" width="2880" height="1800" />
+              <img src="/shots/today.webp" alt="The Komodon dashboard: a greeting, today's most pressing tasks, and the start button" width="2880" height="1800" fetchpriority="high" />
             </div>
             <div class="laptop-base"><span class="laptop-lip"></span></div>
           </div>
@@ -62,28 +64,123 @@
         </div>
       </section>
 
-      <!-- Each feature: the heading on the left, its paragraph on the right, then the app.
-           Every picture is a plain screenshot (or one of the owner's timelapses) with the
-           same corner; widths line up on the one container. -->
+      <!-- Below the hero the page is ruled like a notebook: thin lines down both sides of the
+           content and across between sections. Most scenes pin while you scroll through them
+           (main.js drives them with --p); without the script they lay out flat. -->
 
-      <!-- Track -->
-      <section id="track" class="section">
-        <div class="container">
-          <div class="feature-head rise">
-            <h2>Track your focus sessions.</h2>
-            <p class="lede-sm">
-              See how long the homework really takes, module by module, and how many hours you
-              put in before a test. Hours you can be proud of, and the information to plan ahead
-              and get ahead.
-            </p>
+      <!-- Track: the list on the left walks through three screens in the window on the right. -->
+      <section id="track" class="band band-first">
+        <div class="tour" data-scrub="tour" data-steps="3">
+          <div class="tour-stage">
+            <div class="rail tour-grid">
+              <div class="tour-copy">
+                <h2 class="rise">Track your focus sessions.</h2>
+                <p class="lede-sm rise" style="--d: 100ms">
+                  See how long the homework really takes, module by module, and how many hours you
+                  put in before a test. Hours you can be proud of, and the information to plan ahead
+                  and get ahead.
+                </p>
+                <ol class="tour-list rise" style="--d: 200ms">
+                  <li class="tour-item" data-i="0">
+                    <span class="tour-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 3v16a2 2 0 0 0 2 2h16" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg></span>
+                    <span class="tour-text"><strong>Your week at a glance</strong> Hours this week beside last week, and your goal.</span>
+                    <img class="tour-inline-shot" src="/shots/analytics.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  </li>
+                  <li class="tour-item" data-i="1">
+                    <span class="tour-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg></span>
+                    <span class="tour-text"><strong>Friends studying with you</strong> Their timelapses, kudos, and who's studying right now.</span>
+                    <img class="tour-inline-shot" src="/shots/social.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  </li>
+                  <li class="tour-item" data-i="2">
+                    <span class="tour-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg></span>
+                    <span class="tour-text"><strong>A friendly leaderboard</strong> All-time hours, with your friends or with everyone.</span>
+                    <img class="tour-inline-shot" src="/shots/board.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  </li>
+                </ol>
+              </div>
+              <div class="tour-window" aria-hidden="true">
+                <div class="tour-drum">
+                  <img data-i="0" src="/shots/analytics.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  <img data-i="1" src="/shots/social.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  <img data-i="2" src="/shots/board.webp" alt="" width="2400" height="1500" loading="lazy" />
+                </div>
+              </div>
+            </div>
           </div>
-          <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/analytics.webp" alt="Komodon analytics: 6.1 hours this week against 8.9 last week, the weekly goal met, and what that time is enough for" width="1928" height="1084" loading="lazy" />
         </div>
       </section>
 
-      <!-- Focus -->
-      <section id="focus" class="section">
-        <div class="container">
+      <!-- Timelapses: a dusk interlude. Real Komodon timelapses float down around the words. -->
+      <section class="fall-band" aria-labelledby="fall-title">
+        <div class="fall" data-scrub="fall">
+          <div class="fall-stage">
+            <div class="fall-copy">
+              <span class="rec-pill"><span class="rec-dot"></span>Recording</span>
+              <h2 id="fall-title">Hours of work, in seconds.</h2>
+              <p>
+                A timelapse records you and your screen while you study, so you can see that you
+                stayed on task.
+              </p>
+            </div>
+            <div class="floaters">
+              <video class="floater clip" style="--x: 1.5%; --y: -50; --v: 95; --w: 260px; --r: -7deg; --dr: 6deg" src="/clips/desk.mp4" poster="/clips/desk.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse: a desk, with an Excel timeline on the screen"></video>
+              <video class="floater clip" style="--x: 17%; --y: 8; --v: 72; --w: 190px; --r: 5deg; --dr: -5deg" src="/clips/first-week.mp4" poster="/clips/first-week.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session"></video>
+              <video class="floater clip" style="--x: 2%; --y: 42; --v: 78; --w: 230px; --r: 4deg; --dr: -6deg" src="/clips/late-night.mp4" poster="/clips/late-night.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a late-night study session, 1:28 to 2:23 AM"></video>
+              <video class="floater clip" style="--x: 72%; --y: -42; --v: 100; --w: 260px; --r: 6deg; --dr: -5deg" src="/clips/essay.mp4" poster="/clips/essay.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse: typing an essay, with Word on the screen"></video>
+              <video class="floater clip" style="--x: 82%; --y: 18; --v: 74; --w: 220px; --r: -5deg; --dr: 4deg" src="/clips/afternoon.mp4" poster="/clips/afternoon.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of an afternoon study session, 1:58 to 5:04 PM"></video>
+              <video class="floater clip" style="--x: 70%; --y: 56; --v: 60; --w: 200px; --r: 3deg; --dr: 5deg" src="/clips/solo.mp4" poster="/clips/solo.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse of a morning at a desk"></video>
+              <video class="floater clip" style="--x: 41%; --y: 76; --v: 44; --w: 230px; --r: -3deg; --dr: 4deg" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session over three hours long"></video>
+            </div>
+          </div>
+        </div>
+        <div class="fall-edge fall-edge-top" aria-hidden="true">
+          <svg class="edge-wave edge-pink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 247.7 L2840 242.7 L2800 237.5 L2760 232.3 L2720 227.2 L2680 222.3 L2640 217.9 L2600 214.0 L2560 210.8 L2520 208.4 L2480 206.8 L2440 206.0 L2400 206.2 L2360 207.3 L2320 209.3 L2280 212.1 L2240 215.6 L2200 219.7 L2160 224.3 L2120 229.3 L2080 234.5 L2040 239.7 L2000 244.8 L1960 249.7 L1920 254.1 L1880 258.0 L1840 261.2 L1800 263.6 L1760 265.2 L1720 266.0 L1680 265.8 L1640 264.7 L1600 262.7 L1560 259.9 L1520 256.4 L1480 252.3 L1440 247.7 L1400 242.7 L1360 237.5 L1320 232.3 L1280 227.2 L1240 222.3 L1200 217.9 L1160 214.0 L1120 210.8 L1080 208.4 L1040 206.8 L1000 206.0 L960 206.2 L920 207.3 L880 209.3 L840 212.1 L800 215.6 L760 219.7 L720 224.3 L680 229.3 L640 234.5 L600 239.7 L560 244.8 L520 249.7 L480 254.1 L440 258.0 L400 261.2 L360 263.6 L320 265.2 L280 266.0 L240 265.8 L200 264.7 L160 262.7 L120 259.9 L80 256.4 L40 252.3 L0 247.7 Z" /></svg>
+          <svg class="edge-wave edge-plum" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 195.8 L2840 195.3 L2800 191.6 L2760 185.0 L2720 176.4 L2680 166.7 L2640 157.2 L2600 149.0 L2560 143.1 L2520 140.2 L2480 140.7 L2440 144.4 L2400 151.0 L2360 159.6 L2320 169.3 L2280 178.8 L2240 187.0 L2200 192.9 L2160 195.8 L2120 195.3 L2080 191.6 L2040 185.0 L2000 176.4 L1960 166.7 L1920 157.2 L1880 149.0 L1840 143.1 L1800 140.2 L1760 140.7 L1720 144.4 L1680 151.0 L1640 159.6 L1600 169.3 L1560 178.8 L1520 187.0 L1480 192.9 L1440 195.8 L1400 195.3 L1360 191.6 L1320 185.0 L1280 176.4 L1240 166.7 L1200 157.2 L1160 149.0 L1120 143.1 L1080 140.2 L1040 140.7 L1000 144.4 L960 151.0 L920 159.6 L880 169.3 L840 178.8 L800 187.0 L760 192.9 L720 195.8 L680 195.3 L640 191.6 L600 185.0 L560 176.4 L520 166.7 L480 157.2 L440 149.0 L400 143.1 L360 140.2 L320 140.7 L280 144.4 L240 151.0 L200 159.6 L160 169.3 L120 178.8 L80 187.0 L40 192.9 L0 195.8 Z" /></svg>
+          <svg class="edge-wave edge-ink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 101.3 L2840 104.9 L2800 108.3 L2760 111.2 L2720 113.8 L2680 115.7 L2640 117.1 L2600 117.9 L2560 118.0 L2520 117.4 L2480 116.1 L2440 114.3 L2400 111.9 L2360 109.0 L2320 105.7 L2280 102.1 L2240 98.4 L2200 94.5 L2160 90.7 L2120 87.1 L2080 83.7 L2040 80.8 L2000 78.2 L1960 76.3 L1920 74.9 L1880 74.1 L1840 74.0 L1800 74.6 L1760 75.9 L1720 77.7 L1680 80.1 L1640 83.0 L1600 86.3 L1560 89.9 L1520 93.6 L1480 97.5 L1440 101.3 L1400 104.9 L1360 108.3 L1320 111.2 L1280 113.8 L1240 115.7 L1200 117.1 L1160 117.9 L1120 118.0 L1080 117.4 L1040 116.1 L1000 114.3 L960 111.9 L920 109.0 L880 105.7 L840 102.1 L800 98.4 L760 94.5 L720 90.7 L680 87.1 L640 83.7 L600 80.8 L560 78.2 L520 76.3 L480 74.9 L440 74.1 L400 74.0 L360 74.6 L320 75.9 L280 77.7 L240 80.1 L200 83.0 L160 86.3 L120 89.9 L80 93.6 L40 97.5 L0 101.3 Z" /></svg>
+        </div>
+        <div class="fall-edge fall-edge-bottom" aria-hidden="true">
+          <svg class="edge-wave edge-pink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 247.7 L2840 242.7 L2800 237.5 L2760 232.3 L2720 227.2 L2680 222.3 L2640 217.9 L2600 214.0 L2560 210.8 L2520 208.4 L2480 206.8 L2440 206.0 L2400 206.2 L2360 207.3 L2320 209.3 L2280 212.1 L2240 215.6 L2200 219.7 L2160 224.3 L2120 229.3 L2080 234.5 L2040 239.7 L2000 244.8 L1960 249.7 L1920 254.1 L1880 258.0 L1840 261.2 L1800 263.6 L1760 265.2 L1720 266.0 L1680 265.8 L1640 264.7 L1600 262.7 L1560 259.9 L1520 256.4 L1480 252.3 L1440 247.7 L1400 242.7 L1360 237.5 L1320 232.3 L1280 227.2 L1240 222.3 L1200 217.9 L1160 214.0 L1120 210.8 L1080 208.4 L1040 206.8 L1000 206.0 L960 206.2 L920 207.3 L880 209.3 L840 212.1 L800 215.6 L760 219.7 L720 224.3 L680 229.3 L640 234.5 L600 239.7 L560 244.8 L520 249.7 L480 254.1 L440 258.0 L400 261.2 L360 263.6 L320 265.2 L280 266.0 L240 265.8 L200 264.7 L160 262.7 L120 259.9 L80 256.4 L40 252.3 L0 247.7 Z" /></svg>
+          <svg class="edge-wave edge-plum" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 195.8 L2840 195.3 L2800 191.6 L2760 185.0 L2720 176.4 L2680 166.7 L2640 157.2 L2600 149.0 L2560 143.1 L2520 140.2 L2480 140.7 L2440 144.4 L2400 151.0 L2360 159.6 L2320 169.3 L2280 178.8 L2240 187.0 L2200 192.9 L2160 195.8 L2120 195.3 L2080 191.6 L2040 185.0 L2000 176.4 L1960 166.7 L1920 157.2 L1880 149.0 L1840 143.1 L1800 140.2 L1760 140.7 L1720 144.4 L1680 151.0 L1640 159.6 L1600 169.3 L1560 178.8 L1520 187.0 L1480 192.9 L1440 195.8 L1400 195.3 L1360 191.6 L1320 185.0 L1280 176.4 L1240 166.7 L1200 157.2 L1160 149.0 L1120 143.1 L1080 140.2 L1040 140.7 L1000 144.4 L960 151.0 L920 159.6 L880 169.3 L840 178.8 L800 187.0 L760 192.9 L720 195.8 L680 195.3 L640 191.6 L600 185.0 L560 176.4 L520 166.7 L480 157.2 L440 149.0 L400 143.1 L360 140.2 L320 140.7 L280 144.4 L240 151.0 L200 159.6 L160 169.3 L120 178.8 L80 187.0 L40 192.9 L0 195.8 Z" /></svg>
+          <svg class="edge-wave edge-ink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 101.3 L2840 104.9 L2800 108.3 L2760 111.2 L2720 113.8 L2680 115.7 L2640 117.1 L2600 117.9 L2560 118.0 L2520 117.4 L2480 116.1 L2440 114.3 L2400 111.9 L2360 109.0 L2320 105.7 L2280 102.1 L2240 98.4 L2200 94.5 L2160 90.7 L2120 87.1 L2080 83.7 L2040 80.8 L2000 78.2 L1960 76.3 L1920 74.9 L1880 74.1 L1840 74.0 L1800 74.6 L1760 75.9 L1720 77.7 L1680 80.1 L1640 83.0 L1600 86.3 L1560 89.9 L1520 93.6 L1480 97.5 L1440 101.3 L1400 104.9 L1360 108.3 L1320 111.2 L1280 113.8 L1240 115.7 L1200 117.1 L1160 117.9 L1120 118.0 L1080 117.4 L1040 116.1 L1000 114.3 L960 111.9 L920 109.0 L880 105.7 L840 102.1 L800 98.4 L760 94.5 L720 90.7 L680 87.1 L640 83.7 L600 80.8 L560 78.2 L520 76.3 L480 74.9 L440 74.1 L400 74.0 L360 74.6 L320 75.9 L280 77.7 L240 80.1 L200 83.0 L160 86.3 L120 89.9 L80 93.6 L40 97.5 L0 101.3 Z" /></svg>
+        </div>
+      </section>
+
+      <!-- Make it yours: a ring of real screens in other photos, colours and themes, turning as
+           the page scrolls. main.js places the cards and swaps the word in the heading. -->
+      <section class="band looks-band" aria-labelledby="looks-title">
+        <div class="looks" data-scrub="looks">
+          <div class="looks-stage">
+            <div class="looks-head">
+              <h2 id="looks-title">Make it <span class="scramble" data-words="calm,bright,cozy,yours">yours</span>.</h2>
+            </div>
+            <div class="ring-view" aria-hidden="true">
+              <div class="ring">
+                <img class="ring-card" src="/shots/looks/fuji.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/focus-canyon.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/lilac.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/neon.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/focus-lanterns.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/seaglass.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/milky.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/focus-rain.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/valley.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/graphite.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/panels.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/golden.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/harbour.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/focus-autumn.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/wheat.webp" alt="" width="960" height="600" loading="lazy" />
+                <img class="ring-card" src="/shots/looks/focus-milky.webp" alt="" width="960" height="600" loading="lazy" />
+              </div>
+            </div>
+            <p class="looks-note lede-sm">80+ backgrounds and fully customizable panels.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Focus: the focus screen grows to fill the window, then runs through a Pomodoro. -->
+      <section id="focus" class="band">
+        <div class="rail rail-pad">
           <div class="feature-head rise">
             <h2>Stay accountable and focused.</h2>
             <p class="lede-sm">
@@ -92,20 +189,27 @@
               site blocker is there if you want it.
             </p>
           </div>
-          <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/focus.webp" alt="The Komodon focus screen: a large countdown for Problem set 3 over the backdrop" width="2240" height="963" loading="lazy" />
-          <!-- Real timelapses from Komodon, each a whole session in ten seconds. main.js plays
-               them while they're on screen. -->
-          <div class="clips">
-            <video class="panel clip rise rise-pop" style="--d: 160ms" src="/clips/afternoon.mp4" poster="/clips/afternoon.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of an afternoon study session, 1:58 to 5:04 PM"></video>
-            <video class="panel clip rise rise-pop" style="--d: 260ms" src="/clips/late-night.mp4" poster="/clips/late-night.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a late-night study session, 1:28 to 2:23 AM"></video>
-            <video class="panel clip rise rise-pop" style="--d: 360ms" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session over three hours long"></video>
+        </div>
+        <div class="zoom" data-scrub="zoom" data-steps="4">
+          <div class="zoom-stage">
+            <div class="zoom-dark" aria-hidden="true"></div>
+            <div class="zoom-screen">
+              <img data-i="0" src="/shots/start-dialog.webp" alt="Starting a session: pick the task, then Pomodoro or continuous, and for how long" width="2880" height="1800" loading="lazy" />
+              <img data-i="1" src="/shots/focus-work.webp" alt="The Komodon focus screen during a Pomodoro: the countdown and the task" width="2880" height="1800" loading="lazy" />
+              <img data-i="2" src="/shots/focus-break.webp" alt="The focus screen on a short break" width="2880" height="1800" loading="lazy" />
+              <img data-i="3" src="/shots/focus-rec.webp" alt="The focus screen while a timelapse records: the camera in the corner, and Live clip" width="2880" height="1800" loading="lazy" />
+            </div>
+            <div class="zoom-phone">
+              <img src="/shots/focus-phone.webp" alt="On a phone, a recording session is the camera: the desk, with the timer over it" width="780" height="1688" loading="lazy" />
+            </div>
+            <div class="zoom-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
           </div>
         </div>
       </section>
 
-      <!-- Share -->
-      <section id="share" class="section">
-        <div class="container">
+      <!-- Share: a ruled grid of the social screens. -->
+      <section id="share" class="band">
+        <div class="rail rail-pad">
           <div class="feature-head rise">
             <h2>Share your wins with friends.</h2>
             <p class="lede-sm">
@@ -113,22 +217,69 @@
               competition. Grow stronger and better together.
             </p>
           </div>
-          <div class="share-grid">
-            <img class="panel rise rise-pop" style="--d: 120ms" src="/shots/feed.webp" alt="The Komodon feed: friends studying right now, and a box to share how a session went" width="904" height="950" loading="lazy" />
-            <img class="panel rise rise-pop" style="--d: 220ms" src="/shots/leaderboard.webp" alt="The Komodon leaderboard: the top three by focused hours, then everyone else and how you compare" width="1888" height="1416" loading="lazy" />
+        </div>
+        <div class="rail bento">
+          <figure class="cell cell-feed" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/feed.webp" alt="The Komodon feed: friends' posts, some with a timelapse" width="1020" height="2700" loading="lazy" />
+            </div>
+            <figcaption><strong>The feed</strong> What your friends got done.</figcaption>
+          </figure>
+          <figure class="cell cell-group" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/groups.webp" alt="A study group's week: hours together, a line for each person, and who's studying now" width="1984" height="1064" loading="lazy" />
+            </div>
+            <figcaption><strong>Groups</strong> Your week, side by side.</figcaption>
+          </figure>
+          <figure class="cell cell-jam" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/jams.webp" alt="Jams: a few days of studying where the most hours wins" width="1984" height="1260" loading="lazy" />
+            </div>
+            <figcaption><strong>Jams</strong> A few days, most hours wins.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- Plan: the calendar week as it stands, Plan my week's suggestions around the classes,
+           then the week planned; the phone's day view joins at the end. -->
+      <section id="plan" class="band">
+        <div class="plan" data-scrub="plan" data-steps="3">
+          <div class="plan-stage">
+            <div class="rail plan-grid">
+              <div class="feature-head plan-head rise">
+                <h2>Plan the week.</h2>
+                <p class="lede-sm">
+                  Drag study time onto the days before a test, or let Plan my week find the gaps
+                  around your classes.
+                </p>
+              </div>
+              <div class="plan-view">
+                <div class="plan-window">
+                  <img data-i="0" src="/shots/cal-week.webp" alt="The Komodon calendar: this week's classes, finished sessions and what's due" width="2400" height="1733" loading="lazy" />
+                  <img data-i="1" src="/shots/cal-plan.webp" alt="Plan my week: seven suggested study blocks around the classes, to keep or move" width="2400" height="1733" loading="lazy" />
+                  <img data-i="2" src="/shots/cal-added.webp" alt="The week with the study blocks added" width="2400" height="1733" loading="lazy" />
+                </div>
+                <div class="plan-phone">
+                  <img src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="780" height="1688" loading="lazy" />
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       <!-- Closing -->
-      <section class="section closing">
-        <div class="container closing-inner rise rise-pop">
+      <section class="band closing">
+        <div class="rail closing-inner rise rise-pop">
           <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
-          <h2>Better than last time.</h2>
+          <h2>
+            <span class="scribble">The<svg class="scribble-line" viewBox="0 0 120 16" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M3 9.6C18 6.9 37 5.6 56 6.2C76 6.8 97 8.9 117 6.1" /><path pathLength="1" d="M10 13.4C30 10.6 52 10.1 73 10.9C90 11.5 103 12.6 112 11.3" /></svg></span>
+            study app.
+          </h2>
           <p class="lede-sm">Free to use. Currently in alpha.</p>
           <div class="cta-row">
             <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
-            <a class="cta cta-outline" href="#" aria-disabled="true" title="The extension is coming soon">Get the extension</a>
+            <span class="cta cta-soon" aria-disabled="true">Get the extension <span class="soon-tag">In development!</span></span>
           </div>
         </div>
       </section>
@@ -142,6 +293,7 @@
           <p class="site-muted">© 2026 Komodon. Photograph by frostroomhead on Pexels.</p>
           <div class="site-footer-links">
             <a href="https://komogon.app">Open the app</a>
+            <a href="/docs/">Docs</a>
             <a href="#top">Back to top</a>
           </div>
         </div>

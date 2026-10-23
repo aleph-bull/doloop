@@ -986,9 +986,19 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   brand): each section is its heading left and paragraph right, then tightly cropped
   screenshots with one corner, and Focus has three of the owner's own timelapses under the
   focus screen. The closing is the logo, heading and buttons on the page, no card.
+  Redone again later on 2026-10-22 around the scroll (see README in `apps/site` and
+  DECISIONS.md): a ruled page, a pinned Track tour (Analytics, feed, leaderboard), a dusk
+  interlude of floating timelapses (no clocks: the owner disliked them), a drum of sixteen
+  looks, a focus screen that grows to fill the window, a Share bento, then the calendar. The
+  devices now show with the headline. No pastel fields behind screenshots (the owner
+  disliked them). The closing reads "The study app." with a hand-drawn underline under
+  "The". Three clips are made from YouTube videos the owner downloaded; see
+  apps/site/README.md before publishing.
+  The docs live at `apps/site/docs/index.html` (`/docs/`), written from the code: when a
+  feature's labels, defaults or limits change, update its topic there too.
   Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
-  the devices about 1.3 s later or on the first scroll, each section as it arrives.
+  the devices with it, each section as it arrives, and the pinned scenes (`[data-scrub]`).
 - **Rejected, in order:** hand-built UI mockups ("fake"), the photo feathered on every side,
   photo stages behind every section, rendering the portal's real React components into the
   page ("go back to using screenshots"), device renders from the mockup PSDs, a flat dark

@@ -2140,6 +2140,68 @@ With a screenshot of the focus screen's Timelapse controls: "theres this massive
 - **Cut:** "you are asked whether to record your screen too" (the question asks for itself), the long list of what the layout editor can do, the look's description under the looks on the focus screen (the pictures show it; Settings' editor keeps it), "if there are enough stills" under Set length, the phone's "Breaks always show on the camera screen..." and the two break-clock hints.
 - **Shortened:** Auto length is "About 20 to 40 seconds."
 
+## The homepage body, rebuilt around the scroll, 2026-10-22 (owner request)
+
+The owner kept the hero (photo, copy, laptop and phone) and asked for a body that moves with the scroll, after three references: a drum of cards that turns as you scroll (to show how much of the app can be changed), screenshots set like Daybridge and aside.com (a feature list beside a window of the app, a ruled page), and "make people download it". Everything the page already said stays word for word.
+
+- **The devices show at once.** They used to wait 1.3 s (or the first scroll); now they rise with the headline.
+- **Ruled page.** Hairlines down the sides of the content and across between sections, like aside.com; pictures sit in pastel fields taken from the Cotton Candy photo's colours.
+- **Track** pins: the heading and paragraph on the left with a three-line list (new short lines: "Your week at a glance", "Where the time went", "Plan the week"); a window of the app on the right runs off the screen's edge and swaps Analytics, its charts and the calendar as the list advances. Phones get the list with a screenshot under each line.
+- **Make it yours** (new heading and one line under it) pins: sixteen screens in other photos, colours and themes on a drum, small across the middle and large at the sides; they fan out, then slide; the heading's word scrambles through calm, bright, cozy, yours.
+- **Focus** pins: the focus screen grows from a card to the whole window while the page goes dark, then runs a Pomodoro: start a session, focus, short break, the controls with the timelapse. The phone's focus screen slides in on the way. The three timelapses follow.
+- **Share** is a ruled bento: the feed (a long shot that scrolls inside its field), the leaderboard, and a study group, each with a one-line label.
+- **All screenshots retaken** from a fresh sandbox on main (sidebar, the phone bar, timelapse posts in the feed). The capture and convert scripts now live in `apps/site/scripts` and can retake any single shot.
+- Reduced motion, or no script: nothing pins, and every scene lays out flat.
+
+**Round two, the same night** (owner's notes: loose, "make my unintelligible words amazing"):
+
+- **Track** is shorter (one Analytics screen, then the Social feed and the leaderboard) and
+  pins for less. The drum and the focus screen pin for less too, so Social comes sooner.
+- **No pastel fields** ("I don't super like the pink borders"): screenshots sit straight on
+  the page.
+- **A black interlude** between Track and the drum, after a reference of cards floating
+  round centred words on black: seven timelapses float down, clocks behind them run with the
+  scroll, the app's Recording pill sits over "Hours of work, in seconds."
+- **More timelapses**, from four YouTube videos the owner picked (two study-with-me, a Word
+  and an Excel recording): cut, sped up, and drawn with the portal's own composeFrame so they
+  look like Komodon's. They aren't the owner's footage; their rights need checking before
+  this goes live.
+- **The social talk**: posts are in the owner's own words ("can i cram rsm222 in 1 day
+  😭😭😭", "daily studyy✨", "technical interview comin up wish me luckk 😛😛", "Will he
+  perform when he has money right in front of him?"), and the owner's timelapses are posted
+  by a friend called Zachary.
+- **The phone shot** is the camera screen, as a phone really records, with the owner's desk
+  photo as the camera.
+- The drum lost two looks the owner called ugly (a light lilac focus screen and the Opal
+  one) for a Milky Way focus screen and custom panels, and its line now reads "80+
+  backgrounds and fully customizable panels."
+
+**Round three:** the clocks are gone ("look like shit") and the interlude is no longer pure
+black: Cotton Candy under a dusk wash. The owner found the motion "a tad stiff", so the
+timelapses no longer ride the scroll one to one: each drifts toward its place a beat behind
+and sways and tilts on its own. The calendar got a pinned section after Share ("Plan the
+week."): the week with Jerry's classes, Plan my week's suggestions, the week planned, and
+the phone's day view. Priya posts "daily studyy✨"; Zachary's timelapse post says "Will he
+perform when he has money right in front of him?"
+
+Then: the interlude's straight fade read as a "harsh and linear line", so the way in and out
+became three blurred, drifting waves (ink, plum, a rose bloom). The drum turns on its own
+instead of only with the scroll, which now just gives it a push.
+
+The Track window no longer fades between screens: they sit on a cylinder that turns like a
+revolver's, each rolling up into the frame and settling. "Get the extension" is greyed out
+with an "In development!" tag (owner's words). The focus scene's last step was the controls
+sheet, a wall of settings; it is now the focus screen recording a timelapse instead.
+
+**Docs page (owner request):** `/docs/` on the site, "very organized so the user would know
+exactly where to go": a search across every topic and question, a sidebar grouped Start / Plan
+your work / Study / Progress / With friends / Make it yours / More / Help, each topic with a
+"Where" path through the app, and a FAQ. Written from a read of the code (labels, defaults and
+limits as they are), linked as "Docs" in the homepage nav and footer.
+
+The closing heading is now "The study app." (owner's words), with a hand-drawn underline
+under "The" that draws itself in.
+
 ## Focus time and time elapsed, start and end times, 2026-10-22 (user request)
 
 The owner asked for an option on Social posts to show the total time elapsed ("the time including breaks not including pauses"), a small start and end time on each post, the same as text pieces on the timelapse, and for the app to say plainly which times are focus and which are elapsed, with basic labels and no explanations ("do not explain this rule or concept just use basic labels", meant for every feature from now on).

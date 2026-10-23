@@ -3,3 +3,5 @@ dist
 # Source mockups (PSDs) and reference screenshots are kept out of git; see README.
 design/mockups
 design/*.png
+# Raw PNG captures from scripts/capture.mjs, before convert.mjs turns them into webp.
+scripts/out
