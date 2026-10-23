@@ -363,6 +363,12 @@ reasons. What to keep doing:
   (`PHONE_QUERY` in `lib/media.ts`: touch and under 600px tall), so it never gets the sidebar.
 - **Safe areas**: the page is `viewport-fit=cover`, so anything fixed to an edge keeps to
   `env(safe-area-inset-*)`.
+- **Social** (2026-10-22, the owner asked for it like the photo-sharing apps): friends, the
+  title and the bell across the top, the views as plain words, Live now as a row of ringed
+  pictures, and posts straight on the page (no card), the picture or video big under the head. The
+  phone styles are the last block of `social.css`; posts keep the computer's markup, so change
+  a phone post in CSS. Your card and the friends card aren't on a phone's feed: the friends
+  button opens the friends card in a sheet.
 
 ## Streaks: how they work (weekly streak added 2026-10-21)
 

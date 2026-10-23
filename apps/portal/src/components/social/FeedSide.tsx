@@ -1,4 +1,5 @@
 import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 import { personName, showsUsername, universityById } from '@komogon/core';
 import {
@@ -10,9 +11,10 @@ import {
   Search,
   SlidersHorizontal,
   Trophy,
+  Users,
   X,
 } from 'lucide-react';
-import { Panel, Spinner, useToast } from '@komogon/ui';
+import { Modal, Panel, Spinner, useToast } from '@komogon/ui';
 import type { LeaderboardScope, LiveMember, Person } from '../../lib/api';
 import { fmtHours, fmtTime } from '../../lib/format';
 import {
@@ -111,9 +113,10 @@ const REQUESTS_SHOWN = 3;
 
 /**
  * Friends, under your card: the list, then friend requests split into inbound (answer
- * them) and outgoing (folded away), and a box to find more people.
+ * them) and outgoing (folded away), and a box to find more people. On a phone the same
+ * list opens in a sheet (`sheet`: no card around it, the sheet has the title).
  */
-export function FriendsCard() {
+export function FriendsCard({ sheet }: { sheet?: boolean }) {
   const q = useFriends();
   const live = useLiveFriends();
   const [query, setQuery] = useState('');
@@ -153,16 +156,20 @@ export function FriendsCard() {
     return () => clearTimeout(t);
   }, [nextAgain]);
 
+  // The card is a Panel written out, so the sheet's copy can drop the panel surface.
+  const Box = sheet ? 'div' : 'aside';
   return (
-    <Panel as="aside" className="side-card" aria-label="Friends">
-      <div className="side-head">
-        <h2 className="side-title">
-          Friends
-          {data && data.friends.length > 0 && (
-            <span className="side-count tabular">{data.friends.length}</span>
-          )}
-        </h2>
-      </div>
+    <Box className={sheet ? 'side-card is-sheet' : 'panel side-card'} aria-label="Friends">
+      {!sheet && (
+        <div className="side-head">
+          <h2 className="side-title">
+            Friends
+            {data && data.friends.length > 0 && (
+              <span className="side-count tabular">{data.friends.length}</span>
+            )}
+          </h2>
+        </div>
+      )}
       <label className="side-search">
         <Search size={14} aria-hidden />
         <input
@@ -335,7 +342,40 @@ export function FriendsCard() {
           )}
         </>
       )}
-    </Panel>
+    </Box>
+  );
+}
+
+/**
+ * The friends button at the top of Social on a phone, with a count of requests waiting:
+ * the friends card in a sheet.
+ */
+export function FriendsButton() {
+  const waiting = useFriends().data?.incoming.length ?? 0;
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="social-top-btn"
+        aria-label={
+          waiting > 0
+            ? `Friends, ${waiting} ${waiting === 1 ? 'request' : 'requests'} waiting`
+            : 'Friends'
+        }
+        aria-haspopup="dialog"
+        onClick={() => setOpen(true)}
+      >
+        <Users size={20} aria-hidden />
+        {waiting > 0 && <span className="social-top-count tabular">{waiting}</span>}
+      </button>
+      {createPortal(
+        <Modal open={open} onClose={() => setOpen(false)} title="Friends" phone="full">
+          <FriendsCard sheet />
+        </Modal>,
+        document.body,
+      )}
+    </>
   );
 }
 

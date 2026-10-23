@@ -49,6 +49,8 @@ export function Composer() {
   const [oversize, setOversize] = useState<{ file: File; maxBytes: number } | null>(null);
   const [uploaded, setUploaded] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  /** On a phone it rests as the box alone until it is tapped (social.css, `is-resting`). */
+  const [opened, setOpened] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
 
@@ -151,6 +153,7 @@ export function Composer() {
       setShowElapsed(false);
       setFriendsOnly(false);
       clearFiles();
+      setOpened(false);
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not post it');
     } finally {
@@ -159,13 +162,16 @@ export function Composer() {
     }
   };
 
+  const resting = !opened && !text && !sessionId && files.length === 0 && !oversize;
+
   return (
-    <Panel as="section" className="composer" aria-label="New post">
+    <Panel as="section" className={`composer${resting ? ' is-resting' : ''}`} aria-label="New post">
       <div className="composer-row">
         <Avatar name={me?.settings.profile.name ?? ''} url={avatar} size="sm" />
         <textarea
           className="textarea composer-text"
           value={text}
+          onFocus={() => setOpened(true)}
           onChange={(e) => setText(e.target.value.slice(0, MAX))}
           placeholder={recent.length ? 'How did it go?' : 'Finish a session first, then share it.'}
           rows={2}

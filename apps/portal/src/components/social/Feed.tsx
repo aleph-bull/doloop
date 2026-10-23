@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button, EmptyState, Segmented, Spinner } from '@komogon/ui';
 import type { FeedScope } from '../../lib/api';
+import { NARROW_QUERY, useMediaQuery } from '../../lib/media';
 import { useFeed, useLiveFriends } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Composer } from './Composer';
@@ -12,21 +13,25 @@ import { PostCard } from './PostCard';
 /**
  * The feed: you on the left, the posts in the middle, the leaderboard on the right. Narrower,
  * the sides go and the posts have the page. Friends in a session right now sit above it all.
+ * On a phone your card and friends aren't on the feed: friends and the bell are at the top.
  */
 export function Feed() {
   const [scope, setScope] = useState<FeedScope>('everyone');
   const feed = useFeed(scope);
   const live = useLiveFriends();
+  const phone = useMediaQuery(NARROW_QUERY);
   const posts = feed.data?.pages.flatMap((p) => p.posts) ?? [];
   const people = Object.assign({}, ...(feed.data?.pages.map((p) => p.people) ?? []));
 
   return (
     <div className="feed-wrap">
       <div className="feed-layout">
-        <div className="feed-side is-left">
-          <ProfileCard />
-          <FriendsCard />
-        </div>
+        {!phone && (
+          <div className="feed-side is-left">
+            <ProfileCard />
+            <FriendsCard />
+          </div>
+        )}
         <div className="feed">
           {live.data && <LiveNow live={live.data.live} people={live.data.people} />}
           <Composer />
