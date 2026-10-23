@@ -5,6 +5,7 @@ import {
   DISPLAY_NAME_MAX,
   displayNameError,
   normalizeUsername,
+  personName,
   usernameError,
   usernameUnlocksAt,
 } from '@komogon/core';
@@ -376,10 +377,11 @@ export function ProfileFields({
   onCommit,
   active = true,
 }: ProfileFieldsProps) {
+  const username = useMe().data?.user.username;
   const nameProblem = displayNameError(name);
   return (
     <>
-      <PictureField avatarUrl={avatarUrl} name={name} />
+      <PictureField avatarUrl={avatarUrl} name={personName(name, username)} />
       <Input
         label="Display name"
         hint={

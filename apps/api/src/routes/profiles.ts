@@ -5,6 +5,7 @@ import {
   jackTotals,
   levelProgress,
   lifetimeStats,
+  personName,
   studyHeatmap,
   timeOfDayClock,
   universityById,
@@ -162,7 +163,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const response: ProfileResponse = {
       profile: {
         id: row.id,
-        name: settings.profile.name?.trim() || 'Someone',
+        name: personName(settings.profile.name, row.username),
         username: row.username,
         university: uni ? { id: uni.id, name: uni.name, short: uni.short } : null,
         bio: settings.profile.bio?.trim() || null,

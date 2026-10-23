@@ -1,4 +1,4 @@
-import { universityById } from '@komogon/core';
+import { personName, universityById } from '@komogon/core';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { userAssets, users, type UserRow } from '../db/schema';
@@ -7,7 +7,7 @@ import { settingsOf } from './users';
 /** What anyone signed in may see of a person: the names, picture and university. */
 export interface Person {
   id: string;
-  /** The chosen name, or "Someone"; never an email. */
+  /** The chosen name, else the @username, else "Someone" (`personName`); never an email. */
   name: string;
   /** Without the @. */
   username: string | null;
@@ -20,7 +20,7 @@ export function personOf(row: UserRow, avatar?: { mime: string; data: string } |
   const uni = universityById(settings.profile.university);
   return {
     id: row.id,
-    name: settings.profile.name?.trim() || 'Someone',
+    name: personName(settings.profile.name, row.username),
     username: row.username,
     avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,
     university: uni ? { id: uni.id, name: uni.name, short: uni.short } : null,

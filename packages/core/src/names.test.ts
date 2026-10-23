@@ -4,7 +4,9 @@ import {
   displayNameError,
   normalizeDisplayName,
   normalizeUsername,
+  personName,
   randomUsername,
+  showsUsername,
   usernameError,
   usernameUnlocksAt,
 } from './names';
@@ -76,6 +78,20 @@ describe('display names', () => {
 
   it('caps the length', () => {
     expect(displayNameError('a'.repeat(61))).toMatch(/up to 60/i);
+  });
+});
+
+describe('personName', () => {
+  it('is the name, else the username without its @, else Someone', () => {
+    expect(personName('  Ada ', 'ada')).toBe('Ada');
+    expect(personName('', 'komodev')).toBe('komodev');
+    expect(personName(null, null)).toBe('Someone');
+  });
+
+  it('leaves the small @username out when it is already the name', () => {
+    expect(showsUsername({ name: 'Ada', username: 'ada' })).toBe(true);
+    expect(showsUsername({ name: 'komodev', username: 'komodev' })).toBe(false);
+    expect(showsUsername({ name: 'Someone', username: null })).toBe(false);
   });
 });
 

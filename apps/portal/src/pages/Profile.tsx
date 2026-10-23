@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
-import type { HeatmapCell } from '@komogon/core';
+import { showsUsername, type HeatmapCell } from '@komogon/core';
 import {
   ArrowLeft,
   Award,
@@ -101,7 +101,7 @@ function Head({
               </span>
             )}
           </h1>
-          {profile.username && <span className="profile-username">@{profile.username}</span>}
+          {showsUsername(profile) && <span className="profile-username">@{profile.username}</span>}
         </div>
         <div className="pill-row">
           {live && (

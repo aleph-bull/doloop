@@ -12,6 +12,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { showsUsername } from '@komogon/core';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
 import {
   api,
@@ -419,7 +420,7 @@ export function PostCard({
             )}
           </span>
           <span className="post-when">
-            {author.username && <span className="post-handle">@{author.username} · </span>}
+            {showsUsername(author) && <span className="post-handle">@{author.username} · </span>}
             {fmtAgo(post.createdAt)}
             {post.friendsOnly && (
               <span className="post-audience">

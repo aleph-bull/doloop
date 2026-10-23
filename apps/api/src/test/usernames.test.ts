@@ -73,9 +73,12 @@ describe('usernames', () => {
   it('shows on profiles and finds people by it', async () => {
     const profile = (await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` })).json();
     expect(profile.profile.username).toBe('ben');
+    // No name of their own: the username, without its @, takes its place.
+    expect(profile.profile.name).toBe('ben');
     const found = (await t.api({ method: 'GET', url: '/api/social/people?q=%40be' })).json();
     expect(found.results.map((r: { userId: string }) => r.userId)).toEqual([USER_B.id]);
     expect(found.people[USER_B.id].username).toBe('ben');
+    expect(found.people[USER_B.id].name).toBe('ben');
   });
 });
 

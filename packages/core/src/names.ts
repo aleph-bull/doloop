@@ -48,6 +48,25 @@ export function displayNameError(raw: string): string | null {
 }
 
 /**
+ * What to call someone: their name, else their username without its @ (owner 2026-10-22:
+ * shown big in the name's place, "remove the @"), else "Someone".
+ */
+export function personName(
+  name: string | null | undefined,
+  username: string | null | undefined,
+): string {
+  return name?.trim() || username || 'Someone';
+}
+
+/**
+ * Whether the small @username goes beside a name from `personName`: not when the name is
+ * the username itself (no name of their own, or a name spelled the same).
+ */
+export function showsUsername(person: { name: string; username: string | null }): boolean {
+  return !!person.username && person.name !== person.username;
+}
+
+/**
  * When a username chosen at `changedAt` may next change, or null if it may change now.
  * One the app picked has no `changedAt`, so the first change of it is free.
  */
