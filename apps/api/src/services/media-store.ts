@@ -17,6 +17,8 @@ export interface MediaStore {
   copy(from: string, to: string): Promise<void>;
   /** Delete; a key that is already gone is fine. */
   remove(key: string): Promise<void>;
+  /** How many bytes the whole bucket holds, every file counted. */
+  usage(): Promise<number>;
 }
 
 export interface R2Options {
@@ -92,8 +94,35 @@ export function createR2Store(opts: R2Options): MediaStore {
       const res = await client.fetch(objectUrl(key), { method: 'DELETE' });
       if (res.status !== 404) await check(res, 'DELETE');
     },
+    async usage() {
+      // ListObjectsV2 a thousand files a page, adding up their sizes. The cap on pages only
+      // guards against a token that never runs out.
+      let total = 0;
+      let token: string | undefined;
+      for (let page = 0; page < 1000; page++) {
+        const url = new URL(`${base}/${opts.bucket}`);
+        url.searchParams.set('list-type', '2');
+        if (token) url.searchParams.set('continuation-token', token);
+        const res = await client.fetch(url.toString());
+        await check(res, 'LIST');
+        const xml = await res.text();
+        for (const m of xml.matchAll(/<Size>(\d+)<\/Size>/g)) total += Number(m[1]);
+        token = xml.match(/<NextContinuationToken>([^<]+)<\/NextContinuationToken>/)?.[1];
+        if (!token || !/<IsTruncated>true<\/IsTruncated>/.test(xml)) return total;
+        token = unescapeXml(token);
+      }
+      return total;
+    },
   };
 }
+
+const unescapeXml = (s: string) =>
+  s
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
 
 /**
  * Delete files and carry on whatever happens: a miss leaves a stray file, which costs a

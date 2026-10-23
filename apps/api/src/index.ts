@@ -4,7 +4,10 @@ import { loadEnv } from './env';
 import { buildServer } from './server';
 import { backPayBadges } from './services/achievements';
 import { createGoogleClient } from './services/google';
-import { createGoogleTokenVerifier } from './services/google-signin';
+import {
+  createGoogleAccessTokenVerifier,
+  createGoogleTokenVerifier,
+} from './services/google-signin';
 import type { CalendarDeps } from './services/calendar-sync';
 import { createOutlookClient } from './services/outlook';
 import { DEV_PASSWORD_HASH } from './services/dev-accounts';
@@ -101,6 +104,7 @@ const app = await buildServer({
             ? {
                 clientId: env.googleSignInClientId,
                 verify: createGoogleTokenVerifier(env.googleSignInClientId),
+                verifyAccessToken: createGoogleAccessTokenVerifier(env.googleSignInClientId),
               }
             : null,
         }

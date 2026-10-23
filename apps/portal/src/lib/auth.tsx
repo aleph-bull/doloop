@@ -64,8 +64,8 @@ interface AuthApi extends AuthState {
   /** Resolves true when the account needs its email confirmed before it can sign in. */
   signUpWithPassword: (email: string, password: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
-  /** Server mode: sign in with the ID token from Google's sign-in button. */
-  signInWithGoogleCredential: (credential: string) => Promise<void>;
+  /** Server mode: sign in with the access token from Google's account popup. */
+  signInWithGoogleToken: (accessToken: string) => Promise<void>;
   /** Server mode: "I'm a dev", a throwaway account (fresh, or Jerry) for the dev password. */
   signInAsDev: (password: string, kind: 'fresh' | 'jerry') => Promise<void>;
   signInDev: (email: string) => Promise<void>;
@@ -83,7 +83,7 @@ async function serverAuth(
   path: 'signin' | 'signup' | 'google' | 'dev',
   body:
     | { email: string; password: string }
-    | { credential: string }
+    | { accessToken: string }
     | { password: string; kind: 'fresh' | 'jerry' },
 ): Promise<{
   token?: string;
@@ -320,9 +320,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingVerification) return;
     setPendingVerification(await accountApi.resendEmailCode(pendingVerification.challengeId));
   }, [pendingVerification]);
-  const signInWithGoogleCredential = useCallback(
-    async (credential: string) => {
-      const r = await serverAuth('google', { credential });
+  const signInWithGoogleToken = useCallback(
+    async (accessToken: string) => {
+      const r = await serverAuth('google', { accessToken });
       if (!r.token) throw new Error('Google sign-in failed.');
       keepToken(r.token, r.email);
     },
@@ -367,7 +367,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUpWithPassword,
       signInWithGoogle,
-      signInWithGoogleCredential,
+      signInWithGoogleToken,
       signInAsDev,
       signInDev,
       signOut,
@@ -381,7 +381,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUpWithPassword,
       signInWithGoogle,
-      signInWithGoogleCredential,
+      signInWithGoogleToken,
       signInAsDev,
       signInDev,
       signOut,

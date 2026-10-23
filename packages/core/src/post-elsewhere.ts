@@ -1,7 +1,7 @@
 /**
  * Posting a timelapse on Instagram, TikTok or X. Komodon sends nothing to them itself: a web
- * page can't hand a file to another site, so on a phone the video goes through the share
- * menu, where the apps are, and on a computer it downloads while the site's upload page
+ * page can't hand a file to another site, so on a phone or tablet the video goes through the
+ * share menu, where the apps are, and on a computer it downloads while the site's upload page
  * opens in a new tab. Each site's rules here were checked on 2026-10-22.
  */
 
@@ -14,6 +14,12 @@ export interface PostPlatformInfo {
   uploadUrl: string;
   /** What to do there once the video has downloaded, in a sentence. */
   nextStep: string;
+  /** The same in the app, on a phone that can't share files. */
+  appNextStep: string;
+  /** The link that opens the app on an iPhone or iPad (its URL scheme). */
+  iosApp: string;
+  /** The Android app, and an address of the site it answers, for Chrome's intent link. */
+  android: { package: string; host: string };
 }
 
 /** In the order the buttons show. */
@@ -25,19 +31,42 @@ export const POST_PLATFORM_INFO: Record<PostPlatform, PostPlatformInfo> = {
     // instagram.com has no address for its Create dialog; it opens from the side bar.
     uploadUrl: 'https://www.instagram.com/',
     nextStep: 'On Instagram, press Create and choose it.',
+    appNextStep: 'On Instagram, press + and choose it.',
+    // Meta's documented iPhone hook for opening the app.
+    iosApp: 'instagram://app',
+    android: { package: 'com.instagram.android', host: 'www.instagram.com' },
   },
   tiktok: {
     name: 'TikTok',
     uploadUrl: 'https://www.tiktok.com/tiktokstudio/upload',
     nextStep: 'Choose it on TikTok’s upload page.',
+    appNextStep: 'On TikTok, press + and choose it under Upload.',
+    // The scheme TikTok's own SDK docs use to find the app; it isn't documented for opening it.
+    iosApp: 'snssdk1233://',
+    android: { package: 'com.zhiliaoapp.musically', host: 'www.tiktok.com' },
   },
   x: {
     name: 'X',
     // X's documented web intent: its composer, where the video is added.
     uploadUrl: 'https://x.com/intent/tweet',
     nextStep: 'Add it to your post on X.',
+    appNextStep: 'Add it to your post on X.',
+    // The app still answers twitter:// (undocumented); `post` opens its composer.
+    iosApp: 'twitter://post',
+    android: { package: 'com.twitter.android', host: 'x.com' },
   },
 };
+
+/**
+ * The link that opens the app rather than the site, for a phone that can't share files.
+ * On Android it is Chrome's intent link pinned to the app, which goes to the app's Play Store
+ * page when it isn't installed (still the app, not the site).
+ */
+export function appLink(platform: PostPlatform, os: 'ios' | 'android'): string {
+  const info = POST_PLATFORM_INFO[platform];
+  if (os === 'ios') return info.iosApp;
+  return `intent://${info.android.host}/#Intent;scheme=https;package=${info.android.package};end`;
+}
 
 /** Study time the way a caption says it: "45 min", "2 h", "1 h 30 min". */
 export function studyTimeText(minutes: number): string {

@@ -39,6 +39,39 @@ export function createGoogleTokenVerifier(clientId: string): GoogleTokenVerifier
 }
 
 /**
+ * Checks an access token from Google's account popup, which the portal's own "Continue with
+ * Google" button opens. Google's tokeninfo says whom the token was issued to: it must be our
+ * client id, or a token another site got for the same person could sign in here.
+ */
+export function createGoogleAccessTokenVerifier(
+  clientId: string,
+  fetcher: typeof fetch = fetch,
+): GoogleTokenVerifier {
+  return async (accessToken) => {
+    const failed = new HttpError(401, "Google sign-in didn't go through. Try again.");
+    let info: Record<string, unknown>;
+    try {
+      const res = await fetcher('https://oauth2.googleapis.com/tokeninfo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ access_token: accessToken }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!res.ok) throw failed;
+      info = (await res.json()) as Record<string, unknown>;
+    } catch {
+      throw failed;
+    }
+    if (info.aud !== clientId) throw failed;
+    return {
+      email: typeof info.email === 'string' ? info.email : '',
+      // tokeninfo sends it as the string "true".
+      emailVerified: info.email_verified === true || info.email_verified === 'true',
+    };
+  };
+}
+
+/**
  * Who a Google sign-in belongs to. Google has checked the email, so it joins the account
  * that already uses that address (one made with a password, or moved over from a local
  * copy), and otherwise starts a new one.

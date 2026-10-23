@@ -12,6 +12,20 @@ export function isPhone(): boolean {
   return coarse && short > 0 && short < 600;
 }
 
+/**
+ * The phone or tablet's system, or null on a computer. Unlike `isPhone` it counts tablets:
+ * it says whether the apps and the share sheet are there, not how big the screen is.
+ */
+export function mobileOs(): 'ios' | 'android' | null {
+  if (typeof navigator === 'undefined') return null;
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) return 'android';
+  if (/iPhone|iPad|iPod/.test(ua)) return 'ios';
+  // An iPad asks for the computer site and says it's a Mac; its touch screen gives it away.
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return 'ios';
+  return null;
+}
+
 /** Held upright: taller than wide. Follows the window, which turns with the phone. */
 export function isUpright(): boolean {
   if (typeof window === 'undefined') return true;

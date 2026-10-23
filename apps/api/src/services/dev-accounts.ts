@@ -5,6 +5,7 @@ import type { AnyPgColumn } from 'drizzle-orm/pg-core';
 import type { Db } from '../db/client';
 import { users, type UserRow } from '../db/schema';
 import { buildJerryWorld } from './dev-world';
+import type { MediaLog, MediaStore } from './media-store';
 import { deleteUser, ensureUser } from './users';
 
 /**
@@ -53,8 +54,10 @@ export async function createDevAccount(
   kind: DevKind,
   timezone: string | null,
   now: string,
+  store: MediaStore | null = null,
+  log: MediaLog = console,
 ): Promise<{ id: string; email: string }> {
-  await sweepDevAccounts(db, now);
+  await sweepDevAccounts(db, now, store, log);
   const world: DevWorld = {
     id: randomUUID(),
     expiresAt: new Date(Date.parse(now) + DEV_ACCOUNT_LIFE_SECONDS * 1000),
@@ -74,13 +77,21 @@ export async function markDev(db: Db, userId: string, world: DevWorld, createdAt
     .where(eq(users.id, userId));
 }
 
-/** Delete the dev accounts whose day is up, with everything in them. */
-export async function sweepDevAccounts(db: Db, now: string): Promise<number> {
+/**
+ * Delete the dev accounts whose day is up, with everything in them, their R2 files too
+ * (dev accounts can post videos, and a file whose row is gone would never be deleted).
+ */
+export async function sweepDevAccounts(
+  db: Db,
+  now: string,
+  store: MediaStore | null = null,
+  log: MediaLog = console,
+): Promise<number> {
   const old = await db
     .select({ id: users.id })
     .from(users)
     .where(and(eq(users.devAccount, true), lt(users.devExpiresAt, new Date(now))));
-  for (const u of old) await deleteUser(db, u.id);
+  for (const u of old) await deleteUser(db, u.id, store, log);
   return old.length;
 }
 

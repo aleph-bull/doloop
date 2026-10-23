@@ -2077,6 +2077,69 @@ Two changes from the owner: of "Text on the video", "this should be after the se
 - Computers are unchanged: the sidebar or top bar still lists every page, and a crowded top bar still turns into the all-pages icon bar.
 - Still no "More" menu: every page is two taps away at most, inside the place it belongs to.
 
+## The timelapse comes out compressed, with a resolution slider, 2026-10-22 (owner request)
+
+"Auto compress video after processing then also add option to reduce resolution of video", then: "use percentages to reduce resolution", "a slider but just have the minimum be something reasonable and stop at that depending on their camera", "have a minimum height and length ... dont have anything unreasonable", and "make these rules hidden ... just stop the slider at a minimum and say they reached the minimum compression".
+
+- **Every video is compressed.** It used to be encoded at 8 Mbps, about 1 MB for each second (a 30 s video near 30 MB). It is now encoded at the bitrate its size needs, `timelapseBitrate` in core: 2.5 Mbps at 1280 × 720 and 30 fps, less for a smaller picture (not in step with its pixels, since a small picture needs more bits for each one), a little more at a higher frame rate, never under 300 kbps. Measured in the sandbox: 2.9 Mbps at full size (a third of before), 1.0 Mbps at 640 × 360.
+  - It is done in the one encode rather than a second pass after the video is made: the same smaller file without encoding twice, so it is quicker and loses nothing to a second round of compression. The MediaRecorder fallback records at the same rate.
+  - The size note in Settings and on the focus screen ("The video ends up around ...") follows: about 13 MB for an auto-length video, from 40.
+  - Under the made video, its size in pixels and its weight: "1280 × 720 · 9 MB".
+  - The Social preview's "Compress and post" stays for a video that is still over the limit.
+- **Resolution, in percent.** A Resolution slider under frames per second, on the "Your timelapse" card and in both presets in Settings › Timelapse, saved on the preset like the length and frame rate (`resolution`, 1-100, 100 by default; the API takes whole percents). Beside it, the percent and the size it makes: "75% · 960 × 540". 100% is today's 1280 px on the long side.
+- **The floor, never explained.** The slider stops at the smallest the video may be and says only "That's as small as it goes." The rules, in `minTimelapseResolution`, stay out of the app's words, as asked:
+  - Both sides keep a minimum for the video's shape: 360 px on the short side and 640 on the long. For 16:9 and 9:16 that is 50% (640 × 360, 360 × 640); a very wide screen shape may stop higher.
+  - When this browser remembers the camera's size (now kept beside its shape, `komogon.timelapse.cameraWidth` / `cameraHeight`, whenever the camera starts) and the camera records smaller than the minimum, the floor drops to the camera's own size, never below it: a 320 × 180 camera can go to 25%. A camera that hasn't been seen leaves the plain minimum.
+  - The render clamps the same way, so a percentage saved on another device or for another shape can't make anything smaller.
+- Checked in the sandbox with a fake 1280 × 720 camera: the card's slider (100% to 50%, the line at the stop, saved), videos made at 100% (1280 × 720, 1.0 MB for 2.8 s) and 50% (640 × 360, 373 KB), a remembered 320 × 180 camera moving the stop to 25% (320 × 180, 134 KB), and both presets in Settings.
+
+## Upload limits: 250 MB a day each, and nothing past 10 GB in the bucket, 2026-10-22 (owner request)
+
+"to prevent someone from inflating my r2 server put a limit of 250mb of uploads per day", "per account", then "add rule to stop all uploads when my r2 bucket has 10 gb of media".
+
+- **Counted when the upload link is handed out** (`POST /api/social/uploads`), not when the post is made. A link is signed for one exact size, so that is the most it can put in the bucket, and a file uploaded but never posted still sits in `uploads/` for a day. Each link is a row in `media_uploads` (migration 0027_upload_quota), kept two days. The logic is `services/upload-quota.ts`.
+- **250 MB a day per account**, over any 24 hours rather than from midnight (no double allowance either side of midnight, and no time zone to pick). A link that would go past it is a 429 with Retry-After: "You can upload 250 MB a day. This one fits again in about 5 hours.", the time being when enough of the oldest uploads turn a day old. That is six 40 MB videos, or about twenty compressed timelapses. A failed upload that is tried again counts each time.
+- **10 GB in the bucket stops every upload**, for everyone (R2's free storage; 10 × 1024³ bytes, the same 1024s as the app's MB). Posts without a file still go. The message (503): "Videos and pictures are paused for now. You can still post without one."
+  - The bucket is measured from R2 itself (ListObjectsV2, every file's size added up), so files the database has lost track of count too. A measurement is trusted for ten minutes, plus every link handed out since, so nothing slips through between measurements and deleted files free room within ten minutes. Listing costs a request per thousand files, at most every ten minutes and only when someone asks for an upload link.
+  - If R2 won't list (the token can't, or R2 is down), the API counts from Postgres instead: every posted file plus every link of the last two days. It logs a warning. `scripts/r2-check.mjs` gained a "measure the whole bucket" step to check the token can list.
+- **Found on the way: expired dev accounts left their files in R2 for good.** `sweepDevAccounts` deleted them without the store, so their rows went and their videos stayed with nothing pointing at them. It now gets the store, like every other way an account is deleted.
+- Both limits reach people through the toast the composer and "Share to Social" already show for API errors; no portal change.
+- Unchanged: 30 links an hour, the 40 MB and 2 MB file limits, and posting without R2 (files in Postgres, 5 MB).
+
+## Our own "Continue with Google" button, 2026-10-22 (owner's request)
+
+"When it goes continue with zachary or whatever it looks ugly, just make your own button", with a screenshot of a light grey pill as the look. Google's ready-made button (Identity Services) can't be restyled, turns into "Continue as <name>" with a picture once Google knows you, and on our dark page sat in a white box.
+
+- **The button is ours** (`GoogleSignInButton`, `.google-button` in index.css): the size and pill of the other buttons, the reference's light grey and Google's "G", with a dark label. That label is the one exception to white labels on buttons, because it is the owner's reference and white wouldn't read on light grey.
+- **It opens Google's account popup** (the token flow, `google.accounts.oauth2.initTokenClient`, scope `openid email`), the way Google supports custom buttons. No new keys: the same `GOOGLE_SIGNIN_CLIENT_ID` and its allowed origins. People pick an account and, the first time, agree to share their email.
+- **The API checks the access token with Google** (`createGoogleAccessTokenVerifier`): Google's tokeninfo must say it was issued to our client id, or a token another site got for the same person could sign in here. Then the same rules as before (confirmed email, invites, blocked addresses, joining the account with that email).
+- `POST /api/auth/google` still takes the old ID token (`credential`), so a sign-in page left open from before the deploy keeps working.
+- Closing the popup says nothing; a blocked popup asks to allow pop-ups.
+- Checked in a sandbox: the look in both themes and on a phone, the click opening Google's popup, and the API refusing a junk token through Google's real tokeninfo. A real sign-in needs the real client id, so it is tried on komogon.app.
+
+## One download, and the apps on a phone, 2026-10-22 (user request)
+
+The owner asked that the Instagram, TikTok and X buttons never download the video more than once, counting "Save the video" and anything else that downloads it, and that on a phone the buttons go to the apps rather than the websites, through Apple's share sheet.
+
+- **One download a video** (`downloadOnce` in `TimelapseExport`). Whichever of Save the video, Instagram, TikTok and X downloads first, the video downloads that once. After it, Instagram, TikTok and X still open their site (or app) and the toast says "The video is already in your downloads"; Save the video only says "It's already in your downloads." There is no "download again", since the owner said never. The line under the buttons follows it ("The video is in your downloads, and the site opens in a new tab."). A remade video (trim, length, "Change layout?") is a new file and downloads once again. Closing the focus screen's controls sheet drops the made video, as it did before, so that starts over too.
+- **The share sheet hands the video over; it isn't a download.** On a phone or tablet each button opens the share sheet with the video (on an iPhone or iPad, Apple's; Instagram, TikTok and X sit in it when installed), every time it is pressed, since the sheet is the only way a page can give a file to an app. A quick second tap while a sheet is still open does nothing (the browser answers `InvalidStateError`) instead of falling back to a download.
+- **Tablets count now** (`mobileOs()` in `lib/device.ts`: Android, iPhone, iPad, including an iPad that asks for the computer site). Before, only a phone (`isPhone`) got the share sheet, and an iPad downloaded the video and opened the website. The timelapse preset still goes by `isPhone`, so an iPad keeps the computer's layout.
+- **A phone or tablet without the share sheet opens the app, not the site** (`appLink` in `post-elsewhere.ts`). The video downloads (once), then:
+  - iPhone and iPad: the app's URL scheme. `instagram://app` is Meta's documented hook; `snssdk1233://` is TikTok's, from its SDK docs, where it is only used to check the app is installed; `twitter://post` opens X's composer and is undocumented but still answered. Without the app, Safari says the address is invalid.
+  - Android: Chrome's intent link, pinned to the app's package over the site's address (`intent://www.instagram.com/#Intent;scheme=https;package=com.instagram.android;end`; TikTok `com.zhiliaoapp.musically`, X `com.twitter.android`). Without the app, Chrome opens its Play Store page, which is still the app.
+  - The link is followed a moment after the click, once the save has rendered, so the focus screen's "leave this page?" (held while stills are unsaved) is already gone.
+  - This path is rare: Safari, Chrome on Android and Samsung Internet share files; Firefox on Android and some in-app browsers don't. On an iPhone it is weaker anyway, since a download lands in Files, which the apps' pickers don't show.
+  - The toast gives the app's next step (`appNextStep`): "On Instagram, press + and choose it.", "On TikTok, press + and choose it under Upload.", "Add it to your post on X."
+- Checked in the sandbox with a fake camera and a made video: on the computer layout, Instagram, TikTok, X and Save the video in a row made one download and opened the three sites; as an iPhone with a stubbed share sheet, each button shared the MP4 and nothing downloaded; as Android without one, X downloaded once and followed the app link, and TikTok after it didn't download again. A real iPhone's share sheet and the real app links weren't tried; the owner has to try those on a phone.
+
+## Timelapse settings: the notes fold away, 2026-10-22 (owner request)
+
+With a screenshot of the focus screen's Timelapse controls: "theres this massive thing of text, make it collapsable and make it collapsable on default", "if you need to explain things make it very short do not explain things the user does not need to know".
+
+- **A "Tips" fold, closed every time it opens** (`TimelapseTips` in Timelapse.tsx, `.tl-tips-*` in index.css), under the dim slider, in the focus screen's controls and in each preset in Settings › Timelapse. Inside: "Tap the screen to brighten it.", "Live clip (L) films at normal speed, up to 30 s." (no "(L)" on a phone) and, on the focus screen, an "Edit the layout" link (new tab, as before).
+- **Cut:** "you are asked whether to record your screen too" (the question asks for itself), the long list of what the layout editor can do, the look's description under the looks on the focus screen (the pictures show it; Settings' editor keeps it), "if there are enough stills" under Set length, the phone's "Breaks always show on the camera screen..." and the two break-clock hints.
+- **Shortened:** Auto length is "About 20 to 40 seconds."
+
 ## The homepage body, rebuilt around the scroll, 2026-10-22 (owner request)
 
 The owner kept the hero (photo, copy, laptop and phone) and asked for a body that moves with the scroll, after three references: a drum of cards that turns as you scroll (to show how much of the app can be changed), screenshots set like Daybridge and aside.com (a feature list beside a window of the app, a ruled page), and "make people download it". Everything the page already said stays word for word.

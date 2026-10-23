@@ -56,6 +56,7 @@ export function defaultPhoneTimelapse(): UserSettings['timelapsePhone'] {
     recordBreaks: false,
     breakClock: 'break',
     aspect: 'camera',
+    resolution: 100,
     // A phone filming sits on the desk for the whole session: dark is kinder to its battery.
     dim: 0.7,
     layout: upright,

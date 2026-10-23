@@ -49,10 +49,12 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   (scrypt hashes), `POST /api/auth/signup|signin`, tokens signed with `AUTH_SECRET`. The
   portal uses them when no Supabase and no dev variables are set (`authMode` `'server'` in
   `apps/portal/src/lib/auth.tsx`). Supabase sign-in still works if both sides get its keys.
-- "Continue with Google" for those accounts: Google's own button (Identity Services) gives
-  the portal an ID token, `POST /api/auth/google` checks it against Google's keys and
-  `GOOGLE_SIGNIN_CLIENT_ID`, and joins the account with that email or starts one. The
-  portal shows the button only when `GET /api/auth/google` answers a client id. Try it in
+- "Continue with Google" for those accounts: our own button (not Google's, which turned into
+  "Continue as <name>") opens Google's account popup (Identity Services' token client) and
+  gets an access token; `POST /api/auth/google` asks Google's tokeninfo whether it was issued
+  to `GOOGLE_SIGNIN_CLIENT_ID` (it still takes the older ID token too), and joins the account
+  with that email or starts one. The portal shows the button only when
+  `GET /api/auth/google` answers a client id. Try it in
   the `sandbox-google` sandbox (8800/5186; placeholder id, so the popup itself fails).
 - Sign-in tries are limited in memory (`services/rate-limit.ts`): failed sign-ins per email
   and per address, sign-ups per address, 429 with Retry-After. Addresses come from
@@ -425,7 +427,9 @@ as they were when shared (`posts.minutes`, `posts.subject`), optionally a line o
 makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
 [docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
-the bytes never pass through Render. Without R2, and for posts made before it, the bytes are
+the bytes never pass through Render. Uploads are capped at 250 MB a day per account and stop
+for everyone once the bucket holds 10 GB (`services/upload-quota.ts`, see docs/R2.md); any new
+way of putting files in R2 must go through the same quota. Without R2, and for posts made before it, the bytes are
 in `post_media.data` as base64 (videos capped at 5 MB) and the portal fetches them with the
 token into a blob URL. `GET /api/social/uploads` tells the portal which applies. A file over
 the limit is not refused: the composer and "Share to Social" offer to compress it in the
@@ -603,8 +607,9 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   the frame is pushed back in.
 - **Add back:** removed pieces wait as chips under the preview. The screen starts there.
 - **Shape:** Match camera (the default), Match screen, 16:9, 9:16, 1:1, 4:5, 4:3. The video
-  is 1280 px on its long side. The camera's and screen's shapes are remembered in
-  localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`); the screen falls back to
+  is 1280 px on its long side at full size (see Resolution below). The camera's and screen's
+  shapes are remembered in localStorage (`komogon.timelapse.cameraRatio` / `screenRatio`;
+  the camera's size too, `cameraWidth` / `cameraHeight`); the screen falls back to
   the monitor's shape (`window.screen`), which needs no permission. The screen box keeps the
   screen's shape, refits when the video's shape changes, and has "Fit the screen to its
   shape". A layout still at a shape's starting places moves to the new shape's defaults; an
@@ -623,6 +628,14 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   strip of stills with a handle at each end, a playhead and play; "Keep it all" to undo),
   the length settings, the text on the video (once the recording has stopped), then Make
   the video.
+- **Resolution and compression** (2026-10-22, `timelapse-output.ts` in core): a
+  Resolution slider (percent of full size, `resolution` on each preset) sits under frames
+  per second, on the card and in Settings, and the made video shows its size and weight
+  under it. The slider stops at a floor it never explains (owner's rule): 360 px on the
+  short side and 640 on the long, lowered to the camera's own size when the remembered
+  camera records smaller (`minTimelapseResolution`). The render clamps the same way. Every
+  video is encoded compressed in one pass at `timelapseBitrate` for its size (2.5 Mbps at
+  1280 × 720 and 30 fps, was 8 Mbps), rather than made big and re-encoded after.
 - The trim is held in session seconds, not still indices, because thinning halves the
   stills while recording; an end never moved follows the recording as it grows. The viewer
   keeps its decoded stills by still for the same reason.
@@ -630,12 +643,16 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   separately (smooth motion, deflicker on the camera only), then `composeFrame` lays out
   the frame. The mark is black or white, picked from the brightness behind it on frame 30.
   Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
-  elsewhere MediaRecorder records the canvas in real time. The person can download it,
+  elsewhere MediaRecorder records the canvas in real time; both at `timelapseBitrate`. The person can download it,
   "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still), or post it
-  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone the share sheet carries the
-  video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
+  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone or tablet the share sheet
+  carries the video to the app (a phone that can't share files downloads it and opens the
+  app by its link, `appLink`); on a computer it downloads and the site's upload page opens
+  in a new tab. **A video downloads once** (`downloadOnce`): whichever of Save, Instagram,
+  TikTok and X asks first downloads it, and the rest say it's already in the downloads.
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
-  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
+  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X" and "One
+  download, and the apps on a phone".
 - **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
   with a line to say and a switch for the hours (`showTime: false` posts no minutes or task).
   The text box must stay quick: the post beside it follows a deferred copy of the text in a
@@ -714,8 +731,8 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
   - **After the session**, `TimelapseExport` shows `TimelapseTrim`: a viewer drawn with
     `composeFrame` (no blending, so playing is quick), stills in a strip (nine on a phone; on
     a computer, `wide`, as many as fit at the camera's shape), a handle at each end, a
-    playhead, play. "Save the video" opens the share sheet on a phone (where "Save Video"
-    goes to Photos) and falls back to a download.
+    playhead, play. "Save the video" opens the share sheet on a phone or tablet (where "Save
+    Video" goes to Photos) and falls back to a download.
 - **Not built.** Importing an Apple Time-Lapse from Photos is still in `docs/IDEAS.md`.
 - **Testing the camera screen in the preview.** The pane has no camera, so give it one before
   the recording starts: replace `navigator.mediaDevices.getUserMedia` with a function that

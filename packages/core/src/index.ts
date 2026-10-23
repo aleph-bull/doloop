@@ -36,6 +36,7 @@ export * from './equivalents';
 export * from './session-edit';
 export * from './timelapse';
 export * from './timelapse-layout';
+export * from './timelapse-output';
 export * from './timelapse-presets';
 export * from './timelapse-styles';
 export * from './post-elsewhere';
