@@ -2056,6 +2056,32 @@
     width: 100%;
   }
 }
+/* On a computer: the footer, and at its right the pill the pressing tasks pop out of. */
+.start-panel-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 4px;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+.start-panel-foot:empty {
+  display: none;
+}
+.start-panel-foot > * {
+  min-width: 0;
+}
+/* The row draws the rule, for the footer and the pill both. */
+.start-panel-foot .divider {
+  display: none;
+}
+.start-pill.start-pressing-pill {
+  flex: none;
+  margin-left: auto;
+  padding: 0 14px;
+  font-weight: 500;
+}
 .start-pressing {
   display: flex;
   flex-direction: column;
@@ -2189,47 +2215,275 @@
   }
 }
 
-/* The subject picker: the task tree one page at a time, under a line saying what is chosen. */
+/*
+ * ---------- Starting a session on a computer ----------
+ * One narrow card: what to study as a big button, then a pill each for how it runs, then
+ * one big Start. The task button and the first two pills pop their choices out under them
+ * (Popout); the X at the top right closes the card. The phone has its own screen.
+ */
+@media (min-width: 561px) {
+  .modal.start-dialog {
+    max-width: min(460px, calc(100vw - 32px));
+  }
+}
+.start-dialog .modal-title {
+  margin-bottom: var(--space-5);
+  padding-right: 40px;
+}
+.start-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.start-dialog .modal-actions {
+  margin-top: var(--space-5);
+}
+.btn.start-go {
+  width: 100%;
+}
+.start-go-icon {
+  fill: currentColor;
+}
+/* What to study: the card's main control. */
+.start-subject {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+button.start-subject:hover,
+.start-subject.is-open {
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+.start-subject.is-locked {
+  cursor: default;
+}
+.start-subject-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.start-subject-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.start-subject.is-empty .start-subject-title {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.start-subject-where {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.start-subject-chevron {
+  flex: none;
+  color: var(--fg-muted);
+}
+/* How it runs: a pill each, the icon and chevron quieter than the words. */
+.start-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.start-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.start-pill svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.start-pill:hover,
+.start-pill.is-open {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.start-pill-chevron {
+  margin-right: -4px;
+}
+.start-pill.is-off {
+  color: var(--fg-muted);
+}
+/* What pops out: in the top layer over the card, placed by Popout. */
+.glass.start-pop {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--glass-solid) 96%, transparent);
+  color: var(--fg);
+  overflow: hidden;
+}
+.glass.start-pop.is-menu {
+  padding: 6px;
+}
+.glass.start-pop:popover-open {
+  display: flex;
+  flex-direction: column;
+}
+.start-pop .picker {
+  flex: 1;
+  min-height: 0;
+}
+/* The list gives up height first when the window is short. */
+.start-pop .picker-list {
+  height: auto;
+  flex: 0 1 264px;
+  min-height: 120px;
+}
+/* A slim thumb and no arrow buttons (Windows draws arrows even on a thin standard bar). */
+.start-pop .picker-list::-webkit-scrollbar {
+  width: 10px;
+}
+.start-pop .picker-list::-webkit-scrollbar-button {
+  display: none;
+}
+.start-pop .picker-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.start-pop .picker-list::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 22%, transparent) padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .start-pop .picker-list {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+  }
+}
+.start-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.start-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.start-option:hover,
+.start-option:focus-visible {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.start-option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.start-option-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.start-option-check {
+  flex: none;
+  color: var(--accent);
+}
+.start-menu-foot {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.start-option.is-link {
+  color: var(--fg-muted);
+}
+.start-length-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 4px 4px;
+}
+.start-length .ss-stepper {
+  grid-template-columns: 38px 1fr 38px;
+  height: 46px;
+  margin-top: 0;
+  padding: 4px;
+}
+.start-length .ss-step {
+  width: 38px;
+  height: 38px;
+}
+.start-length .ss-step:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 15%, transparent);
+}
+.start-length .ss-step-input {
+  font-size: 1.125rem;
+}
+.start-length .input {
+  height: 42px;
+  text-align: center;
+}
+/* Close, at the card's top right, level with the title. */
+.modal-body > .start-close {
+  position: absolute;
+  top: 22px;
+  right: 18px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.modal-body > .start-close:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+}
+
+/* The subject picker: search, then the task tree one page at a time. */
 .picker {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-/* What is chosen right now, wherever in the tree it lives. */
-.picker-chosen {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: var(--accent-soft);
-  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
-  font-size: var(--text-sm);
-}
-/* Before anything is chosen the line is quiet: no accent, no dot. */
-.picker-chosen.is-empty {
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-  border-color: transparent;
-  color: var(--fg-muted);
-}
-.picker-chosen.is-empty .picker-chosen-dot {
-  background: var(--fg-subtle);
-}
-.picker-chosen-dot {
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  align-self: center;
-}
-.picker-chosen-title {
-  font-weight: 600;
-}
-.picker-chosen-where {
-  color: var(--fg-muted);
-  font-size: var(--text-xs);
-  min-width: 0;
 }
 /* Back, where you are, and the way back to the top, on one line above the list. */
 /* Search above the list: typing swaps the course pages for one flat list of matches. */
@@ -7648,6 +7902,16 @@
   margin-left: 0.3em;
   font-size: 0.85em;
 }
+.profile-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-username {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
 .profile-chip {
   display: inline-flex;
   align-items: center;
@@ -7781,6 +8045,36 @@
 .profile-uni-row .input {
   flex: 1 1 200px;
   min-width: 0;
+}
+/* The username's @ sits inside the well, before what is typed. */
+.username-input {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+.profile-uni-row .username-input {
+  flex: 1 1 200px;
+}
+.username-notice-field {
+  margin-top: 14px;
+}
+.username-input .input {
+  flex: 1;
+  padding-left: calc(var(--space-3) + 0.9em);
+}
+.username-at {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+.input[aria-invalid='true'] {
+  border-color: color-mix(in srgb, var(--status-bad) 45%, transparent);
+}
+.field-error {
+  color: color-mix(in srgb, var(--status-bad) 62%, var(--fg));
 }
 .profile-uni-row .profile-uni-code {
   flex: 0 1 140px;

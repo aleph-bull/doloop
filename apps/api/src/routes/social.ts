@@ -99,6 +99,13 @@ export interface FeedPost {
     elapsedMinutes: number | null;
     startedAt: string | null;
     endedAt: string | null;
+    /**
+     * Read live from the session, and only when the author shares study stats (the
+     * profile's rule): the badges it unlocked, and the daily streak when it ended (null for
+     * sessions from before that was kept).
+     */
+    badges: string[];
+    streak: number | null;
   } | null;
   /** The first file, for portals from before a post could carry several. */
   media: { mime: string; bytes: number; poster: string | null } | null;
@@ -231,6 +238,13 @@ export async function loadPosts(
   const likes = sql<number>`(select count(*) from post_likes l where l.post_id = posts.id)::int`;
   const liked = sql<boolean>`exists(select 1 from post_likes l where l.post_id = posts.id and l.user_id = ${viewerId})`;
   const comments = sql<number>`(select count(*) from post_comments c where c.post_id = posts.id)::int`;
+  const shares = sql`(posts.user_id = ${viewerId} or coalesce((select (u.settings -> 'social' ->> 'stats')::boolean from users u where u.id = posts.user_id), true))`;
+  const badges = sql<
+    string[] | string | null
+  >`(select s.badges_awarded from sessions s where s.id = posts.session_id and ${shares})`;
+  const streak = sql<
+    number | null
+  >`(select s.streak from sessions s where s.id = posts.session_id and ${shares})`;
   const rows = await db
     .select({
       id: posts.id,
@@ -249,6 +263,8 @@ export async function loadPosts(
       likes,
       liked,
       comments,
+      badges,
+      streak,
     })
     .from(posts)
     .where(where)
@@ -304,6 +320,9 @@ export async function loadPosts(
                 elapsedMinutes: r.elapsedMinutes,
                 startedAt: r.startedAt?.toISOString() ?? null,
                 endedAt: r.endedAt?.toISOString() ?? null,
+                // jsonb from a hand-written subquery: parsed by some drivers, text in others.
+                badges: (typeof r.badges === 'string' ? JSON.parse(r.badges) : r.badges) ?? [],
+                streak: r.streak === null ? null : Number(r.streak),
               },
         media: first ? { mime: first.mime, bytes: first.bytes, poster: first.poster } : null,
         files,
@@ -632,6 +651,20 @@ export function socialRoutes(
     return reply.code(204).send();
   });
 
+  /** Only the words of your own post change; the session and files stay as they were. */
+  app.patch('/api/posts/:id', async (req) => {
+    const { id } = idParam.parse(req.params);
+    const { body } = z.object({ body: z.string().trim().max(POST_MAX_LENGTH) }).parse(req.body);
+    const updated = await db
+      .update(posts)
+      .set({ body })
+      .where(and(eq(posts.id, id), eq(posts.userId, req.user.id)))
+      .returning({ id: posts.id });
+    if (updated.length === 0) throw notFound('No such post');
+    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1);
+    return { post: page.posts[0], people: page.people };
+  });
+
   /** Which of a post's files: `?n=1` is the second; without it, the first. */
   const fileQuery = z.object({ n: z.coerce.number().int().min(0).max(9).default(0) });
   const mediaRow = async (viewer: UserRow, postId: string, n: number) => {
@@ -813,10 +846,11 @@ export function socialRoutes(
     return { friends, incoming, outgoing, people };
   });
 
-  /** People by name, to find someone to add. Only accounts that finished onboarding. */
+  /** People by name or username, to find someone to add. Only accounts that finished onboarding. */
   app.get('/api/social/people', async (req) => {
     const { q } = z.object({ q: z.string().trim().min(1).max(60) }).parse(req.query);
     const name = sql`${users.settings} -> 'profile' ->> 'name'`;
+    const like = '%' + q.replace(/^@/, '').replace(/[%_\\]/g, '\\$&') + '%';
     const rows = await db
       .select({ id: users.id, settings: users.settings })
       .from(users)
@@ -826,7 +860,7 @@ export function socialRoutes(
           sql`${users.bannedAt} is null`,
           inWorldOf(req.user),
           sql`${users.id} <> ${req.user.id}`,
-          sql`${name} ilike ${'%' + q.replace(/[%_\\]/g, '\\$&') + '%'}`,
+          sql`(${name} ilike ${like} or ${users.username} ilike ${like})`,
         ),
       )
       .orderBy(sql`lower(${name})`)

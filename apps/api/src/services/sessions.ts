@@ -42,7 +42,7 @@ import {
   type SessionRow,
   type UserRow,
 } from '../db/schema';
-import { badRequest, conflict, notFound } from '../errors';
+import { badRequest, conflict, isUniqueViolation, notFound } from '../errors';
 import type {
   endSessionSchema,
   reviewSchema,
@@ -67,15 +67,6 @@ export interface SessionView {
    * `FREE_SESSION_TITLE` for a session started with nothing picked.
    */
   nodeTitle: string;
-}
-
-/** Postgres's unique_violation, from the driver or wrapped by Drizzle. */
-function isUniqueViolation(err: unknown): boolean {
-  for (let e = err as { code?: unknown; cause?: unknown } | undefined, i = 0; e && i < 4; i++) {
-    if (e.code === '23505') return true;
-    e = e.cause as typeof e;
-  }
-  return false;
 }
 
 /** What a session with no task and no routine is called. */
@@ -840,7 +831,12 @@ async function finalize(
 
   const [saved] = await db
     .update(sessions)
-    .set({ review, xpAwarded: xp.total, phraseId: phrase?.id ?? null })
+    .set({
+      review,
+      xpAwarded: xp.total,
+      phraseId: phrase?.id ?? null,
+      streak: streakSync.streak.current,
+    })
     .where(eq(sessions.id, row.id))
     .returning();
   const badges = await unlockNewBadges(db, user, now, row.id);

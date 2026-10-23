@@ -124,8 +124,8 @@ it('keeps test accounts off the leaderboard and configured admins on it', async 
   // The owner (an admin) is on the board; the two seeded test accounts, with the same
   // minutes, are not. Entries also carry the userId that opens the profile.
   expect(leaderboard.json().entries).toMatchObject([
-    { rank: 1, name: 'Someone', focusMinutes: 1667, you: false },
-    { rank: 2, name: 'Someone', focusMinutes: 60, you: true },
+    { rank: 1, name: expect.stringMatching(/^[a-z]+.[a-z]+$/), focusMinutes: 1667, you: false },
+    { rank: 2, name: expect.stringMatching(/^[a-z]+.[a-z]+$/), focusMinutes: 60, you: true },
   ]);
   expect(leaderboard.json().entries).toHaveLength(2);
 });

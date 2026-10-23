@@ -82,6 +82,12 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   `account_suspended`, and the portal signs out with a message). Suspended accounts are left
   off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
   blocked from there.
+- **Usernames** (2026-10-22): every account has a unique @username (`users.username`, stored
+  without the @; rules in core `names.ts`: a to z, numbers and `_ - ! .`, no two symbols
+  together; names take no symbols). Accounts get two random words when made, and migration
+  0033 gave every older account some; the first-time setup opens with "Pick a username" (no
+  skip), and older accounts are asked once to change theirs (`UsernameNotice`). A chosen one
+  holds for 14 days. DECISIONS.md has the details.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.
@@ -367,6 +373,12 @@ reasons. What to keep doing:
   (`PHONE_QUERY` in `lib/media.ts`: touch and under 600px tall), so it never gets the sidebar.
 - **Safe areas**: the page is `viewport-fit=cover`, so anything fixed to an edge keeps to
   `env(safe-area-inset-*)`.
+- **Social** (2026-10-22, the owner asked for it like the photo-sharing apps): friends, the
+  title and the bell across the top, the views as plain words, Live now as a row of ringed
+  pictures, and posts straight on the page (no card), the picture or video big under the head. The
+  phone styles are the last block of `social.css`; posts keep the computer's markup, so change
+  a phone post in CSS. Your card and the friends card aren't on a phone's feed: the friends
+  button opens the friends card in a sheet.
 
 ## Streaks: how they work (weekly streak added 2026-10-21)
 
@@ -497,7 +509,10 @@ browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule
 when their post or account does. The focus screen's timelapse export has "Share to Social",
 which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
-author deletes a post. Counts come with every post; liking patches the caches rather than
+author edits a post (the words only, `PATCH /api/posts/:id`) or deletes it, from the ⋯ under it.
+A post also shows what its session earned: one award naming the session's badges on hover
+(`sessions.badges_awarded`) and the daily streak when it ended (`sessions.streak`, kept since
+0034), only when the author shares study stats, like the profile. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).
 
 **Friends.** `friendships` holds one row per pair with `status` pending or accepted;

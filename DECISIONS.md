@@ -2349,6 +2349,98 @@ The owner asked for "Jack mode", named after their friend Jack Chow: after every
 - **No sheen on any card in glass mode** (owner: "remove the top sheen efect off of all panels in glass mode"): the white gradient over the top of Glass cards (`.glass::before`, `--glass-highlight`) is gone, and so is the bright 1px line along every glass card's top edge (it was the first part of `--glass-border-inner`, which now keeps only the even inner ring). The Panels setting's glass preview lost its line too.
 - **The trophies keep theirs** (owner: "except for those badges that have that nice animated sheen"): the shimmer on new records is untouched, and trophies keep the top edge as `--glass-top-edge`.
 
+## Usernames and display names, 2026-10-21 (user request)
+
+Built on 2026-10-21 but not shipped then; it shipped with the changes in the next section, which replace several of these rules.
+
+The owner asked for a username and a display name, with these rules, in their words: the username "starts with @ and is at least 3 characters", is "only latin alphabet with no accents and . _ -"; the display name has "no punctuation except ._-"; "for both names cannot have 2 symbols next to each other"; "only 1 username can exist at a time and usernames can only change once every 14 days"; and "for everyone that doesnt have a username yet give them a random one and then inform them and bring them to the settings to change it".
+
+- **The display name is the old name** (`settings.profile.name`), relabelled "Display name". It may use letters in any script (accents included), numbers and spaces, and . _ - as its only punctuation; runs of spaces close up. Emoji and other symbols are refused. Names saved before this keep working until they are next edited.
+- **The username is a column** (`users.username`, unique; it shipped as migration 0033), stored lower case without the @ and always shown with it. 3 to 30 letters a to z plus . _ -, read literally: no digits. Typing capitals or a leading @ is fine; the field lowers and strips them as you type.
+- **Two of . _ - side by side** are refused in both names (`..`, `._`, `-_`); one symbol next to a space is fine in a display name.
+- **Once chosen, a username holds for 14 days** (`users.username_changed_at`); the API says the day it can change again, and the field is greyed with that date. Only the username the person chose starts the clock.
+- **Everyone gets a random one** the next time they open the app (`ensureUsername` on `GET /api/me`): an adjective and an animal or tree ("golden.finch"), with four random letters after once the short ones keep colliding. It doesn't count as a change, so the first change is free. While it is still the picked one, a one-time dialog says "You have a username" with "Keep it" and "Change it"; Change it opens `/settings#username`, which focuses the field. Read "bring them to the settings" as that button, not an automatic jump, so the dialog can't pull someone off a page mid-task.
+- **The username saves on its own Save button, never on blur**, because of the 14-day hold: a half-typed name must not stick by accident.
+- **Where it shows:** under the name on profiles, on your card beside the feed, and after names in the feed's people lists. "Find people" also matches usernames, with or without the @.
+- The rules live in `packages/core/src/names.ts` (tested), shared by the API and the portal.
+
+## Usernames for everyone, new rules, and a first step in setup, 2026-10-22 (user request)
+
+The owner asked: "add usernames, start with @"; "give all users a username now just 2 random words. notify them and tell them to change it"; "add names and usernames to the onboarding"; then, while it was being built, "force them to add a username but a name is optional", usernames with "no special characters except _-!. no spaces and no 2 special characters right next to eachother", and "for the names, no symbols".
+
+- **Everyone has one now.** Migration 0033 adds the columns and, in the same migration, gives every account two random words ("quiet.otter": an adjective, then an animal, tree or thing outdoors), a pair already taken tried again and a third word after eight tries. The word lists are `USERNAME_WORDS` in core `names.ts`, copied into the migration's SQL. New accounts get one the moment they are made (`ensureUser`), so no account is ever without one; `/api/me` still fills in any row that slipped through. The given one doesn't count as a change, so its first change is free.
+- **Usernames:** a to z, numbers and `_ - ! .`; no spaces, no accents, no other symbols, never two of those four side by side; 3 to 30 long; lower case, stored without the @ and always shown with it. Numbers are allowed now (the 10-21 rule read "only latin alphabet" as none); accents stay out because the owner's earlier rule said so and nothing since changed it.
+- **Names (the display name) take no symbols at all:** letters in any script, numbers and spaces. Names saved before keep working until they are next edited.
+- **Telling people:** someone whose username is still the one they were given sees, once, "Change your username" with what they were given and a box for a new one right there ("Keep it" or "Save"), instead of a trip to Settings. It never shows over the first-time setup's look around. Either button closes it for good (the `username` hint). It is a dialog rather than a row in the Social bell because the bell is only on the feed, and this has to reach everyone.
+- **First-time setup starts with "Pick a username"** (`NamesStep` in Onboarding.tsx): a username box that starts empty, so it is the person's own pick, and "Name (optional)". It is the one question with no Skip, and "Skip section" waits until it is done ("force them to add a username"). Saving there counts as choosing, so the 14-day hold starts; it is recorded as `name: true` in the onboarding answers so a reload carries on after it.
+- **Where @usernames show:** under the name on profiles, on your card beside the feed, after names in the friends lists, and before the time on each post. "Find people" matches them, with or without the @.
+- No explanation of the rules on screen (the plain-labels rule): the field only says what is wrong when something is ("No spaces.", "No two symbols in a row.") and, while held, "Can change again Nov 5".
+- **No name, then the username is the name, without its @** (owner, the same night: "if someone has username but no name just make their username BIG and remove the name", then "remove the @ if they only have a username and no name"): `personName` in core gives the name, else the bare username, else "Someone", everywhere the API names a person (profiles, people lists, the leaderboard). So the profile's big title is "komodev" and the small @ line under it goes (`showsUsername`: not when the name is the username). The profile's edit dialog reads your own name from your account, since the title can no longer tell "no name" apart.
+
+## The start card on a computer: a task button, three pills, one Start, 2026-10-22 (owner request)
+
+The owner called the computer's "Start a session" card an eyesore: the picker inside it made
+the card taller than the window, so the card scrolled and its list scrolled too. Tried and
+turned down along the way: a two-pane rebuild ("looks like ass"), then the original card with
+the picker behind a button ("the functionality of the card is much better now, but it is so
+ugly"). Asked which apps do this well, the owner said to redo it, keeping the phone as is. This
+version borrows Linear's property pills and the running apps' one big Start.
+
+- **What to study is one big button** (`SubjectButton` in SubjectPicker.tsx): the task and where
+  it lives, or "Choose what to study". It pops the picker (search, the course pages) out under
+  it. No "Studying" label; "No task" stands alone (no "Minutes still count"), and the picker
+  lost its "Nothing chosen yet" line.
+- **Then a pill each for how it runs:** Pomodoro or Continuous (its pop-out has the lengths under
+  Pomodoro and "Change lengths"), how long ("Unlimited", "50 min", "Until 4:30 PM"; its pop-out
+  has the three choices and the minus/plus minutes or the time), and "Timer shown" / "Timer
+  hidden", which flips on a click. No field labels or hints on the card.
+- **One full-width Start**, and an X at the top right in place of Cancel.
+- **Pop-outs** are `Popout.tsx`: a popover in the browser's top layer, since anything portalled
+  outside a modal dialog is inert. Escape and a click anywhere else close it; choosing closes the
+  task and work-style ones.
+- The card went from 446px tall to 283px.
+- **The phone is unchanged** (owner: "do not change the mobile version"), its "Minutes still
+  count" included.
+
+## The dashboard's start card: Most pressing beside the quote, in a small pop-out, 2026-10-22 (owner request)
+
+The owner sent a screenshot of how the "Ready when you are" card should look on a computer:
+the title, the day's line and the two buttons on top, one rule, then the quote with "Most
+pressing" at its right. And: "make the drop down a separate small card window that just shows
+the names and tag of on track or not".
+
+- **One rule, two rows.** The pressing list no longer sits between the buttons and the quote
+  under a rule of its own. The quote and a "Most pressing" pill (the count and a chevron) share
+  the row under the one rule, the pill at the right, centred on the quote.
+- **The pill pops out a small card** (`Popout`, lined up with the pill's right edge; it gained
+  an `align` for that): each task's name and its pace tag ("On track", "Behind" and so on, the
+  same `StatusChip`). Where the task sits, its due date and its minutes are gone from it.
+  Clicking a task still closes the card and goes to that task further down. Escape and a click
+  anywhere else close it. It starts shut on every visit; remembering the list open or folded
+  (`komogon.pressing-open`) is the phone's alone now.
+- **The phone is unchanged** (narrower than 560px, as the start dialog): the list still unfolds
+  under Start with where, due and minutes, and the quote keeps its own rule.
+
+## A shorter composer and the post card reworked, 2026-10-22 (user request)
+
+The owner, on Social: the composer was "so tall and gross looking make it shorter and make post fill in that empty space"; then, for posts: "make 1h focus in its own little card thing", "make RSM 222 - slides review kinda like a title of sorts", "remove the trash can, add 3 dots at the bottom left where i can edit the post body or delete it", and "put the time ... on the top right on the same line as the @zachary bit".
+
+- **The composer** (computer only; the phone is untouched): the box is one line and grows as you type (`field-sizing: content`), and Post sits at the right of the attachments' last line instead of a line of its own. 226px tall became 166px.
+- **A post's session** is no longer one tinted strip. Settled after two rounds (first the cards beside the title, owner: "should sit on the same line"; then the owner's sketch): the start and end times sit top right with focus (and elapsed, when shown) as small tinted cards under them, and what it was on ("Course · Task") is the post's title, right under the name (owner: "too much space between phy131 and the username"): the head is a grid, so the times and card hang down the right beside both. The timelapse's "Share to Social" preview follows the same layout.
+- **What the session earned, beside kudos and comments** (owner's sketch: "content if this session broke records (badges) also add streak"; "for sessions that have badges dont have all of them just have one award symbol, people hover it and they can see which ones"): a flame with the daily streak as it stood when the session ended, then one award icon when the session unlocked badges, naming them in a small card on hover (or a tap). Always in that order (owner: "kudos comment streak badge", the badge "if any"), then the ⋯. Badges come live from `sessions.badges_awarded`; the streak is a new `sessions.streak` (migration **0034_session_streak**), written at the end of every session, so sessions from before it show no flame. Both follow the profile's rule: shown only when the author shares study stats (Settings › Social), and never on a post that hides its time.
+- **Every post has the ⋯** (owner: "all posts should have a 3 dots"). Someone else's holds Hide and Report, which only close the menu for now ("don't add functionality yet"). Your own holds Edit and Delete; Delete asks "Are you sure?" first (the trash can deleted at once). Edit turns the words into a box in place, with Cancel and Save. Only the words change: the session, times and files stay as posted. The post's edit isn't marked as edited (not asked for).
+
+## Social on a phone, laid out like the photo-sharing apps, 2026-10-22 (user request)
+
+The owner, with two screenshots of BeReal: "social looks bad on mobile right now make the style similar to bereal". Before, a phone got the computer's cards stacked: a Live now card, a tall composer card, every post a card with its session in a tinted strip, the four tabs running off the screen, and your card and the friends card (with the bell and the requests) under the very last post. Phone width only (560px, `NARROW_QUERY`); the computer's Social is unchanged.
+
+- **The top of Social:** a round friends button on the left (with the count of requests waiting), the title in the middle, the bell on the right; under it the four views as plain words (Feed, Groups, Jams, Leaderboard), the one shown in full colour, Jams keeping its count. The friends button opens the friends card in a sheet (`FriendsButton`, `FriendsCard sheet`); the bell is `NotificationsBell round`. Your card and the friends card are no longer on a phone's feed.
+- **Posts sit straight on the page, not in cards** (the one place a phone drops the "every card is the same card" rule, since the reference has no cards): the backdrop's text colours, and the page title's halo on photo backgrounds. The head stays on top as the computer has it (name, the times and focus card at the right, what it was on under the name); the picture or video comes right under it, big (22px corners), then the words and the bottom row (kudos, comments, streak, award, ⋯). It is all CSS (`order`), so a post's markup stays the computer's. The focus card gets a little more tint (18%), since there is no card behind it on a photo. The profile's posts follow.
+- **Live now** is a row of round pictures ringed in red (grey on a break or pause) with the clock under each name.
+- **The composer** rests as one round field beside your picture and opens up (session, files, Post) when tapped (`is-resting`).
+- **Everyone / Friends** are two words instead of a pill switch. **Comments** have no rule above them and a round field. Share to Social's preview puts the video first on a phone too.
+- Built first with a big card for the session where the picture would be (on posts without one); dropped the same night once the computer's post got its title and small focus card, so the phone uses the same pieces.
+
 ## Glass that blurs once, 2026-10-23 (owner's idea)
 
 The owner found the app's frame rate low and asked whether it was the app or the hosting. It was the app: hosting only decides how fast pages and data arrive, and every glass card blurred the photo behind it again on every frame while the page scrolled, the costliest thing the app draws. The owner then suggested blurring the background once when it changes, saving that as an image, and showing it cropped on the cards that sit straight on the background, keeping the real blur for anything that overlaps other things.

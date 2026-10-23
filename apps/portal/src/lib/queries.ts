@@ -527,6 +527,14 @@ function patchPost(
   );
 }
 
+export function useEditPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => api.editPost(id, body),
+    onSuccess: ({ post }) => patchPost(qc, post.id, (p) => ({ ...p, body: post.body })),
+  });
+}
+
 export function useLikePost() {
   const qc = useQueryClient();
   return useMutation({
@@ -783,6 +791,15 @@ export function useUpdateSettings() {
         ['social'],
         ['leaderboard'],
       ),
+  });
+}
+
+/** Choose a username. The API checks it is free and wasn't chosen in the last 14 days. */
+export function useSetUsername() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (username: string) => api.setUsername(username),
+    onSuccess: () => invalidate(keys.me, ['profiles'], ['social']),
   });
 }
 

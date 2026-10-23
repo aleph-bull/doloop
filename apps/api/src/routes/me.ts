@@ -1,7 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import {
   dayStartUnlocksAt,
+  displayNameError,
   minCostUnlocksAt,
+  normalizeDisplayName,
   isAccentUnlocked,
   isBackgroundAvailable,
   isValidTimezone,
@@ -12,14 +14,16 @@ import { badRequest } from '../errors';
 import { viewPolicy } from '../services/rest-days';
 import {
   deleteUser,
+  ensureUsername,
   regenerateIcsToken,
+  setUsername,
   settingsOf,
   syncStreak,
   toUser,
   updateProfile,
   updateSettings,
 } from '../services/users';
-import { settingsSchema, updateMeSchema } from '../validation';
+import { settingsSchema, updateMeSchema, usernameSchema } from '../validation';
 import { exportUserData } from '../services/export';
 import { and, eq } from 'drizzle-orm';
 import { userAssets } from '../db/schema';
@@ -35,12 +39,13 @@ export function meRoutes(
     const now = clock();
     const streak = await syncStreak(db, req.user, now);
     const policy = await viewPolicy(db, req.user.id, now);
+    const row = await ensureUsername(db, req.user);
     const bg = await db.query.userAssets.findFirst({
       where: and(eq(userAssets.userId, req.user.id), eq(userAssets.kind, 'background')),
       columns: { updatedAt: true },
     });
     return {
-      user: toUser(req.user),
+      user: toUser(row),
       onboarded: req.user.onboardedAt !== null,
       streakMessage: streak.message,
       streakMilestones: streak.milestonesReached,
@@ -58,8 +63,20 @@ export function meRoutes(
     return { user: toUser(row), onboarded: row.onboardedAt !== null };
   });
 
+  app.put('/api/me/username', async (req) => {
+    const { username } = usernameSchema.parse(req.body);
+    const row = await setUsername(db, req.user, username, clock());
+    return { user: toUser(row) };
+  });
+
   app.patch('/api/me/settings', async (req) => {
     const patch = settingsSchema.parse(req.body);
+    const name = patch.profile?.name;
+    if (name) {
+      const error = displayNameError(name);
+      if (error) throw badRequest(error);
+      patch.profile!.name = normalizeDisplayName(name);
+    }
     const accent = patch.theme?.accent;
     if (accent && !accent.startsWith('custom:') && !isAccentUnlocked(accent, req.user.level))
       throw badRequest('That accent unlocks at a higher level');

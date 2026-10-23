@@ -472,6 +472,9 @@ export const updateMeSchema = z
 
 export type SettingsPatch = z.infer<typeof settingsSchema>;
 
+/** The rules themselves are core's `usernameError`, checked in the service for its wording. */
+export const usernameSchema = z.object({ username: z.string().max(64) }).strict();
+
 export const trackerSchema = z.object({
   title: z.string().trim().min(1).max(60),
   /** Plural noun for one unit: "pages", "problems", "km". */

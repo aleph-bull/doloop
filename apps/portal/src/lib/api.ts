@@ -279,6 +279,8 @@ type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]>
 export interface PublicProfile {
   id: string;
   name: string;
+  /** Without the @. */
+  username: string | null;
   university: { id: string; name: string; short?: string } | null;
   bio: string | null;
   avatarUrl: string | null;
@@ -297,6 +299,8 @@ export interface PublicProfile {
 export interface Person {
   id: string;
   name: string;
+  /** Without the @. */
+  username: string | null;
   avatarUrl: string | null;
   university: { id: string; name: string; short?: string } | null;
 }
@@ -316,6 +320,10 @@ export interface PostSession {
   elapsedMinutes: number | null;
   startedAt: string | null;
   endedAt: string | null;
+  /** The badges the session unlocked, when the author shares stats; missing from older APIs. */
+  badges?: string[];
+  /** The daily streak when it ended, when kept and shared. */
+  streak?: number | null;
 }
 
 /** A post on Social, with its counts as the viewer sees them. */
@@ -625,6 +633,8 @@ export const api = {
     request<{ answers: OnboardingAnswers }>('PATCH', '/api/me/onboarding', patch),
   updateSettings: (patch: DeepPartial<UserSettings>) =>
     request<{ settings: UserSettings }>('PATCH', '/api/me/settings', patch),
+  setUsername: (username: string) =>
+    request<{ user: User }>('PUT', '/api/me/username', { username }),
   regenerateIcsToken: () => request<{ icsToken: string }>('POST', '/api/me/ics-token'),
   exportData: () => request<unknown>('GET', '/api/me/export'),
   deleteAccount: () => request<void>('DELETE', '/api/me'),
@@ -835,6 +845,11 @@ export const api = {
   createPost: (input: NewPost) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
+  /** Changes only the words of your own post. */
+  editPost: (id: string, body: string) =>
+    request<{ post: FeedPost; people: Record<string, Person> }>('PATCH', `/api/posts/${id}`, {
+      body,
+    }),
   mediaLimits: () => request<MediaLimits>('GET', '/api/social/uploads'),
   startUpload: (mime: string, bytes: number) =>
     request<UploadLink>('POST', '/api/social/uploads', { mime, bytes }),

@@ -43,6 +43,8 @@ describe('the times on a post', () => {
       elapsedMinutes: null,
       startedAt: '2026-09-23T09:00:00.000Z',
       endedAt: '2026-09-23T10:25:00.000Z',
+      badges: [],
+      streak: null,
     });
   });
 

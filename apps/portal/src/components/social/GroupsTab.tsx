@@ -21,6 +21,7 @@ import { LiveNow } from './LiveNow';
 const unknown = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });

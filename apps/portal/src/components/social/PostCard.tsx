@@ -2,9 +2,15 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
+  Award,
   ChevronLeft,
   ChevronRight,
+  EyeOff,
+  Flag,
+  Flame,
   MessageCircle,
+  MoreHorizontal,
+  Pencil,
   Play,
   ThumbsUp,
   Timer,
@@ -12,6 +18,7 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import { badgeByKey, showsUsername } from '@komogon/core';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
 import {
   api,
@@ -28,6 +35,7 @@ import {
   useComments,
   useDeleteComment,
   useDeletePost,
+  useEditPost,
   useLikePost,
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
@@ -35,6 +43,7 @@ import { Avatar } from './Avatar';
 const unknown = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });
@@ -46,35 +55,234 @@ export function figure(minutes: number): { value: string; unit: string } {
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };
 }
 
-/** The session on a post: focus, elapsed when shown, what it was on, and when, small. */
-export function SessionRow({ session }: { session: PostSession }) {
+/** The top right of a post: when the session ran, then focus (and elapsed) as small cards. */
+export function SessionSide({ session }: { session: PostSession | null }) {
+  if (!session) return null;
   const focus = figure(session.minutes);
   const elapsed = session.elapsedMinutes !== null ? figure(session.elapsedMinutes) : null;
   return (
-    <div className="post-session">
-      <Timer size={18} aria-hidden className="post-session-icon" />
-      <span className="post-session-part">
-        <span className="post-session-figure tabular">
-          {focus.value}
-          <small>{focus.unit}</small>
-        </span>
-        <span className="post-session-label">focus</span>
-      </span>
-      {elapsed && (
-        <span className="post-session-part">
-          <span className="post-session-figure tabular">
-            {elapsed.value}
-            <small>{elapsed.unit}</small>
-          </span>
-          <span className="post-session-label">elapsed</span>
-        </span>
-      )}
-      {session.subject && <span className="post-session-subject">on {session.subject}</span>}
+    <div className="post-side">
       {session.startedAt && session.endedAt && (
-        <span className="post-session-times tabular">
-          {timeRange(session.startedAt, session.endedAt)}
+        <span className="post-times tabular">{timeRange(session.startedAt, session.endedAt)}</span>
+      )}
+      <div className="post-stats">
+        <span className="post-stat">
+          <Timer size={15} aria-hidden className="post-session-icon" />
+          <span className="post-session-figure tabular">
+            {focus.value}
+            <small>{focus.unit}</small>
+          </span>
+          <span className="post-session-label">focus</span>
+        </span>
+        {elapsed && (
+          <span className="post-stat">
+            <span className="post-session-figure tabular">
+              {elapsed.value}
+              <small>{elapsed.unit}</small>
+            </span>
+            <span className="post-session-label">elapsed</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What the session earned, after kudos and comments: the daily streak it ended on, then one
+ * award for all its badges (named on hover, or on a tap).
+ */
+function SessionWins({ session }: { session: PostSession }) {
+  const [open, setOpen] = useState(false);
+  const names = (session.badges ?? []).flatMap((k) => badgeByKey(k)?.name ?? []);
+  const streak = session.streak ?? 0;
+  return (
+    <>
+      {streak > 0 && (
+        <span className="post-streak" title={`${streak} ${streak === 1 ? 'day' : 'days'}`}>
+          <Flame size={15} aria-hidden />
+          <span className="tabular">{streak}</span>
         </span>
       )}
+      {names.length > 0 && (
+        <span
+          className={`post-awards${open ? ' is-open' : ''}`}
+          onMouseLeave={() => setOpen(false)}
+        >
+          <button
+            type="button"
+            className="post-action"
+            aria-label={`Badges: ${names.join(', ')}`}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            onBlur={() => setOpen(false)}
+          >
+            <Award size={17} aria-hidden />
+          </button>
+          <span className="post-awards-tip" role="tooltip">
+            {names.map((n) => (
+              <span key={n}>{n}</span>
+            ))}
+          </span>
+        </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * The ⋯ under every post. Yours: edit the words, or delete it after "Are you sure?".
+ * Someone else's: Hide and Report, which only close the menu for now (not built yet).
+ */
+function PostMenu({ post, onEdit }: { post: FeedPost; onEdit: () => void }) {
+  const del = useDeletePost();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [sure, setSure] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = () => {
+      setOpen(false);
+      setSure(false);
+    };
+    const away = (e: MouseEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) close();
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', key);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', key);
+    };
+  }, [open]);
+
+  return (
+    <span className="post-menu" ref={wrap}>
+      <button
+        type="button"
+        className={`post-action${open ? ' is-on' : ''}`}
+        aria-label="More"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((v) => !v);
+          setSure(false);
+        }}
+      >
+        <MoreHorizontal size={17} aria-hidden />
+      </button>
+      {open && (
+        <span className="post-menu-pop" role="menu">
+          {sure ? (
+            <span className="post-menu-sure">
+              <span>Are you sure?</span>
+              <span className="post-menu-actions">
+                <Button
+                  size="sm"
+                  variant="danger"
+                  loading={del.isPending}
+                  onClick={() =>
+                    del.mutate(post.id, {
+                      onError: (err) =>
+                        toast(err instanceof Error ? err.message : 'Could not delete it'),
+                    })
+                  }
+                >
+                  Delete
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSure(false)}>
+                  Keep
+                </Button>
+              </span>
+            </span>
+          ) : post.you ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="post-menu-item"
+                onClick={() => {
+                  setOpen(false);
+                  onEdit();
+                }}
+              >
+                <Pencil size={14} aria-hidden /> Edit
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="post-menu-item is-danger"
+                onClick={() => setSure(true)}
+              >
+                <Trash2 size={14} aria-hidden /> Delete
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className="post-menu-item"
+                onClick={() => setOpen(false)}
+              >
+                <EyeOff size={14} aria-hidden /> Hide
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                className="post-menu-item is-danger"
+                onClick={() => setOpen(false)}
+              >
+                <Flag size={14} aria-hidden /> Report
+              </button>
+            </>
+          )}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** The post's words in a box, saved over the old ones. */
+function EditBody({ post, onDone }: { post: FeedPost; onDone: () => void }) {
+  const edit = useEditPost();
+  const { toast } = useToast();
+  const [text, setText] = useState(post.body ?? '');
+  const save = () =>
+    edit.mutate(
+      { id: post.id, body: text.trim() },
+      {
+        onSuccess: onDone,
+        onError: (err) => toast(err instanceof Error ? err.message : 'Could not save it'),
+      },
+    );
+  return (
+    <div className="post-edit">
+      <textarea
+        className="textarea post-edit-text"
+        value={text}
+        onChange={(e) => setText(e.target.value.slice(0, 500))}
+        placeholder="How did it go?"
+        aria-label="Your post"
+        rows={1}
+        autoFocus
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') save();
+          if (e.key === 'Escape') onDone();
+        }}
+      />
+      <span className="post-edit-actions">
+        <Button size="sm" variant="ghost" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button size="sm" variant="primary" loading={edit.isPending} onClick={save}>
+          Save
+        </Button>
+      </span>
     </div>
   );
 }
@@ -387,8 +595,7 @@ export function PostCard({
 }) {
   const author = people[post.userId] ?? unknown(post.userId);
   const like = useLikePost();
-  const del = useDeletePost();
-  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(focus === 'comments');
   const [marked, setMarked] = useState(!!focus);
   const files = postFiles(post);
@@ -418,6 +625,7 @@ export function PostCard({
             )}
           </span>
           <span className="post-when">
+            {showsUsername(author) && <span className="post-handle">@{author.username} · </span>}
             {fmtAgo(post.createdAt)}
             {post.friendsOnly && (
               <span className="post-audience">
@@ -426,29 +634,15 @@ export function PostCard({
             )}
           </span>
         </div>
-        {post.you && (
-          <Button
-            icon
-            size="sm"
-            variant="ghost"
-            aria-label="Delete post"
-            title="Delete"
-            className="post-delete"
-            loading={del.isPending}
-            onClick={() =>
-              del.mutate(post.id, {
-                onError: (err) => toast(err instanceof Error ? err.message : 'Could not delete it'),
-              })
-            }
-          >
-            <Trash2 size={15} aria-hidden />
-          </Button>
-        )}
+        <SessionSide session={post.session} />
+        {post.session?.subject && <h3 className="post-title">{post.session.subject}</h3>}
       </header>
 
-      {post.session && <SessionRow session={post.session} />}
-
-      {post.body && <p className="post-body">{post.body}</p>}
+      {editing ? (
+        <EditBody post={post} onDone={() => setEditing(false)} />
+      ) : (
+        post.body && <p className="post-body">{post.body}</p>
+      )}
       {files.length > 1 ? (
         <Carousel post={post} files={files} />
       ) : (
@@ -477,6 +671,8 @@ export function PostCard({
           <MessageCircle size={17} aria-hidden />
           {post.comments > 0 && <span className="tabular">{post.comments}</span>}
         </button>
+        {post.session && <SessionWins session={post.session} />}
+        <PostMenu post={post} onEdit={() => setEditing(true)} />
       </footer>
       {open && <Comments post={post} people={people} />}
     </Panel>

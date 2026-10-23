@@ -350,6 +350,21 @@
     padding-left: 0;
   }
 }
+/* On a computer the box is one line until you write more, and Post sits on the
+   attachments' last line instead of a line of its own. */
+@media (min-width: 601px) {
+  .composer-text {
+    field-sizing: content;
+    max-height: 240px;
+  }
+  .composer-foot {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+  .composer-attach {
+    flex: 1;
+  }
+}
 
 /* A post. */
 .post {
@@ -358,10 +373,19 @@
   gap: 10px;
   padding: var(--card-pad);
 }
+/*
+ * The head as a grid: picture and name, the title on the next row right under them, and the
+ * session's times and focus card down the right of both, so the title doesn't wait for them.
+ */
 .post-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
+}
+.post-head > .post-title {
+  grid-column: 1 / 3;
+  grid-row: 2;
 }
 .post-who {
   flex: 1;
@@ -406,9 +430,20 @@
   content: '·';
   margin-right: 3px;
 }
-.post-delete {
-  flex: none;
+/* The top right of a post: when the session ran, then focus (and elapsed) as small cards. */
+.post-side {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.post-times {
+  font-size: var(--text-xs);
   color: var(--fg-subtle);
+  white-space: nowrap;
 }
 .post-body {
   font-size: var(--text-sm);
@@ -418,12 +453,22 @@
   max-width: 62ch;
 }
 
-/* The session strip: a big number on a soft tint, the subject beside it. */
-.post-session {
+/* What the session was on, as the post's title under the head. */
+.post-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+/* Focus (and elapsed) as small cards on a soft tint. */
+.post-stats {
   display: flex;
-  flex-wrap: wrap;
+  gap: 8px;
+}
+.post-stat {
+  display: inline-flex;
   align-items: baseline;
-  gap: 4px 8px;
+  gap: 6px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -449,31 +494,9 @@
   color: var(--fg-muted);
   margin-left: 0.3em;
 }
-.post-session-part {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  flex: none;
-}
 .post-session-label {
   font-size: var(--text-xs);
   color: var(--fg-muted);
-}
-.post-session-times {
-  margin-left: auto;
-  flex: none;
-  padding-left: 4px;
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-  white-space: nowrap;
-}
-.post-session-subject {
-  flex: 1 1 8em;
-  color: var(--fg-muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A picture on a post, at its own shape, no taller than the screen's half. */
@@ -649,6 +672,128 @@
 }
 .post-action.is-on {
   color: var(--accent-text);
+}
+
+/*
+ * What the session earned, after kudos and comments: one award whose badges are named in a
+ * small card on hover (or a tap), and the daily streak it ended on.
+ */
+.post-awards {
+  position: relative;
+}
+.post-awards > .post-action {
+  color: var(--accent-text);
+}
+.post-awards-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 5;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-fill, #1c1b22);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.post-awards:hover .post-awards-tip,
+.post-awards.is-open .post-awards-tip {
+  display: flex;
+}
+.post-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.post-streak svg {
+  color: var(--flame);
+  fill: color-mix(in srgb, var(--flame) 35%, transparent);
+}
+
+/* The ⋯ under your own post: Edit and Delete, and "Are you sure?" before a delete. */
+.post-menu {
+  position: relative;
+}
+/* Above the posts after it while open. */
+.post:has(.post-menu-pop) {
+  position: relative;
+  z-index: 2;
+}
+.post-menu-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--panel-fill, #1c1b22);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+.post-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.post-menu-item:hover,
+.post-menu-item:focus-visible {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.post-menu-item.is-danger {
+  color: color-mix(in srgb, var(--status-bad) 62%, var(--fg));
+}
+.post-menu-sure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  font-size: var(--text-sm);
+}
+.post-menu-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Editing the words in place. */
+.post-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.post-edit-text {
+  min-height: 44px;
+  max-height: 240px;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  field-sizing: content;
+  resize: vertical;
+}
+.post-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .post-comments {
@@ -1464,6 +1609,15 @@
 }
 .side-person-name {
   font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-person-handle {
+  flex: none;
+  max-width: 45%;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2688,4 +2842,294 @@
 .post.is-focus {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* ----- Social on a phone (2026-10-22) ----- */
+/*
+ * Laid out like the photo-sharing apps: friends, the title and the bell across the top, the
+ * views as plain words, and posts straight on the page instead of in cards, the picture or
+ * video big and first. The computer's feed is unchanged.
+ */
+.social-top {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 8px;
+}
+.social-top-title {
+  text-align: center;
+}
+.social-top-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+}
+.social-top-dot {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+}
+.social-top-count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+.social-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 20px;
+}
+.social-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--fg-muted);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.social-tab[aria-pressed='true'] {
+  color: var(--fg);
+}
+
+@media (max-width: 560px) {
+  .feed {
+    gap: 24px;
+  }
+
+  /* Straight on the page: the backdrop's text colours, no surface. */
+  :root .panel.post,
+  :root .panel.live,
+  :root .panel.composer {
+    --fg: var(--fg-on-backdrop);
+    --fg-muted: var(--fg-on-backdrop-muted);
+    --fg-subtle: var(--fg-on-backdrop-subtle);
+    --border: var(--line-on-backdrop);
+    --border-strong: var(--line-strong-on-backdrop);
+    --accent-text: var(--accent-text-backdrop);
+    padding: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  /* Who is studying now: round pictures in a row, ringed while they focus. */
+  .live-list {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin: -4px;
+    padding: 4px;
+  }
+  .live-list::-webkit-scrollbar {
+    display: none;
+  }
+  .live-row {
+    flex: none;
+    flex-direction: column;
+    gap: 7px;
+    width: 64px;
+  }
+  .live-avatar .profile-avatar.is-sm {
+    width: 56px;
+    height: 56px;
+    font-size: 1.25rem;
+    outline: 2px solid var(--status-bad);
+    outline-offset: 2px;
+  }
+  .live-avatar:has(.live-dot.is-resting) .profile-avatar {
+    outline-color: var(--fg-subtle);
+  }
+  .live-avatar .live-dot {
+    display: none;
+  }
+  .live-text {
+    align-items: center;
+    width: 100%;
+    text-align: center;
+  }
+  .live-text .post-name {
+    max-width: 100%;
+    font-size: var(--text-xs);
+  }
+  .live-line .live-state,
+  .live-line .live-subject {
+    display: none;
+  }
+
+  /* The composer rests as the box alone, round like a message field, until tapped. */
+  .composer .profile-avatar.is-sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+  .composer-row {
+    align-items: center;
+  }
+  .composer-text {
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 21px;
+    resize: none;
+  }
+  .composer.is-resting .composer-text {
+    height: 42px;
+    overflow: hidden;
+  }
+  .composer.is-resting .composer-foot {
+    display: none;
+  }
+
+  /* Everyone or Friends: two words, the one shown in full colour. */
+  .feed-bar {
+    justify-content: flex-start;
+    margin-bottom: -8px;
+  }
+  .feed-bar .segmented {
+    gap: 16px;
+    padding: 0;
+    background: none;
+  }
+  .feed-bar .segmented-item,
+  .feed-bar .segmented-item[aria-pressed='true'] {
+    padding: 2px 0;
+    background: none;
+    box-shadow: none;
+    font-weight: 600;
+  }
+
+  /* A post: the picture or video first and big, then what it was on and the words. */
+  .post {
+    gap: 10px;
+  }
+  .post > .post-head {
+    order: -2;
+  }
+  .post > .post-image,
+  .post > .post-video,
+  .post > .post-carousel {
+    order: -1;
+  }
+  .post .profile-avatar.is-sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.95rem;
+  }
+  .post-name {
+    font-size: 0.9375rem;
+  }
+  .post-image,
+  .post-video,
+  .post-carousel-track {
+    border-radius: var(--radius-lg);
+  }
+  .post-image {
+    max-height: 72vh;
+  }
+  .post-carousel-slide .post-image,
+  .post-carousel-slide .post-video {
+    border-radius: 0;
+  }
+  .post-carousel-dots {
+    margin-top: 0;
+  }
+  .post-body {
+    font-size: 0.9375rem;
+  }
+  .post-foot {
+    gap: 4px;
+  }
+  .post-action {
+    height: 36px;
+    padding: 0 10px;
+  }
+  .post-action svg {
+    width: 19px;
+    height: 19px;
+  }
+  /* With no card behind it, the focus card needs a little more tint to show on a photo. */
+  .post-stat {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .post-streak {
+    height: 36px;
+  }
+  .post-streak svg {
+    width: 18px;
+    height: 18px;
+  }
+  .post.is-focus {
+    outline-offset: 8px;
+  }
+
+  /* Comments: no rule above them, and a round field. */
+  .post-comments {
+    gap: 14px;
+    padding-top: 2px;
+    border-top: 0;
+  }
+  .post-comment-form .input {
+    min-height: 42px;
+    padding-inline: 16px;
+    border-radius: 21px;
+  }
+
+  /* Share to Social's preview follows: the video first. */
+  .post-preview-post > .post-head {
+    order: -2;
+  }
+  .post-preview-post > .post-preview-video {
+    order: -1;
+    border-radius: var(--radius-lg);
+  }
+}
+
+/* Words straight on a photograph get the same soft halo as the page title. */
+:root[data-backdrop='photo'] .social-tabs,
+:root[data-backdrop='photo'] .feed-bar {
+  text-shadow:
+    0 0 2px color-mix(in srgb, var(--backdrop-halo) 25%, transparent),
+    0 1px 18px color-mix(in srgb, var(--backdrop-halo) 35%, transparent);
+}
+@media (max-width: 560px) {
+  :root[data-backdrop='photo'] .live-head,
+  :root[data-backdrop='photo'] .live-text,
+  :root[data-backdrop='photo'] .post-head,
+  :root[data-backdrop='photo'] .post-body,
+  :root[data-backdrop='photo'] .post-foot,
+  :root[data-backdrop='photo'] .post-comment {
+    text-shadow:
+      0 0 2px color-mix(in srgb, var(--backdrop-halo) 25%, transparent),
+      0 1px 18px color-mix(in srgb, var(--backdrop-halo) 35%, transparent);
+  }
+  .post-menu-pop,
+  .post-awards-tip {
+    text-shadow: none;
+  }
 }

@@ -10,7 +10,15 @@ import { useMe, useUpdateSettings } from './queries';
  * dismissal takes effect immediately and survives the moment before /api/me returns.
  */
 export type HintKey =
-  'rest-days' | 'calendar' | 'xp' | 'freezes' | 'blocking' | 'name' | 'dashboard' | 'grades';
+  | 'rest-days'
+  | 'calendar'
+  | 'xp'
+  | 'freezes'
+  | 'blocking'
+  | 'name'
+  | 'dashboard'
+  | 'grades'
+  | 'username';
 
 const KEY = 'komogon.hints.dismissed';
 

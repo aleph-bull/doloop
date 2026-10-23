@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { displayNameError } from '@komogon/core';
 import { Button, Modal, useToast } from '@komogon/ui';
 import type { PublicProfile } from '../lib/api';
-import { useUpdateSettings } from '../lib/queries';
+import { useMe, useUpdateSettings } from '../lib/queries';
 import { ProfileFields } from './ProfileFields';
 
 export interface ProfileSettingsDialogProps {
@@ -17,6 +18,7 @@ export interface ProfileSettingsDialogProps {
  */
 export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSettingsDialogProps) {
   const update = useUpdateSettings();
+  const me = useMe();
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
@@ -24,18 +26,21 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
   // Start from what the profile shows each time it opens, so a cancelled edit leaves no trace.
   // Only on opening: the picture and university fields refetch the profile while the dialog
   // is up, and that must not wipe a name or bio typed but not yet saved.
-  const latest = useRef(profile);
+  // The name comes from your account, not the profile: with no name of your own, the profile
+  // shows your username (or "Someone") in its place.
+  const latest = useRef({ profile, name: me.data?.user.settings.profile.name ?? '' });
   useEffect(() => {
-    latest.current = profile;
-  }, [profile]);
+    latest.current = { profile, name: me.data?.user.settings.profile.name ?? '' };
+  }, [profile, me.data]);
   useEffect(() => {
     if (!open) return;
-    const p = latest.current;
-    setName(p.name === 'Someone' ? '' : p.name);
+    const { profile: p, name: own } = latest.current;
+    setName(own.trim());
     setBio(p.bio ?? '');
   }, [open]);
 
   const save = async () => {
+    if (displayNameError(name)) return;
     try {
       await update.mutateAsync({
         profile: { name: name.trim() || null, bio: bio.trim() || null },
@@ -57,7 +62,12 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => void save()} loading={update.isPending}>
+          <Button
+            variant="primary"
+            onClick={() => void save()}
+            loading={update.isPending}
+            disabled={!!displayNameError(name)}
+          >
             Save
           </Button>
         </>

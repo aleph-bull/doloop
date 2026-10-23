@@ -11,6 +11,7 @@ import { Avatar } from './Avatar';
 const someone = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });
@@ -102,8 +103,9 @@ function Row({
  * The bell beside the streak and level on your card: how many things are new, and the list
  * behind it, laid out like BeReal's notifications (picture, who and what, when, the post on
  * the right, under Today, Yesterday, This week and Earlier). Opening it makes them seen.
+ * On a phone it is a round button at the top of Social instead (`round`).
  */
-export function NotificationsBell() {
+export function NotificationsBell({ round }: { round?: boolean }) {
   const q = useNotifications();
   const seen = useNotificationsSeen();
   const [open, setOpen] = useState(false);
@@ -125,20 +127,33 @@ export function NotificationsBell() {
 
   return (
     <>
-      <button
-        type="button"
-        className="side-bell"
-        aria-label={unread > 0 ? `Notifications, ${unread} new` : 'Notifications'}
-        aria-haspopup="dialog"
-        onClick={show}
-      >
-        <span className="side-bell-icon">
-          <Bell size={16} aria-hidden />
-          {unread > 0 && <span className="side-bell-dot" />}
-        </span>
-        <span className="tabular">{unread}</span>
-        <span className="side-stat-label">new</span>
-      </button>
+      {round ? (
+        <button
+          type="button"
+          className="social-top-btn"
+          aria-label={unread > 0 ? `Notifications, ${unread} new` : 'Notifications'}
+          aria-haspopup="dialog"
+          onClick={show}
+        >
+          <Bell size={20} aria-hidden />
+          {unread > 0 && <span className="social-top-dot" />}
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="side-bell"
+          aria-label={unread > 0 ? `Notifications, ${unread} new` : 'Notifications'}
+          aria-haspopup="dialog"
+          onClick={show}
+        >
+          <span className="side-bell-icon">
+            <Bell size={16} aria-hidden />
+            {unread > 0 && <span className="side-bell-dot" />}
+          </span>
+          <span className="tabular">{unread}</span>
+          <span className="side-stat-label">new</span>
+        </button>
+      )}
       {/* On the body: inside the figures' row it would take on their bold, centred text. */}
       {createPortal(
         <Modal

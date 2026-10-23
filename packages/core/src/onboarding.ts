@@ -47,6 +47,8 @@ export type OnboardingSection = 'questions' | 'tour' | 'timelapse';
 export type SectionEnd = 'done' | 'skipped';
 
 export interface OnboardingAnswers {
+  /** The names step was done: a username picked, a name maybe. The names themselves live on the account. */
+  name?: true;
   look?: { id: OnboardingLookId; dark: boolean } | null;
   /** An id from `ONTARIO_UNIVERSITIES`, or `NOT_IN_UNIVERSITY`. Not verified. */
   university?: string | null;
