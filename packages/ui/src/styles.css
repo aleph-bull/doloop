@@ -288,6 +288,41 @@ a:hover {
 :root[data-panel='matte'] .modal::backdrop {
   backdrop-filter: none;
 }
+/*
+ * Matte on a solid colour (data-tonal, from applyUserTheme): cards, the top bar or sidebar
+ * and dialogs are shades of that colour, and text takes its hue, instead of the theme's own
+ * blue-greys laid over it. The --tone-* values are measured for contrast in tonalSurfaces
+ * (contrast.ts). Written after the matte rules so equal selectors here win.
+ */
+:root[data-tonal][data-panel='matte'] {
+  --bg-base: var(--tone-bg);
+  --bg-elevated: var(--tone-raised);
+  --bg-sunken: var(--tone-sunken);
+  --matte-fill: var(--tone-card);
+  --panel-fill: var(--tone-card);
+  --glass-solid: var(--tone-card);
+  --ink: var(--tone-ink);
+  --ink-muted: var(--tone-ink-muted);
+  --ink-subtle: var(--tone-ink-subtle);
+  --ink-line: color-mix(in srgb, var(--tone-ink) 10%, transparent);
+  --ink-line-strong: color-mix(in srgb, var(--tone-ink) 18%, transparent);
+  --panel-border: var(--tone-border);
+  --panel-shadow: var(--tone-shadow);
+  --chrome-shadow: var(--tone-shadow);
+}
+:root[data-tonal][data-panel='matte'] .panel,
+:root[data-tonal][data-panel='matte'] .glass,
+:root[data-tonal][data-panel='matte'] .chrome {
+  --accent-text: var(--tone-accent-text);
+}
+:root[data-tonal][data-panel='matte'] .on-backdrop {
+  --fg: var(--tone-page);
+  --fg-muted: var(--tone-page-muted);
+  --fg-subtle: var(--tone-page-subtle);
+  --border: color-mix(in srgb, var(--tone-page) 12%, transparent);
+  --border-strong: color-mix(in srgb, var(--tone-page) 22%, transparent);
+  --accent-text: var(--tone-page-accent);
+}
 
 @supports not (backdrop-filter: blur(1px)) {
   .glass,

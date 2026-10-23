@@ -1,6 +1,5 @@
-import { CUSTOM_BACKGROUND_UPLOAD, type UserSettings } from '@komogon/core';
+import { CUSTOM_BACKGROUND_UPLOAD, type BackgroundTexture, type UserSettings } from '@komogon/core';
 import {
-  applyTheme,
   applyUserTheme,
   recommendedTheme,
   resolveTheme,
@@ -18,9 +17,11 @@ export interface Appearance {
   customImageUrl: string | null;
   /** Their own glass colour and weight (Appearance › Advanced), for the Backdrop. */
   glass: GlassChoice;
+  /** The pattern over a plain background, for the Backdrop. */
+  texture: BackgroundTexture;
 }
 
-interface Resolved extends Omit<Appearance, 'glass'> {
+interface Resolved extends Omit<Appearance, 'glass' | 'texture'> {
   /** The background's own pick, which the Recommended mode follows; null on a gradient. */
   recommended: ResolvedTheme | null;
 }
@@ -72,10 +73,12 @@ export function useResolvedTheme(settings: UserSettings | undefined): ResolvedTh
 export function useAppearance(settings: UserSettings | undefined): Appearance {
   const resolved = useResolvedAppearance(settings);
   const { recommended } = resolved;
+  // The background on screen: an upload has no colour of its own for matte panels to take.
+  const backdropId = settings?.theme.customBackgroundUrl ? null : resolved.backgroundId;
 
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended);
-  }, [settings, recommended]);
+    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
+  }, [settings, recommended, backdropId]);
 
   // Follow OS theme changes while the system decides: in system mode, or Recommended on a
   // background that has no pick of its own.
@@ -84,15 +87,12 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
   useEffect(() => {
     if (!settings || !followsSystem) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    // All of it, not just light or dark: matte panels on a solid colour shade for the theme.
     const onChange = () =>
-      applyTheme({
-        mode: settings.theme.mode,
-        accent: settings.theme.accent.startsWith('custom:') ? 'custom' : settings.theme.accent,
-        reducedMotion: settings.effects.reducedMotion,
-      });
+      applyUserTheme(settings, document.documentElement, recommended, backdropId);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
-  }, [settings, followsSystem]);
+  }, [settings, followsSystem, recommended, backdropId]);
 
   return {
     theme: resolved.theme,
@@ -102,5 +102,6 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
       color: settings?.theme.glassColor ?? null,
       alpha: settings?.theme.glassAlpha ?? null,
     },
+    texture: settings?.theme.texture ?? 'none',
   };
 }

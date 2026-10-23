@@ -161,7 +161,8 @@ function PresetCard({
 
 /**
  * Saved looks: the background (including an uploaded image), accent and panel style, under
- * a name. Kept in this browser only. Picking one applies all of it.
+ * a name. Kept in this browser only. Picking one applies all of it. Shown as the Themes
+ * picker's Custom tab, so it renders straight into that field, with no heading of its own.
  */
 export function AppearancePresets({
   theme,
@@ -209,6 +210,7 @@ export function AppearancePresets({
               glassBlur: p.glassBlur,
               glassSaturate: p.glassSaturate ?? 100,
             }),
+        ...(p.texture ? { texture: p.texture } : {}),
       };
       if (p.hasImage) {
         const image = await presetImage(p.id);
@@ -236,8 +238,7 @@ export function AppearancePresets({
   };
 
   return (
-    <div className="field">
-      <span className="field-label">Saved looks</span>
+    <>
       {presets.length > 0 && (
         <div className="preset-grid">
           {presets.map((p) => (
@@ -292,6 +293,6 @@ export function AppearancePresets({
         </div>
       )}
       <span className="field-hint">Your current appearance settings saved as a preset.</span>
-    </div>
+    </>
   );
 }

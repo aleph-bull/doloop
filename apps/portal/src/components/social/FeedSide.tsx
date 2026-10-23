@@ -30,6 +30,7 @@ import {
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
 import { LiveDot, liveStateLabel, StudyingFor } from './LiveNow';
+import { NotificationsBell } from './Notifications';
 
 const unknown = (id: string): Person => ({
   id,
@@ -359,6 +360,9 @@ export function ProfileCard() {
           <Trophy size={14} aria-hidden />
           <span className="tabular">{user.level}</span>
           <span className="side-stat-label">level</span>
+        </li>
+        <li>
+          <NotificationsBell />
         </li>
       </ul>
       <Link to="/settings#social" className="side-link">

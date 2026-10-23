@@ -255,6 +255,24 @@ describe('settings and profile', () => {
     }
   });
 
+  it('keeps a texture, starting with none', async () => {
+    const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme;
+    expect(before.texture).toBe('none');
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { backgroundId: 'solid:#f4f1ea', panel: 'matte', texture: 'grain' } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().settings.theme).toMatchObject({ texture: 'grain', panel: 'matte' });
+    const bad = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { texture: 'stripes' } },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+
   it('updates timezone and onboarding, regenerates ics token, exports data', async () => {
     const res = await t.api({
       method: 'PATCH',

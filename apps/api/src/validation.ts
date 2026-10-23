@@ -337,6 +337,7 @@ export const settingsSchema = z
         glassAlpha: z.number().min(0.3).max(0.95).nullable(),
         glassBlur: z.number().int().min(0).max(40),
         glassSaturate: z.number().int().min(100).max(200),
+        texture: z.enum(['none', 'grain', 'dots', 'grid']),
         extensionBackground: z.string().max(32),
         // A hard ceiling only; the route refuses growing past MAX_SAVED_ACCENTS, so a list saved
         // under an older, higher limit can still be trimmed or reordered.

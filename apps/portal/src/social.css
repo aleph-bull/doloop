@@ -395,6 +395,17 @@
   font-size: var(--text-xs);
   color: var(--fg-subtle);
 }
+/* "· Friends" after the time on a post kept to friends. */
+.post-audience {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 6px;
+}
+.post-audience::before {
+  content: '·';
+  margin-right: 3px;
+}
 .post-delete {
   flex: none;
   color: var(--fg-subtle);
@@ -511,6 +522,103 @@
   position: absolute;
   bottom: 10px;
   font-size: var(--text-xs);
+}
+
+/*
+ * Several files: one frame at the first file's shape, slid sideways like Instagram's
+ * carousel. The track snaps to each slide; pictures fill the frame, the video sits in it.
+ */
+.post-carousel {
+  position: relative;
+}
+.post-carousel-track {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  border-radius: var(--radius-md);
+  background: #000;
+  max-height: 70vh;
+}
+.post-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+.post-carousel-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+.post-carousel-slide .post-image,
+.post-carousel-slide .post-video {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.post-carousel-slide .post-image.is-loading {
+  aspect-ratio: auto;
+}
+.post-carousel-count {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+.post-carousel-arrow {
+  position: absolute;
+  top: calc(50% - 11px);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.85);
+  color: #111;
+  cursor: pointer;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+.post-carousel-arrow.is-prev {
+  left: 10px;
+}
+.post-carousel-arrow.is-next {
+  right: 10px;
+}
+.post-carousel:hover .post-carousel-arrow,
+.post-carousel-arrow:focus-visible {
+  opacity: 1;
+}
+/* A touch screen swipes; no arrows. */
+@media (hover: none) {
+  .post-carousel-arrow {
+    display: none;
+  }
+}
+.post-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 8px;
+}
+.post-carousel-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 25%, transparent);
+}
+.post-carousel-dots span.is-on {
+  background: var(--accent);
 }
 
 /* Like and comment: quiet marks that fill in when they are on. */
@@ -2414,4 +2522,170 @@
 .friend-pop-actions {
   display: flex;
   gap: 6px;
+}
+
+/* ---------- Notifications (the bell on your card, 2026-10-22) ---------- */
+
+/* A figure like the streak and level beside it, but a button that opens the list. */
+.side-bell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  /* Room for the hover around it, without moving it off its neighbours' line. */
+  margin: -2px 0;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.side-bell:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.side-bell-icon {
+  position: relative;
+  display: grid;
+  margin-bottom: 2px;
+  color: var(--accent-text);
+}
+.side-bell-dot {
+  position: absolute;
+  top: -1px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+}
+
+@media (min-width: 561px) {
+  .notif-dialog {
+    max-width: min(440px, calc(100vw - 32px));
+  }
+}
+.notif-empty {
+  padding: 8px 0;
+}
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.notif-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.notif-section {
+  margin: 0 0 4px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+/* Like BeReal's: the picture, who and what with when under it, the post at the end. */
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  margin: 0 -8px;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+}
+.notif-row:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.notif-who {
+  position: relative;
+  flex: none;
+}
+.notif-who .profile-avatar.is-xs {
+  width: 40px;
+  height: 40px;
+}
+/* What happened, as a small badge on the picture's corner. */
+.notif-kind {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--glass-solid);
+}
+.notif-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  line-height: 1.35;
+}
+.notif-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.notif-line strong {
+  font-weight: 600;
+}
+.notif-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.notif-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+}
+.notif-thumb {
+  flex: none;
+  width: 40px;
+  height: 52px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.notif-thumb.is-plain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
+  padding: 2px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--fg-muted);
+}
+
+.notif-thumb.is-plain small {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+
+/* A post opened from the notifications, outlined for a moment. */
+.post.is-focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }

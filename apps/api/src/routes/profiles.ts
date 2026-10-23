@@ -119,14 +119,23 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const settings = settingsOf(row);
     const you = row.id === req.user.id;
     const showStats = you || settings.social.stats;
-    const [sessions, avatar, page, friends, friendship, held] = await Promise.all([
+    const friendship = await friendshipWith(db, req.user.id, row.id);
+    // A post kept to friends shows only to the author and their friends.
+    const ownCircle = you || friendship.status === 'friends';
+    const [sessions, avatar, page, friends, held] = await Promise.all([
       loadCompletedSessions(db, row.id),
       db.query.userAssets.findFirst({
         where: and(eq(userAssets.userId, row.id), eq(userAssets.kind, 'avatar')),
       }),
-      loadPosts(db, req.user.id, eq(posts.userId, row.id), PROFILE_POSTS_LIMIT),
+      loadPosts(
+        db,
+        req.user.id,
+        ownCircle
+          ? eq(posts.userId, row.id)
+          : and(eq(posts.userId, row.id), eq(posts.friendsOnly, false)),
+        PROFILE_POSTS_LIMIT,
+      ),
       friendIds(db, row.id),
-      friendshipWith(db, req.user.id, row.id),
       showStats ? listAchievements(db, row.id) : Promise.resolve([]),
     ]);
     const tz = row.timezone;

@@ -60,6 +60,8 @@ export const users = pgTable('users', {
   devWorld: uuid('dev_world'),
   /** When a dev account and everything in it is deleted. */
   devExpiresAt: ts('dev_expires_at'),
+  /** When the notifications (the bell on Social) were last opened: anything later is new. */
+  notificationsSeenAt: ts('notifications_seen_at'),
 });
 
 /**
@@ -412,11 +414,16 @@ export const posts = pgTable(
     /** When the session started and ended, shown small on the post. */
     startedAt: ts('started_at'),
     endedAt: ts('ended_at'),
-    /** The attached video's type and size; the bytes are in `post_media`. */
+    /**
+     * The first file's type and size, kept for portals from before a post could carry
+     * several; every file, in order, is a row of `post_media`.
+     */
     mediaMime: text('media_mime'),
     mediaBytes: integer('media_bytes'),
-    /** A small JPEG data URL shown before the video loads. */
+    /** A small JPEG data URL shown before the post's video loads. */
     poster: text('poster'),
+    /** Shown only to the author's friends, whatever Settings › Social says. */
+    friendsOnly: boolean('friends_only').notNull().default(false),
     createdAt: ts('created_at').notNull().defaultNow(),
   },
   (t) => [
@@ -429,16 +436,22 @@ export const posts = pgTable(
  * The video or picture behind a post, kept apart from the post so listing the feed never
  * reads it. Either the bytes are here (`data`, without R2) or in the R2 bucket (`key`).
  */
-export const postMedia = pgTable('post_media', {
-  postId: uuid('post_id')
-    .primaryKey()
-    .references(() => posts.id, { onDelete: 'cascade' }),
-  mime: text('mime').notNull(),
-  data: text('data'), // base64
-  /** Where the file is in the R2 bucket (`posts/<user>/<id>.<ext>`). */
-  key: text('key'),
-  bytes: integer('bytes').notNull(),
-});
+export const postMedia = pgTable(
+  'post_media',
+  {
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    /** Its place in the post's carousel, from 0; a post has one video and three pictures at most. */
+    position: integer('position').notNull().default(0),
+    mime: text('mime').notNull(),
+    data: text('data'), // base64
+    /** Where the file is in the R2 bucket (`posts/<user>/<id>.<ext>`). */
+    key: text('key'),
+    bytes: integer('bytes').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.postId, t.position] })],
+);
 
 /**
  * Every R2 upload link handed out, with the size it was signed for, kept two days: what

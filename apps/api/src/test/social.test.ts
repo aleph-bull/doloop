@@ -114,7 +114,17 @@ describe('posts on the feed', () => {
     expect(del.statusCode).toBeLessThan(300);
   });
 
+  /** A finished session of Ada's from this morning, not posted yet. */
+  const fresh = async () => {
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_A.id, '2026-09-23T09:00:00Z', 1200))
+      .returning();
+    return s!.id;
+  };
+
   it("refuses someone else's session, a wrong video type and a poster alone", async () => {
+    const sessionId = await fresh();
     const theirs = await t.api({
       method: 'POST',
       url: '/api/social/posts',
@@ -137,6 +147,13 @@ describe('posts on the feed', () => {
   });
 
   it('takes a picture too, but no poster with it', async () => {
+    const sessionId = await fresh();
+    const withPoster = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId, media: 'data:image/png;base64,iVBORw0KGgo=', poster: JPEG },
+    });
+    expect(withPoster.statusCode).toBe(400);
     const pic = await t.api({
       method: 'POST',
       url: '/api/social/posts',
@@ -144,16 +161,11 @@ describe('posts on the feed', () => {
     });
     expect(pic.statusCode).toBe(201);
     expect(pic.json().post.media).toEqual({ mime: 'image/png', bytes: 8, poster: null });
-    const withPoster = await t.api({
-      method: 'POST',
-      url: '/api/social/posts',
-      payload: { sessionId, media: 'data:image/png;base64,iVBORw0KGgo=', poster: JPEG },
-    });
-    expect(withPoster.statusCode).toBe(400);
     await t.api({ method: 'DELETE', url: `/api/posts/${pic.json().post.id}` });
   });
 
   it('leaves the minutes and the task off when asked, still about the session', async () => {
+    const sessionId = await fresh();
     const res = await t.api({
       method: 'POST',
       url: '/api/social/posts',

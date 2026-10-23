@@ -246,6 +246,14 @@ and never explain the difference on screen.
 - The glass's colour, weight, blur and colour boost are settings (Appearance › Advanced ›
   Glass, `settings.theme.glass*`); the defaults are the owner's pick, 11px blur and no boost.
   Use `--glass-blur` and `--glass-saturate` in new glass, never fixed numbers.
+- **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in
+  `packages/core/src/theme-presets.ts` (Dawn Skies is the default, built from
+  `DEFAULT_SETTINGS`; only free backgrounds, tested). **Matte panels on a solid colour are
+  shaded from it** (`tonalSurfaces` in contrast.ts, set by `applyUserTheme` as `--tone-*`
+  and `data-tonal`, mapped onto the theme tokens in styles.css): new surfaces should use
+  the usual tokens (`--ink`, `--matte-fill`, `--glass-solid`, `--accent-text`), which
+  follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
+  never use another company's name (owner).
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.
@@ -415,6 +423,12 @@ day from the owner's instructions and reshaped several times; this is the state 
   `FriendButton.tsx`, `Avatar.tsx`. The dashboard's `components/NudgesCard.tsx` shows
   nudges in both dashboard layouts. Styles are all in `apps/portal/src/social.css`,
   imported from `index.css`.
+- **The bell** (2026-10-22): the third figure on your card beside the feed (`NotificationsBell`
+  in `components/social/Notifications.tsx`) opens kudos, comments and nudges in BeReal's
+  layout (`GET /api/social/notifications`, `routes/notifications.ts`); new means after
+  `users.notifications_seen_at`, set on opening. Its dialog is portalled to the body: a
+  dialog rendered inside a card's text inherits that text's styles. Rows link to
+  `/profile#post-<id>` (`-comments` opens them), which `PostCard`'s `focus` scrolls to.
 - Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
   `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
   mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys
@@ -439,8 +453,13 @@ as they were when shared (`posts.minutes`, `posts.subject`), the session's start
 (`posts.started_at`, `ended_at`, small at the end of the session row) and, when the post
 asks for it, the time elapsed (`posts.elapsed_minutes`, focus and breaks; the composer's
 "Elapsed" chip, `showElapsed`), optionally a line of text
-(500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
-makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
+(500 characters) and up to four files, one video (MP4/WebM up to 40 MB, with a JPEG poster the
+portal makes from a frame) and three pictures (JPEG/PNG/WebP up to 2 MB each), shown as a
+carousel (2026-10-22: `post_media.position`, `files` on the post, `?n=` on the file routes;
+`media` stays as the first file for older portals). A post can be **friends only**
+(`posts.friends_only`, on top of Settings › Social); every query that shows posts must check
+it. **Only a session that ended in the last 7 days and has no post yet can be posted**
+(`GET /api/social/postable`); never explain that rule on screen (owner). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
 [docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
 the bytes never pass through Render. Uploads are capped at 250 MB a day per account and stop
@@ -451,7 +470,7 @@ token into a blob URL. `GET /api/social/uploads` tells the portal which applies.
 the limit is not refused: the composer and "Share to Social" offer to compress it in the
 browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule, and go
 when their post or account does. The focus screen's timelapse export has "Share to Social",
-which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person); comments are
+which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
 author deletes a post. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).

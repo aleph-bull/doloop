@@ -15,6 +15,7 @@ import {
   useMe,
   useMediaLimits,
   useNodes,
+  usePostableSessions,
   useSessions,
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
@@ -27,8 +28,11 @@ const renamed = (name: string, blob: Blob) =>
   }`;
 
 const MAX = 500;
+/** What one post carries: one video and three pictures (the API's limits). */
+const MAX_VIDEOS = 1;
+const MAX_IMAGES = 3;
 
-/** Where a post starts: a line, a session from the last few days, a video, or all three. */
+/** Where a post starts: a line, a session from the last few days, and a video and pictures. */
 export function Composer() {
   const me = useMe().data?.user;
   const avatar = useAvatar().data?.dataUrl ?? null;
@@ -37,7 +41,10 @@ export function Composer() {
   const [text, setText] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [showElapsed, setShowElapsed] = useState(false);
-  const [video, setVideo] = useState<File | null>(null);
+  // Settings › Social can keep every post to friends; then this one is too.
+  const allFriends = me?.settings.social.posts === 'friends';
+  const [friendsOnly, setFriendsOnly] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
   /** A file over the limit, waiting on "Compress it". */
   const [oversize, setOversize] = useState<{ file: File; maxBytes: number } | null>(null);
   const [uploaded, setUploaded] = useState<number | null>(null);
@@ -46,11 +53,13 @@ export function Composer() {
   const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
 
   const sessions = useSessions(undefined, 15).data?.sessions;
+  const postable = usePostableSessions().data?.sessionIds;
   const nodes = useNodes().data?.nodes;
   const recent = useMemo(() => {
     const titles = new Map((nodes ?? []).map((n) => [n.id, n.title]));
+    const open = new Set(postable ?? []);
     return (sessions ?? [])
-      .filter((s) => s.endedAt && s.workSeconds >= 60)
+      .filter((s) => s.endedAt && s.workSeconds >= 60 && open.has(s.id))
       .slice(0, 10)
       .map((s) => ({
         id: s.id,
@@ -62,44 +71,86 @@ export function Composer() {
               : ''
         }`,
       }));
-  }, [sessions, nodes]);
+  }, [sessions, nodes, postable]);
 
-  const clearFile = () => {
-    setVideo(null);
-    setOversize(null);
+  // The pending compress counts too, so it can't push a post past its limits.
+  const held = oversize ? [...files, oversize.file] : files;
+  const videos = held.filter(isVideo).length;
+  const images = held.length - videos;
+  const full = videos >= MAX_VIDEOS && images >= MAX_IMAGES;
+
+  const clearInput = () => {
     if (fileRef.current) fileRef.current.value = '';
   };
-
-  const pick = (file: File | null) => {
-    if (!file) return;
-    const problem = mediaProblem(file, limits);
-    if (problem?.kind === 'type') return toast(problem.message);
-    if (problem?.kind === 'size') return setOversize({ file, maxBytes: problem.maxBytes });
+  const clearFiles = () => {
+    setFiles([]);
     setOversize(null);
-    setVideo(file);
+    clearInput();
   };
 
-  // Every post is about a session; the line and the file go with it.
-  const canPost = Boolean(sessionId) && !busy && !create.isPending;
+  const pick = (list: FileList | null) => {
+    if (!list) return;
+    let v = videos;
+    let i = images;
+    let over = oversize;
+    let skipped = false;
+    const next: File[] = [];
+    for (const file of list) {
+      const problem = mediaProblem(file, limits);
+      if (problem?.kind === 'type') {
+        toast(problem.message);
+        continue;
+      }
+      const video = isVideo(file);
+      if (video ? v >= MAX_VIDEOS : i >= MAX_IMAGES) {
+        skipped = true;
+        continue;
+      }
+      if (problem?.kind === 'size') {
+        // One compress at a time; another file too big waits to be picked again.
+        if (over) {
+          skipped = true;
+          continue;
+        }
+        over = { file, maxBytes: problem.maxBytes };
+      } else next.push(file);
+      if (video) v++;
+      else i++;
+    }
+    if (skipped) toast('1 video and 3 photos at most.');
+    setFiles((f) => [...f, ...next]);
+    setOversize(over);
+    clearInput();
+  };
+
+  // Every post is about a session; the line and the files go with it.
+  const canPost = Boolean(sessionId) && !busy && !create.isPending && !oversize;
 
   const submit = async () => {
     if (!canPost) return;
     setBusy(true);
     try {
-      const poster =
-        video && isVideo(video) ? ((await posterFromVideo(video)) ?? undefined) : undefined;
-      const file = video ? await sendMedia(video, limits, setUploaded) : {};
+      const video = files.find(isVideo);
+      const poster = video ? ((await posterFromVideo(video)) ?? undefined) : undefined;
+      // One after another, so the label can count the whole lot.
+      const sent = [];
+      for (const [i, file] of files.entries())
+        sent.push(
+          await sendMedia(file, limits, (f) => setUploaded((i + f) / Math.max(1, files.length))),
+        );
       await create.mutateAsync({
         body: text.trim() || undefined,
         sessionId,
         showElapsed,
-        ...file,
+        friendsOnly: friendsOnly || allFriends,
+        files: sent.length ? sent : undefined,
         poster,
       });
       setText('');
       setSessionId('');
       setShowElapsed(false);
-      clearFile();
+      setFriendsOnly(false);
+      clearFiles();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not post it');
     } finally {
@@ -154,34 +205,52 @@ export function Composer() {
               Elapsed
             </button>
           )}
-          {video ? (
-            <span className="chip composer-file" title={video.name}>
-              {isVideo(video) ? (
+          {sessionId && (
+            <button
+              type="button"
+              className="chip composer-toggle"
+              aria-pressed={friendsOnly || allFriends}
+              disabled={allFriends}
+              onClick={() => setFriendsOnly((v) => !v)}
+            >
+              Friends only
+            </button>
+          )}
+          {files.map((file, at) => (
+            <span
+              key={`${file.name}-${file.size}-${at}`}
+              className="chip composer-file"
+              title={file.name}
+            >
+              {isVideo(file) ? (
                 <Video size={13} aria-hidden />
               ) : (
                 <ImageIcon size={13} aria-hidden />
               )}
-              {video.name.length > 24 ? `${video.name.slice(0, 22)}…` : video.name}
+              {file.name.length > 24 ? `${file.name.slice(0, 22)}…` : file.name}
               <button
                 type="button"
                 className="composer-file-x"
-                aria-label="Remove the file"
-                onClick={clearFile}
+                aria-label={`Remove ${file.name}`}
+                onClick={() => setFiles((f) => f.filter((_, i) => i !== at))}
               >
                 <X size={12} aria-hidden />
               </button>
             </span>
-          ) : (
+          ))}
+          {!full && (
             <Button size="sm" variant="ghost" onClick={() => fileRef.current?.click()}>
-              <ImageIcon size={15} aria-hidden /> Add a photo or video
+              <ImageIcon size={15} aria-hidden />{' '}
+              {held.length ? 'Add more' : 'Add photos or a video'}
             </Button>
           )}
           <input
             ref={fileRef}
             type="file"
             accept="video/mp4,video/webm,image/jpeg,image/png,image/webp"
+            multiple
             hidden
-            onChange={(e) => pick(e.target.files?.[0] ?? null)}
+            onChange={(e) => pick(e.target.files)}
           />
         </div>
         <Button
@@ -200,10 +269,13 @@ export function Composer() {
           file={oversize.file}
           maxBytes={oversize.maxBytes}
           onDone={(blob) => {
-            setVideo(new File([blob], renamed(oversize.file.name, blob), { type: blob.type }));
+            setFiles((f) => [
+              ...f,
+              new File([blob], renamed(oversize.file.name, blob), { type: blob.type }),
+            ]);
             setOversize(null);
           }}
-          onCancel={clearFile}
+          onCancel={() => setOversize(null)}
         />
       )}
     </Panel>

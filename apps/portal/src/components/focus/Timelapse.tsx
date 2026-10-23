@@ -1053,7 +1053,7 @@ export function TimelapseExport({
    * `blob` may be a compressed copy. Resolves true once it is up.
    */
   const shareToSocial = async (
-    input: { body: string; showTime: boolean; showElapsed: boolean },
+    input: { body: string; showTime: boolean; showElapsed: boolean; friendsOnly: boolean },
     blob: Blob,
   ): Promise<boolean> => {
     try {
@@ -1065,6 +1065,7 @@ export function TimelapseExport({
         sessionId: sessionId ?? undefined,
         showTime: input.showTime,
         showElapsed: input.showElapsed,
+        friendsOnly: input.friendsOnly,
         ...(await sendMedia(blob, limits)),
         poster: poster ?? undefined,
       });

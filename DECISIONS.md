@@ -2230,6 +2230,70 @@ The owner asked for an option on Social posts to show the total time elapsed ("t
 - **The changelog shows the last three days only** (owner, same day): older days stay in the
   file and in the sidebar back to September 20, greyed, and clicking them does nothing. Counted
   from the reader's today, so days drop off on their own; the newest day always shows.
+
+## The bell on Social, and the kudos button without its word, 2026-10-22 (user request)
+
+The owner asked for the "Kudos" text on posts to go, and for notifications on Social: a bell next to the trophy that opens to who gave kudos on which posts, who commented and who nudged, "like BeReal's notifications tab", so it feels familiar.
+
+- **Kudos button:** the thumbs-up and the count only; the word is gone (its label for screen readers stays).
+- **Where the bell is:** a third figure on your card beside the feed, after the streak and the level: the bell, how many are new, "new". A dot on the bell while anything is new. Under 880px of page width that card sits under the posts (it always has), so on a phone the bell is far down the feed; not moved, since the owner asked for it beside the trophy.
+- **The list** (`components/social/Notifications.tsx`): a dialog on a computer, a whole screen on a phone (`Modal phone="full"`). BeReal's layout: Today, Yesterday, This week, Earlier; each row the person's picture with a small badge for what happened, "**Name** gave you kudos" / "commented: …" / "nudged you", then which post (what it was on, else its words) and when, a dot while new, and the post's picture on the right (its poster, or its focus minutes, labelled "focus", when it has none). A row opens your profile at that post (`/profile#post-<id>`, scrolled to and outlined for a moment; a comment opens its comments too); a nudge opens the person's profile. The list is rendered on the page's body, because inside the figures' row it took on their bold, centred text.
+- **What's in it:** kudos and comments on your posts and nudges to you, from the last 30 days, the newest 60 (`GET /api/social/notifications`, `routes/notifications.ts`). It reads the rows Social already keeps; your own kudos and comments on your own posts aren't in it, nor anything from a suspended account. Kudos taken back go away with their row. Friend requests aren't in it (not asked; they have the friends card).
+- **New:** anything after `users.notifications_seen_at` (migration **0029_notifications_seen**). Opening the bell sets it (`POST /api/social/notifications/seen`); the count goes to 0 at once and the dots stay until the list next loads. It is separate from a nudge's "Got it" on the dashboard. The list refreshes every minute while the page is open.
+- Copy kept to plain labels (the owner's rule from the same evening: don't explain, simple and incomplete is fine): an empty list says "Nothing yet."
+- Tests: `notifications.test.ts`. Checked in a sandbox as Jerry: the bell's count, the list on a computer and a phone, a new comment arriving as 1 new, opening clearing it, and a comment row opening the post with its comments.
+
+## Posts: friends only, one post a recent session, and a carousel of a video and three pictures, 2026-10-22 (user request)
+
+The owner asked for three things in one message: an option to post to friends only; a rule, not to be explained anywhere, that only a session less than a week old with no post yet can be posted; and up to one video and three pictures on a post, shown "like Instagram", as a carousel.
+
+- **Friends only** (`posts.friends_only`, migration **0030_post_files**): a "Friends only" chip in the composer once a session is picked (beside "Elapsed"), and a "Friends only" switch in the timelapse's Share to Social preview, whose line explaining who sees the post is gone (the preview's audience chip says Everyone or Friends). Such a post shows only to the author and their friends: the feed, profiles and the file routes all check it. Settings › Social's "friends only" for every post still applies on top; with it on, the chip shows pressed and can't be turned off, and the preview has no switch. A friends-only post says "· Friends" after its time.
+- **Which sessions can be posted:** one that ended within the last 7 days and has no post yet (`POST_SESSION_MAX_AGE_MS`). The composer's "Which session?" lists only those (`GET /api/social/postable`); the API refuses the rest ("Too old to post", 409 "Already posted"). Deleting a post frees its session. Nothing on screen explains the rule (owner's words).
+- **Files:** a post carries up to 4: one video and three pictures, in the order they were picked. `post_media` has a `position` and its key is now (post, position); posts made before keep their one file at position 0. The API takes `files: [{ media | upload }]` (the old single `media`/`upload` still works), checks each like before, copies each R2 upload, deletes them all with the post, and answers `files` (each with `n`, and the poster on the video) beside the old `media` (the first file), so a portal from before still shows something. `GET /api/posts/:id/media(?n=)` and `/media/url?n=` pick a file. With no R2 the post can carry up to 24 MB (its own body limit).
+- **The composer:** "Add photos or a video" picks several at once (then "Add more"); each shows as a chip with a remove button; past one video or three pictures it says "1 video and 3 photos at most." A file too big still gets the compress offer (one at a time). Uploading counts across all the files.
+- **The carousel** (`Carousel` in PostCard.tsx): one frame at the first file's shape, kept between 4:5 and 16:9 (Instagram's range is 4:5 to 1.91:1), swiped on a touch screen (scroll snapping), arrows on hover on a computer, "2/4" in the corner and dots under it. Pictures fill the frame; the video sits in it on black, and pauses when swiped away. One file shows as before.
+- Tests: `post-files.test.ts` (the session rule, the carousel, friends only), an R2 case in `social-media.test.ts`; older tests now post a session each. Checked in a sandbox: a picture, the video and two pictures in one post at computer and phone widths (arrows, swipe, the video pausing), a friends-only post, and the composer listing only the sessions still free.
+
+## Preset themes, and solid colours that look finished, 2026-10-22 (owner request)
+
+The owner asked for preset themes: the current default named **Dawn Skies**, minimalist
+themes in **off white, Discord blue and Claude grey**, things that make solid-colour themes
+look better, a tag on each theme (minimalist, nature, cities and so on), and all of it in
+Settings › Appearance.
+
+- **Themes** (`packages/core/src/theme-presets.ts`, `components/ThemePicker.tsx`) sit at the
+  top of Appearance. A theme sets light or dark, accent, background,
+  panels, glass and texture in one click; the one in use is ticked (`matchingThemePreset`,
+  which ignores what doesn't show: glass on matte panels, a texture on a photo). Tags:
+  Minimalist, Nature, Cities, Night, Abstract, as a filter and in each card's foot. Under
+  All, two rows show until "Show all themes", like the background picker.
+- **Dawn Skies is the default exactly** (built from `DEFAULT_SETTINGS`), so new accounts
+  are on it. Nineteen themes: Dawn Skies, Off White (#f4f1ea, light, ink blue, grain),
+  Night Shift (#313338, the owner's Discord dark blue-grey, with a blurple accent; a first
+  try on the bright blurple itself was the wrong shade), Warm Charcoal (#262624, the
+  owner's Claude grey, with a clay deep enough for white labels), Quiet Stone (Graphite,
+  matte, grain), then photo themes (glass, Recommended mode).
+  Every background in them is a free one, which the tests check.
+- **No other company's name on a theme** (owner): only Dawn Skies and Off White kept the
+  names from the request; every other theme has its own name, not its background's.
+- **Matte on a solid colour takes its shades from it** (`tonalSurfaces` in contrast.ts,
+  applied by `applyUserTheme`, mapped in styles.css under `data-tonal`). Glass over a flat
+  colour has nothing to blur and laid the theme's blue-greys over it, which read muddy. Now
+  cards, the sidebar or top bar, and dialogs are a shade of the colour (a step lighter on a
+  dark one; a step whiter on a light one, like paper; deep enough for
+  light text on a bright one), text takes the colour's hue, borders are hairlines and
+  shadows short. Every text colour is measured: 7:1 main, 6:1 muted, 4.6:1 quietest, and
+  the contrast audit now checks the three minimalist colours and a few hard ones in both
+  modes. Only with Matte panels and a solid colour; other panels are as before.
+- **Texture** (`settings.theme.texture`: none, grain, dots, grid; API-validated, so Render
+  must be on this commit before it saves on komogon.app) shows under Background for a
+  solid colour or a Minimal gradient. A faint layer in the Backdrop; photos never get one.
+- The light/dark field is now labelled **Mode**, so it isn't read as the Themes above it.
+- **Saved looks are the Custom tab** of Themes (owner, same day), beside All and the tags,
+  with no heading of their own. The picker opens on Custom when there is at least one saved
+  look in this browser, otherwise on All. All lists the preset themes only.
+- Saved looks keep the texture too. The extension popup gets the texture and matte shades.
+
 - **Docs off for now** (owner, same night): not built, `/docs` redirects to the homepage, and
   the Docs links are gone from the homepage and the changelog. The page and its text are kept.
 - **The Track list lost its icons and connecting line** ("looks too ai"): each line has a thin

@@ -150,10 +150,11 @@ describe('profiles', () => {
     });
     expect(first.statusCode).toBe(201);
     t.clock.now = '2026-09-21T15:00:00.000Z';
+    const [another] = await t.db.insert(sessions).values(finished(USER_A.id, 3600)).returning();
     const second = await t.api({
       method: 'POST',
       url: '/api/social/posts',
-      payload: { body: 'Two hours on linear algebra today.', sessionId },
+      payload: { body: 'Two hours on linear algebra today.', sessionId: another!.id },
     });
     const prof = (
       await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB })
@@ -173,6 +174,8 @@ describe('profiles', () => {
     expect(yours.statusCode).toBe(204);
     const after = (await t.api({ method: 'GET', url: '/api/profiles/me' })).json();
     expect(after.posts.map((p: { id: string }) => p.id)).toEqual([second.json().post.id]);
+    // Only here for the second post; the totals below count the first session alone.
+    await t.db.delete(sessions).where(eq(sessions.id, another!.id));
   });
 
   it('shows the four badges that paid the most XP, the hours of the day and the level bar', async () => {

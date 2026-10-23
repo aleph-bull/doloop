@@ -161,6 +161,38 @@ describe('post media in R2', () => {
     expect(r2.files.has(row!.key!)).toBe(false);
   });
 
+  it('posts a video and three pictures, each moved, each served, all deleted together', async () => {
+    const keys = [
+      await upload('image/jpeg', Buffer.from('one')),
+      await upload('video/mp4', Buffer.from('a video')),
+      await upload('image/png', Buffer.from('three')),
+      await upload('image/webp', Buffer.from('four')),
+    ];
+    const res = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: sessionA, files: keys.map((upload) => ({ upload })), poster: JPEG },
+    });
+    expect(res.statusCode).toBe(201);
+    const post = res.json().post;
+    expect(post.files.map((f: { mime: string }) => f.mime)).toEqual([
+      'image/jpeg',
+      'video/mp4',
+      'image/png',
+      'image/webp',
+    ]);
+    const rows = await t.db.query.postMedia.findMany({ where: eq(postMedia.postId, post.id) });
+    expect(rows).toHaveLength(4);
+    for (const key of keys) expect(r2.files.has(key)).toBe(false);
+    for (const row of rows) expect(r2.files.has(row.key!)).toBe(true);
+
+    const link = await t.api({ method: 'GET', url: `/api/posts/${post.id}/media/url?n=3` });
+    expect(link.json().url).toMatch(/^data:image\/webp;base64,/);
+
+    await t.api({ method: 'DELETE', url: `/api/posts/${post.id}` });
+    for (const row of rows) expect(r2.files.has(row.key!)).toBe(false);
+  });
+
   it("refuses an upload that never arrived, someone else's, or one over the size", async () => {
     const missing = await t.api({
       method: 'POST',

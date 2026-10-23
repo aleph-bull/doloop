@@ -242,6 +242,10 @@
   color: var(--accent);
   padding-left: 18px;
 }
+/* On cards shaded from a solid colour the accent can share their hue and vanish. */
+:root[data-tonal][data-panel='matte'] .brand-logo {
+  color: var(--tone-accent-text);
+}
 .logo-mark {
   display: block;
   flex: none;
@@ -7406,6 +7410,41 @@
 .preset-tool:hover {
   color: var(--fg);
   background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+/* Themes: the same card as a saved look, ticked when in use, with its tag in the foot. */
+.theme-grid {
+  /* Two across on a phone. */
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+/* A name that doesn't fit beside its tag keeps whole, and the tag goes under it. */
+.theme-grid .preset-foot {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+.theme-grid .preset-name {
+  flex: 1 0 auto;
+  max-width: 100%;
+}
+.theme-preview.is-selected {
+  border-color: var(--accent);
+}
+.theme-texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.theme-panel {
+  position: relative;
+}
+.theme-panel .preset-lines span {
+  background: color-mix(in srgb, var(--theme-ink) 55%, transparent);
+}
+.theme-panel .preset-lines span + span {
+  background: color-mix(in srgb, var(--theme-ink) 30%, transparent);
+}
+.theme-check {
+  flex: none;
+  color: var(--accent-text);
 }
 
 /* When you study: a density curve across the day. */

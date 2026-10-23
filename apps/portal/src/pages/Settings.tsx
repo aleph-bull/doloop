@@ -1,5 +1,6 @@
 import {
   dayStartUnlocksAt,
+  isPlainBackground,
   minCostUnlocksAt,
   REWARDS,
   resolveBackgroundId,
@@ -44,7 +45,7 @@ import {
   useSettingsFilter,
 } from '../components/SettingsNav';
 import { AccentPicker } from '../components/AccentPicker';
-import { AppearancePresets } from '../components/AppearancePresets';
+import { ThemePicker } from '../components/ThemePicker';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { GlassSettings } from '../components/GlassSettings';
@@ -526,7 +527,7 @@ export function Settings() {
             </Section>
 
             <Section id="theme" title="Appearance" glass>
-              <AppearancePresets
+              <ThemePicker
                 theme={s.theme}
                 resolved={theme}
                 patch={patch}
@@ -536,9 +537,9 @@ export function Settings() {
                 }}
               />
               <div className="field">
-                <span className="field-label">Theme</span>
+                <span className="field-label">Mode</span>
                 <Segmented
-                  ariaLabel="Theme"
+                  ariaLabel="Mode"
                   value={s.theme.mode}
                   onChange={(mode) => patch({ theme: { mode } })}
                   options={[
@@ -577,6 +578,22 @@ export function Settings() {
                   }
                 />
               </div>
+              {!s.theme.customBackgroundUrl && isPlainBackground(s.theme.backgroundId) && (
+                <div className="field">
+                  <span className="field-label">Texture</span>
+                  <Segmented
+                    ariaLabel="Texture"
+                    value={s.theme.texture ?? 'none'}
+                    onChange={(texture) => patch({ theme: { texture } })}
+                    options={[
+                      { value: 'none', label: 'None' },
+                      { value: 'grain', label: 'Grain' },
+                      { value: 'dots', label: 'Dots' },
+                      { value: 'grid', label: 'Grid' },
+                    ]}
+                  />
+                </div>
+              )}
               <ExtensionBackgroundPicker
                 value={s.theme.extensionBackground}
                 hasUpload={s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD}
