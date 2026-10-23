@@ -85,7 +85,12 @@ function Row({
             <img className="notif-thumb" src={post.poster} alt="" />
           ) : (
             <span className="notif-thumb is-plain tabular" aria-hidden>
-              {post?.minutes != null ? fmtMinutes(post.minutes) : ''}
+              {post?.minutes != null && (
+                <>
+                  {fmtMinutes(post.minutes)}
+                  <small>focus</small>
+                </>
+              )}
             </span>
           ))}
       </Link>

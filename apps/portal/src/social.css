@@ -2555,14 +2555,23 @@
   object-fit: cover;
 }
 .notif-thumb.is-plain {
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.2;
   padding: 2px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   font-size: 10px;
   font-weight: 600;
   text-align: center;
   color: var(--fg-muted);
+}
+
+.notif-thumb.is-plain small {
+  font-size: 9px;
+  font-weight: 400;
+  color: var(--fg-subtle);
 }
 
 /* A post opened from the notifications, outlined for a moment. */
