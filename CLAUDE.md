@@ -1015,8 +1015,8 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   interlude of floating timelapses (no clocks: the owner disliked them), a drum of sixteen
   looks, a focus screen that grows to fill the window, a Share bento, then the calendar. The
   devices now show with the headline. No pastel fields behind screenshots (the owner
-  disliked them). The closing reads "The study app." with a hand-drawn underline under
-  "The". Three clips are made from YouTube videos the owner downloaded; see
+  disliked them). The closing reads "Try it out!" (the owner found the hand-drawn
+  underline ugly). Three clips are made from YouTube videos the owner downloaded; see
   apps/site/README.md before publishing.
   The docs are off for now (owner, 2026-10-22: not built, `/docs` redirects home, no links;
   how to turn them back on is in `apps/site/vite.config.js`). Their text lives in

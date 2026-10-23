@@ -851,52 +851,6 @@ main {
   font-size: clamp(44px, 6vw, 76px);
   text-wrap: balance;
 }
-/* "The", underlined by hand: two loose marker strokes that draw themselves in as the
-   closing arrives (or are simply there without motion). */
-.scribble {
-  position: relative;
-  display: inline-block;
-}
-.scribble-line {
-  position: absolute;
-  left: -6%;
-  bottom: -0.16em;
-  width: 112%;
-  height: 0.34em;
-  overflow: visible;
-  pointer-events: none;
-}
-.scribble-line path {
-  fill: none;
-  stroke: var(--site-accent);
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 4.5px;
-  vector-effect: non-scaling-stroke;
-  stroke-dasharray: 1;
-}
-.scribble-line path + path {
-  stroke-width: 3px;
-  opacity: 0.75;
-}
-html.has-motion .scribble-line path {
-  stroke-dashoffset: 1;
-  transition: stroke-dashoffset 700ms cubic-bezier(0.65, 0, 0.35, 1) 450ms;
-}
-html.has-motion .scribble-line path + path {
-  transition-duration: 550ms;
-  transition-delay: 1050ms;
-}
-html.has-motion .is-in .scribble-line path {
-  stroke-dashoffset: 0;
-}
-@media (prefers-reduced-motion: reduce) {
-  html.has-motion .scribble-line path {
-    stroke-dashoffset: 0;
-    transition: none;
-  }
-}
-
 /* Footer */
 .site-footer {
   padding: 28px 0 40px;

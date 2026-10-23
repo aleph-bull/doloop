@@ -2298,3 +2298,5 @@ Settings › Appearance.
   the Docs links are gone from the homepage and the changelog. The page and its text are kept.
 - **The Track list lost its icons and connecting line** ("looks too ai"): each line has a thin
   accent bar beside its words, and while the tour runs the lines not on show grey out.
+- **The closing heading is "Try it out!"** (owner, same night): the hand-drawn underline under
+  "The" looked ugly, so it and "The study app." are gone.
