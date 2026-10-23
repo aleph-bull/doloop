@@ -134,6 +134,14 @@ em-dash flourishes). Never flirty or salesy, and never pushy (no nagging about r
 Keep the owner's own wording verbatim, "!" included.
 `greetings.test.ts` and `phrases.test.ts` reject "!", emoji and nag words.
 
+**Basic labels, for every feature** (owner, 2026-10-22): "do not explain what the user does
+not need to know and text can be simple and incomplete". A label, not a sentence ("Focus 42
+min", "Start 9:10 AM", "Nothing yet."); no hints that explain a rule or concept.
+
+**Focus and elapsed** (same day): *focus* is work time only; *elapsed* is focus and breaks
+together, never pauses. Label every time shown as one or the other ("focus", "elapsed"),
+and never explain the difference on screen.
+
 **Look.**
 
 - Matte and flat: no glossy sheens, glows, or gradients inside panels. Every card on a page
@@ -428,7 +436,10 @@ the rounded corners. The small leaderboard also has more room between its rows.
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and what it was on,
 "Course · Task" (root course and the task itself, never the units between; `focusLabel`),
-as they were when shared (`posts.minutes`, `posts.subject`), optionally a line of text
+as they were when shared (`posts.minutes`, `posts.subject`), the session's start and end
+(`posts.started_at`, `ended_at`, small at the end of the session row) and, when the post
+asks for it, the time elapsed (`posts.elapsed_minutes`, focus and breaks; the composer's
+"Elapsed" chip, `showElapsed`), optionally a line of text
 (500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
 makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
@@ -599,9 +610,13 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - The **camera is a fixed backdrop**: it always fills the whole frame and can't be moved,
   resized or removed (the owner was emphatic). It has no box in the editor. Stored layouts
   are mended to a full-frame camera by `normalizeTimelapseLayout`.
-- On top sit the **screen**, **current time**, **time elapsed**, **task name**, **progress
-  bar** (fills as the video plays through the session) and the **Komodon mark** (can't be
-  removed). Each is a box in fractions of the frame (0-1), so one layout fits any size.
+- On top sit the **screen**, **current time**, **focus time** (the piece's id is still
+  `elapsed`; it draws "Focus 42:17", "Break 3:10"), **time elapsed** (`total`, "Elapsed
+  51:02": focus and breaks), **start time** and **end time** (`start`, `end`: the
+  session's, "Start 9:10 AM"; until it ends, the end is the last still), **task name**,
+  **progress bar** (fills as the video plays through the session) and the **Komodon mark**
+  (can't be removed). The time elapsed, start and end start out of the layout, as chips to
+  add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
 - The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
   each one, and the boxes come from that. Text pieces are placed by their top left and sized
   by their height; their width is the text's. Resizing from a corner keeps the shape of the
@@ -651,12 +666,17 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   Where the browser has WebCodecs, frames are encoded to an H.264 MP4 with `mp4-muxer`;
   elsewhere MediaRecorder records the canvas in real time; both at `timelapseBitrate`. The person can download it,
   "Share to Social" (`lib/post-media.ts`; the poster is the middle kept still), or post it
-  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone the share sheet carries the
-  video to the app; elsewhere it downloads and the site's upload page opens in a new tab.
+  on Instagram, TikTok or X (2026-10-22, `postTo`): on a phone or tablet the share sheet
+  carries the video to the app (a phone that can't share files downloads it and opens the
+  app by its link, `appLink`); on a computer it downloads and the site's upload page opens
+  in a new tab. **A video downloads once** (`downloadOnce`): whichever of Save, Instagram,
+  TikTok and X asks first downloads it, and the rest say it's already in the downloads.
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
-  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X".
+  are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X" and "One
+  download, and the apps on a phone".
 - **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
-  with a line to say and a switch for the hours (`showTime: false` posts no minutes or task).
+  with a line to say, a "Show time" switch (`showTime: false` posts no minutes, task or
+  times) and a "Time elapsed" switch (`showElapsed`).
   The text box must stay quick: the post beside it follows a deferred copy of the text in a
   memoised card, and its video doesn't play until pressed. Instagram, TikTok and X have **no
   preview** (owner, 2026-10-22): their buttons go straight to the app or site, where the post
@@ -733,8 +753,8 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
   - **After the session**, `TimelapseExport` shows `TimelapseTrim`: a viewer drawn with
     `composeFrame` (no blending, so playing is quick), stills in a strip (nine on a phone; on
     a computer, `wide`, as many as fit at the camera's shape), a handle at each end, a
-    playhead, play. "Save the video" opens the share sheet on a phone (where "Save Video"
-    goes to Photos) and falls back to a download.
+    playhead, play. "Save the video" opens the share sheet on a phone or tablet (where "Save
+    Video" goes to Photos) and falls back to a download.
 - **Not built.** Importing an Apple Time-Lapse from Photos is still in `docs/IDEAS.md`.
 - **Testing the camera screen in the preview.** The pane has no camera, so give it one before
   the recording starts: replace `navigator.mediaDevices.getUserMedia` with a function that
@@ -972,9 +992,19 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   brand): each section is its heading left and paragraph right, then tightly cropped
   screenshots with one corner, and Focus has three of the owner's own timelapses under the
   focus screen. The closing is the logo, heading and buttons on the page, no card.
+  Redone again later on 2026-10-22 around the scroll (see README in `apps/site` and
+  DECISIONS.md): a ruled page, a pinned Track tour (Analytics, feed, leaderboard), a dusk
+  interlude of floating timelapses (no clocks: the owner disliked them), a drum of sixteen
+  looks, a focus screen that grows to fill the window, a Share bento, then the calendar. The
+  devices now show with the headline. No pastel fields behind screenshots (the owner
+  disliked them). The closing reads "The study app." with a hand-drawn underline under
+  "The". Three clips are made from YouTube videos the owner downloaded; see
+  apps/site/README.md before publishing.
+  The docs live at `apps/site/docs/index.html` (`/docs/`), written from the code: when a
+  feature's labels, defaults or limits change, update its topic there too.
   Satoshi for headings, Inter for everything else; no eyebrow
   labels, captions or quotes. `src/main.js` does the entrance motion: the headline first,
-  the devices about 1.3 s later or on the first scroll, each section as it arrives.
+  the devices with it, each section as it arrives, and the pinned scenes (`[data-scrub]`).
 - **Rejected, in order:** hand-built UI mockups ("fake"), the photo feathered on every side,
   photo stages behind every section, rendering the portal's real React components into the
   page ("go back to using screenshots"), device renders from the mockup PSDs, a flat dark

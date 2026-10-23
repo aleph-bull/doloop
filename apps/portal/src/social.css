@@ -304,6 +304,18 @@
   padding: 4px 28px 4px 10px;
   font-size: var(--text-xs);
 }
+/* Show the time elapsed on the post too: a chip that stays lit while on. */
+.composer-toggle {
+  height: 26px;
+  border: 0;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.composer-toggle[aria-pressed='true'] {
+  background: var(--accent-fill);
+  color: #fff;
+}
 .composer-file {
   height: 26px;
   gap: 6px;
@@ -398,14 +410,16 @@
 /* The session strip: a big number on a soft tint, the subject beside it. */
 .post-session {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: 4px 8px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   font-size: var(--text-sm);
 }
 .post-session-icon {
+  flex: none;
   align-self: center;
   width: 15px;
   height: 15px;
@@ -424,7 +438,26 @@
   color: var(--fg-muted);
   margin-left: 0.3em;
 }
+.post-session-part {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  flex: none;
+}
+.post-session-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.post-session-times {
+  margin-left: auto;
+  flex: none;
+  padding-left: 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  white-space: nowrap;
+}
 .post-session-subject {
+  flex: 1 1 8em;
   color: var(--fg-muted);
   min-width: 0;
   overflow: hidden;

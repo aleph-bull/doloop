@@ -216,7 +216,7 @@ export function PhoneCamera({
           <>
             <TimerDisplay
               digits={ctl.digits}
-              meaning={timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}
+              meaning={timer.mode === 'unlimited' ? 'focus' : 'remaining'}
             />
             <TaskContext subject={context.subject} child={context.child} />
           </>

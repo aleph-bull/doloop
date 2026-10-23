@@ -3,7 +3,8 @@ import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { MessageCircle, Play, ThumbsUp, Timer, Trash2, X } from 'lucide-react';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
-import { api, type FeedPost, type Person } from '../../lib/api';
+import { api, type FeedPost, type Person, type PostSession } from '../../lib/api';
+import { timeRange } from '../../lib/calendar';
 import { fmtAgo } from '../../lib/format';
 import {
   useAddComment,
@@ -26,6 +27,39 @@ export function figure(minutes: number): { value: string; unit: string } {
   if (minutes < 60) return { value: String(Math.max(1, Math.round(minutes))), unit: 'min' };
   const h = minutes / 60;
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };
+}
+
+/** The session on a post: focus, elapsed when shown, what it was on, and when, small. */
+export function SessionRow({ session }: { session: PostSession }) {
+  const focus = figure(session.minutes);
+  const elapsed = session.elapsedMinutes !== null ? figure(session.elapsedMinutes) : null;
+  return (
+    <div className="post-session">
+      <Timer size={18} aria-hidden className="post-session-icon" />
+      <span className="post-session-part">
+        <span className="post-session-figure tabular">
+          {focus.value}
+          <small>{focus.unit}</small>
+        </span>
+        <span className="post-session-label">focus</span>
+      </span>
+      {elapsed && (
+        <span className="post-session-part">
+          <span className="post-session-figure tabular">
+            {elapsed.value}
+            <small>{elapsed.unit}</small>
+          </span>
+          <span className="post-session-label">elapsed</span>
+        </span>
+      )}
+      {session.subject && <span className="post-session-subject">on {session.subject}</span>}
+      {session.startedAt && session.endedAt && (
+        <span className="post-session-times tabular">
+          {timeRange(session.startedAt, session.endedAt)}
+        </span>
+      )}
+    </div>
+  );
 }
 
 /**
@@ -203,7 +237,6 @@ export function PostCard({
   const { toast } = useToast();
   const [open, setOpen] = useState(focus === 'comments');
   const [marked, setMarked] = useState(!!focus);
-  const fig = post.session ? figure(post.session.minutes) : null;
 
   useEffect(() => {
     if (!focus) return;
@@ -251,18 +284,7 @@ export function PostCard({
         )}
       </header>
 
-      {post.session && fig && (
-        <div className="post-session">
-          <Timer size={18} aria-hidden className="post-session-icon" />
-          <span className="post-session-figure tabular">
-            {fig.value}
-            <small>{fig.unit}</small>
-          </span>
-          {post.session.subject && (
-            <span className="post-session-subject">on {post.session.subject}</span>
-          )}
-        </div>
-      )}
+      {post.session && <SessionRow session={post.session} />}
 
       {post.body && <p className="post-body">{post.body}</p>}
       {post.media &&

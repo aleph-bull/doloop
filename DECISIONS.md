@@ -2117,6 +2117,101 @@ Two changes from the owner: of "Text on the video", "this should be after the se
 - Closing the popup says nothing; a blocked popup asks to allow pop-ups.
 - Checked in a sandbox: the look in both themes and on a phone, the click opening Google's popup, and the API refusing a junk token through Google's real tokeninfo. A real sign-in needs the real client id, so it is tried on komogon.app.
 
+## One download, and the apps on a phone, 2026-10-22 (user request)
+
+The owner asked that the Instagram, TikTok and X buttons never download the video more than once, counting "Save the video" and anything else that downloads it, and that on a phone the buttons go to the apps rather than the websites, through Apple's share sheet.
+
+- **One download a video** (`downloadOnce` in `TimelapseExport`). Whichever of Save the video, Instagram, TikTok and X downloads first, the video downloads that once. After it, Instagram, TikTok and X still open their site (or app) and the toast says "The video is already in your downloads"; Save the video only says "It's already in your downloads." There is no "download again", since the owner said never. The line under the buttons follows it ("The video is in your downloads, and the site opens in a new tab."). A remade video (trim, length, "Change layout?") is a new file and downloads once again. Closing the focus screen's controls sheet drops the made video, as it did before, so that starts over too.
+- **The share sheet hands the video over; it isn't a download.** On a phone or tablet each button opens the share sheet with the video (on an iPhone or iPad, Apple's; Instagram, TikTok and X sit in it when installed), every time it is pressed, since the sheet is the only way a page can give a file to an app. A quick second tap while a sheet is still open does nothing (the browser answers `InvalidStateError`) instead of falling back to a download.
+- **Tablets count now** (`mobileOs()` in `lib/device.ts`: Android, iPhone, iPad, including an iPad that asks for the computer site). Before, only a phone (`isPhone`) got the share sheet, and an iPad downloaded the video and opened the website. The timelapse preset still goes by `isPhone`, so an iPad keeps the computer's layout.
+- **A phone or tablet without the share sheet opens the app, not the site** (`appLink` in `post-elsewhere.ts`). The video downloads (once), then:
+  - iPhone and iPad: the app's URL scheme. `instagram://app` is Meta's documented hook; `snssdk1233://` is TikTok's, from its SDK docs, where it is only used to check the app is installed; `twitter://post` opens X's composer and is undocumented but still answered. Without the app, Safari says the address is invalid.
+  - Android: Chrome's intent link, pinned to the app's package over the site's address (`intent://www.instagram.com/#Intent;scheme=https;package=com.instagram.android;end`; TikTok `com.zhiliaoapp.musically`, X `com.twitter.android`). Without the app, Chrome opens its Play Store page, which is still the app.
+  - The link is followed a moment after the click, once the save has rendered, so the focus screen's "leave this page?" (held while stills are unsaved) is already gone.
+  - This path is rare: Safari, Chrome on Android and Samsung Internet share files; Firefox on Android and some in-app browsers don't. On an iPhone it is weaker anyway, since a download lands in Files, which the apps' pickers don't show.
+  - The toast gives the app's next step (`appNextStep`): "On Instagram, press + and choose it.", "On TikTok, press + and choose it under Upload.", "Add it to your post on X."
+- Checked in the sandbox with a fake camera and a made video: on the computer layout, Instagram, TikTok, X and Save the video in a row made one download and opened the three sites; as an iPhone with a stubbed share sheet, each button shared the MP4 and nothing downloaded; as Android without one, X downloaded once and followed the app link, and TikTok after it didn't download again. A real iPhone's share sheet and the real app links weren't tried; the owner has to try those on a phone.
+
+## Timelapse settings: the notes fold away, 2026-10-22 (owner request)
+
+With a screenshot of the focus screen's Timelapse controls: "theres this massive thing of text, make it collapsable and make it collapsable on default", "if you need to explain things make it very short do not explain things the user does not need to know".
+
+- **A "Tips" fold, closed every time it opens** (`TimelapseTips` in Timelapse.tsx, `.tl-tips-*` in index.css), under the dim slider, in the focus screen's controls and in each preset in Settings › Timelapse. Inside: "Tap the screen to brighten it.", "Live clip (L) films at normal speed, up to 30 s." (no "(L)" on a phone) and, on the focus screen, an "Edit the layout" link (new tab, as before).
+- **Cut:** "you are asked whether to record your screen too" (the question asks for itself), the long list of what the layout editor can do, the look's description under the looks on the focus screen (the pictures show it; Settings' editor keeps it), "if there are enough stills" under Set length, the phone's "Breaks always show on the camera screen..." and the two break-clock hints.
+- **Shortened:** Auto length is "About 20 to 40 seconds."
+
+## The homepage body, rebuilt around the scroll, 2026-10-22 (owner request)
+
+The owner kept the hero (photo, copy, laptop and phone) and asked for a body that moves with the scroll, after three references: a drum of cards that turns as you scroll (to show how much of the app can be changed), screenshots set like Daybridge and aside.com (a feature list beside a window of the app, a ruled page), and "make people download it". Everything the page already said stays word for word.
+
+- **The devices show at once.** They used to wait 1.3 s (or the first scroll); now they rise with the headline.
+- **Ruled page.** Hairlines down the sides of the content and across between sections, like aside.com; pictures sit in pastel fields taken from the Cotton Candy photo's colours.
+- **Track** pins: the heading and paragraph on the left with a three-line list (new short lines: "Your week at a glance", "Where the time went", "Plan the week"); a window of the app on the right runs off the screen's edge and swaps Analytics, its charts and the calendar as the list advances. Phones get the list with a screenshot under each line.
+- **Make it yours** (new heading and one line under it) pins: sixteen screens in other photos, colours and themes on a drum, small across the middle and large at the sides; they fan out, then slide; the heading's word scrambles through calm, bright, cozy, yours.
+- **Focus** pins: the focus screen grows from a card to the whole window while the page goes dark, then runs a Pomodoro: start a session, focus, short break, the controls with the timelapse. The phone's focus screen slides in on the way. The three timelapses follow.
+- **Share** is a ruled bento: the feed (a long shot that scrolls inside its field), the leaderboard, and a study group, each with a one-line label.
+- **All screenshots retaken** from a fresh sandbox on main (sidebar, the phone bar, timelapse posts in the feed). The capture and convert scripts now live in `apps/site/scripts` and can retake any single shot.
+- Reduced motion, or no script: nothing pins, and every scene lays out flat.
+
+**Round two, the same night** (owner's notes: loose, "make my unintelligible words amazing"):
+
+- **Track** is shorter (one Analytics screen, then the Social feed and the leaderboard) and
+  pins for less. The drum and the focus screen pin for less too, so Social comes sooner.
+- **No pastel fields** ("I don't super like the pink borders"): screenshots sit straight on
+  the page.
+- **A black interlude** between Track and the drum, after a reference of cards floating
+  round centred words on black: seven timelapses float down, clocks behind them run with the
+  scroll, the app's Recording pill sits over "Hours of work, in seconds."
+- **More timelapses**, from four YouTube videos the owner picked (two study-with-me, a Word
+  and an Excel recording): cut, sped up, and drawn with the portal's own composeFrame so they
+  look like Komodon's. They aren't the owner's footage; their rights need checking before
+  this goes live.
+- **The social talk**: posts are in the owner's own words ("can i cram rsm222 in 1 day
+  😭😭😭", "daily studyy✨", "technical interview comin up wish me luckk 😛😛", "Will he
+  perform when he has money right in front of him?"), and the owner's timelapses are posted
+  by a friend called Zachary.
+- **The phone shot** is the camera screen, as a phone really records, with the owner's desk
+  photo as the camera.
+- The drum lost two looks the owner called ugly (a light lilac focus screen and the Opal
+  one) for a Milky Way focus screen and custom panels, and its line now reads "80+
+  backgrounds and fully customizable panels."
+
+**Round three:** the clocks are gone ("look like shit") and the interlude is no longer pure
+black: Cotton Candy under a dusk wash. The owner found the motion "a tad stiff", so the
+timelapses no longer ride the scroll one to one: each drifts toward its place a beat behind
+and sways and tilts on its own. The calendar got a pinned section after Share ("Plan the
+week."): the week with Jerry's classes, Plan my week's suggestions, the week planned, and
+the phone's day view. Priya posts "daily studyy✨"; Zachary's timelapse post says "Will he
+perform when he has money right in front of him?"
+
+Then: the interlude's straight fade read as a "harsh and linear line", so the way in and out
+became three blurred, drifting waves (ink, plum, a rose bloom). The drum turns on its own
+instead of only with the scroll, which now just gives it a push.
+
+The Track window no longer fades between screens: they sit on a cylinder that turns like a
+revolver's, each rolling up into the frame and settling. "Get the extension" is greyed out
+with an "In development!" tag (owner's words). The focus scene's last step was the controls
+sheet, a wall of settings; it is now the focus screen recording a timelapse instead.
+
+**Docs page (owner request):** `/docs/` on the site, "very organized so the user would know
+exactly where to go": a search across every topic and question, a sidebar grouped Start / Plan
+your work / Study / Progress / With friends / Make it yours / More / Help, each topic with a
+"Where" path through the app, and a FAQ. Written from a read of the code (labels, defaults and
+limits as they are), linked as "Docs" in the homepage nav and footer.
+
+The closing heading is now "The study app." (owner's words), with a hand-drawn underline
+under "The" that draws itself in.
+
+## Focus time and time elapsed, start and end times, 2026-10-22 (user request)
+
+The owner asked for an option on Social posts to show the total time elapsed ("the time including breaks not including pauses"), a small start and end time on each post, the same as text pieces on the timelapse, and for the app to say plainly which times are focus and which are elapsed, with basic labels and no explanations ("do not explain this rule or concept just use basic labels", meant for every feature from now on).
+
+- **Words.** Focus is work time only. Elapsed is focus and breaks together; pauses never count. Every time shown is labelled one or the other, and nothing on screen explains the difference.
+- **Posts.** Each post shows the session's start and end, small at the right of its session row ("4:29 – 5:29 PM"; on a phone it wraps under). The focus figure says "focus". The time elapsed is an option per post: an "Elapsed" chip in the composer once a session is picked, and a "Time elapsed" switch in the timelapse's Share to Social preview (whose "Show how long I studied" switch is now "Show time", without the line under it). Off by default. New columns `posts.elapsed_minutes`, `started_at`, `ended_at` (migration **0028_post_times**, which also gives every older post that showed its time the start and end of its session). Hiding the time hides the start and end too. The dev world's posts get their times.
+- **The timelapse.** Three new text pieces, waiting as chips under the editor: Time elapsed ("Elapsed 51:02"), Start time and End time ("Start 9:10 AM", the session's; until it ends, the end is the last still). The old "Time elapsed" piece was the focus clock all along, so it is now called Focus time and draws "Focus 42:17" (still "Break 3:10" on a break; with the break clock set to keep counting it says "Elapsed"). The looks leave the three new pieces where they are. The API's layout schema takes them, so Render must run this code before a layout with them saves on komogon.app.
+- **Elsewhere.** "Studied" times became "focus" (dashboard and profile "Focus, all time", tasks, deadlines, the calendar header, the tracker, admin), the analytics session table's "Work" column is "Focus", and the end-of-session screens and the timer card add "Elapsed" beside the breaks when there were any. "Days studied" stays (it counts days, not time).
+- Checked in a sandbox: posts with and without the elapsed time at computer and phone widths, the composer chip, and the three pieces added, drawn and saved in Settings › Timelapse. A real video with them wasn't made (no camera in the preview); the same text code draws the editor and the video.
+
 ## The bell on Social, and the kudos button without its word, 2026-10-22 (user request)
 
 The owner asked for the "Kudos" text on posts to go, and for notifications on Social: a bell next to the trophy that opens to who gave kudos on which posts, who commented and who nudged, "like BeReal's notifications tab", so it feels familiar.
@@ -2125,6 +2220,6 @@ The owner asked for the "Kudos" text on posts to go, and for notifications on So
 - **Where the bell is:** a third figure on your card beside the feed, after the streak and the level: the bell, how many are new, "new". A dot on the bell while anything is new. Under 880px of page width that card sits under the posts (it always has), so on a phone the bell is far down the feed; not moved, since the owner asked for it beside the trophy.
 - **The list** (`components/social/Notifications.tsx`): a dialog on a computer, a whole screen on a phone (`Modal phone="full"`). BeReal's layout: Today, Yesterday, This week, Earlier; each row the person's picture with a small badge for what happened, "**Name** gave you kudos" / "commented: …" / "nudged you", then which post (what it was on, else its words) and when, a dot while new, and the post's picture on the right (its poster, or the minutes when it has none). A row opens your profile at that post (`/profile#post-<id>`, scrolled to and outlined for a moment; a comment opens its comments too); a nudge opens the person's profile. The list is rendered on the page's body, because inside the figures' row it took on their bold, centred text.
 - **What's in it:** kudos and comments on your posts and nudges to you, from the last 30 days, the newest 60 (`GET /api/social/notifications`, `routes/notifications.ts`). It reads the rows Social already keeps; your own kudos and comments on your own posts aren't in it, nor anything from a suspended account. Kudos taken back go away with their row. Friend requests aren't in it (not asked; they have the friends card).
-- **New:** anything after `users.notifications_seen_at` (migration **0028_notifications_seen**). Opening the bell sets it (`POST /api/social/notifications/seen`); the count goes to 0 at once and the dots stay until the list next loads. It is separate from a nudge's "Got it" on the dashboard. The list refreshes every minute while the page is open.
+- **New:** anything after `users.notifications_seen_at` (migration **0029_notifications_seen**). Opening the bell sets it (`POST /api/social/notifications/seen`); the count goes to 0 at once and the dots stay until the list next loads. It is separate from a nudge's "Got it" on the dashboard. The list refreshes every minute while the page is open.
 - Copy kept to plain labels (the owner's rule from the same evening: don't explain, simple and incomplete is fine): an empty list says "Nothing yet."
 - Tests: `notifications.test.ts`. Checked in a sandbox as Jerry: the bell's count, the list on a computer and a phone, a new comment arriving as 1 new, opening clearing it, and a comment row opening the post with its comments.

@@ -1,4 +1,5 @@
 import {
+  appLink,
   applyTimelapseStyle,
   aspectRatio,
   clampTimelapseResolution,
@@ -27,6 +28,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import {
+  ChevronDown,
   Clapperboard,
   Download,
   LayoutTemplate,
@@ -42,15 +44,17 @@ import {
   Input,
   Modal,
   ProgressBar,
+  Reveal,
   Segmented,
   Select,
   Slider,
   Toggle,
   useToast,
 } from '@komogon/ui';
-import { isUpright } from '../../lib/device';
+import { isUpright, mobileOs } from '../../lib/device';
 import { fmtMinutes } from '../../lib/format';
 import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
+import type { PostSession } from '../../lib/api';
 import { useCreatePost, useMe, useMediaLimits } from '../../lib/queries';
 import { PlatformMark } from '../PlatformMark';
 import {
@@ -64,12 +68,10 @@ import {
   measuredScreenBytes,
   measuredStillBytes,
   renderTimelapse,
-  screenSupported,
   timelapseFileName,
   videoSupported,
   clipTime,
-  clockText,
-  timeOfDayText,
+  stillTexts,
   type RecorderStatus,
   type ScreenStatus,
   type TimelapseLook,
@@ -406,7 +408,6 @@ export function DimField({ value, onChange }: { value: number; onChange: (v: num
         />
         <span className="dim-value tabular">{words}</span>
       </div>
-      <span className="field-hint">Tap the screen to brighten it for a moment.</span>
     </div>
   );
 }
@@ -450,27 +451,7 @@ export function TimelapseSettings({
         <TimelapseRecordChoice value={settings.timelapse.record} onChange={onChange} />
       )}
       <DimField value={value.dim} onChange={(dim) => set({ dim })} />
-      {device === 'computer' && screenSupported() && (
-        <p className="field-hint">
-          Each time a recording starts, you are asked whether to record your screen too.
-        </p>
-      )}
-      <p className="field-hint">
-        {device === 'phone'
-          ? `While recording, Live clip on the camera screen films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`
-          : `While recording, Live clip in the top bar (or the L key) films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`}
-      </p>
-      {linkToLayout && (
-        <p className="field-hint">
-          {device === 'phone'
-            ? 'Move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape upright and sideways, in '
-            : 'Place the screen, move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape in '}
-          <TimelapseSettingsLink newTab device={device}>
-            the timelapse layout
-          </TimelapseSettingsLink>
-          .
-        </p>
-      )}
+      <TimelapseTips device={device} linkToLayout={linkToLayout} />
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
       <LengthFields
         value={value}
@@ -483,11 +464,6 @@ export function TimelapseSettings({
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
-        description={
-          device === 'phone'
-            ? 'Breaks always show on the camera screen. This decides whether they go in the video.'
-            : undefined
-        }
       />
       {value.recordBreaks && elapsedShown && (
         <div className="field">
@@ -501,11 +477,6 @@ export function TimelapseSettings({
               { value: 'running', label: 'Keeps counting' },
             ]}
           />
-          <span className="field-hint">
-            {value.breakClock === 'break'
-              ? 'A break clock, so the video shows when you were resting.'
-              : 'The session’s running time, counting on through each break.'}
-          </span>
         </div>
       )}
       <Toggle
@@ -520,6 +491,46 @@ export function TimelapseSettings({
         label="Even out the light"
         description="Takes out the flicker of the camera's auto exposure."
       />
+    </div>
+  );
+}
+
+/** A few short notes, folded until opened. */
+function TimelapseTips({
+  device,
+  linkToLayout,
+}: {
+  device: TimelapseDevice;
+  linkToLayout: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="tl-tips">
+      <button
+        type="button"
+        className="tl-tips-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <ChevronDown size={15} aria-hidden className="tl-tips-chevron" />
+        Tips
+      </button>
+      <Reveal open={open}>
+        <ul className="tl-tips-list">
+          <li>Tap the screen to brighten it.</li>
+          <li>
+            {device === 'phone' ? 'Live clip' : 'Live clip (L)'} films at normal speed, up to{' '}
+            {LIVE_CLIP_MAX_SECONDS} s.
+          </li>
+          {linkToLayout && (
+            <li>
+              <TimelapseSettingsLink newTab device={device}>
+                Edit the layout
+              </TimelapseSettingsLink>
+            </li>
+          )}
+        </ul>
+      </Reveal>
     </div>
   );
 }
@@ -660,13 +671,13 @@ function LengthFields({ value, onChange, maxFps = 60, ratio, camera }: LengthFie
             { value: 'speed', label: 'Speed' },
           ]}
         />
-        <span className="field-hint">
-          {value.lengthMode === 'auto'
-            ? 'About 20 to 40 seconds for a long session, shorter for a short one.'
-            : value.lengthMode === 'length'
-              ? 'Exactly this long, if there are enough stills.'
+        {value.lengthMode !== 'length' && (
+          <span className="field-hint">
+            {value.lengthMode === 'auto'
+              ? 'About 20 to 40 seconds.'
               : `Every second of video is ${value.speed / 60 >= 1 ? fmtMinutes(value.speed / 60) : `${value.speed} s`} of focus.`}
-        </span>
+          </span>
+        )}
       </div>
       {value.lengthMode === 'length' && (
         <SecondsInput
@@ -814,8 +825,13 @@ export interface TimelapseExportProps {
   onSaved?: () => void;
   /** The session the stills came from, so sharing can attach it to the post. */
   sessionId?: string | null;
-  /** What a post says about that session, for its preview: focused minutes and the task. */
-  postSession?: { minutes: number; subject: string | null } | null;
+  /**
+   * What a post says about that session, for its preview: focus minutes, focus and breaks
+   * together, and the task.
+   */
+  postSession?: { minutes: number; elapsedMinutes: number; subject: string | null } | null;
+  /** When the session started and, once over, ended: the video's start and end times. */
+  sessionSpan?: { startedAt: string; endedAt: string | null } | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -828,6 +844,7 @@ export function TimelapseExport({
   onSaved,
   sessionId,
   postSession,
+  sessionSpan,
 }: TimelapseExportProps) {
   const value = presetOf(settings, device);
   const { toast } = useToast();
@@ -850,6 +867,10 @@ export function TimelapseExport({
     h: number;
   } | null>(null);
   const [played, setPlayed] = useState<{ url: string; seconds: number } | null>(null);
+  // The video downloads once, whichever button asked first (Save, Instagram, TikTok or X):
+  // the others say it's already there rather than adding another copy.
+  const [downloadedUrl, setDownloadedUrl] = useState<string | null>(null);
+  const downloaded = !!video && downloadedUrl === video.url;
   const abort = useRef<AbortController | null>(null);
   const count = recorder.count;
   // The trim, in seconds into the session; null keeps that end where the recording is.
@@ -884,13 +905,20 @@ export function TimelapseExport({
   const clipCount = new Set(clipStills.map((s) => s.clip)).size;
   // A phone's video keeps the shape it starts in: the first kept still says which way up.
   const upright = all[startAt]?.portrait ?? true;
+  // The session's start and end; until it has ended, the end is the last still.
+  const startMs = sessionSpan ? Date.parse(sessionSpan.startedAt) : (all[0]?.takenAt ?? null);
+  const endMs = sessionSpan?.endedAt
+    ? Date.parse(sessionSpan.endedAt)
+    : (all[all.length - 1]?.takenAt ?? null);
   const look: TimelapseLook = useMemo(
     () => ({
       ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
       timeZone,
       noteText: cleanNoteText(noteText),
+      startAt: startMs,
+      endAt: endMs,
     }),
-    [settings, device, upright, timeZone, noteText],
+    [settings, device, upright, timeZone, noteText, startMs, endMs],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
@@ -899,13 +927,11 @@ export function TimelapseExport({
     () =>
       middle
         ? {
-            clock: middle.takenAt ? timeOfDayText(middle.takenAt, timeZone) : null,
-            elapsed: clockText(middle, value.breakClock),
-            title: middle.title,
+            ...stillTexts(middle, look),
             progress: kept > 1 ? (middleAt - startAt) / (kept - 1) : 1,
           }
         : {},
-    [middle, timeZone, value.breakClock, kept, middleAt, startAt],
+    [middle, look, kept, middleAt, startAt],
   );
 
   // A video replaced or gone gives back its memory. Making one stops only when the card
@@ -921,10 +947,13 @@ export function TimelapseExport({
     return () => making.current?.abort();
   }, []);
 
-  // On a phone the share sheet takes the video to the apps, when this browser can share files.
+  // On a phone or tablet the share sheet takes the video to the apps (on an iPhone, Apple's
+  // share sheet), when this browser can share files.
+  const os = mobileOs();
+  const mobile = device === 'phone' || os !== null;
   const shareSheet = useMemo(
-    () => device === 'phone' && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
-    [device, video],
+    () => mobile && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
+    [mobile, video],
   );
 
   if (count === 0) return null;
@@ -959,51 +988,64 @@ export function TimelapseExport({
     }
   };
 
+  /**
+   * The share sheet with the video. True when it is done with: shared, or closed (which is
+   * not a failure); false when it can't open, so the caller falls back to a download.
+   */
+  const shareVideo = async (): Promise<boolean> => {
+    if (!video) return true;
+    try {
+      await navigator.share({ files: [videoFile(video)] });
+      onSaved?.();
+      return true;
+    } catch (err) {
+      // A quick second tap finds the first sheet still open: that one is enough.
+      return (
+        err instanceof DOMException &&
+        (err.name === 'AbortError' || err.name === 'InvalidStateError')
+      );
+    }
+  };
+
+  /** Download the video unless it already has been. False when it was already there. */
+  const downloadOnce = (): boolean => {
+    if (!video || downloaded) return false;
+    downloadVideo(video);
+    setDownloadedUrl(video.url);
+    onSaved?.();
+    return true;
+  };
+
   const download = async () => {
     if (!video) return;
-    // On a phone the share sheet is the way into Photos ("Save Video"); a download would
-    // only land in Files. Called straight from the click, which the sheet needs.
-    if (device === 'phone') {
-      const file = videoFile(video);
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file] });
-          onSaved?.();
-          return;
-        } catch (err) {
-          // Closing the sheet is not a failure; anything else falls back to a download.
-          if (err instanceof DOMException && err.name === 'AbortError') return;
-        }
-      }
-    }
-    downloadVideo(video);
-    onSaved?.();
+    // On a phone or tablet the share sheet is the way into Photos ("Save Video"); a download
+    // would only land in Files. Called straight from the click, which the sheet needs.
+    if (shareSheet && (await shareVideo())) return;
+    if (!downloadOnce()) toast('It’s already in your downloads.');
   };
 
   /**
-   * Hand the video to Instagram, TikTok or X, where the post is written in the site's own
-   * composer. On a phone the share sheet holds the apps and takes the video along. A page
-   * can't pass a file to another site, so elsewhere the video downloads, the site opens in a
-   * new tab, and a toast says what to do there. Called straight from the click, which the
-   * sheet and the new tab both need.
+   * Hand the video to Instagram, TikTok or X, where the post is written in the app's or site's
+   * own composer. On a phone or tablet the share sheet holds the apps and takes the video
+   * along. Without it the video downloads (once, whichever button asked first): a phone then
+   * opens the app, a computer the site in a new tab, and a toast says what to do there.
+   * Called straight from the click, which the sheet, the app link and the new tab all need.
    */
   const postTo = async (platform: PostPlatform) => {
     if (!video) return;
     const site = POST_PLATFORM_INFO[platform];
-    if (shareSheet) {
-      try {
-        await navigator.share({ files: [videoFile(video)] });
-        onSaved?.();
-        return;
-      } catch (err) {
-        // Closing the sheet is not a failure; anything else falls back to a download.
-        if (err instanceof DOMException && err.name === 'AbortError') return;
-      }
+    if (shareSheet && (await shareVideo())) return;
+    const where = downloadOnce()
+      ? 'The video is in your downloads.'
+      : 'The video is already in your downloads.';
+    if (os) {
+      // After the save has rendered, so the focus screen's "leave this page?" is gone first.
+      window.setTimeout(() => (window.location.href = appLink(platform, os)), 0);
+      toast(`${where} ${site.appNextStep}`, { durationMs: 8000 });
+      return;
     }
-    downloadVideo(video);
     window.open(site.uploadUrl, '_blank', 'noopener,noreferrer');
-    onSaved?.();
-    toast(`The video is in your downloads. ${site.nextStep}`, { durationMs: 8000 });
+    toast(`${where} ${site.nextStep}`, { durationMs: 8000 });
   };
 
   /**
@@ -1011,7 +1053,7 @@ export function TimelapseExport({
    * `blob` may be a compressed copy. Resolves true once it is up.
    */
   const shareToSocial = async (
-    input: { body: string; showTime: boolean },
+    input: { body: string; showTime: boolean; showElapsed: boolean },
     blob: Blob,
   ): Promise<boolean> => {
     try {
@@ -1022,6 +1064,7 @@ export function TimelapseExport({
         body: input.body || undefined,
         sessionId: sessionId ?? undefined,
         showTime: input.showTime,
+        showElapsed: input.showElapsed,
         ...(await sendMedia(blob, limits)),
         poster: poster ?? undefined,
       });
@@ -1054,9 +1097,21 @@ export function TimelapseExport({
 
   // What the post says about the session: the finished session's, else the stills' own time.
   const lastStill = all[Math.max(0, endAt - 1)];
-  const session =
-    postSession ??
-    (lastStill ? { minutes: Math.round(lastStill.workSeconds / 60), subject: null } : null);
+  const session: PostSession | null = postSession
+    ? {
+        ...postSession,
+        startedAt: sessionSpan?.startedAt ?? null,
+        endedAt: sessionSpan?.endedAt ?? null,
+      }
+    : lastStill
+      ? {
+          minutes: Math.round(lastStill.workSeconds / 60),
+          elapsedMinutes: Math.round(lastStill.totalSeconds / 60),
+          subject: null,
+          startedAt: null,
+          endedAt: null,
+        }
+      : null;
 
   const postNote =
     video &&
@@ -1145,8 +1200,8 @@ export function TimelapseExport({
           </div>
           <p className="field-hint">
             {shareSheet
-              ? 'They open your phone’s share menu. Pick the app there.'
-              : 'The video downloads and the site opens in a new tab.'}
+              ? `They open your ${device === 'phone' ? 'phone’s' : 'tablet’s'} share menu. Pick the app there.`
+              : `${downloaded ? 'The video is in your downloads, and the' : 'The video downloads and the'} ${os ? 'app opens.' : 'site opens in a new tab.'}`}
             {postNote && ` ${postNote}`}
           </p>
           <PostPreview

@@ -108,7 +108,7 @@ describe('posts on the feed', () => {
       payload: { sessionId: s!.id },
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json().post.session).toEqual({ minutes: 30, subject: 'RSM222 · Assignment' });
+    expect(res.json().post.session).toMatchObject({ minutes: 30, subject: 'RSM222 · Assignment' });
     // Gone again, so the feed tests below see only the first post.
     const del = await t.api({ method: 'DELETE', url: `/api/posts/${res.json().post.id}` });
     expect(del.statusCode).toBeLessThan(300);

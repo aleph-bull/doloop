@@ -79,7 +79,7 @@ export function Admin() {
                   <tr>
                     <th>Email</th>
                     <th>Joined</th>
-                    <th>Studied</th>
+                    <th>Focus</th>
                     <th>Sessions</th>
                     <th>Level</th>
                     <th>Streak</th>

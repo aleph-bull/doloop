@@ -13,7 +13,8 @@
 }
 
 :root {
-  --site-sans: 'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --site-sans:
+    'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --site-brand-font: 'Satoshi', var(--site-sans);
   --site-accent: #5b55eb;
   --site-accent-strong: #4a44d6;
@@ -31,7 +32,6 @@ html {
   color: var(--site-ink);
   background: var(--site-page);
   scroll-behavior: smooth;
-  overflow-x: hidden;
   /* A phone's own tap highlight comes out as an oval on a pill; the buttons press in instead. */
   -webkit-tap-highlight-color: transparent;
 }
@@ -44,7 +44,11 @@ body {
   color: var(--site-ink);
   /* The page is a quiet gradient rather than a flat sheet. */
   background: linear-gradient(180deg, #faf8fc 0%, #ece5f3 40%, #ddd2e8 100%);
-  overflow-x: hidden;
+}
+/* Sideways overflow is clipped here, not on html or body: a hidden overflow there makes body
+   a scroll box, and the pinned scenes below would stop sticking. */
+main {
+  overflow-x: clip;
 }
 .hero h1,
 .feature-head h2,
@@ -194,16 +198,26 @@ body {
 .cta-ghost:hover {
   background: rgb(255 255 255 / 0.28);
 }
-.cta-outline {
-  background: transparent;
-  border: 1px solid rgb(27 26 43 / 0.25);
-  color: var(--site-ink);
-}
-.cta-outline:hover {
+/* Greyed out until it ships: no hover, no press. */
+.cta-soon {
+  gap: 10px;
+  padding-right: 8px;
   background: rgb(27 26 43 / 0.05);
+  border: 1px solid rgb(27 26 43 / 0.1);
+  color: var(--site-subtle);
+  cursor: not-allowed;
+  user-select: none;
 }
-.cta-outline[aria-disabled='true'] {
-  cursor: default;
+.cta-soon:active {
+  transform: none;
+}
+.soon-tag {
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgb(27 26 43 / 0.07);
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--site-muted);
 }
 .cta-row {
   display: flex;
@@ -333,54 +347,56 @@ body {
   height: auto;
 }
 
-/* ---------- Panels ---------- */
+/* ---------- The ruled body ---------- */
 
-/* Every picture below the hero: a plain screenshot or a timelapse, the same corner on each,
-   flat on the page. */
-.panel {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 24px;
-  background: #3b3045;
-  box-shadow: 0 0 0 1px rgb(27 26 43 / 0.06);
+/*
+ * Below the hero the page is ruled: hairlines down both sides of the content (`.rail`) and
+ * across between sections (`.band`), like aside.com. Screenshots sit straight on the page.
+ */
+.rail {
+  position: relative;
+  width: min(1200px, 100% - 40px);
+  margin-inline: auto;
+  border-inline: 1px solid var(--site-line);
 }
-.clips {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 16px;
+.rail-pad {
+  padding: 104px clamp(20px, 5vw, 64px) 56px;
 }
-.clip {
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
+.rail-pad-top0 {
+  padding-top: 0;
+  padding-bottom: 104px;
 }
-/* The two shots have different shapes; columns in proportion to them give one height. */
-.share-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.952fr) minmax(0, 1.333fr);
-  gap: 16px;
-  align-items: start;
+.band {
+  position: relative;
+  border-top: 1px solid var(--site-line);
+}
+.band-first {
+  border-top: 0;
+  padding-top: clamp(220px, 21vw, 300px);
+}
+.band-first > .tour > .tour-stage > .rail {
+  border-top: 1px solid var(--site-line);
 }
 
-/* ---------- Sections ---------- */
-
-.section {
-  padding: 72px 0;
-}
-#track.section {
-  padding-top: clamp(260px, 24vw, 340px);
-}
 .feature-head {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
   gap: 20px 64px;
   align-items: end;
-  margin-bottom: 44px;
+}
+.feature-head h2,
+.tour-copy h2,
+.looks-head h2 {
+  margin: 0;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  text-wrap: balance;
 }
 .feature-head h2 {
   font-size: clamp(34px, 4.4vw, 54px);
-  text-wrap: balance;
 }
 .feature-head .lede-sm {
   justify-self: end;
@@ -395,22 +411,538 @@ body {
   text-wrap: pretty;
 }
 
-/* Closing */
+/* ---------- Track: the tour ---------- */
+
+.tour-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+  gap: 48px;
+  padding: 96px clamp(20px, 5vw, 64px);
+}
+.tour-copy h2 {
+  font-size: clamp(34px, 3.8vw, 50px);
+}
+.tour-copy .lede-sm {
+  margin-top: 20px;
+  max-width: 44ch;
+}
+.tour-list {
+  position: relative;
+  list-style: none;
+  margin: 40px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  --fill: 1;
+}
+/* The line the icons hang on, filling as the tour goes. */
+.tour-list::before,
+.tour-list::after {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 20px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+}
+.tour-list::before {
+  bottom: 20px;
+  background: rgb(27 26 43 / 0.08);
+}
+.tour-list::after {
+  height: calc((100% - 40px) * var(--fill));
+  background: var(--site-accent);
+}
+.tour-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 10px 0;
+}
+.tour-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--site-ink);
+  box-shadow:
+    0 0 0 1px rgb(27 26 43 / 0.08),
+    0 6px 16px -8px rgb(27 26 43 / 0.25);
+  transition:
+    background 400ms,
+    color 400ms,
+    transform 500ms var(--site-ease);
+}
+.tour-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.tour-text {
+  padding-top: 1px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--site-muted);
+  transition: opacity 400ms;
+}
+.tour-text strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--site-ink);
+}
+.tour-inline-shot {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 14px;
+  border-radius: 16px;
+  box-shadow: 0 24px 50px -28px rgb(40 20 70 / 0.5);
+}
+/* The window: the app running off the right edge of the screen. */
+.tour-window {
+  display: none;
+}
+
+/* ---------- Timelapses: the dusk interlude ---------- */
+
+/*
+ * The page fades into the app's own photograph at dusk, and real timelapses float down
+ * around the words. main.js moves them: each drifts toward where the scroll puts it, a beat
+ * behind, and sways and turns a little on its own. The fades in and out sit in the band's
+ * margins, so they never darken the screens either side.
+ */
+.fall-band {
+  position: relative;
+  z-index: 3;
+  margin-block: 26vh;
+  background: var(--fall-ink);
+  color: #fff;
+  --fall-ink: #1c1526;
+}
+/*
+ * The way in and out: three soft waves, ink, plum and a rose bloom, stacked like the
+ * bands of a sunset and blurred together, each drifting sideways at its own pace. The top
+ * edge is the bottom one turned over. They hang in the band's margins.
+ */
+.fall-edge {
+  position: absolute;
+  left: -6%;
+  right: -6%;
+  height: 34vh;
+  pointer-events: none;
+  filter: blur(18px);
+}
+/* The waves stand in for the hairline between these sections. */
+.fall-band + .band {
+  border-top: 0;
+}
+.fall-edge-bottom {
+  top: calc(100% - 6vh);
+}
+.fall-edge-top {
+  bottom: calc(100% - 6vh);
+  transform: scaleY(-1);
+}
+.edge-wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 200%;
+  height: 100%;
+  animation: edge-drift 46s linear infinite;
+}
+.edge-wave path {
+  fill: currentColor;
+}
+.edge-pink {
+  color: #e9a8c9;
+  opacity: 0.6;
+  animation-duration: 58s;
+}
+.edge-plum {
+  color: #6b3866;
+  opacity: 0.9;
+  animation-duration: 38s;
+  animation-direction: reverse;
+}
+.edge-ink {
+  color: var(--fall-ink);
+}
+@keyframes edge-drift {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edge-wave {
+    animation: none;
+  }
+}
+.fall-stage {
+  position: relative;
+  height: 100vh;
+  min-height: 560px;
+  overflow: hidden;
+}
+/* Cotton Candy under a dusk wash, melting into the ink at the top and bottom. */
+.fall-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgb(28 21 38 / 0.5) 0%, rgb(28 21 38 / 0.72) 100%),
+    url('/backgrounds/cotton-candy.webp') center 35% / cover no-repeat;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+}
+.fall-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  text-align: center;
+  pointer-events: none;
+}
+.fall-copy h2 {
+  margin: 0;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  max-width: 11ch;
+  font-size: clamp(36px, 4.4vw, 62px);
+  text-wrap: balance;
+  text-shadow: 0 2px 30px rgb(20 10 30 / 0.35);
+}
+.fall-copy p {
+  margin: 0;
+  max-width: 34ch;
+  font-size: clamp(16px, 1.4vw, 18px);
+  line-height: 1.55;
+  color: rgb(255 255 255 / 0.74);
+  text-wrap: pretty;
+}
+/* The app's own recording pill. */
+.rec-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 14px 0 12px;
+  border-radius: 999px;
+  background: rgb(10 12 24 / 0.45);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.14) inset;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.92);
+}
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: rec-blink 1.6s ease-in-out infinite;
+}
+@keyframes rec-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+.floaters {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  --fs: 1;
+}
+/* Where each card sits without the script: --y (vh) down the stage, turned by --r. */
+.floater {
+  position: absolute;
+  top: 0;
+  left: var(--x);
+  width: calc(var(--w) * var(--fs));
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 14px;
+  background: #1d1a25;
+  box-shadow: 0 40px 80px -30px rgb(10 5 20 / 0.75);
+  transform: translateY(calc((var(--y) + 0.4 * var(--v)) * 1vh)) rotate(var(--r));
+  will-change: transform;
+}
+
+/* ---------- Make it yours: the ring ---------- */
+
+.looks-head {
+  text-align: center;
+  padding: 0 20px;
+}
+.looks-head h2 {
+  font-size: clamp(44px, 6.4vw, 92px);
+  text-wrap: nowrap;
+}
+.scramble {
+  color: var(--site-accent);
+}
+.scramble.is-scrambling {
+  filter: blur(1.5px);
+}
+.looks-note {
+  margin: 0 auto;
+  text-align: center;
+  max-width: 40ch;
+  padding: 0 20px;
+}
+/* Without the script the screens are a plain grid. */
+.ring-view {
+  padding: 48px 20px;
+}
+.ring {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+}
+.ring-card {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: #3b3045;
+}
+.looks-band {
+  padding: 104px 0;
+}
+
+/* ---------- Focus: the screen that grows ---------- */
+
+.zoom-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0 20px 48px;
+}
+.zoom-dark {
+  display: none;
+}
+.zoom-screen {
+  position: relative;
+  width: min(1120px, 100%);
+  aspect-ratio: 16 / 10;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #241d2c;
+  box-shadow: 0 40px 90px -40px rgb(30 15 50 / 0.55);
+}
+.zoom-screen img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Still, it shows the running timer. */
+.zoom-screen img:not([data-i='1']) {
+  opacity: 0;
+}
+.zoom-phone,
+.zoom-dots {
+  display: none;
+}
+
+/* ---------- Share: the bento ---------- */
+
+.bento {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  border-top: 1px solid var(--site-line);
+}
+.cell {
+  margin: 0;
+  padding: 28px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 18px;
+}
+.cell-feed {
+  grid-row: span 2;
+  border-right: 1px solid var(--site-line);
+}
+.cell-jam {
+  border-top: 1px solid var(--site-line);
+}
+/* Each screenshot straight on the page, one corner; it rises a little as it arrives. */
+.frame {
+  align-self: start;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #241d2c;
+  box-shadow:
+    0 0 0 1px rgb(27 26 43 / 0.06),
+    0 30px 60px -32px rgb(40 20 70 / 0.5);
+  transform: translateY(calc((1 - var(--enter, 1)) * 60px));
+}
+.frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* The feed is a long picture in a fixed frame; main.js scrolls it as the page scrolls. */
+.cell-feed .frame {
+  height: 720px;
+}
+.cell-feed .frame img {
+  transform: translateY(var(--shift, 0px));
+}
+.cell figcaption {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+.cell figcaption strong {
+  color: var(--site-ink);
+  font-weight: 600;
+}
+
+/* ---------- Plan: the calendar ---------- */
+
+.plan-grid {
+  display: grid;
+  gap: 44px;
+  padding: 104px clamp(20px, 5vw, 64px);
+}
+.plan-view {
+  position: relative;
+  justify-self: center;
+  width: 100%;
+}
+.plan-window {
+  position: relative;
+  aspect-ratio: 2400 / 1733;
+  overflow: hidden;
+  border-radius: 16px;
+  background: #241d2c;
+  box-shadow:
+    0 0 0 1px rgb(27 26 43 / 0.08),
+    0 50px 100px -40px rgb(40 20 70 / 0.55);
+}
+.plan-window img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Still, it shows the week planned. */
+.plan-window img:not([data-i='2']) {
+  opacity: 0;
+}
+.plan-phone {
+  position: absolute;
+  right: -3%;
+  bottom: -9%;
+  width: clamp(104px, 17%, 210px);
+  padding: 7px;
+  background: #0d0d12;
+  border-radius: 32px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.14) inset,
+    0 40px 80px -24px rgb(20 10 40 / 0.6);
+  transform: rotate(4deg);
+}
+.plan-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 26px;
+}
+
+/* ---------- Closing ---------- */
+
 .closing {
-  padding: 120px 0 128px;
+  padding: 0;
 }
 .closing-inner {
   display: grid;
   justify-items: center;
   text-align: center;
   gap: 18px;
+  padding: 128px 20px 136px;
 }
 .closing-mark {
   margin-bottom: 6px;
 }
 .closing h2 {
-  font-size: clamp(40px, 5.4vw, 64px);
+  margin: 0;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-size: clamp(44px, 6vw, 76px);
   text-wrap: balance;
+}
+/* "The", underlined by hand: two loose marker strokes that draw themselves in as the
+   closing arrives (or are simply there without motion). */
+.scribble {
+  position: relative;
+  display: inline-block;
+}
+.scribble-line {
+  position: absolute;
+  left: -6%;
+  bottom: -0.16em;
+  width: 112%;
+  height: 0.34em;
+  overflow: visible;
+  pointer-events: none;
+}
+.scribble-line path {
+  fill: none;
+  stroke: var(--site-accent);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4.5px;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 1;
+}
+.scribble-line path + path {
+  stroke-width: 3px;
+  opacity: 0.75;
+}
+html.has-motion .scribble-line path {
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 700ms cubic-bezier(0.65, 0, 0.35, 1) 450ms;
+}
+html.has-motion .scribble-line path + path {
+  transition-duration: 550ms;
+  transition-delay: 1050ms;
+}
+html.has-motion .is-in .scribble-line path {
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  html.has-motion .scribble-line path {
+    stroke-dashoffset: 0;
+    transition: none;
+  }
 }
 
 /* Footer */
@@ -447,13 +979,269 @@ body {
   color: var(--site-ink);
 }
 
-/* ---------- Motion ---------- */
+/* ---------- Scroll scenes ---------- */
+
+/*
+ * With motion allowed, main.js adds .has-scrub and keeps --p (0 to 1 through a pinned
+ * scene), --enter (0 to 1 as it comes up the screen) and data-step on each [data-scrub].
+ * Everything here is transform and opacity on plain images, so it stays smooth.
+ */
+@media (min-width: 900px) {
+  html.has-scrub .tour {
+    height: 240vh;
+  }
+  html.has-scrub .tour-stage {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: grid;
+    align-items: stretch;
+  }
+  html.has-scrub .tour-stage > .rail {
+    display: grid;
+    align-content: center;
+  }
+  html.has-scrub .tour-inline-shot {
+    display: none;
+  }
+  html.has-scrub .tour-list {
+    --fill: var(--p, 0);
+  }
+  html.has-scrub .tour-item .tour-text {
+    opacity: 0.42;
+  }
+  html.has-scrub .tour[data-step='0'] .tour-item[data-i='0'] .tour-text,
+  html.has-scrub .tour[data-step='1'] .tour-item[data-i='1'] .tour-text,
+  html.has-scrub .tour[data-step='2'] .tour-item[data-i='2'] .tour-text {
+    opacity: 1;
+  }
+  html.has-scrub .tour[data-step='0'] .tour-item[data-i='0'] .tour-icon,
+  html.has-scrub .tour[data-step='1'] .tour-item[data-i='1'] .tour-icon,
+  html.has-scrub .tour[data-step='2'] .tour-item[data-i='2'] .tour-icon {
+    background: var(--site-accent);
+    color: #fff;
+    transform: scale(1.06);
+  }
+  html.has-scrub .tour-window {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 47%;
+    /* Out past the rail to the edge of the screen. */
+    right: calc((100% - 100vw) / 2 - 1px);
+    height: min(66vh, 40vw);
+    translate: 0 -50%;
+    transform: translateX(calc((1 - var(--enter, 1)) * 30vw));
+    perspective: 1700px;
+  }
+  /* The screens sit on the chambers of a cylinder that main.js turns, like a revolver's:
+     the next one rolls up into the frame from below as the last rolls away over the top. */
+  html.has-scrub .tour-drum {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+  }
+  html.has-scrub .tour-window img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: auto;
+    aspect-ratio: 16 / 10;
+    border-radius: 16px;
+    box-shadow:
+      0 0 0 1px rgb(27 26 43 / 0.08),
+      0 50px 100px -40px rgb(40 20 70 / 0.55);
+    backface-visibility: hidden;
+  }
+  html.has-scrub .tour-window img:not([data-i='0']) {
+    opacity: 0;
+  }
+  html.has-scrub .tour-grid {
+    padding-block: 0;
+    min-height: 100vh;
+    align-content: center;
+  }
+}
+
+/* The ring: every card is placed by main.js around the middle of the stage. */
+html.has-scrub .looks-band {
+  padding: 0;
+}
+html.has-scrub .looks {
+  height: 240vh;
+}
+html.has-scrub .looks-stage {
+  position: sticky;
+  top: 0;
+  box-sizing: border-box;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  padding: clamp(72px, 11vh, 120px) 0 clamp(40px, 8vh, 80px);
+}
+html.has-scrub .ring-view {
+  position: relative;
+  padding: 0;
+}
+html.has-scrub .ring {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+html.has-scrub .ring-card {
+  position: absolute;
+  width: var(--cw, 340px);
+  height: calc(var(--cw, 340px) * 0.625);
+  left: calc(var(--cw, 340px) / -2);
+  top: calc(var(--cw, 340px) * -0.3125);
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 30px 60px -30px rgb(40 20 70 / 0.45);
+  will-change: transform, opacity;
+}
+
+/* Focus: pinned; the screen grows to fill the window and the page goes dark around it. */
+html.has-scrub .zoom {
+  height: 250vh;
+}
+
+/* The interlude pins too. */
+html.has-scrub .fall {
+  height: 240vh;
+}
+html.has-scrub .fall-stage {
+  position: sticky;
+  top: 0;
+}
+html.has-scrub .zoom-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+html.has-scrub .zoom-dark {
+  display: block;
+  position: absolute;
+  inset: 0;
+  background: #120f19;
+  opacity: var(--dark, 0);
+}
+html.has-scrub .zoom-screen {
+  width: var(--sw, 1100px);
+  max-width: none;
+  border-radius: calc(20px / var(--s, 1));
+  transform: scale(var(--s, 1));
+  box-shadow: 0 50px 110px -40px rgb(10 5 20 / 0.7);
+}
+html.has-scrub .zoom-screen img {
+  opacity: 0;
+  transform: scale(1.04);
+  transition:
+    opacity 700ms var(--site-ease),
+    transform 1100ms var(--site-ease);
+}
+html.has-scrub .zoom[data-step='0'] .zoom-screen img[data-i='0'],
+html.has-scrub .zoom[data-step='1'] .zoom-screen img[data-i='1'],
+html.has-scrub .zoom[data-step='2'] .zoom-screen img[data-i='2'],
+html.has-scrub .zoom[data-step='3'] .zoom-screen img[data-i='3'] {
+  opacity: 1;
+  transform: none;
+}
+html.has-scrub .zoom-phone {
+  display: block;
+  position: absolute;
+  left: max(24px, calc(50% - var(--sw, 1100px) / 2 + 3%));
+  bottom: 5vh;
+  width: clamp(130px, 13vw, 210px);
+  padding: 7px;
+  background: #0d0d12;
+  border-radius: 32px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.14) inset,
+    0 40px 80px -20px rgb(0 0 0 / 0.7);
+  transform: translateY(calc((1 - var(--ph, 0)) * 140%)) rotate(calc(-5deg + var(--ph, 0) * 3deg));
+}
+html.has-scrub .zoom-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 26px;
+}
+html.has-scrub .zoom-dots {
+  display: flex;
+  gap: 6px;
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  translate: -50% 0;
+  opacity: var(--dark, 0);
+}
+.zoom-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.35);
+  transition:
+    width 500ms var(--site-ease),
+    background 500ms;
+}
+html.has-scrub .zoom[data-step='0'] .zoom-dots span:nth-child(1),
+html.has-scrub .zoom[data-step='1'] .zoom-dots span:nth-child(2),
+html.has-scrub .zoom[data-step='2'] .zoom-dots span:nth-child(3),
+html.has-scrub .zoom[data-step='3'] .zoom-dots span:nth-child(4) {
+  width: 22px;
+  background: #fff;
+}
+
+/* The calendar pins: the week, the suggestions, then the week planned, and the phone. */
+html.has-scrub .plan {
+  height: 230vh;
+}
+html.has-scrub .plan-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: grid;
+}
+html.has-scrub .plan-grid {
+  align-content: center;
+  gap: 36px;
+  padding-block: 0;
+}
+html.has-scrub .plan-view {
+  width: min(100%, calc((100vh - 230px) * 1.385));
+}
+html.has-scrub .plan-window img {
+  opacity: 0;
+  transform: translateY(24px) scale(0.985);
+  transition:
+    opacity 600ms var(--site-ease),
+    transform 900ms var(--site-ease);
+}
+html.has-scrub .plan[data-step='0'] .plan-window img[data-i='0'],
+html.has-scrub .plan[data-step='1'] .plan-window img[data-i='1'],
+html.has-scrub .plan[data-step='2'] .plan-window img[data-i='2'] {
+  opacity: 1;
+  transform: none;
+}
+html.has-scrub .plan-phone {
+  opacity: var(--ph, 0);
+  transform: translateY(calc((1 - var(--ph, 0)) * 60%)) rotate(calc(10deg - var(--ph, 0) * 6deg));
+}
+
+/* ---------- Entrance motion ---------- */
 
 /*
  * Everything with .rise starts just below its place and lifts into it; .rise-pop also scales
- * up a touch, so panels and devices land with a small settle. main.js adds .is-in on load
- * for the hero (the devices a beat later) and as each section scrolls into view. Without
- * the script, or with reduced motion, everything is simply there.
+ * up a touch. main.js adds .is-in on load for the hero (the devices with the headline) and
+ * as each section scrolls into view. Without the script, or with reduced motion, everything
+ * is simply there.
  */
 :root {
   --rise-ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -494,50 +1282,83 @@ html.has-motion .devices.rise.is-in {
   }
 }
 
-/* ---------- Phones ---------- */
+/* ---------- Smaller screens ---------- */
 
-@media (max-width: 900px) {
+@media (max-width: 899px) {
+  .tour-grid {
+    grid-template-columns: 1fr;
+    padding-block: 72px;
+  }
+  .tour-list::after {
+    display: none;
+  }
   .feature-head {
     grid-template-columns: 1fr;
     gap: 14px;
-    margin-bottom: 32px;
   }
   .feature-head .lede-sm {
     justify-self: start;
   }
-  .share-grid {
+  .rail-pad {
+    padding-top: 72px;
+    padding-bottom: 36px;
+  }
+  .rail-pad-top0 {
+    padding-top: 0;
+    padding-bottom: 72px;
+  }
+  .bento {
     grid-template-columns: 1fr;
   }
-  .section {
-    padding: 56px 0;
+  .cell-feed {
+    grid-row: auto;
+    border-right: 0;
   }
-  .closing {
-    padding: 88px 0 96px;
+  .cell-group {
+    border-top: 1px solid var(--site-line);
+  }
+  .cell-feed .frame {
+    height: 540px;
+  }
+  .floaters {
+    --fs: 0.62;
+  }
+  html.has-scrub .looks {
+    height: 200vh;
+  }
+  html.has-scrub .zoom {
+    height: 210vh;
+  }
+  html.has-scrub .fall {
+    height: 200vh;
+  }
+  html.has-scrub .zoom-phone {
+    width: 26vw;
+    bottom: 14vh;
+    border-radius: 22px;
+    padding: 5px;
+  }
+  html.has-scrub .zoom-phone img {
+    border-radius: 17px;
   }
 }
-/* On a phone the timelapses become a row to swipe through, running to the screen's edges. */
+/* On a phone the words sit high and fewer, smaller timelapses fall out from under them. */
 @media (max-width: 640px) {
-  .panel {
-    border-radius: 18px;
+  .cell {
+    padding: 20px;
   }
-  .clips {
-    grid-template-columns: none;
-    grid-auto-flow: column;
-    grid-auto-columns: 84%;
-    gap: 12px;
-    margin-top: 12px;
-    margin-inline: -20px;
-    padding-inline: 20px;
-    scroll-padding-inline: 20px;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scrollbar-width: none;
+  .fall-copy {
+    place-content: start center;
+    padding-top: 13vh;
   }
-  .clip {
-    scroll-snap-align: start;
+  .floaters {
+    top: 46vh;
+    overflow: hidden;
+    --fs: 0.55;
   }
-  .share-grid {
-    gap: 12px;
+  .floater:nth-child(6),
+  .floater:nth-child(7) {
+    display: none;
   }
 }
 @media (max-width: 760px) {
@@ -551,8 +1372,8 @@ html.has-motion .devices.rise.is-in {
     margin-top: 40px;
     margin-bottom: clamp(-120px, -20vw, -60px);
   }
-  #track.section {
-    padding-top: clamp(140px, 28vw, 200px);
+  .band-first {
+    padding-top: clamp(110px, 24vw, 170px);
   }
   .laptop {
     margin-left: 10%;

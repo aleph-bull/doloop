@@ -46,7 +46,7 @@ function ManageBody({ account, onDeleted }: { account: AdminAccount; onDeleted: 
         {account.bannedAt && <Chip tone="warn">Suspended</Chip>}
         <span>
           Joined {fmtDate(account.createdAt, { year: 'numeric' })} ·{' '}
-          {fmtMinutes(account.focusMinutes)} studied · {account.sessions}{' '}
+          {fmtMinutes(account.focusMinutes)} focus · {account.sessions}{' '}
           {account.sessions === 1 ? 'session' : 'sessions'} · {account.timezone.replace(/_/g, ' ')}
         </span>
       </p>

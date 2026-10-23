@@ -2,7 +2,7 @@ export interface TimerDisplayProps {
   /** The countdown or elapsed clock, already formatted. */
   digits: string;
   /** What the digits mean, for assistive tech. */
-  meaning: 'remaining' | 'elapsed';
+  meaning: 'remaining' | 'focus';
 }
 
 /**

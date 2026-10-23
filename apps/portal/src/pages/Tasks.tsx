@@ -118,7 +118,7 @@ function Row({
       : // No estimate here or under it: hours logged is the only honest number. Gated on the
         // rounded value so a few seconds do not render "0 min studied".
         p != null && Math.round(p.loggedWorkMinutes) > 0
-        ? `${fmtMinutes(p.loggedWorkMinutes)} studied`
+        ? `${fmtMinutes(p.loggedWorkMinutes)} focus`
         : '';
   const perDay =
     p?.requiredPerDay != null && !done ? `Need ${fmtPerDay(p.requiredPerDay)}/day` : null;

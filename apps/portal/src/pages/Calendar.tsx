@@ -551,7 +551,7 @@ export function Calendar() {
                   <span className="cal-stat tabular">{fmtMinutes(sum.planned)} planned</span>
                 )}
                 {sum.studied >= 1 && (
-                  <span className="cal-stat tabular">{fmtMinutes(sum.studied)} studied</span>
+                  <span className="cal-stat tabular">{fmtMinutes(sum.studied)} focus</span>
                 )}
                 {dueCount > 0 && <span className="cal-stat tabular">{dueCount} due</span>}
               </span>

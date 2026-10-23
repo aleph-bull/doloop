@@ -83,7 +83,7 @@ export function NodeCard({ node, pace, courseTitle, tags, onStart, onOpen }: Nod
         Math.round(pace.loggedWorkMinutes) > 0 && (
           <div className="node-card-figures">
             <span className="node-card-logged tabular">{fmtMinutes(pace.loggedWorkMinutes)}</span>
-            <span className="node-card-of">studied</span>
+            <span className="node-card-of">focus</span>
           </div>
         )
       )}

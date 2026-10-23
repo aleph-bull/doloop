@@ -53,7 +53,10 @@ interface Person {
   id: string;
   name: string;
   /** Session ids by days ago, for posts. */
-  sessionsByDay: Map<number, { id: string; minutes: number; subject: string; endedAt: Date }>;
+  sessionsByDay: Map<
+    number,
+    { id: string; minutes: number; subject: string; startedAt: Date; endedAt: Date }
+  >;
   /** A task to hang a live session on. */
   liveTask: string;
 }
@@ -201,7 +204,7 @@ export async function buildJerryWorld(
   ) => {
     const byDay = new Map<
       number,
-      { id: string; minutes: number; subject: string; endedAt: Date }
+      { id: string; minutes: number; subject: string; startedAt: Date; endedAt: Date }
     >();
     const hourOf = new Map<number, number>();
     const rows = plan.map(([daysAgo, minutes, nodeId, subject]) => {
@@ -299,6 +302,7 @@ export async function buildJerryWorld(
         minutes: r.row.workSeconds / 60,
         // As a real post names it: "Course · Task".
         subject: course ? focusLabel({ subject: course, child: r.subject }) : r.subject,
+        startedAt: r.row.startedAt,
         endedAt: r.row.endedAt,
       });
     }
@@ -536,6 +540,8 @@ export async function buildJerryWorld(
         sessionId: session.id,
         minutes: Math.round(session.minutes),
         subject: session.subject,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
         createdAt: createdAt < session.endedAt ? session.endedAt : createdAt,
       })
       .returning({ id: posts.id });

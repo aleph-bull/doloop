@@ -153,7 +153,7 @@ export function DashboardStats() {
 
       <dl className="dash-foot">
         <div className="dash-foot-stat">
-          <dt className="dash-label">Studied, all time</dt>
+          <dt className="dash-label">Focus, all time</dt>
           <dd className="dash-foot-figure">
             <Hours minutes={d.totalMinutes} />
           </dd>

@@ -37,8 +37,8 @@ export function ProgressDisplay({ progress }: { progress: FocusProgress }) {
           aria-valuenow={Math.round(fraction * 100)}
           aria-label={
             exceeded
-              ? `${total} studied, past the ${formatClock(expectedSeconds!)} expected`
-              : `${total} studied of ${formatClock(expectedSeconds!)} expected`
+              ? `${total} focus, past the ${formatClock(expectedSeconds!)} expected`
+              : `${total} focus of ${formatClock(expectedSeconds!)} expected`
           }
         >
           <div className="focus-bar-fill" style={{ width: `${fraction * 100}%` }} />

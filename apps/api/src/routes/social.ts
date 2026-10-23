@@ -82,8 +82,17 @@ export interface FeedPost {
   userId: string;
   body: string;
   createdAt: string;
-  /** The session shared, as it was when shared. */
-  session: { minutes: number; subject: string | null } | null;
+  /**
+   * The session shared, as it was when shared: focus minutes, focus and breaks together
+   * (when the post shows it), and when it started and ended.
+   */
+  session: {
+    minutes: number;
+    subject: string | null;
+    elapsedMinutes: number | null;
+    startedAt: string | null;
+    endedAt: string | null;
+  } | null;
   /** The attached video or picture; the bytes come from GET /api/posts/:id/media. */
   media: { mime: string; bytes: number; poster: string | null } | null;
   likes: number;
@@ -210,6 +219,9 @@ export async function loadPosts(
       createdAt: posts.createdAt,
       minutes: posts.minutes,
       subject: posts.subject,
+      elapsedMinutes: posts.elapsedMinutes,
+      startedAt: posts.startedAt,
+      endedAt: posts.endedAt,
       mediaMime: posts.mediaMime,
       mediaBytes: posts.mediaBytes,
       poster: posts.poster,
@@ -231,7 +243,16 @@ export async function loadPosts(
       userId: r.userId,
       body: r.body,
       createdAt: r.createdAt.toISOString(),
-      session: r.minutes === null ? null : { minutes: r.minutes, subject: r.subject },
+      session:
+        r.minutes === null
+          ? null
+          : {
+              minutes: r.minutes,
+              subject: r.subject,
+              elapsedMinutes: r.elapsedMinutes,
+              startedAt: r.startedAt?.toISOString() ?? null,
+              endedAt: r.endedAt?.toISOString() ?? null,
+            },
       media:
         r.mediaMime && r.mediaBytes !== null
           ? { mime: r.mediaMime, bytes: r.mediaBytes, poster: r.poster }
@@ -356,6 +377,8 @@ export function socialRoutes(
         sessionId: uuid,
         /** Show the session's minutes and task on the post; off keeps the post to the words and the file. */
         showTime: z.boolean().default(true),
+        /** Also show focus and breaks together (not pauses), with the time shown. */
+        showElapsed: z.boolean().default(false),
         media: z
           .string()
           .max(POST_VIDEO_MAX_BYTES_INLINE * 1.4)
@@ -372,6 +395,8 @@ export function socialRoutes(
 
     let minutes: number | null = null;
     let subject: string | null = null;
+    let elapsedMinutes: number | null = null;
+    let span: { startedAt: Date; endedAt: Date } | null = null;
     if (input.sessionId) {
       // Only your own finished sessions, so the numbers on a post are always real ones.
       const s = await db.query.sessions.findFirst({
@@ -379,6 +404,10 @@ export function socialRoutes(
       });
       if (!s || !s.endedAt) throw notFound('No such session');
       minutes = Math.round(s.workSeconds / 60);
+      // Hiding the time hides when it was too.
+      if (input.showTime) span = { startedAt: s.startedAt, endedAt: s.endedAt };
+      if (input.showTime && input.showElapsed)
+        elapsedMinutes = Math.round((s.workSeconds + s.breakSeconds) / 60);
       if (!input.showTime) minutes = null;
       else if (s.nodeId) subject = await taskLabel(db, s.nodeId);
       else if (s.routineId) {
@@ -431,6 +460,9 @@ export function socialRoutes(
             sessionId: input.sessionId ?? null,
             minutes,
             subject,
+            elapsedMinutes,
+            startedAt: span?.startedAt ?? null,
+            endedAt: span?.endedAt ?? null,
             mediaMime: mime,
             mediaBytes: inline?.bytes ?? stored?.bytes ?? null,
             poster: poster ? `data:${poster.mime};base64,${poster.data}` : null,

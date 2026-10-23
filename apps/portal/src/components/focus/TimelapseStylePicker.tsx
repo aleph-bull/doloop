@@ -12,7 +12,7 @@ import { composeFrame, type ComposeFrame } from '../../lib/timelapse-compose';
 /** What the pieces say in the little pictures, unless real ones are given. */
 const SAMPLE: Omit<ComposeFrame, 'camera' | 'screen'> = {
   clock: '2:14 PM',
-  elapsed: '42:17',
+  elapsed: 'Focus 42:17',
   title: 'Your task name',
   note: 'Your text',
   progress: 0.6,
@@ -99,11 +99,13 @@ export function TimelapseStylePicker({
           );
         })}
       </div>
-      <span className="field-hint">
-        {current
-          ? TIMELAPSE_STYLES.find((s) => s.id === current)!.description
-          : 'Arranged your own way. Pick a look to start again from it.'}
-      </span>
+      {!compact && (
+        <span className="field-hint">
+          {current
+            ? TIMELAPSE_STYLES.find((s) => s.id === current)!.description
+            : 'Arranged your own way. Pick a look to start again from it.'}
+        </span>
+      )}
     </div>
   );
 }

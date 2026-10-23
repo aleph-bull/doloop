@@ -1,5 +1,5 @@
 {
-  "id": "22788326-2ff2-459e-a8f3-71cbc8f56c7e",
+  "id": "4ee73858-4887-4ca2-8932-581c048b61cd",
   "prevId": "bed5010c-259a-41dc-8652-8bbeafce6205",
   "version": "7",
   "dialect": "postgresql",
@@ -2792,6 +2792,24 @@
           "primaryKey": false,
           "notNull": false
         },
+        "elapsed_minutes": {
+          "name": "elapsed_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ended_at": {
+          "name": "ended_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "media_mime": {
           "name": "media_mime",
           "type": "text",
@@ -4454,12 +4472,6 @@
         },
         "dev_expires_at": {
           "name": "dev_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "notifications_seen_at": {
-          "name": "notifications_seen_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

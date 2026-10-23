@@ -102,6 +102,12 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
             <dd className="tabular">{fmtMinutes(breakSeconds / 60)}</dd>
           </div>
         )}
+        {breakSeconds > 0 && (
+          <div>
+            <dt>Elapsed</dt>
+            <dd className="tabular">{fmtMinutes((workSeconds + breakSeconds) / 60)}</dd>
+          </div>
+        )}
         {idleSeconds > 0 && (
           <div>
             <dt>Idle</dt>
