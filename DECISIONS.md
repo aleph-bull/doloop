@@ -2343,3 +2343,28 @@ The owner asked for "Jack mode", named after their friend Jack Chow: after every
 - **Sorbet** takes a muted plum accent (hsl 320 35% 36%) instead of rose. On its light-pink glass every built-in accent measured 1.0 to 1.7 against the sidebar, so Komo vanished; the plum measures about 4.5 to 5.2.
 - **Komo goes white when the accent is too dark** (owner: "when komo is too dark along a dark background just resort to making him white"): `logoColor` in ui theme.ts sets `--logo-color` to white on a dark theme when the accent is under 3:1 against the nav (the solid colour's own shades when there is one, else a dark card); otherwise the accent as before. The sidebar's mark now uses it too, and on matte solid colours it takes the same lightened accent as the top bar's (it used the raw accent, which is how Night Shift's indigo Komo got lost on its grey sidebar). Light themes are unchanged.
 - A "Recommended" note on Dawn Skies was added and then taken off at the owner's word the same evening.
+
+## The start card on a computer: a task button, three pills, one Start, 2026-10-22 (owner request)
+
+The owner called the computer's "Start a session" card an eyesore: the picker inside it made
+the card taller than the window, so the card scrolled and its list scrolled too. Tried and
+turned down along the way: a two-pane rebuild ("looks like ass"), then the original card with
+the picker behind a button ("the functionality of the card is much better now, but it is so
+ugly"). Asked which apps do this well, the owner said to redo it, keeping the phone as is. This
+version borrows Linear's property pills and the running apps' one big Start.
+
+- **What to study is one big button** (`SubjectButton` in SubjectPicker.tsx): the task and where
+  it lives, or "Choose what to study". It pops the picker (search, the course pages) out under
+  it. No "Studying" label; "No task" stands alone (no "Minutes still count"), and the picker
+  lost its "Nothing chosen yet" line.
+- **Then a pill each for how it runs:** Pomodoro or Continuous (its pop-out has the lengths under
+  Pomodoro and "Change lengths"), how long ("Unlimited", "50 min", "Until 4:30 PM"; its pop-out
+  has the three choices and the minus/plus minutes or the time), and "Timer shown" / "Timer
+  hidden", which flips on a click. No field labels or hints on the card.
+- **One full-width Start**, and an X at the top right in place of Cancel.
+- **Pop-outs** are `Popout.tsx`: a popover in the browser's top layer, since anything portalled
+  outside a modal dialog is inert. Escape and a click anywhere else close it; choosing closes the
+  task and work-style ones.
+- The card went from 446px tall to 283px.
+- **The phone is unchanged** (owner: "do not change the mobile version"), its "Minutes still
+  count" included.

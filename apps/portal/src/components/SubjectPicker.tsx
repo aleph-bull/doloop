@@ -1,7 +1,17 @@
 import { buildIndex, type RoutineOccurrence, type StudyNode } from '@komogon/core';
-import { ArrowLeft, Check, ChevronRight, CircleDot, Search, Timer, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
+  Search,
+  Timer,
+  X,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { fmtDate } from '../lib/format';
+import { Popout } from './Popout';
 
 /** The picker's value: a task, one occurrence of a routine, or nothing at all. */
 export const NONE = 'none';
@@ -103,7 +113,8 @@ export interface SubjectPickerProps {
  * the courses. A row with things inside opens on click and turns the page to them; a row
  * without is chosen on click. A course or unit can still be studied as a whole through the
  * small mark at its right. Back goes up one level, "See all courses" back to the top.
- * "No task" is the first row at the top, and the routines the last.
+ * "No task" is the first row at the top, and the routines the last. On a computer it pops
+ * out of `SubjectButton`, which shows what is chosen.
  */
 export function SubjectPicker({ nodes, routines, today, value, onChange }: SubjectPickerProps) {
   const index = useSubjectIndex(nodes);
@@ -120,19 +131,8 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
   const heading = here ? titleOf(here) : 'All courses';
   const above = path.slice(0, -1).map(titleOf);
 
-  /** The chosen thing and where it lives, for the summary line. */
-  const chosen = describeSubject(value, index, routines);
-
   return (
     <div className="picker" role="group" aria-label="What to study">
-      <div className={`picker-chosen${chosen ? '' : ' is-empty'}`} aria-live="polite">
-        <span className="picker-chosen-dot" aria-hidden />
-        <span className="picker-chosen-title truncate">
-          {chosen?.title ?? 'Nothing chosen yet'}
-        </span>
-        {chosen?.where && <span className="picker-chosen-where truncate">{chosen.where}</span>}
-      </div>
-
       <label className="picker-search">
         <Search size={15} aria-hidden className="picker-search-icon" />
         <input
@@ -227,7 +227,6 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
                   <Timer size={16} aria-hidden className="picker-row-icon" />
                   <span className="picker-row-text">
                     <span className="picker-row-title">No task</span>
-                    <span className="picker-row-sub">Minutes still count</span>
                   </span>
                   {value === NONE && <Check size={16} aria-hidden className="picker-check" />}
                 </button>
@@ -337,5 +336,49 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * What to study, on a computer: a big button showing what is chosen, which pops the picker
+ * out under it, over the rest of the card. Choosing something closes it. Each time it opens
+ * it starts on the courses.
+ */
+export function SubjectButton({ nodes, routines, today, value, onChange }: SubjectPickerProps) {
+  const index = useSubjectIndex(nodes);
+  const chosen = describeSubject(value, index, routines);
+  // "No task" stands alone here; the phone's row still says more under it.
+  const where = value === NONE ? '' : chosen?.where;
+
+  return (
+    <Popout
+      label="What to study"
+      triggerClassName={`start-subject${chosen ? '' : ' is-empty'}`}
+      className="is-subject"
+      trigger={
+        <>
+          <span className="start-subject-text">
+            <span className="start-subject-title truncate">
+              {chosen?.title ?? 'Choose what to study'}
+            </span>
+            {where && <span className="start-subject-where truncate">{where}</span>}
+          </span>
+          <ChevronDown size={18} aria-hidden className="start-subject-chevron" />
+        </>
+      }
+    >
+      {(close) => (
+        <SubjectPicker
+          nodes={nodes}
+          routines={routines}
+          today={today}
+          value={value}
+          onChange={(v) => {
+            onChange(v);
+            close();
+          }}
+        />
+      )}
+    </Popout>
   );
 }
