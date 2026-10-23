@@ -1397,6 +1397,8 @@
 }
 .profile-avatar-streak .rc-flame {
   margin: -8px -3px -6px -4px;
+  /* Lifted so the bottom of the fire sits on the number's baseline (every flame grows up from the same base). */
+  transform: translateY(-6.4px);
 }
 
 /* ----- the friends card, under yours ----- */
