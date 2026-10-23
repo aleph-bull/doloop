@@ -547,21 +547,15 @@ export function Settings() {
                 <span className="field-label">Mode</span>
                 <Segmented
                   ariaLabel="Mode"
-                  value={s.theme.mode}
+                  // The old Recommended mode follows the system now, so it shows as System.
+                  value={s.theme.mode === 'recommended' ? 'system' : s.theme.mode}
                   onChange={(mode) => patch({ theme: { mode } })}
                   options={[
-                    { value: 'recommended', label: 'Recommended' },
                     { value: 'system', label: 'System' },
                     { value: 'light', label: 'Light' },
                     { value: 'dark', label: 'Dark' },
                   ]}
                 />
-                {s.theme.mode === 'recommended' && (
-                  <p className="field-hint">
-                    Light or dark, whichever suits your background. On the plain gradients it
-                    follows your system.
-                  </p>
-                )}
               </div>
               <div className="field">
                 <span className="field-label">Accent</span>
