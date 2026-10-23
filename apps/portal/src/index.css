@@ -7198,6 +7198,10 @@
   box-shadow: var(--glass-border-inner), var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
+/* The trophies keep the lit top edge the other cards lost (owner, 2026-10-22). */
+:root[data-panel='glass'] .trophy {
+  box-shadow: var(--glass-top-edge), var(--glass-border-inner), var(--glass-shadow);
+}
 :root[data-panel='custom'] .eq-card,
 :root[data-panel='custom'] .trophy {
   --fg: var(--panel-fg);
@@ -7447,7 +7451,6 @@
 .preset-panel.is-glossy {
   background: rgb(255 255 255 / 0.16);
   border: 1px solid rgb(255 255 255 / 0.28);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   backdrop-filter: blur(6px);
 }
 .preset-panel.is-matte {
