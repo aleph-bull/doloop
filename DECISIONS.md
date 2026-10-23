@@ -2201,3 +2201,43 @@ limits as they are), linked as "Docs" in the homepage nav and footer.
 
 The closing heading is now "The study app." (owner's words), with a hand-drawn underline
 under "The" that draws itself in.
+
+## Preset themes, and solid colours that look finished, 2026-10-22 (owner request)
+
+The owner asked for preset themes: the current default named **Dawn Skies**, minimalist
+themes in **off white, Discord blue and Claude grey**, things that make solid-colour themes
+look better, a tag on each theme (minimalist, nature, cities and so on), and all of it in
+Settings › Appearance.
+
+- **Themes** (`packages/core/src/theme-presets.ts`, `components/ThemePicker.tsx`) sit at the
+  top of Appearance. A theme sets light or dark, accent, background,
+  panels, glass and texture in one click; the one in use is ticked (`matchingThemePreset`,
+  which ignores what doesn't show: glass on matte panels, a texture on a photo). Tags:
+  Minimalist, Nature, Cities, Night, Abstract, as a filter and in each card's foot. Under
+  All, two rows show until "Show all themes", like the background picker.
+- **Dawn Skies is the default exactly** (built from `DEFAULT_SETTINGS`), so new accounts
+  are on it. Nineteen themes: Dawn Skies, Off White (#f4f1ea, light, ink blue, grain),
+  Night Shift (#313338, the owner's Discord dark blue-grey, with a blurple accent; a first
+  try on the bright blurple itself was the wrong shade), Warm Charcoal (#262624, the
+  owner's Claude grey, with a clay deep enough for white labels), Quiet Stone (Graphite,
+  matte, grain), then photo themes (glass, Recommended mode).
+  Every background in them is a free one, which the tests check.
+- **No other company's name on a theme** (owner): only Dawn Skies and Off White kept the
+  names from the request; every other theme has its own name, not its background's.
+- **Matte on a solid colour takes its shades from it** (`tonalSurfaces` in contrast.ts,
+  applied by `applyUserTheme`, mapped in styles.css under `data-tonal`). Glass over a flat
+  colour has nothing to blur and laid the theme's blue-greys over it, which read muddy. Now
+  cards, the sidebar or top bar, and dialogs are a shade of the colour (a step lighter on a
+  dark one; a step whiter on a light one, like paper; deep enough for
+  light text on a bright one), text takes the colour's hue, borders are hairlines and
+  shadows short. Every text colour is measured: 7:1 main, 6:1 muted, 4.6:1 quietest, and
+  the contrast audit now checks the three minimalist colours and a few hard ones in both
+  modes. Only with Matte panels and a solid colour; other panels are as before.
+- **Texture** (`settings.theme.texture`: none, grain, dots, grid; API-validated, so Render
+  must be on this commit before it saves on komogon.app) shows under Background for a
+  solid colour or a Minimal gradient. A faint layer in the Backdrop; photos never get one.
+- The light/dark field is now labelled **Mode**, so it isn't read as the Themes above it.
+- **Saved looks are the Custom tab** of Themes (owner, same day), beside All and the tags,
+  with no heading of their own. The picker opens on Custom when there is at least one saved
+  look in this browser, otherwise on All. All lists the preset themes only.
+- Saved looks keep the texture too. The extension popup gets the texture and matte shades.

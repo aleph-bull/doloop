@@ -10,8 +10,17 @@
  *
  * Run: pnpm --filter @komogon/ui audit:contrast
  */
+import { solidColorOf, THEME_PRESETS } from '@komogon/core';
 import { BACKGROUND_DEFS } from '../src/backgrounds';
-import { adaptToPhoto, composite, contrastRatio, hexToRgb, hslToRgb, type RGB } from '../src/contrast';
+import {
+  adaptToPhoto,
+  composite,
+  contrastRatio,
+  hexToRgb,
+  hslToRgb,
+  tonalSurfaces,
+  type RGB,
+} from '../src/contrast';
 import { ACCENT_PRESET_HSL, ownAccentFill, readableAccent } from '../src/theme';
 
 interface Theme {
@@ -193,6 +202,44 @@ for (const [name, hsl] of Object.entries(PRESETS)) {
   // Fills are the colour as it is; the label is whichever of white or near-black reads.
   const own = ownAccentFill(hsl);
   check(name, 'both', 'button label', hexToRgb(own.fg), parseHsl(own.fill));
+}
+
+// Matte panels on a solid colour (tonalSurfaces): every text colour on the shaded cards and
+// straight on the colour, in both themes, for the preset themes' colours and a few hard ones.
+// Each preset's accent is checked as text on its cards and as its buttons' label.
+const accentHsl = (accent: string): [number, number, number] =>
+  accent.startsWith('custom:')
+    ? (accent.slice(7).split(',').map(Number) as [number, number, number])
+    : ACCENT_PRESET_HSL[accent]!;
+const solids: Array<[string, RGB, string | null]> = [
+  ...THEME_PRESETS.flatMap((p): Array<[string, RGB, string | null]> => {
+    const hex = solidColorOf(p.look.backgroundId);
+    return hex ? [[p.id, hexToRgb(hex), p.look.accent]] : [];
+  }),
+  ['white', [255, 255, 255], null],
+  ['black', [0, 0, 0], null],
+  ['mid grey', [128, 128, 128], null],
+  ['red', [255, 0, 0], null],
+  ['yellow', [255, 230, 0], null],
+];
+for (const [id, bg, accent] of solids) {
+  for (const t of ['light', 'dark'] as const) {
+    const s = tonalSurfaces(bg, t);
+    check(id, t, 'tonal ink on card', s.ink, s.card);
+    check(id, t, 'tonal muted on card', s.inkMuted, s.card);
+    check(id, t, 'tonal subtle on card', s.inkSubtle, s.card);
+    check(id, t, 'tonal page text', s.page, s.bg);
+    check(id, t, 'tonal muted page', s.pageMuted, s.bg);
+    check(id, t, 'tonal subtle page', s.pageSubtle, s.bg);
+    if (accent) {
+      const hsl = accentHsl(accent);
+      check(id, t, 'accent on card', parseHsl(readableAccent(hsl, s.card, 4.6, !s.lightText)), s.card);
+      const pageDark = s.page[0] < 128;
+      check(id, t, 'accent on page', parseHsl(readableAccent(hsl, s.bg, 4.6, pageDark)), s.bg);
+      const own = ownAccentFill(hsl);
+      check(id, 'both', 'button label', hexToRgb(own.fg), parseHsl(own.fill));
+    }
+  }
 }
 
 console.log(rows.join('\n'));

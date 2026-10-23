@@ -670,6 +670,7 @@ export function AppShell() {
         theme={appearance.theme}
         customImageUrl={appearance.customImageUrl}
         glass={appearance.glass}
+        texture={appearance.texture}
       />
       <a href="#main" className="skip-link">
         Skip to content

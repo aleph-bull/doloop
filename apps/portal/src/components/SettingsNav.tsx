@@ -119,6 +119,12 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     title: 'Appearance',
     keywords: [
       'theme',
+      'themes',
+      'presets',
+      'minimalist',
+      'mode',
+      'texture',
+      'grain',
       'dark mode',
       'light mode',
       'accent',

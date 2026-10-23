@@ -25,6 +25,8 @@ export interface AppearancePreset {
   glassAlpha?: number | null;
   glassBlur?: number;
   glassSaturate?: number;
+  /** The pattern on a plain background. Missing on looks saved before it existed. */
+  texture?: Theme['texture'];
 }
 
 const LIST_KEY = 'komogon.appearancePresets';
@@ -106,6 +108,7 @@ export async function savePreset(
     glassAlpha: theme.glassAlpha,
     glassBlur: theme.glassBlur,
     glassSaturate: theme.glassSaturate,
+    texture: theme.texture,
   };
   if (preset.hasImage) await idb('readwrite', (s) => s.put(image, preset.id));
   saveList([...list, preset]);

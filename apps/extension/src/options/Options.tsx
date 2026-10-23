@@ -25,9 +25,10 @@ export function Options() {
     : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
   // An upload is not sampled here, so Recommended follows the system on one.
   const recommended = choice.customImageUrl ? null : recommendedTheme(choice.backgroundId);
+  const backdropId = choice.customImageUrl ? null : choice.backgroundId;
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended);
-  }, [settings, recommended]);
+    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
+  }, [settings, recommended, backdropId]);
   return (
     <main style={{ padding: 32, maxWidth: 520 }}>
       <Backdrop
@@ -35,6 +36,7 @@ export function Options() {
         theme={settings ? resolveTheme(settings.theme.mode, undefined, recommended) : 'dark'}
         customImageUrl={choice.customImageUrl}
         assetBase={portal}
+        texture={settings?.theme.texture}
       />
       <Glass
         className="card"

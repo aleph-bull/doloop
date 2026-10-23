@@ -5,6 +5,8 @@ import {
   hslToRgb,
   recommendedThemeFor,
   relativeLuminance,
+  rgbToHsl,
+  tonalSurfaces,
   type RGB,
 } from './contrast';
 
@@ -198,8 +200,13 @@ const DARK_SURFACE: RGB = [30, 32, 44];
  * The accent, moved in lightness only as far as it takes to reach `ratio` against `bg`.
  * Keeps hue and saturation, so a link still reads as the user's colour.
  */
-export function readableAccent([h, s, l]: [number, number, number], bg: RGB, ratio = 4.6): string {
-  const darker = relativeLuminance(bg) > 0.4;
+export function readableAccent(
+  [h, s, l]: [number, number, number],
+  bg: RGB,
+  ratio = 4.6,
+  /** Which way to go; by default darker on a light surface. A mid-tone needs telling. */
+  darker = relativeLuminance(bg) > 0.4,
+): string {
   let lig = l;
   for (let i = 0; i < 100; i++) {
     if (contrastRatio(hslToRgb(h, s, lig), bg) >= ratio) break;
@@ -277,14 +284,81 @@ export function applyGlassFrost(
   else root.style.setProperty('--glass-saturate', `${Math.min(200, Math.max(100, saturate))}%`);
 }
 
+const TONE_VARS = [
+  'bg',
+  'card',
+  'raised',
+  'sunken',
+  'ink',
+  'ink-muted',
+  'ink-subtle',
+  'page',
+  'page-muted',
+  'page-subtle',
+  'border',
+  'shadow',
+  'accent-text',
+  'page-accent',
+].map((v) => `--tone-${v}`);
+
+const rgbCss = (c: RGB) => `rgb(${c.join(' ')})`;
+
+/**
+ * Matte panels on a solid colour take their surfaces and text from it (`tonalSurfaces`).
+ * Writes only the --tone-* values and data-tonal; styles.css maps them onto the theme's
+ * tokens. `solid` is null for anything else, which clears them.
+ */
+function applyTonal(
+  solid: RGB | null,
+  theme: ResolvedTheme,
+  hsl: [number, number, number],
+  root: HTMLElement,
+): void {
+  if (!solid) {
+    delete root.dataset.tonal;
+    for (const v of TONE_VARS) root.style.removeProperty(v);
+    return;
+  }
+  const t = tonalSurfaces(solid, theme);
+  const [h, s] = rgbToHsl(solid);
+  const tint = `${h} ${Math.min(s, 40)}% 22%`;
+  const set = (name: string, value: string) => root.style.setProperty(`--tone-${name}`, value);
+  set('bg', rgbCss(t.bg));
+  set('card', rgbCss(t.card));
+  set('raised', rgbCss(t.raised));
+  set('sunken', rgbCss(t.sunken));
+  set('ink', rgbCss(t.ink));
+  set('ink-muted', rgbCss(t.inkMuted));
+  set('ink-subtle', rgbCss(t.inkSubtle));
+  set('page', rgbCss(t.page));
+  set('page-muted', rgbCss(t.pageMuted));
+  set('page-subtle', rgbCss(t.pageSubtle));
+  // A hairline and a short, soft shadow in the colour's own shade: on a flat colour the
+  // glass's long dark shadow reads as a smudge.
+  set('border', t.lightText ? 'rgb(255 255 255 / 0.07)' : `hsl(${tint} / 0.1)`);
+  set(
+    'shadow',
+    t.lightText
+      ? '0 1px 2px rgb(0 0 0 / 0.2), 0 10px 28px -16px rgb(0 0 0 / 0.55)'
+      : `0 1px 2px hsl(${tint} / 0.06), 0 10px 28px -16px hsl(${tint} / 0.22)`,
+  );
+  // The accent goes the way the text on that surface does: lighter beside light text.
+  set('accent-text', readableAccent(hsl, t.card, 4.6, !t.lightText));
+  set('page-accent', readableAccent(hsl, t.bg, 4.6, t.page[0] < 128));
+  root.dataset.tonal = '';
+}
+
 /**
  * Apply everything from user settings that lives on <html>: theme, accent (preset or
  * "custom:<h>,<s>,<l>"), motion, and panel surface. Used by the portal and the extension.
+ * `backdropId` is the background on screen (null for an uploaded image); a solid colour
+ * there gives matte panels its own shades.
  */
 export function applyUserTheme(
   settings: UserThemeLike,
   root: HTMLElement = document.documentElement,
   recommended: ResolvedTheme | null = null,
+  backdropId: string | null = null,
 ): ResolvedTheme {
   const custom = settings.theme.accent.startsWith('custom:');
   applyTheme(
@@ -328,6 +402,11 @@ export function applyUserTheme(
   // A custom panel colour gets its own accent text, measured against that colour.
   if (panelBehind) root.style.setProperty('--panel-accent-text', readableAccent(hsl, panelBehind));
   applyGlassFrost(settings.theme.glassBlur, settings.theme.glassSaturate, root);
+  const solid =
+    settings.theme.panel === 'matte' && backdropId
+      ? (backgroundById(backdropId).solid ?? null)
+      : null;
+  applyTonal(solid, resolved, hsl, root);
   return resolved;
 }
 

@@ -197,9 +197,10 @@ export function Popup() {
     : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
   // An upload is not sampled here, so Recommended follows the system on one.
   const recommended = choice.customImageUrl ? null : recommendedTheme(choice.backgroundId);
+  const backdropId = choice.customImageUrl ? null : choice.backgroundId;
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended);
-  }, [settings, recommended]);
+    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
+  }, [settings, recommended, backdropId]);
   const resolvedTheme = settings
     ? resolveThemeSafe(settings.theme.mode, undefined, recommended)
     : 'dark';
@@ -209,6 +210,7 @@ export function Popup() {
       theme={resolvedTheme}
       customImageUrl={choice.customImageUrl}
       assetBase={store?.connection?.portalUrl ?? 'http://localhost:5173'}
+      texture={settings?.theme.texture}
     />
   );
 

@@ -18,7 +18,7 @@ export {
 export { ToastProvider, useToast } from './components/Toast';
 export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './components/Charts';
 export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatmap';
-export { Backdrop, sampleImage } from './components/Backdrop';
+export { Backdrop, sampleImage, textureStyle } from './components/Backdrop';
 export { BackgroundThumb, type BackgroundThumbProps } from './components/BackgroundThumb';
 export { LogoMark, type LogoMarkProps } from './components/LogoMark';
 export {

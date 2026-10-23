@@ -233,6 +233,14 @@ Keep the owner's own wording verbatim, "!" included.
 - The glass's colour, weight, blur and colour boost are settings (Appearance › Advanced ›
   Glass, `settings.theme.glass*`); the defaults are the owner's pick, 11px blur and no boost.
   Use `--glass-blur` and `--glass-saturate` in new glass, never fixed numbers.
+- **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in
+  `packages/core/src/theme-presets.ts` (Dawn Skies is the default, built from
+  `DEFAULT_SETTINGS`; only free backgrounds, tested). **Matte panels on a solid colour are
+  shaded from it** (`tonalSurfaces` in contrast.ts, set by `applyUserTheme` as `--tone-*`
+  and `data-tonal`, mapped onto the theme tokens in styles.css): new surfaces should use
+  the usual tokens (`--ink`, `--matte-fill`, `--glass-solid`, `--accent-text`), which
+  follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
+  never use another company's name (owner).
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.
