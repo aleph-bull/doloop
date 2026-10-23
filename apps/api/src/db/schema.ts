@@ -407,6 +407,11 @@ export const posts = pgTable(
     /** What the session showed when it was shared, kept so the post reads the same later. */
     minutes: integer('minutes'),
     subject: text('subject'),
+    /** Focus and breaks together, without pauses; only when the post chose to show it. */
+    elapsedMinutes: integer('elapsed_minutes'),
+    /** When the session started and ended, shown small on the post. */
+    startedAt: ts('started_at'),
+    endedAt: ts('ended_at'),
     /** The attached video's type and size; the bytes are in `post_media`. */
     mediaMime: text('media_mime'),
     mediaBytes: integer('media_bytes'),

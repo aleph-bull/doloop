@@ -272,7 +272,7 @@ export function Profile() {
   // of their own: the daily one on the picture, the weekly one at the start of this row.
   const totals: Array<{ label: string; value: number; unit: string }> = [];
   if (stats && studied) {
-    totals.push({ label: 'Studied, all time', ...figure(stats.totalMinutes) });
+    totals.push({ label: 'Focus, all time', ...figure(stats.totalMinutes) });
     totals.push({
       label: 'Sessions',
       value: stats.totalSessions,

@@ -746,8 +746,15 @@ export function Focus() {
               recording={recording}
               onSaved={() => setTlSavedAt(recorder.count)}
               sessionId={summary.session.id}
+              sessionSpan={{
+                startedAt: summary.session.startedAt,
+                endedAt: summary.session.endedAt,
+              }}
               postSession={{
                 minutes: Math.round(summary.session.workSeconds / 60),
+                elapsedMinutes: Math.round(
+                  (summary.session.workSeconds + summary.session.breakSeconds) / 60,
+                ),
                 // Named as the post will be, "Course · Task".
                 subject:
                   summary.session.nodeId && nodeIndex.byId.has(summary.session.nodeId)
@@ -841,6 +848,9 @@ export function Focus() {
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
                   sessionId={session?.session.id ?? null}
+                  sessionSpan={
+                    session ? { startedAt: session.session.startedAt, endedAt: null } : null
+                  }
                 />
               )}
             </SheetFold>
@@ -1048,7 +1058,7 @@ function FocusSession({
           <div className="focus-fold-inner">
             <TimerDisplay
               digits={ctl.digits}
-              meaning={timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}
+              meaning={timer.mode === 'unlimited' ? 'focus' : 'remaining'}
             />
             <TaskContext subject={context.subject} child={context.child} />
             {showProgress && <ProgressDisplay progress={progress} />}

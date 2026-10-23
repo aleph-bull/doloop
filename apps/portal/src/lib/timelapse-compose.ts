@@ -21,8 +21,13 @@ export interface ComposeFrame {
   screen: CanvasImageSource | null;
   /** The time of day, "2:14 PM EST". */
   clock: string | null;
-  /** The time studied, "23:45" or "Break 03:10". */
+  /** The focus clock, "Focus 23:45" or "Break 03:10". */
   elapsed: string | null;
+  /** Focus and breaks together, "Elapsed 41:02". */
+  total?: string | null;
+  /** When the session started and ended, "Start 9:10 AM". */
+  start?: string | null;
+  end?: string | null;
   title: string | null;
   /** The person's own line of text, the same on every frame. */
   note?: string | null;
@@ -272,9 +277,14 @@ export function composeFrame(
       drawn.screen = screenBox;
     }
   }
-  const texts: Array<['clock' | 'elapsed' | 'title' | 'note', string | null]> = [
+  const texts: Array<
+    ['clock' | 'elapsed' | 'total' | 'start' | 'end' | 'title' | 'note', string | null]
+  > = [
     ['clock', frame.clock],
     ['elapsed', frame.elapsed],
+    ['total', frame.total ?? null],
+    ['start', frame.start ?? null],
+    ['end', frame.end ?? null],
     ['title', frame.title],
     ['note', frame.note ?? null],
   ];
