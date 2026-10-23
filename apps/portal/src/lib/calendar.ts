@@ -72,12 +72,17 @@ export function periodLabel(kind: 'week' | 'month' | 'day', from: string, to: st
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).formatRange(a, b);
 }
 
-/** "9:00 – 10:30 AM". */
+/**
+ * "9:00 – 10:30 AM". Past midnight it stays times only, "11:39 PM – 12:31 AM": formatRange
+ * would put the full date on both ends.
+ */
 export function timeRange(startIso: string, endIso: string): string {
-  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).formatRange(
-    new Date(startIso),
-    new Date(endIso),
-  );
+  const fmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (start.toDateString() !== end.toDateString())
+    return `${fmt.format(start)} – ${fmt.format(end)}`;
+  return fmt.formatRange(start, end);
 }
 
 /** "9 AM" for the grid's gutter. */
