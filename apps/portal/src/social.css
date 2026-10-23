@@ -1290,6 +1290,22 @@
 .profile-avatar-streak .rc-flame {
   margin: -8px -3px -6px -4px;
 }
+/* Lifted so the body of the fire sits on the pill's middle; a longer streak's taller flame needs less. */
+.profile-avatar-streak .rc-flame.is-level-1 {
+  transform: translateY(-7.3px);
+}
+.profile-avatar-streak .rc-flame.is-level-2 {
+  transform: translateY(-6.2px);
+}
+.profile-avatar-streak .rc-flame.is-level-3 {
+  transform: translateY(-5px);
+}
+.profile-avatar-streak .rc-flame.is-level-4 {
+  transform: translateY(-3.8px);
+}
+.profile-avatar-streak .rc-flame.is-level-5 {
+  transform: translateY(-2.7px);
+}
 
 /* ----- the friends card, under yours ----- */
 .side-count {
