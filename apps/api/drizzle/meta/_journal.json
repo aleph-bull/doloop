@@ -225,6 +225,13 @@
       "when": 1792719011993,
       "tag": "0031_jack_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1792721363407,
+      "tag": "0032_onboarding_answers",
+      "breakpoints": true
     }
   ]
 }

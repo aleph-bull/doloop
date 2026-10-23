@@ -1,5 +1,6 @@
 import type {
   NodeTemplate,
+  OnboardingAnswers,
   PomodoroSnapshot,
   RestDayChange,
   SessionReview,
@@ -949,6 +950,19 @@ export const drillItems = pgTable(
   (t) => [index('drill_items_node_idx').on(t.nodeId), index('drill_items_user_idx').on(t.userId)],
 );
 
+/**
+ * What someone answered in the first-time setup, for whoever runs Komodon (Admin ›
+ * Onboarding answers). One row per account, filled in as they go.
+ */
+export const onboardingAnswers = pgTable('onboarding_answers', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  answers: jsonb('answers').$type<OnboardingAnswers>().notNull().default({}),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
 export const schema = {
   emailCodes,
   emailRateLimits,
@@ -994,6 +1008,7 @@ export const schema = {
   planTopics,
   drillRounds,
   drillItems,
+  onboardingAnswers,
 };
 
 export type UserRow = typeof users.$inferSelect;

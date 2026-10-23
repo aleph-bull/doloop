@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { Button, Chip, Input, Panel, Spinner, useToast } from '@komogon/ui';
 import { AccountManager } from '../components/admin/AccountManager';
+import { OnboardingAnswers } from '../components/admin/OnboardingAnswers';
 import {
   adminFetch,
   adminKeys,
@@ -155,6 +156,8 @@ export function Admin() {
               </table>
             </div>
           </Panel>
+
+          <OnboardingAnswers />
 
           <div className="admin-grid">
             <DevTools />

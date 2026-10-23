@@ -32,7 +32,7 @@ describe('theme presets', () => {
   });
 
   it('the three minimalist colours are matte solids', () => {
-    for (const id of ['off-white', 'night-shift', 'warm-charcoal']) {
+    for (const id of ['off-white', 'night-shift', 'inkwell']) {
       const p = THEME_PRESETS.find((x) => x.id === id)!;
       expect(p.tag).toBe('minimalist');
       expect(p.look.panel).toBe('matte');
@@ -53,16 +53,16 @@ describe('theme presets', () => {
     const on = { ...theme, ...themePresetPatch(peak) };
     // A texture never shows on a photo.
     expect(matchingThemePreset({ ...on, texture: 'dots' })?.id).toBe('cherry-peak');
-    const charcoal = THEME_PRESETS.find((p) => p.id === 'warm-charcoal')!;
-    const matte = { ...theme, ...themePresetPatch(charcoal) };
+    const inkwell = THEME_PRESETS.find((p) => p.id === 'inkwell')!;
+    const matte = { ...theme, ...themePresetPatch(inkwell) };
     // Matte panels have no glass.
-    expect(matchingThemePreset({ ...matte, glassBlur: 30 })?.id).toBe('warm-charcoal');
+    expect(matchingThemePreset({ ...matte, glassBlur: 30 })?.id).toBe('inkwell');
     expect(matchingThemePreset({ ...matte, texture: 'grid' })).toBeNull();
     expect(matchingThemePreset({ ...matte, customBackgroundUrl: 'upload' })).toBeNull();
   });
 
   it('knows which backgrounds are plain', () => {
-    expect(isPlainBackground('solid:#262624')).toBe(true);
+    expect(isPlainBackground('solid:#1c1c21')).toBe(true);
     expect(isPlainBackground('graphite')).toBe(true);
     expect(isPlainBackground('fuji')).toBe(false);
   });

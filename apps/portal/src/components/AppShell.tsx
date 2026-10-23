@@ -1,4 +1,4 @@
-﻿import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+﻿import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import { levelProgress, type UserSettings } from '@komogon/core';
 import {
@@ -37,10 +37,14 @@ import { preloadPage, preloadPages } from '../lib/page-loaders';
 import { useActiveSession, useAvatar, useMe, useNodes } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
+import { useTour } from '../lib/tour';
 import { useUndoShortcuts } from '../lib/undo';
 import { ErrorBoundary } from './ErrorState';
 import { SignOutButton } from './SignOutButton';
 import { StartSessionDialog } from './StartSessionDialog';
+
+// The first-time setup's look around, loaded only while one is running.
+const Tour = lazy(() => import('./onboarding/Tour').then((m) => ({ default: m.Tour })));
 
 /**
  * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
@@ -393,6 +397,7 @@ export function AppShell() {
   useExtensionStatus();
   // Ctrl+Z and Ctrl+Y for the small reversible things, anywhere in the app.
   useUndoShortcuts();
+  const touring = useTour() !== null;
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
@@ -1005,6 +1010,11 @@ export function AppShell() {
           </div>
         </ErrorBoundary>
       </main>
+      {touring && (
+        <Suspense fallback={null}>
+          <Tour />
+        </Suspense>
+      )}
     </>
   );
 }

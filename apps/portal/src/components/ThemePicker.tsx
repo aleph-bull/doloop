@@ -47,12 +47,12 @@ const TAG_LABEL = Object.fromEntries(THEME_TAGS.map((t) => [t.id, t.label])) as 
 const rgb = (c: RGB) => `rgb(${c.join(' ')})`;
 
 /** Light or dark, as the preset comes out: its own mode, on its own background. */
-function lookTheme(p: ThemePreset): ResolvedTheme {
+export function lookTheme(p: ThemePreset): ResolvedTheme {
   return resolveTheme(p.look.mode, undefined, recommendedTheme(p.look.backgroundId));
 }
 
 /** The preview's background: the photo's thumbnail, or the colour or gradient with its texture. */
-function backgroundStyle(p: ThemePreset, resolved: ResolvedTheme): CSSProperties {
+export function backgroundStyle(p: ThemePreset, resolved: ResolvedTheme): CSSProperties {
   const def = backgroundById(p.look.backgroundId);
   if (def.photo)
     return {
@@ -64,7 +64,10 @@ function backgroundStyle(p: ThemePreset, resolved: ResolvedTheme): CSSProperties
 }
 
 /** The little card on the preview in the preset's panels, and its text colour. */
-function cardLook(p: ThemePreset, resolved: ResolvedTheme): { card: CSSProperties; ink: string } {
+export function cardLook(
+  p: ThemePreset,
+  resolved: ResolvedTheme,
+): { card: CSSProperties; ink: string } {
   const dark = resolved === 'dark';
   const solid = backgroundById(p.look.backgroundId).solid;
   if (p.look.panel === 'matte' && solid) {

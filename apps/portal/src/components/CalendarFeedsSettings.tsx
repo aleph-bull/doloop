@@ -81,7 +81,7 @@ export function CalendarFeedsSettings() {
   );
 }
 
-function eventsLabel(n: number): string {
+export function eventsLabel(n: number): string {
   return n === 0 ? 'No events coming up' : `${n} event${n === 1 ? '' : 's'}`;
 }
 

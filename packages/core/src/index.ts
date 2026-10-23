@@ -45,3 +45,4 @@ export * from './study-plan';
 export * from './universities';
 export * from './study-list';
 export * from './theme-presets';
+export * from './onboarding';

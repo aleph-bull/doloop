@@ -3,6 +3,8 @@ import { ChevronDown, Laptop, Smartphone } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { Reveal } from '@komogon/ui';
 import { isPhone } from '../../lib/device';
+import { useTour } from '../../lib/tour';
+import { TimelapseTourSave } from '../onboarding/TimelapseTourSave';
 import { presetOf, TimelapseSettings } from './Timelapse';
 import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
 
@@ -46,6 +48,8 @@ export function TimelapsePresets({
   onChange: (patch: DeepPartial<UserSettings>) => unknown;
 }) {
   const here: TimelapseDevice = useMemo(() => (isPhone() ? 'phone' : 'computer'), []);
+  // During the first-time setup, saving the layout is what ends its timelapse part.
+  const touring = useTour()?.stage === 'timelapse';
   const [open, setOpen] = useState<Record<TimelapseDevice, boolean>>({
     phone: false,
     computer: false,
@@ -117,6 +121,7 @@ export function TimelapsePresets({
                     onChange={onChange}
                     screen={d === 'computer'}
                     active={open[d]}
+                    footer={touring ? (c) => <TimelapseTourSave {...c} /> : undefined}
                   />
                   <div className="divider" />
                   <h3 className="font-medium">Recording</h3>

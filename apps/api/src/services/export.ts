@@ -8,6 +8,7 @@ import {
   estimateChanges,
   gradeComponents,
   nodes,
+  onboardingAnswers,
   plannedBlocks,
   planTopics,
   quotesSeen,
@@ -63,6 +64,9 @@ export async function exportUserData(db: Db, user: UserRow) {
     socialProfile: await db.query.socialProfiles
       .findFirst({ where: eq(socialProfiles.userId, user.id) })
       .then((row) => (row ? plain(row) : null)),
+    onboarding: await db.query.onboardingAnswers
+      .findFirst({ where: eq(onboardingAnswers.userId, user.id) })
+      .then((row) => row?.answers ?? null),
     routines: rt.map(plain),
     routineCompletions: rc.map(plain),
     trackers: tr.map(plain),

@@ -173,3 +173,35 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
 }
+
+/* Onboarding answers: each question's totals, then everyone's answers. */
+.admin-answers {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.admin-answer {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+}
+.admin-answer dt {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.admin-answer dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+}
+.admin-answer-count .muted {
+  margin-left: 0.3em;
+}
+@media (max-width: 560px) {
+  .admin-answer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+}

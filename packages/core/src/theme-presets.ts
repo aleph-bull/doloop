@@ -118,7 +118,7 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
   solid('off-white', 'Off White', '#f4f1ea', 'light', DEFAULT_SETTINGS.theme.accent, 'grain'),
   solid('night-shift', 'Night Shift', '#313338', 'dark', 'custom:235,86,65', 'none'),
-  solid('warm-charcoal', 'Warm Charcoal', '#262624', 'dark', 'custom:15,58,47', 'none'),
+  solid('inkwell', 'Inkwell', '#1c1c21', 'dark', 'amber', 'none'),
   {
     id: 'quiet-stone',
     name: 'Quiet Stone',

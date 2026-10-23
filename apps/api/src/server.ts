@@ -26,6 +26,7 @@ import { recapRoutes } from './routes/recap';
 import { passwordAuthRoutes, type PasswordAuthOptions } from './routes/auth';
 import { devLoginRoutes, type DevLoginOptions } from './routes/dev-login';
 import { adminRoutes } from './routes/admin';
+import { onboardingRoutes } from './routes/onboarding';
 import { leaderboardRoutes } from './routes/leaderboard';
 import { profileRoutes } from './routes/profiles';
 import { socialRoutes } from './routes/social';
@@ -175,6 +176,7 @@ export async function buildServer(opts: BuildOptions) {
   emailAuthRoutes(app, opts.db, clock, email);
   meRoutes(app, opts.db, clock, opts.mediaStore ?? null);
   adminRoutes(app, opts.db, admins, clock, opts.mediaStore ?? null);
+  onboardingRoutes(app, opts.db, admins, clock);
   leaderboardRoutes(app, opts.db, clock);
   profileRoutes(app, opts.db, clock);
   socialRoutes(app, opts.db, clock, opts.mediaStore ?? null);

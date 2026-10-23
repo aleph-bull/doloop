@@ -1,0 +1,542 @@
+/* The first-time setup: the questions (/onboarding), the look around, the timelapse bar and
+   "All done". Everything rises in by transform only: these sit on glass. */
+
+@keyframes ob-rise {
+  from {
+    transform: translateY(8px);
+  }
+}
+:root[data-motion='off'] .ob-step,
+:root[data-motion='off'] .tour-pop-body {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .ob-step,
+  :root:not([data-motion='on']) .tour-pop-body {
+    animation: none;
+  }
+}
+
+/* ---------- The questions ---------- */
+
+/* Held from the top, so a shorter question doesn't move the card. */
+.ob-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: max(24px, 10dvh) 16px 24px;
+}
+.ob-card {
+  width: 100%;
+  max-width: 580px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+@media (max-width: 560px) {
+  .ob-page {
+    padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  }
+  .ob-card {
+    padding: var(--card-pad);
+  }
+}
+.ob-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ob-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  color: var(--accent-text);
+}
+/* Komo himself: never black. Grey on a light theme, the screen's text colour on a dark one. */
+.ob-brand .logo-mark {
+  color: var(--fg);
+}
+:root[data-theme='light'] .ob-brand .logo-mark {
+  color: var(--fg-subtle);
+}
+.ob-skip-section,
+.tour-skip {
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: var(--text-sm);
+}
+.ob-skip-section:hover,
+.tour-skip:hover {
+  color: var(--fg);
+}
+
+.ob-sections {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ob-sections li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ob-section-bar {
+  display: block;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+  overflow: hidden;
+}
+.ob-section-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+  transition: transform var(--dur-slow) var(--ease-out);
+}
+.ob-section-name {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ob-sections li.is-here .ob-section-name {
+  color: var(--fg);
+}
+
+.ob-loading {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+.ob-step {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: ob-rise var(--dur-slow) var(--ease-out);
+}
+.ob-question {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ob-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+}
+.ob-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Pick a look */
+.ob-mode {
+  align-self: flex-start;
+}
+.ob-looks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.ob-look {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.ob-look:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.ob-look[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+/* A stand-in for each look until the theme presets land: its colours and two little cards. */
+.ob-look-preview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  aspect-ratio: 16 / 10;
+  padding: 12px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+/* A little card in the look's panels: its accent, then two lines of its text colour. */
+.ob-look-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 72%;
+  padding: 10px;
+  border-radius: 8px;
+}
+.ob-look-accent {
+  width: 26px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+}
+.ob-look-line {
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--theme-ink) 45%, transparent);
+}
+.ob-look-line.is-short {
+  width: 60%;
+}
+.ob-look-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 0 4px;
+  font-weight: 500;
+}
+.ob-look-name svg {
+  color: var(--accent-text);
+}
+.ob-look-tag {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-text);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.ob-look-check {
+  margin-left: auto;
+}
+
+/* Where do you study? */
+.ob-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.ob-search > svg {
+  position: absolute;
+  left: 12px;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.ob-search .input {
+  width: 100%;
+  padding-left: 36px;
+}
+.ob-unis {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: min(280px, 40dvh);
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
+}
+/* The university list keeps its height while it is searched. */
+.ob-unis.is-fixed {
+  height: min(280px, 40dvh);
+}
+.ob-uni {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ob-uni:hover {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.ob-uni[aria-checked='true'] {
+  background: var(--accent-soft);
+}
+.ob-uni svg {
+  flex: none;
+  color: var(--accent-text);
+}
+.ob-uni .ob-uni-go {
+  color: var(--fg-subtle);
+}
+.ob-none {
+  padding: 8px 12px;
+}
+.ob-not-uni {
+  align-self: flex-start;
+}
+
+/* Pick any */
+.ob-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ob-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.ob-chip:hover {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.ob-chip[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--accent-soft);
+}
+.ob-chip svg {
+  color: var(--accent-text);
+}
+
+/* The calendar */
+.ob-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.ob-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ob-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.ob-step-n {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transform: translateY(-1px);
+}
+.ob-open {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ob-link {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ob-link-actions {
+  display: flex;
+  gap: 8px;
+}
+.ob-link-actions .btn {
+  gap: 4px;
+}
+.ob-added {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+/* ---------- The look around ---------- */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+/* The nav link in a ring, the rest of the window dimmed around it. */
+.tour-spot {
+  position: fixed;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 0 0 100vmax rgb(0 0 0 / 0.42);
+  pointer-events: none;
+  transition:
+    left var(--dur-slow) var(--ease-out),
+    top var(--dur-slow) var(--ease-out),
+    width var(--dur-slow) var(--ease-out),
+    height var(--dur-slow) var(--ease-out);
+}
+.tour-shade {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 0.42);
+}
+.tour .tour-pop {
+  position: fixed;
+  width: min(340px, calc(100vw - 24px));
+  padding: var(--card-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition:
+    left var(--dur-slow) var(--ease-out),
+    top var(--dur-slow) var(--ease-out);
+}
+.tour-pop-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: ob-rise var(--dur-slow) var(--ease-out);
+}
+/* The timelapse part's first card: in the middle, with no link to point at. */
+.tour .tour-intro {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(380px, calc(100vw - 24px));
+}
+.tour-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+.tour-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-actions .tour-skip {
+  margin-right: auto;
+}
+.tour-count {
+  font-size: var(--text-sm);
+  margin-right: 4px;
+}
+
+/* ---------- The timelapse part ---------- */
+
+.tour-bar.glass {
+  position: fixed;
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 58;
+  width: min(440px, calc(100vw - 24px));
+  padding: 16px var(--card-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tour-bar .tour-title {
+  font-size: var(--text-base);
+}
+.tour-bar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tour-bar-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-sm);
+}
+.tour-bar-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-bar-steps .ob-step-n {
+  width: 22px;
+  height: 22px;
+  transform: none;
+}
+/* Room to scroll the page's end out from under the bar. */
+:root[data-touring='timelapse'] .page {
+  padding-bottom: 160px;
+}
+:root[data-touring='timelapse'] .toast-stack {
+  bottom: calc(var(--space-6) + var(--tabbar-clearance, 0px) + 120px);
+}
+.tour-tl-save {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ---------- All done ---------- */
+
+.tour-done-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tour-done-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+}
+@media (min-width: 561px) {
+  .modal.tour-done {
+    max-width: min(480px, calc(100vw - 32px));
+  }
+}
+.tour-done .get-started-options {
+  margin-top: 4px;
+}
+.get-started-option:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+.get-started-option:disabled:hover {
+  background: transparent;
+}
+.ob-actions > :last-child {
+  margin-left: auto;
+}

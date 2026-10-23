@@ -315,6 +315,17 @@ and never explain the difference on screen.
 - The Level pill's hover card opens on hover and keyboard focus only (`:has(:focus-visible)`),
   so it no longer stays open after a click.
 
+## First-time setup (2026-10-22)
+
+New accounts go through three parts, each skippable on its own (never all at once): the
+questions on `/onboarding` (`pages/Onboarding.tsx`), then a look around the app and the
+timelapse in Settings (`components/onboarding/Tour.tsx`, stage kept in `lib/tour.ts`), then
+"All done". The answers are for the owner only (`onboarding_answers`, Admin › Onboarding
+answers); never show them in the app. The two looks offered first map to preset themes in
+`lib/onboarding-looks.ts` (the owner's picks; dark is its own theme where the owner chose
+one). A new nav page that should be in the look around goes in `STOPS` in Tour.tsx.
+DECISIONS.md has the details.
+
 ## On a phone (2026-10-22)
 
 The phone layout is designed for the phone, not the computer's shrunk; DECISIONS.md has the

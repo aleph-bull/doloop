@@ -1,5 +1,6 @@
 import type {
   NodePace,
+  OnboardingAnswers,
   PlanItem,
   PlannedBlock,
   RestDayPolicy,
@@ -619,6 +620,9 @@ export const api = {
   me: () => request<MeResponse>('GET', '/api/me'),
   updateMe: (patch: { timezone?: string; onboarded?: boolean }) =>
     request<{ user: User; onboarded: boolean }>('PATCH', '/api/me', patch),
+  onboarding: () => request<{ answers: OnboardingAnswers }>('GET', '/api/me/onboarding'),
+  saveOnboarding: (patch: OnboardingAnswers) =>
+    request<{ answers: OnboardingAnswers }>('PATCH', '/api/me/onboarding', patch),
   updateSettings: (patch: DeepPartial<UserSettings>) =>
     request<{ settings: UserSettings }>('PATCH', '/api/me/settings', patch),
   regenerateIcsToken: () => request<{ icsToken: string }>('POST', '/api/me/ics-token'),
