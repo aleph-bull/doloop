@@ -23,7 +23,7 @@ export interface PostPreviewProps {
   maxBytes: number;
   /** Post it; resolves true once it is up. */
   onShare: (
-    input: { body: string; showTime: boolean; showElapsed: boolean },
+    input: { body: string; showTime: boolean; showElapsed: boolean; friendsOnly: boolean },
     blob: Blob,
   ) => Promise<boolean>;
   onClose: () => void;
@@ -47,6 +47,7 @@ export function PostPreview({
   const [text, setText] = useState('');
   const [showTime, setShowTime] = useState(true);
   const [showElapsed, setShowElapsed] = useState(false);
+  const [friendsOnly, setFriendsOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Over the limit: the offer to compress shows in place of the buttons. */
   const [oversize, setOversize] = useState(false);
@@ -54,7 +55,9 @@ export function PostPreview({
   const me = useMe().data?.user;
   const avatar = useAvatar().data?.dataUrl ?? null;
   const name = me?.settings.profile.name || 'You';
-  const audience = me?.settings.social.posts === 'friends' ? 'Friends' : 'Everyone';
+  // Settings › Social can keep every post to friends; then there is nothing to choose.
+  const allFriends = me?.settings.social.posts === 'friends';
+  const audience = allFriends || friendsOnly ? 'Friends' : 'Everyone';
 
   const close = useCallback(() => {
     if (busy) return;
@@ -67,7 +70,12 @@ export function PostPreview({
     setOversize(false);
     setBusy(true);
     try {
-      if (await onShare({ body: text.trim(), showTime, showElapsed }, blob)) {
+      if (
+        await onShare(
+          { body: text.trim(), showTime, showElapsed, friendsOnly: friendsOnly || allFriends },
+          blob,
+        )
+      ) {
         setText('');
         onClose();
       }
@@ -115,11 +123,9 @@ export function PostPreview({
           {session && session.minutes > 0 && showTime && session.elapsedMinutes !== null && (
             <Toggle checked={showElapsed} onChange={setShowElapsed} label="Time elapsed" />
           )}
-          <p className="field-hint">
-            {audience === 'Friends'
-              ? 'Your friends see it on the feed and your profile.'
-              : 'Everyone signed in sees it on the feed and your profile.'}
-          </p>
+          {!allFriends && (
+            <Toggle checked={friendsOnly} onChange={setFriendsOnly} label="Friends only" />
+          )}
         </div>
         <PreviewPost
           name={name}

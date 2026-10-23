@@ -440,8 +440,13 @@ as they were when shared (`posts.minutes`, `posts.subject`), the session's start
 (`posts.started_at`, `ended_at`, small at the end of the session row) and, when the post
 asks for it, the time elapsed (`posts.elapsed_minutes`, focus and breaks; the composer's
 "Elapsed" chip, `showElapsed`), optionally a line of text
-(500 characters) and one file: a video (MP4/WebM up to 40 MB, with a JPEG poster the portal
-makes from a frame) or a picture (JPEG/PNG/WebP up to 2 MB). **The files live in Cloudflare
+(500 characters) and up to four files, one video (MP4/WebM up to 40 MB, with a JPEG poster the
+portal makes from a frame) and three pictures (JPEG/PNG/WebP up to 2 MB each), shown as a
+carousel (2026-10-22: `post_media.position`, `files` on the post, `?n=` on the file routes;
+`media` stays as the first file for older portals). A post can be **friends only**
+(`posts.friends_only`, on top of Settings › Social); every query that shows posts must check
+it. **Only a session that ended in the last 7 days and has no post yet can be posted**
+(`GET /api/social/postable`); never explain that rule on screen (owner). **The files live in Cloudflare
 R2** when the API has the `R2_*` variables (2026-10-21; how it works and how to set it up:
 [docs/R2.md](docs/R2.md)): the browser uploads through a signed link and plays from one, so
 the bytes never pass through Render. Uploads are capped at 250 MB a day per account and stop

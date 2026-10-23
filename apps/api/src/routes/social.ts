@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import { focusLabel, withDefaults, type UserSettings } from '@komogon/core';
-import { and, desc, eq, gte, inArray, lt, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {
@@ -36,6 +36,13 @@ export const POST_VIDEO_MAX_BYTES_INLINE = 5 * 1024 * 1024;
 /** The largest picture a post may carry. */
 export const POST_IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 export const POST_POSTER_MAX_BYTES = 200 * 1024;
+/** What one post can carry, in a carousel: one video and three pictures. */
+export const POST_MAX_VIDEOS = 1;
+export const POST_MAX_IMAGES = 3;
+/** Only a session that ended within this long, and has no post yet, can be posted. */
+export const POST_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
+/** Room for a video and three pictures sent with the post, as base64 (no R2). */
+const POST_BODY_LIMIT = 24 * 1024 * 1024;
 export const FEED_PAGE = 20;
 /** How long an upload link and a link to watch stay good, in seconds. */
 const UPLOAD_LINK_SECONDS = 15 * 60;
@@ -93,12 +100,25 @@ export interface FeedPost {
     startedAt: string | null;
     endedAt: string | null;
   } | null;
-  /** The attached video or picture; the bytes come from GET /api/posts/:id/media. */
+  /** The first file, for portals from before a post could carry several. */
   media: { mime: string; bytes: number; poster: string | null } | null;
+  /** Every file, in the carousel's order; the bytes come from GET /api/posts/:id/media?n=. */
+  files: PostFile[];
+  /** Shown only to the author's friends. */
+  friendsOnly: boolean;
   likes: number;
   liked: boolean;
   comments: number;
   you: boolean;
+}
+
+/** One video or picture on a post; `n` is its place, 0 first. */
+export interface PostFile {
+  n: number;
+  mime: string;
+  bytes: number;
+  /** The video's still, shown before it plays; null for a picture. */
+  poster: string | null;
 }
 
 export interface FeedComment {
@@ -225,6 +245,7 @@ export async function loadPosts(
       mediaMime: posts.mediaMime,
       mediaBytes: posts.mediaBytes,
       poster: posts.poster,
+      friendsOnly: posts.friendsOnly,
       likes,
       liked,
       comments,
@@ -233,35 +254,66 @@ export async function loadPosts(
     .where(where)
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit);
-  const people = await loadPeople(
-    db,
-    rows.map((r) => r.userId),
-  );
+  const [people, fileRows] = await Promise.all([
+    loadPeople(
+      db,
+      rows.map((r) => r.userId),
+    ),
+    rows.length
+      ? db
+          .select({
+            postId: postMedia.postId,
+            position: postMedia.position,
+            mime: postMedia.mime,
+            bytes: postMedia.bytes,
+          })
+          .from(postMedia)
+          .where(
+            inArray(
+              postMedia.postId,
+              rows.map((r) => r.id),
+            ),
+          )
+          .orderBy(postMedia.position)
+      : Promise.resolve([]),
+  ]);
+  const filesOf = new Map<string, PostFile[]>();
+  for (const f of fileRows) {
+    const list = filesOf.get(f.postId) ?? [];
+    list.push({ n: f.position, mime: f.mime, bytes: f.bytes, poster: null });
+    filesOf.set(f.postId, list);
+  }
   return {
-    posts: rows.map((r) => ({
-      id: r.id,
-      userId: r.userId,
-      body: r.body,
-      createdAt: r.createdAt.toISOString(),
-      session:
-        r.minutes === null
-          ? null
-          : {
-              minutes: r.minutes,
-              subject: r.subject,
-              elapsedMinutes: r.elapsedMinutes,
-              startedAt: r.startedAt?.toISOString() ?? null,
-              endedAt: r.endedAt?.toISOString() ?? null,
-            },
-      media:
-        r.mediaMime && r.mediaBytes !== null
-          ? { mime: r.mediaMime, bytes: r.mediaBytes, poster: r.poster }
-          : null,
-      likes: Number(r.likes),
-      liked: Boolean(r.liked),
-      comments: Number(r.comments),
-      you: r.userId === viewerId,
-    })),
+    posts: rows.map((r) => {
+      const files = (filesOf.get(r.id) ?? []).map((f) => ({
+        ...f,
+        poster: f.mime.startsWith('video/') ? r.poster : null,
+      }));
+      const first = files[0];
+      return {
+        id: r.id,
+        userId: r.userId,
+        body: r.body,
+        createdAt: r.createdAt.toISOString(),
+        session:
+          r.minutes === null
+            ? null
+            : {
+                minutes: r.minutes,
+                subject: r.subject,
+                elapsedMinutes: r.elapsedMinutes,
+                startedAt: r.startedAt?.toISOString() ?? null,
+                endedAt: r.endedAt?.toISOString() ?? null,
+              },
+        media: first ? { mime: first.mime, bytes: first.bytes, poster: first.poster } : null,
+        files,
+        friendsOnly: r.friendsOnly,
+        likes: Number(r.likes),
+        liked: Boolean(r.liked),
+        comments: Number(r.comments),
+        you: r.userId === viewerId,
+      };
+    }),
     people,
   };
 }
@@ -292,7 +344,7 @@ export function socialRoutes(
   const canSeePost = async (viewer: UserRow, postId: string): Promise<boolean> => {
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, postId),
-      columns: { userId: true },
+      columns: { userId: true, friendsOnly: true },
     });
     if (!post) return false;
     if (post.userId === viewer.id) return true;
@@ -301,7 +353,7 @@ export function socialRoutes(
       columns: { settings: true, bannedAt: true, devWorld: true },
     });
     if (!author || author.bannedAt || !sameWorld(viewer, author)) return false;
-    if (socialOf(author.settings).posts !== 'friends') return true;
+    if (socialOf(author.settings).posts !== 'friends' && !post.friendsOnly) return true;
     return (await friendshipWith(db, viewer.id, post.userId)).status === 'friends';
   };
 
@@ -318,11 +370,15 @@ export function socialRoutes(
     const conds = [];
     if (q.before) conds.push(lt(posts.createdAt, dt(q.before)));
     const circle = [req.user.id, ...(await friendIds(db, req.user.id))];
-    // Posts someone keeps to friends (Settings › Social) show only to them and their friends.
+    // Posts kept to friends (one post, or all of them in Settings › Social) show only to the
+    // author and their friends.
     conds.push(
       or(
         inArray(posts.userId, circle),
-        sql`(select coalesce(u.settings -> 'social' ->> 'posts', 'everyone') from users u where u.id = posts.user_id) <> 'friends'`,
+        and(
+          eq(posts.friendsOnly, false),
+          sql`(select coalesce(u.settings -> 'social' ->> 'posts', 'everyone') from users u where u.id = posts.user_id) <> 'friends'`,
+        ),
       )!,
     );
     if (q.scope === 'friends') conds.push(inArray(posts.userId, circle));
@@ -370,7 +426,30 @@ export function socialRoutes(
     return { key, url, headers: { 'content-type': mime } };
   });
 
-  app.post('/api/social/posts', async (req, reply) => {
+  /** Your sessions a post can be about: ended within the last week, with no post yet. */
+  app.get('/api/social/postable', async (req) => {
+    const since = new Date(dt(clock()).getTime() - POST_SESSION_MAX_AGE_MS);
+    const rows = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(
+        and(
+          eq(sessions.userId, req.user.id),
+          isNotNull(sessions.endedAt),
+          gte(sessions.endedAt, since),
+          notInArray(
+            sessions.id,
+            db
+              .select({ id: sql<string>`${posts.sessionId}` })
+              .from(posts)
+              .where(and(eq(posts.userId, req.user.id), isNotNull(posts.sessionId))),
+          ),
+        ),
+      );
+    return { sessionIds: rows.map((r) => r.id) };
+  });
+
+  app.post('/api/social/posts', { bodyLimit: POST_BODY_LIMIT }, async (req, reply) => {
     const input = z
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
@@ -379,11 +458,26 @@ export function socialRoutes(
         showTime: z.boolean().default(true),
         /** Also show focus and breaks together (not pauses), with the time shown. */
         showElapsed: z.boolean().default(false),
+        /** Only the author's friends see it. */
+        friendsOnly: z.boolean().default(false),
+        /** Each file as a data URL (no R2) or the key from POST /api/social/uploads, in order. */
+        files: z
+          .array(
+            z.object({
+              media: z
+                .string()
+                .max(POST_VIDEO_MAX_BYTES_INLINE * 1.4)
+                .optional(),
+              upload: z.string().max(200).optional(),
+            }),
+          )
+          .max(POST_MAX_VIDEOS + POST_MAX_IMAGES)
+          .optional(),
+        /** One file, the way a portal from before `files` sends it. */
         media: z
           .string()
           .max(POST_VIDEO_MAX_BYTES_INLINE * 1.4)
           .optional(),
-        /** The key from POST /api/social/uploads, once the file is up. */
         upload: z.string().max(200).optional(),
         poster: z
           .string()
@@ -391,7 +485,11 @@ export function socialRoutes(
           .optional(),
       })
       .parse(req.body);
-    if (input.media && input.upload) throw badRequest('One file per post');
+    if (input.files && (input.media || input.upload)) throw badRequest('Send files or media');
+    const wanted =
+      input.files ??
+      (input.media || input.upload ? [{ media: input.media, upload: input.upload }] : []);
+    if (wanted.some((f) => !f.media === !f.upload)) throw badRequest('One file each');
 
     let minutes: number | null = null;
     let subject: string | null = null;
@@ -403,6 +501,13 @@ export function socialRoutes(
         where: and(eq(sessions.id, input.sessionId), eq(sessions.userId, req.user.id)),
       });
       if (!s || !s.endedAt) throw notFound('No such session');
+      if (s.endedAt.getTime() < dt(clock()).getTime() - POST_SESSION_MAX_AGE_MS)
+        throw badRequest('Too old to post');
+      const posted = await db.query.posts.findFirst({
+        where: and(eq(posts.userId, req.user.id), eq(posts.sessionId, s.id)),
+        columns: { id: true },
+      });
+      if (posted) throw conflict('Already posted');
       minutes = Math.round(s.workSeconds / 60);
       // Hiding the time hides when it was too.
       if (input.showTime) span = { startedAt: s.startedAt, endedAt: s.endedAt };
@@ -416,13 +521,6 @@ export function socialRoutes(
       }
     }
 
-    // A video, or a picture: the type says which, and each has its own size. Sent with the
-    // post it is kept in Postgres (also what a portal from before R2 sends).
-    const inline = input.media
-      ? /^data:image\//i.test(input.media)
-        ? parseDataUrl(input.media, IMAGE_TYPES, POST_IMAGE_MAX_BYTES, 'picture')
-        : parseDataUrl(input.media, VIDEO_TYPES, POST_VIDEO_MAX_BYTES_INLINE, 'video')
-      : null;
     const poster = input.poster
       ? parseDataUrl(
           input.poster,
@@ -432,22 +530,45 @@ export function socialRoutes(
         )
       : null;
 
-    // Uploaded to R2: check what actually arrived, then copy it out of `uploads/`.
-    let stored: { mime: string; bytes: number; key: string } | null = null;
-    if (input.upload) {
+    // Each file a video or a picture: the type says which, and each has its own size. Sent
+    // with the post it is kept in Postgres; uploaded to R2, what actually arrived is checked
+    // and then copied out of `uploads/`.
+    const own = new RegExp(`^uploads/${req.user.id}/[0-9a-f-]{36}$`);
+    const ready: Array<{
+      mime: string;
+      bytes: number;
+      data?: string;
+      upload?: string;
+      key?: string;
+    }> = [];
+    for (const f of wanted) {
+      if (f.media) {
+        ready.push(
+          /^data:image\//i.test(f.media)
+            ? parseDataUrl(f.media, IMAGE_TYPES, POST_IMAGE_MAX_BYTES, 'picture')
+            : parseDataUrl(f.media, VIDEO_TYPES, POST_VIDEO_MAX_BYTES_INLINE, 'video'),
+        );
+        continue;
+      }
       if (!store) throw badRequest('Send the file with the post');
-      const own = new RegExp(`^uploads/${req.user.id}/[0-9a-f-]{36}$`);
-      if (!own.test(input.upload)) throw badRequest('That upload is not yours');
-      const head = await store.head(input.upload);
+      if (!own.test(f.upload!)) throw badRequest('That upload is not yours');
+      const head = await store.head(f.upload!);
       if (!head) throw badRequest('The file did not finish uploading. Try again.');
       checkMedia(head.mime, head.bytes, limits);
       const key = `posts/${req.user.id}/${randomUUID()}.${EXTENSIONS[head.mime]}`;
-      stored = { mime: head.mime, bytes: head.bytes, key };
+      ready.push({ mime: head.mime, bytes: head.bytes, upload: f.upload!, key });
     }
-
-    const mime = inline?.mime ?? stored?.mime ?? null;
-    if (poster && !mime?.startsWith('video/')) throw badRequest('A poster goes with a video');
-    if (stored) await store!.copy(input.upload!, stored.key);
+    const videos = ready.filter((f) => f.mime.startsWith('video/')).length;
+    if (videos > POST_MAX_VIDEOS || ready.length - videos > POST_MAX_IMAGES)
+      throw badRequest('1 video and 3 pictures at most');
+    if (poster && videos === 0) throw badRequest('A poster goes with a video');
+    const keys = ready.flatMap((f) => (f.key ? [f.key] : []));
+    try {
+      for (const f of ready) if (f.upload && f.key) await store!.copy(f.upload, f.key);
+    } catch (err) {
+      await removeAll(store!, keys, req.log);
+      throw err;
+    }
 
     let post: { id: string };
     try {
@@ -463,35 +584,40 @@ export function socialRoutes(
             elapsedMinutes,
             startedAt: span?.startedAt ?? null,
             endedAt: span?.endedAt ?? null,
-            mediaMime: mime,
-            mediaBytes: inline?.bytes ?? stored?.bytes ?? null,
+            mediaMime: ready[0]?.mime ?? null,
+            mediaBytes: ready[0]?.bytes ?? null,
             poster: poster ? `data:${poster.mime};base64,${poster.data}` : null,
+            friendsOnly: input.friendsOnly,
             createdAt: dt(clock()),
           })
           .returning({ id: posts.id });
-        if (inline)
-          await tx
-            .insert(postMedia)
-            .values({ postId: row!.id, mime: inline.mime, data: inline.data, bytes: inline.bytes });
-        if (stored)
-          await tx
-            .insert(postMedia)
-            .values({ postId: row!.id, mime: stored.mime, key: stored.key, bytes: stored.bytes });
+        if (ready.length)
+          await tx.insert(postMedia).values(
+            ready.map((f, position) => ({
+              postId: row!.id,
+              position,
+              mime: f.mime,
+              bytes: f.bytes,
+              data: f.data ?? null,
+              key: f.key ?? null,
+            })),
+          );
         return row!;
       });
     } catch (err) {
-      if (stored) await removeAll(store!, [stored.key], req.log);
+      if (keys.length) await removeAll(store!, keys, req.log);
       throw err;
     }
-    // The copy under posts/ is the one kept; the lifecycle rule would get this one anyway.
-    if (input.upload && store) await removeAll(store, [input.upload], req.log);
+    // The copies under posts/ are the ones kept; the lifecycle rule would get these anyway.
+    const uploads = ready.flatMap((f) => (f.upload ? [f.upload] : []));
+    if (uploads.length && store) await removeAll(store, uploads, req.log);
     const page = await loadPosts(db, req.user.id, eq(posts.id, post.id), 1);
     return reply.code(201).send({ post: page.posts[0], people: page.people });
   });
 
   app.delete('/api/posts/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const file = await db.query.postMedia.findFirst({
+    const files = await db.query.postMedia.findMany({
       where: eq(postMedia.postId, id),
       columns: { key: true },
     });
@@ -501,12 +627,17 @@ export function socialRoutes(
       .where(and(eq(posts.id, id), eq(posts.userId, req.user.id)))
       .returning({ id: posts.id });
     if (deleted.length === 0) throw notFound('No such post');
-    if (file?.key && store) await removeAll(store, [file.key], req.log);
+    const keys = files.flatMap((f) => (f.key ? [f.key] : []));
+    if (keys.length && store) await removeAll(store, keys, req.log);
     return reply.code(204).send();
   });
 
-  const mediaRow = async (viewer: UserRow, postId: string) => {
-    const row = await db.query.postMedia.findFirst({ where: eq(postMedia.postId, postId) });
+  /** Which of a post's files: `?n=1` is the second; without it, the first. */
+  const fileQuery = z.object({ n: z.coerce.number().int().min(0).max(9).default(0) });
+  const mediaRow = async (viewer: UserRow, postId: string, n: number) => {
+    const row = await db.query.postMedia.findFirst({
+      where: and(eq(postMedia.postId, postId), eq(postMedia.position, n)),
+    });
     if (!row || !(await canSeePost(viewer, postId))) throw notFound('No video on this post');
     return row;
   };
@@ -517,7 +648,8 @@ export function socialRoutes(
    */
   app.get('/api/posts/:id/media/url', async (req) => {
     const { id } = idParam.parse(req.params);
-    const row = await mediaRow(req.user, id);
+    const { n } = fileQuery.parse(req.query);
+    const row = await mediaRow(req.user, id, n);
     if (!row.key || !store) return { url: null, expiresIn: null };
     return {
       url: await store.readUrl(row.key, READ_LINK_SECONDS),
@@ -531,7 +663,8 @@ export function socialRoutes(
    */
   app.get('/api/posts/:id/media', async (req, reply) => {
     const { id } = idParam.parse(req.params);
-    const row = await mediaRow(req.user, id);
+    const { n } = fileQuery.parse(req.query);
+    const row = await mediaRow(req.user, id, n);
     let bytes: Buffer;
     if (row.data !== null) bytes = Buffer.from(row.data, 'base64');
     else if (row.key && store) {
