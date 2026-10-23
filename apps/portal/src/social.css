@@ -648,7 +648,7 @@
 .post-foot {
   display: flex;
   gap: 2px;
-  margin-left: -8px;
+  margin: 0 -8px;
 }
 .post-action {
   display: inline-flex;
@@ -719,9 +719,10 @@
   fill: color-mix(in srgb, var(--flame) 35%, transparent);
 }
 
-/* The ⋯ under your own post: Edit and Delete, and "Are you sure?" before a delete. */
+/* The ⋯ at the right end of the row: Edit and Delete, and "Are you sure?" before a delete. */
 .post-menu {
   position: relative;
+  margin-left: auto;
 }
 /* Above the posts after it while open. */
 .post:has(.post-menu-pop) {
@@ -731,7 +732,7 @@
 .post-menu-pop {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
   z-index: 5;
   display: flex;
   flex-direction: column;
