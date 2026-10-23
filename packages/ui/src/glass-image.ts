@@ -353,6 +353,24 @@ function placePane(card: HTMLElement): void {
   setVar(pane, '--pane-width', `${r.width}px`);
 }
 
+/**
+ * The pane sits inside the card, so the card must be positioned (glass cards are, sticky
+ * ones too). A static card is made relative only when nothing inside it is positioned, which
+ * would otherwise move onto it; and if the page's own rules still hold it static (Settings'
+ * menu on a phone), it keeps its own blur.
+ */
+function positioned(card: HTMLElement): boolean {
+  if (getComputedStyle(card).position !== 'static') return true;
+  for (const el of card.querySelectorAll(`:not(.${PANE_CLASS})`)) {
+    const p = getComputedStyle(el).position;
+    if (p === 'absolute' || p === 'fixed') return false;
+  }
+  card.classList.add(PANE_HOST);
+  if (getComputedStyle(card).position !== 'static') return true;
+  card.classList.remove(PANE_HOST);
+  return false;
+}
+
 function addPane(card: HTMLElement, sizes: ResizeObserver): void {
   let pane = card.querySelector<HTMLElement>(`:scope > .${PANE_CLASS}`);
   if (!pane) {
@@ -366,8 +384,6 @@ function addPane(card: HTMLElement, sizes: ResizeObserver): void {
   setVar(pane, '--pane-radius', radius);
   setVar(pane, '--pane-inset', inset);
   placePane(card);
-  // The pane sits inside the card, so the card must be positioned (sticky ones already are).
-  if (getComputedStyle(card).position === 'static') card.classList.add(PANE_HOST);
   for (const button of card.querySelectorAll<HTMLElement>(ACCENT)) {
     const under = underColor(button, card);
     button.classList.toggle(ACCENT_UNDER, under !== null);
@@ -418,7 +434,7 @@ export function watchGlassPanes(container: HTMLElement, more?: string): () => vo
     }
     const seen = new Map<HTMLElement, Around>();
     for (const card of container.querySelectorAll<HTMLElement>(cards)) {
-      if (canTakePane(card, cards, seen)) addPane(card, sizes);
+      if (canTakePane(card, cards, seen) && positioned(card)) addPane(card, sizes);
       else if (card.classList.contains(HAS_PANE)) removePane(card, sizes);
     }
   };
