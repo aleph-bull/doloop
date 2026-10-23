@@ -2116,3 +2116,11 @@ Two changes from the owner: of "Text on the video", "this should be after the se
 - `POST /api/auth/google` still takes the old ID token (`credential`), so a sign-in page left open from before the deploy keeps working.
 - Closing the popup says nothing; a blocked popup asks to allow pop-ups.
 - Checked in a sandbox: the look in both themes and on a phone, the click opening Google's popup, and the API refusing a junk token through Google's real tokeninfo. A real sign-in needs the real client id, so it is tried on komogon.app.
+
+## Timelapse settings: the notes fold away, 2026-10-22 (owner request)
+
+With a screenshot of the focus screen's Timelapse controls: "theres this massive thing of text, make it collapsable and make it collapsable on default", "if you need to explain things make it very short do not explain things the user does not need to know".
+
+- **A "Tips" fold, closed every time it opens** (`TimelapseTips` in Timelapse.tsx, `.tl-tips-*` in index.css), under the dim slider, in the focus screen's controls and in each preset in Settings › Timelapse. Inside: "Tap the screen to brighten it.", "Live clip (L) films at normal speed, up to 30 s." (no "(L)" on a phone) and, on the focus screen, an "Edit the layout" link (new tab, as before).
+- **Cut:** "you are asked whether to record your screen too" (the question asks for itself), the long list of what the layout editor can do, the look's description under the looks on the focus screen (the pictures show it; Settings' editor keeps it), "if there are enough stills" under Set length, the phone's "Breaks always show on the camera screen..." and the two break-clock hints.
+- **Shortened:** Auto length is "About 20 to 40 seconds."

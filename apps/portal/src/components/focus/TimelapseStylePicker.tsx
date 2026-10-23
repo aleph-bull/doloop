@@ -99,11 +99,13 @@ export function TimelapseStylePicker({
           );
         })}
       </div>
-      <span className="field-hint">
-        {current
-          ? TIMELAPSE_STYLES.find((s) => s.id === current)!.description
-          : 'Arranged your own way. Pick a look to start again from it.'}
-      </span>
+      {!compact && (
+        <span className="field-hint">
+          {current
+            ? TIMELAPSE_STYLES.find((s) => s.id === current)!.description
+            : 'Arranged your own way. Pick a look to start again from it.'}
+        </span>
+      )}
     </div>
   );
 }
