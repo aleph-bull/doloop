@@ -4552,6 +4552,40 @@
   text-underline-offset: 2px;
 }
 
+/* The timelapse settings' tips: a quiet toggle, folded until opened. */
+.tl-tips-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.tl-tips-toggle:hover {
+  color: var(--fg);
+}
+.tl-tips-chevron {
+  transform: rotate(-90deg);
+  transition: transform var(--dur-base) var(--ease-out);
+}
+.tl-tips-toggle[aria-expanded='true'] .tl-tips-chevron {
+  transform: none;
+}
+.tl-tips-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
 /*
  * The timelapse layout editor: the video drawn on a canvas, with a box over each piece to
  * drag, resize and remove. The boxes are invisible until hovered or chosen, so the preview

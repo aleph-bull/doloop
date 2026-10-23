@@ -28,6 +28,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import {
+  ChevronDown,
   Clapperboard,
   Download,
   LayoutTemplate,
@@ -43,6 +44,7 @@ import {
   Input,
   Modal,
   ProgressBar,
+  Reveal,
   Segmented,
   Select,
   Slider,
@@ -66,7 +68,6 @@ import {
   measuredScreenBytes,
   measuredStillBytes,
   renderTimelapse,
-  screenSupported,
   timelapseFileName,
   videoSupported,
   clipTime,
@@ -407,7 +408,6 @@ export function DimField({ value, onChange }: { value: number; onChange: (v: num
         />
         <span className="dim-value tabular">{words}</span>
       </div>
-      <span className="field-hint">Tap the screen to brighten it for a moment.</span>
     </div>
   );
 }
@@ -451,27 +451,7 @@ export function TimelapseSettings({
         <TimelapseRecordChoice value={settings.timelapse.record} onChange={onChange} />
       )}
       <DimField value={value.dim} onChange={(dim) => set({ dim })} />
-      {device === 'computer' && screenSupported() && (
-        <p className="field-hint">
-          Each time a recording starts, you are asked whether to record your screen too.
-        </p>
-      )}
-      <p className="field-hint">
-        {device === 'phone'
-          ? `While recording, Live clip on the camera screen films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`
-          : `While recording, Live clip in the top bar (or the L key) films at normal speed for up to ${LIVE_CLIP_MAX_SECONDS} seconds, for when there’s something to show the camera.`}
-      </p>
-      {linkToLayout && (
-        <p className="field-hint">
-          {device === 'phone'
-            ? 'Move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape upright and sideways, in '
-            : 'Place the screen, move, resize or remove the clocks, the task name and the progress bar, and pick the video’s shape in '}
-          <TimelapseSettingsLink newTab device={device}>
-            the timelapse layout
-          </TimelapseSettingsLink>
-          .
-        </p>
-      )}
+      <TimelapseTips device={device} linkToLayout={linkToLayout} />
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
       <LengthFields
         value={value}
@@ -484,11 +464,6 @@ export function TimelapseSettings({
         checked={value.recordBreaks}
         onChange={(v) => set({ recordBreaks: v })}
         label="Record breaks too"
-        description={
-          device === 'phone'
-            ? 'Breaks always show on the camera screen. This decides whether they go in the video.'
-            : undefined
-        }
       />
       {value.recordBreaks && elapsedShown && (
         <div className="field">
@@ -502,11 +477,6 @@ export function TimelapseSettings({
               { value: 'running', label: 'Keeps counting' },
             ]}
           />
-          <span className="field-hint">
-            {value.breakClock === 'break'
-              ? 'A break clock, so the video shows when you were resting.'
-              : 'The session’s running time, counting on through each break.'}
-          </span>
         </div>
       )}
       <Toggle
@@ -521,6 +491,46 @@ export function TimelapseSettings({
         label="Even out the light"
         description="Takes out the flicker of the camera's auto exposure."
       />
+    </div>
+  );
+}
+
+/** A few short notes, folded until opened. */
+function TimelapseTips({
+  device,
+  linkToLayout,
+}: {
+  device: TimelapseDevice;
+  linkToLayout: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="tl-tips">
+      <button
+        type="button"
+        className="tl-tips-toggle"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+      >
+        <ChevronDown size={15} aria-hidden className="tl-tips-chevron" />
+        Tips
+      </button>
+      <Reveal open={open}>
+        <ul className="tl-tips-list">
+          <li>Tap the screen to brighten it.</li>
+          <li>
+            {device === 'phone' ? 'Live clip' : 'Live clip (L)'} films at normal speed, up to{' '}
+            {LIVE_CLIP_MAX_SECONDS} s.
+          </li>
+          {linkToLayout && (
+            <li>
+              <TimelapseSettingsLink newTab device={device}>
+                Edit the layout
+              </TimelapseSettingsLink>
+            </li>
+          )}
+        </ul>
+      </Reveal>
     </div>
   );
 }
@@ -661,13 +671,13 @@ function LengthFields({ value, onChange, maxFps = 60, ratio, camera }: LengthFie
             { value: 'speed', label: 'Speed' },
           ]}
         />
-        <span className="field-hint">
-          {value.lengthMode === 'auto'
-            ? 'About 20 to 40 seconds for a long session, shorter for a short one.'
-            : value.lengthMode === 'length'
-              ? 'Exactly this long, if there are enough stills.'
+        {value.lengthMode !== 'length' && (
+          <span className="field-hint">
+            {value.lengthMode === 'auto'
+              ? 'About 20 to 40 seconds.'
               : `Every second of video is ${value.speed / 60 >= 1 ? fmtMinutes(value.speed / 60) : `${value.speed} s`} of focus.`}
-        </span>
+          </span>
+        )}
       </div>
       {value.lengthMode === 'length' && (
         <SecondsInput

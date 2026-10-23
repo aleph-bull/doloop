@@ -2132,6 +2132,14 @@ The owner asked that the Instagram, TikTok and X buttons never download the vide
   - The toast gives the app's next step (`appNextStep`): "On Instagram, press + and choose it.", "On TikTok, press + and choose it under Upload.", "Add it to your post on X."
 - Checked in the sandbox with a fake camera and a made video: on the computer layout, Instagram, TikTok, X and Save the video in a row made one download and opened the three sites; as an iPhone with a stubbed share sheet, each button shared the MP4 and nothing downloaded; as Android without one, X downloaded once and followed the app link, and TikTok after it didn't download again. A real iPhone's share sheet and the real app links weren't tried; the owner has to try those on a phone.
 
+## Timelapse settings: the notes fold away, 2026-10-22 (owner request)
+
+With a screenshot of the focus screen's Timelapse controls: "theres this massive thing of text, make it collapsable and make it collapsable on default", "if you need to explain things make it very short do not explain things the user does not need to know".
+
+- **A "Tips" fold, closed every time it opens** (`TimelapseTips` in Timelapse.tsx, `.tl-tips-*` in index.css), under the dim slider, in the focus screen's controls and in each preset in Settings › Timelapse. Inside: "Tap the screen to brighten it.", "Live clip (L) films at normal speed, up to 30 s." (no "(L)" on a phone) and, on the focus screen, an "Edit the layout" link (new tab, as before).
+- **Cut:** "you are asked whether to record your screen too" (the question asks for itself), the long list of what the layout editor can do, the look's description under the looks on the focus screen (the pictures show it; Settings' editor keeps it), "if there are enough stills" under Set length, the phone's "Breaks always show on the camera screen..." and the two break-clock hints.
+- **Shortened:** Auto length is "About 20 to 40 seconds."
+
 ## Focus time and time elapsed, start and end times, 2026-10-22 (user request)
 
 The owner asked for an option on Social posts to show the total time elapsed ("the time including breaks not including pauses"), a small start and end time on each post, the same as text pieces on the timelapse, and for the app to say plainly which times are focus and which are elapsed, with basic labels and no explanations ("do not explain this rule or concept just use basic labels", meant for every feature from now on).
