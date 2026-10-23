@@ -125,8 +125,10 @@ function ThemeCard({
         </span>
       </button>
       <div className="preset-foot">
-        <span className="preset-name truncate">{preset.name}</span>
-        {active && <Check size={14} className="theme-check" aria-label="In use" />}
+        <span className="theme-name-row">
+          <span className="preset-name truncate">{preset.name}</span>
+          {active && <Check size={14} className="theme-check" aria-label="In use" />}
+        </span>
         <span className="preset-kind">{TAG_LABEL[preset.tag]}</span>
       </div>
     </div>

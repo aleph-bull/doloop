@@ -116,7 +116,7 @@ export const THEME_PRESETS: ThemePreset[] = [
       texture: DEFAULT_SETTINGS.theme.texture,
     },
   },
-  solid('off-white', 'Off White', '#f4f1ea', 'light', 'custom:221,39,42', 'grain'),
+  solid('off-white', 'Off White', '#f4f1ea', 'light', DEFAULT_SETTINGS.theme.accent, 'grain'),
   solid('night-shift', 'Night Shift', '#313338', 'dark', 'custom:235,86,65', 'none'),
   solid('warm-charcoal', 'Warm Charcoal', '#262624', 'dark', 'custom:15,58,47', 'none'),
   {
@@ -134,18 +134,16 @@ export const THEME_PRESETS: ThemePreset[] = [
   },
   photo('cherry-peak', 'Cherry Peak', 'nature', 'fuji', 'rose'),
   photo('deep-woods', 'Deep Woods', 'nature', 'pine-ridge', 'mint'),
-  photo('golden-pond', 'Golden Pond', 'nature', 'golden-willow', 'amber'),
   photo('morning-tide', 'Morning Tide', 'nature', 'pier', 'rose'),
   photo('falling-leaves', 'Falling Leaves', 'nature', 'autumn', 'amber'),
   photo('harbour-glow', 'Harbour Glow', 'cities', 'harbour-lights', 'sky'),
-  photo('neon-streets', 'Neon Streets', 'cities', 'taipei', 'violet'),
   photo('old-town', 'Old Town', 'cities', 'rooftops', 'amber'),
   photo('paper-lanterns', 'Paper Lanterns', 'cities', 'lanterns', 'lemon'),
   photo('clear-night', 'Clear Night', 'night', 'star-field', 'violet'),
   photo('desert-night', 'Desert Night', 'night', 'canyon-stars', 'sky'),
   photo('plum-velvet', 'Plum Velvet', 'abstract', 'velvet', 'violet'),
   photo('still-water', 'Still Water', 'abstract', 'lagoon', 'mint'),
-  photo('sorbet', 'Sorbet', 'abstract', 'sherbet', 'rose'),
+  photo('sorbet', 'Sorbet', 'abstract', 'sherbet', 'custom:320,35,36'),
 ];
 
 /** A solid colour or one of the Minimal gradients: the backgrounds a texture shows on. */

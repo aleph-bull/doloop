@@ -239,12 +239,14 @@
   display: grid;
   place-items: center;
   flex: none;
-  color: var(--accent);
+  color: var(--logo-color, var(--accent));
   padding-left: 18px;
 }
-/* On cards shaded from a solid colour the accent can share their hue and vanish. */
-:root[data-tonal][data-panel='matte'] .brand-logo {
-  color: var(--tone-accent-text);
+/* On cards shaded from a solid colour the accent can share their hue and vanish. Komo goes
+   white instead when the accent is too dark for a dark nav (--logo-color, theme.ts). */
+:root[data-tonal][data-panel='matte'] .brand-logo,
+:root[data-tonal][data-panel='matte'] .sidenav-brand .sidenav-icon {
+  color: var(--logo-color, var(--tone-accent-text));
 }
 .logo-mark {
   display: block;
@@ -771,7 +773,7 @@
     color: var(--fg);
   }
   .sidenav-brand .sidenav-icon {
-    color: var(--accent);
+    color: var(--logo-color, var(--accent));
   }
   .sidenav-link:hover,
   .sidenav-brand:hover {
@@ -7519,14 +7521,17 @@
   /* Two across on a phone. */
   grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
 }
-/* A name that doesn't fit beside its tag keeps whole, and the tag goes under it. */
+/* The name (and the tick) on the first line, the tag always on the second (owner, 2026-10-22). */
 .theme-grid .preset-foot {
-  flex-wrap: wrap;
-  row-gap: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
 }
-.theme-grid .preset-name {
-  flex: 1 0 auto;
-  max-width: 100%;
+.theme-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 .theme-preview.is-selected {
   border-color: var(--accent);

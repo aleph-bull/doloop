@@ -2314,3 +2314,12 @@ The owner asked for "Jack mode", named after their friend Jack Chow: after every
 - **Achievements** (badges, since that is what Achievements are): Gambler (75 XP), and rolls: Feeling lucky 1 (25), Ten rolls 10 (50), Regular 25 (75), High roller 50 (100), The house always wins 100 (150). They carry `jack: true` and are listed on Achievements only for someone with Jack mode on or who has earned one, so the badges don't advertise a mode that is off for everyone by default. Not asked either way; easy to show to everyone.
 - **Jack Chow:** migration **0031_jack_mode** turns the setting on for any account (not a dev account) whose profile name is "Jack Chow", ignoring case and extra spaces. It runs when Render deploys it; an account named that later doesn't get it.
 - Tests: `jack.test.ts` (the odds over 60,000 rolls, the timer), Jack mode cases in `badges.test.ts`, and `jack-mode.test.ts` in the API (the setting, rolls on a session, badges, the profile, the migration).
+
+## Themes: tags on their own line, two themes gone, Off White and Sorbet accents, a white Komo, 2026-10-22 (owner request)
+
+- **The tag under each theme's name, always** (owner: "always on the second line, seperate from the names"): the name and the tick on the first line, the tag (Nature, Minimalist…) on the second. It used to sit beside a short name and drop under a long one.
+- **Golden Pond and Neon Streets removed** ("unreadable" for Golden Pond). Their photos (golden-willow, taipei) are still backgrounds; an account using either keeps its look, it just no longer matches a theme.
+- **Off White** takes the default accent (sky), not its own navy.
+- **Sorbet** takes a muted plum accent (hsl 320 35% 36%) instead of rose. On its light-pink glass every built-in accent measured 1.0 to 1.7 against the sidebar, so Komo vanished; the plum measures about 4.5 to 5.2.
+- **Komo goes white when the accent is too dark** (owner: "when komo is too dark along a dark background just resort to making him white"): `logoColor` in ui theme.ts sets `--logo-color` to white on a dark theme when the accent is under 3:1 against the nav (the solid colour's own shades when there is one, else a dark card); otherwise the accent as before. The sidebar's mark now uses it too, and on matte solid colours it takes the same lightened accent as the top bar's (it used the raw accent, which is how Night Shift's indigo Komo got lost on its grey sidebar). Light themes are unchanged.
+- A "Recommended" note on Dawn Skies was added and then taken off at the owner's word the same evening.

@@ -407,7 +407,31 @@ export function applyUserTheme(
       ? (backgroundById(backdropId).solid ?? null)
       : null;
   applyTonal(solid, resolved, hsl, root);
+  const logo = logoColor(hsl, resolved, solid);
+  if (logo) root.style.setProperty('--logo-color', logo);
+  else root.style.removeProperty('--logo-color');
   return resolved;
+}
+
+/** Below this the mark can't be made out against the nav (WCAG's figure for graphics). */
+const LOGO_MIN_CONTRAST = 3;
+
+/**
+ * Komo, the mark in the nav, is drawn in the accent. When that accent is too dark to make
+ * out on a dark surface it is white instead (owner, 2026-10-22). Null keeps the accent. The
+ * surface is the solid colour's own shades when there is one, else a dark card.
+ */
+export function logoColor(
+  hsl: [number, number, number],
+  theme: ResolvedTheme,
+  solid: RGB | null = null,
+): string | null {
+  if (theme !== 'dark') return null;
+  const accent = hslToRgb(hsl[0], hsl[1], hsl[2]);
+  const t = solid ? tonalSurfaces(solid, theme) : null;
+  const surfaces = t ? [t.bg, t.card] : [DARK_SURFACE];
+  const worst = Math.min(...surfaces.map((s) => contrastRatio(accent, s)));
+  return worst < LOGO_MIN_CONTRAST ? '#ffffff' : null;
 }
 
 export interface ExtensionBackdropChoice {
