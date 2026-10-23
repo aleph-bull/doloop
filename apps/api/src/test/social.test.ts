@@ -253,6 +253,42 @@ describe('posts on the feed', () => {
     const gone = await t.api({ method: 'DELETE', url: `/api/comments/${c.json().comment.id}` });
     expect(gone.statusCode).toBe(204);
   });
+
+  it('lets the author change the words, and only the words', async () => {
+    const theirs = await t.api({
+      method: 'PATCH',
+      url: `/api/posts/${postId}`,
+      token: t.tokenB,
+      payload: { body: 'Not mine.' },
+    });
+    expect(theirs.statusCode).toBe(404);
+    const long = await t.api({
+      method: 'PATCH',
+      url: `/api/posts/${postId}`,
+      payload: { body: 'x'.repeat(501) },
+    });
+    expect(long.statusCode).toBe(400);
+
+    const res = await t.api({
+      method: 'PATCH',
+      url: `/api/posts/${postId}`,
+      payload: { body: '  Good morning, again.  ' },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().post).toMatchObject({
+      id: postId,
+      body: 'Good morning, again.',
+      session: { minutes: 90, subject: 'Linear algebra' },
+      media: { mime: 'video/mp4' },
+    });
+    // Emptied, the post keeps its session and video.
+    const empty = await t.api({
+      method: 'PATCH',
+      url: `/api/posts/${postId}`,
+      payload: { body: '' },
+    });
+    expect(empty.json().post).toMatchObject({ body: '', session: { minutes: 90 } });
+  });
 });
 
 describe('friends', () => {

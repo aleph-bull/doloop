@@ -831,7 +831,12 @@ async function finalize(
 
   const [saved] = await db
     .update(sessions)
-    .set({ review, xpAwarded: xp.total, phraseId: phrase?.id ?? null })
+    .set({
+      review,
+      xpAwarded: xp.total,
+      phraseId: phrase?.id ?? null,
+      streak: streakSync.streak.current,
+    })
     .where(eq(sessions.id, row.id))
     .returning();
   const badges = await unlockNewBadges(db, user, now, row.id);

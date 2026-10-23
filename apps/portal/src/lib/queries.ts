@@ -527,6 +527,14 @@ function patchPost(
   );
 }
 
+export function useEditPost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: string }) => api.editPost(id, body),
+    onSuccess: ({ post }) => patchPost(qc, post.id, (p) => ({ ...p, body: post.body })),
+  });
+}
+
 export function useLikePost() {
   const qc = useQueryClient();
   return useMutation({

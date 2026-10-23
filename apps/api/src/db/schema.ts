@@ -214,6 +214,8 @@ export const sessions = pgTable(
     review: jsonb('review').$type<SessionReview | null>(),
     xpAwarded: integer('xp_awarded').notNull().default(0),
     badgesAwarded: jsonb('badges_awarded').$type<string[]>().notNull().default([]),
+    /** The daily streak as it stood when the session ended, for its post. Null before 0034. */
+    streak: integer('streak'),
     /** When the computer slept during the session, and whether the user kept studying. */
     sleeps: jsonb('sleeps').$type<SleepGap[]>().notNull().default([]),
     /** Full timer state machine; derived columns above are synced from it. */

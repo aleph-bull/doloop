@@ -320,6 +320,10 @@ export interface PostSession {
   elapsedMinutes: number | null;
   startedAt: string | null;
   endedAt: string | null;
+  /** The badges the session unlocked, when the author shares stats; missing from older APIs. */
+  badges?: string[];
+  /** The daily streak when it ended, when kept and shared. */
+  streak?: number | null;
 }
 
 /** A post on Social, with its counts as the viewer sees them. */
@@ -841,6 +845,11 @@ export const api = {
   createPost: (input: NewPost) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
+  /** Changes only the words of your own post. */
+  editPost: (id: string, body: string) =>
+    request<{ post: FeedPost; people: Record<string, Person> }>('PATCH', `/api/posts/${id}`, {
+      body,
+    }),
   mediaLimits: () => request<MediaLimits>('GET', '/api/social/uploads'),
   startUpload: (mime: string, bytes: number) =>
     request<UploadLink>('POST', '/api/social/uploads', { mime, bytes }),

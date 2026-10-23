@@ -1,5 +1,7 @@
 import { badgeXp } from '@komogon/core';
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { sessions } from '../db/schema';
 import { advanceClock, createTestApp, type TestApp } from './helpers';
 
 let t: TestApp;
@@ -141,6 +143,9 @@ describe('session lifecycle', () => {
     const me = await t.api({ method: 'GET', url: '/api/me' });
     expect(me.json().user.xp).toBe(summary.xpTotal);
     expect(me.json().user.streak.current).toBe(1);
+    // Kept on the session for its post.
+    const row = await t.db.query.sessions.findFirst({ where: eq(sessions.id, sessionId) });
+    expect(row!.streak).toBe(1);
 
     const again = await t.api({
       method: 'POST',

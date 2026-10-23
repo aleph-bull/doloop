@@ -239,6 +239,13 @@
       "when": 1792722379834,
       "tag": "0033_usernames",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1792725834792,
+      "tag": "0034_session_streak",
+      "breakpoints": true
     }
   ]
 }

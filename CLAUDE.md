@@ -493,7 +493,10 @@ browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule
 when their post or account does. The focus screen's timelapse export has "Share to Social",
 which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). Only the
-author deletes a post. Counts come with every post; liking patches the caches rather than
+author edits a post (the words only, `PATCH /api/posts/:id`) or deletes it, from the ⋯ under it.
+A post also shows what its session earned: one award naming the session's badges on hover
+(`sessions.badges_awarded`) and the daily streak when it ended (`sessions.streak`, kept since
+0034), only when the author shares study stats, like the profile. Counts come with every post; liking patches the caches rather than
 refetching (`patchPost` in queries.ts).
 
 **Friends.** `friendships` holds one row per pair with `status` pending or accepted;

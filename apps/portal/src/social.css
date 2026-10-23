@@ -350,6 +350,21 @@
     padding-left: 0;
   }
 }
+/* On a computer the box is one line until you write more, and Post sits on the
+   attachments' last line instead of a line of its own. */
+@media (min-width: 601px) {
+  .composer-text {
+    field-sizing: content;
+    max-height: 240px;
+  }
+  .composer-foot {
+    flex-wrap: nowrap;
+    align-items: flex-end;
+  }
+  .composer-attach {
+    flex: 1;
+  }
+}
 
 /* A post. */
 .post {
@@ -358,10 +373,19 @@
   gap: 10px;
   padding: var(--card-pad);
 }
+/*
+ * The head as a grid: picture and name, the title on the next row right under them, and the
+ * session's times and focus card down the right of both, so the title doesn't wait for them.
+ */
 .post-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
+}
+.post-head > .post-title {
+  grid-column: 1 / 3;
+  grid-row: 2;
 }
 .post-who {
   flex: 1;
@@ -406,9 +430,20 @@
   content: '·';
   margin-right: 3px;
 }
-.post-delete {
-  flex: none;
+/* The top right of a post: when the session ran, then focus (and elapsed) as small cards. */
+.post-side {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+.post-times {
+  font-size: var(--text-xs);
   color: var(--fg-subtle);
+  white-space: nowrap;
 }
 .post-body {
   font-size: var(--text-sm);
@@ -418,12 +453,22 @@
   max-width: 62ch;
 }
 
-/* The session strip: a big number on a soft tint, the subject beside it. */
-.post-session {
+/* What the session was on, as the post's title under the head. */
+.post-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+/* Focus (and elapsed) as small cards on a soft tint. */
+.post-stats {
   display: flex;
-  flex-wrap: wrap;
+  gap: 8px;
+}
+.post-stat {
+  display: inline-flex;
   align-items: baseline;
-  gap: 4px 8px;
+  gap: 6px;
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 10%, transparent);
@@ -449,31 +494,9 @@
   color: var(--fg-muted);
   margin-left: 0.3em;
 }
-.post-session-part {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  flex: none;
-}
 .post-session-label {
   font-size: var(--text-xs);
   color: var(--fg-muted);
-}
-.post-session-times {
-  margin-left: auto;
-  flex: none;
-  padding-left: 4px;
-  font-size: var(--text-xs);
-  color: var(--fg-subtle);
-  white-space: nowrap;
-}
-.post-session-subject {
-  flex: 1 1 8em;
-  color: var(--fg-muted);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 /* A picture on a post, at its own shape, no taller than the screen's half. */
@@ -649,6 +672,128 @@
 }
 .post-action.is-on {
   color: var(--accent-text);
+}
+
+/*
+ * What the session earned, after kudos and comments: one award whose badges are named in a
+ * small card on hover (or a tap), and the daily streak it ended on.
+ */
+.post-awards {
+  position: relative;
+}
+.post-awards > .post-action {
+  color: var(--accent-text);
+}
+.post-awards-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 5;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--panel-fill, #1c1b22);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+.post-awards:hover .post-awards-tip,
+.post-awards.is-open .post-awards-tip {
+  display: flex;
+}
+.post-streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 8px;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+.post-streak svg {
+  color: var(--flame);
+  fill: color-mix(in srgb, var(--flame) 35%, transparent);
+}
+
+/* The ⋯ under your own post: Edit and Delete, and "Are you sure?" before a delete. */
+.post-menu {
+  position: relative;
+}
+/* Above the posts after it while open. */
+.post:has(.post-menu-pop) {
+  position: relative;
+  z-index: 2;
+}
+.post-menu-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  background: var(--panel-fill, #1c1b22);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+.post-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--fg);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.post-menu-item:hover,
+.post-menu-item:focus-visible {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.post-menu-item.is-danger {
+  color: color-mix(in srgb, var(--status-bad) 62%, var(--fg));
+}
+.post-menu-sure {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px;
+  font-size: var(--text-sm);
+}
+.post-menu-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Editing the words in place. */
+.post-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.post-edit-text {
+  min-height: 44px;
+  max-height: 240px;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  field-sizing: content;
+  resize: vertical;
+}
+.post-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 
 .post-comments {
