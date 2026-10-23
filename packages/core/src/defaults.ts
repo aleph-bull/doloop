@@ -57,7 +57,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
   effects: { confetti: true, badgeToasts: true, phrases: true, reducedMotion: 'system' },
   quote: { mode: 'quotes', appTips: true },
   theme: {
-    mode: 'system',
+    // Dark until someone picks otherwise; never the device's setting by default (owner,
+    // 2026-10-23: a phone set to light turned the app light without them choosing it).
+    mode: 'dark',
     accent: 'sky',
     backgroundId: 'cotton-candy',
     customBackgroundUrl: null,

@@ -2453,6 +2453,39 @@ The owner found the app's frame rate low and asked whether it was the app or the
 - **Measured** on the same build with Chrome's CPU renderer while scrolling, frames a second with the real blur → with panes: Home 13 → 43, Settings 17 → 55, Analytics 12 → 44, Social 16 → 52, Profile 9 → 28, Achievements 40 → 59. Rastered tiles: Analytics about 60 MB more, Social about the same.
 - **The owner's laptop** has Intel UHD graphics driving its 165 Hz screen, and an RTX 4050; browsers run on the Intel chip unless Windows is told otherwise (Settings › System › Display › Graphics).
 
+## Sorbet theme removed, 2026-10-23 (owner request)
+
+The owner asked for the Sorbet theme (Abstract, on the Sherbet photo) to go. Only the preset is gone: the Sherbet photo stays in the background picker, and anyone already on that look keeps it (it now reads as their own look rather than a theme).
+
+## The background never picks light or dark, and Social on a phone is one big card, 2026-10-23 (user request)
+
+The owner, looking at Social on a phone: "it should not become an auto light mode just because of the background", "try keeping dark/ light mode and just increasing darkness/lightness on social specifically", then "maybe all of social should be the colour of one big card when you enter", "just use the colour and blur of one big card and blur it in when you enter it", and "remove the global auto light mode/ dark mode".
+
+- **No Recommended mode.** Settings › Appearance › Mode is System, Light or Dark. Recommended took light or dark from the background's colour; accounts that still hold it follow the system (`resolveTheme`), and the Mode switch shows them as System. The photo themes, Dawn Skies and Quiet Stone no longer set a mode, so putting one on keeps the mode already chosen; only the flat colours (Off White, Night Shift, Inkwell) set theirs, since each is made for one (`ThemeLook.mode` is optional; `matchingThemePreset` ignores the mode when a preset has none). The extension follows.
+- **Text straight on a photo keeps the mode's colour**: white in dark mode, black in light (`adaptToPhoto`). Before, a light photo turned it black even in dark mode. The photo is washed darker (or lighter, in light mode) under it instead, as far as 4.5:1 needs: at most 30% on the shipped photos. A flat colour keeps whichever text reads on it, since a wash would change the colour chosen.
+- **Social on a phone is one big card** (`.social-sheet`, portalled to the body, under the page and over the backdrop): the card's own colour and blur over the whole window, fading in over 360 ms as the page opens, so it looks like the photo blurring in (it holds nothing, so fading it doesn't touch the cards' glass). In glass mode it is the photo blurred once (`--glass-image`) under the glass fill, like a card's pane, or the real blur where there is no blurred copy; other panels give it the panel fill. Its text is a card's (`.social-page` takes the panel or glass text colours). Cards on it (groups, jams, the board) are a step lighter or darker (6% of the text colour, no shadow, no pane) rather than a card on a card; posts, Live now and the composer stay without a surface, and lost the halo they had on the photo.
+
+## Themes: two gone, three new accents, 2026-10-23 (owner request)
+
+- **Morning Tide and Falling Leaves are gone**, with nothing in their place (owner: "dont get a replacement for these"). Their photos (Pier, Autumn) stay in the background picker. Nature keeps Dawn Skies, Cherry Peak and Deep Woods.
+- **New accents, sampled from the owner's swatches:** Paper Lanterns a warm grey (#8c857d, `custom:32,6,52`, was Lemon), Old Town a dusty pink (#c99cc2, `custom:309,29,70`, was Peach), Inkwell a peach orange (#ffb36b, `custom:29,100,71`, was Peach). Inkwell is also the Minimalist look's dark side in the first-time setup, so it gets the new orange there too.
+- **New theme, Last Light** (Nature), from the owner's own look in a screenshot: the Valley Light photo, matte panels, and the same peach orange as Inkwell (read from the screenshot, which wasn't a file to sample). The name is ours; the photo already has its own. Like the other photo themes it sets no mode, so it keeps the one you're on (the owner was in dark).
+
+## Social's big card blurs in and out, and the bar's name slides open whole, 2026-10-23 (user request)
+
+The owner, on a phone: "add a blur on social for mobile and make it the same blur image from panels, make it fade in and out", and "glitch in mobile for bottom nav where text shows up as ... before the full word".
+
+- **The card moved into the Backdrop** (`sheet` prop, turned on by AppShell for Social at phone width, `.backdrop-sheet` in styles.css). It was a layer the Social page put on the body, which went the moment the page did and leaned on the browser's live blur wherever the photo wasn't blurred once. Now it shows the very image the cards' panes use (`--glass-image`, Chromium); where that isn't made (Safari, or a colour boost), the photo is blurred once in the sheet itself with a CSS filter at the glass's blur, never a live backdrop blur. The cards' colour goes over it. It fades in over 360 ms as Social opens and out as it goes, then hides, so it costs nothing on other pages.
+- **The bottom bar's name is cut off, not "…"**: the name's column slides open from nothing, and with `text-overflow: ellipsis` it read "So…" before "Social". With `clip` the word slides out whole.
+
+## The mode picked in setup, never the device's setting by default, 2026-10-23 (user request)
+
+After Recommended went, it followed the device, so the owner's phone, set to light, turned the app light (Dawn Skies in light mode) the next time it opened, without them choosing it: "just dont default to system like ever for both devices". Then, to a forced dark: "no it should start on whatever theme that the person decides during onboarding".
+
+- **A new account starts on what it picks in setup**: the look step saves Light or Dark with the look, as it already did. Until then, and if that step is skipped, it is Dark (`DEFAULT_SETTINGS.theme.mode`, also the first paint before settings load, so the sign-in page is dark), never the device's setting.
+- **Accounts still on the old Recommended mode take the light or dark they picked in setup** (migration **0035_theme_mode_from_setup**, from `onboarding_answers.look.dark`), or dark when they never answered it. A row that somehow still holds Recommended shows dark (`resolveTheme`, and the Mode switch shows Dark).
+- Only someone who picks System follows their device.
+
 ## The background's own blur and brightness, 2026-10-23 (owner request)
 
 The owner asked for the background to be made lighter or darker and blurred, set right under the background in Appearance, and for the blur to be worked out once, when Appearance is saved or left, so it isn't blurred again on every visit or reload.

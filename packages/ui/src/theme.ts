@@ -3,7 +3,6 @@ import { backgroundById } from './backgrounds';
 import {
   contrastRatio,
   hslToRgb,
-  recommendedThemeFor,
   relativeLuminance,
   rgbToHsl,
   tonalSurfaces,
@@ -13,34 +12,20 @@ import {
 export type ResolvedTheme = 'light' | 'dark';
 
 /**
- * The theme the Recommended mode picks for a background: from a photo's or a solid
- * colour's own colour, or an uploaded image's sampled one. Null for the gradients, which
- * come in both a light and a dark version, so Recommended follows the system there.
- */
-export function recommendedTheme(
-  backgroundId: string,
-  uploadAvg: RGB | null = null,
-): ResolvedTheme | null {
-  if (uploadAvg) return recommendedThemeFor(uploadAvg);
-  const def = backgroundById(backgroundId);
-  const avg = def.photo?.avg ?? def.solid ?? null;
-  return avg ? recommendedThemeFor(avg as RGB) : null;
-}
-
-/**
  * Resolve the theme to apply. Kickoff decision: when the mode is 'system' and the
- * system preference cannot be read, default to dark. 'recommended' takes the background's
- * pick (see `recommendedTheme`) and falls back to the system when there is none.
+ * system preference cannot be read, default to dark. 'recommended' was a mode that took
+ * light or dark from the background; it was removed (owner, 2026-10-23: the background
+ * never picks the mode). Migration 0035 gave the stored ones the light or dark picked in
+ * setup; anything still holding it is dark, the default, never the device's setting.
  */
 export function resolveTheme(
   mode: ThemeMode,
   matchMedia: ((q: string) => { matches: boolean }) | undefined = typeof window !== 'undefined'
     ? window.matchMedia?.bind(window)
     : undefined,
-  recommended: ResolvedTheme | null = null,
 ): ResolvedTheme {
   if (mode === 'light' || mode === 'dark') return mode;
-  if (mode === 'recommended' && recommended) return recommended;
+  if (mode === 'recommended') return 'dark';
   if (!matchMedia) return 'dark';
   try {
     if (matchMedia('(prefers-color-scheme: light)').matches) return 'light';
@@ -54,13 +39,11 @@ export interface ApplyThemeOptions {
   mode: ThemeMode;
   accent: string;
   reducedMotion: 'system' | 'on' | 'off';
-  /** The background's pick, for the Recommended mode. */
-  recommended?: ResolvedTheme | null;
 }
 
 /** Write theme/accent/motion attributes onto <html>. Safe to call repeatedly. */
 export function applyTheme(opts: ApplyThemeOptions, root: HTMLElement = document.documentElement) {
-  root.dataset.theme = resolveTheme(opts.mode, undefined, opts.recommended ?? null);
+  root.dataset.theme = resolveTheme(opts.mode);
   root.dataset.accent = opts.accent;
   // data-motion: 'on' forces animations even if the OS prefers reduced; 'off' disables them.
   if (opts.reducedMotion === 'system') delete root.dataset.motion;
@@ -357,7 +340,6 @@ function applyTonal(
 export function applyUserTheme(
   settings: UserThemeLike,
   root: HTMLElement = document.documentElement,
-  recommended: ResolvedTheme | null = null,
   backdropId: string | null = null,
 ): ResolvedTheme {
   const custom = settings.theme.accent.startsWith('custom:');
@@ -366,7 +348,6 @@ export function applyUserTheme(
       mode: settings.theme.mode,
       accent: custom ? 'custom' : settings.theme.accent,
       reducedMotion: settings.effects.reducedMotion,
-      recommended,
     },
     root,
   );
@@ -389,7 +370,7 @@ export function applyUserTheme(
   const own = ownAccentFill(hsl);
   root.style.setProperty('--accent-fill', own.fill);
   root.style.setProperty('--accent-fg', own.fg);
-  const resolved = resolveTheme(settings.theme.mode, undefined, recommended);
+  const resolved = resolveTheme(settings.theme.mode);
   const panelBehind = applyPanelStyle(
     {
       panel: settings.theme.panel,

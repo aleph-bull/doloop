@@ -38,7 +38,6 @@ import {
   fireConfetti,
   fireRewardBurst,
   Glass,
-  recommendedTheme,
   resolveExtensionBackdrop,
   Segmented,
   Toggle,
@@ -195,15 +194,11 @@ export function Popup() {
   const choice = settings
     ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
     : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
-  // An upload is not sampled here, so Recommended follows the system on one.
-  const recommended = choice.customImageUrl ? null : recommendedTheme(choice.backgroundId);
   const backdropId = choice.customImageUrl ? null : choice.backgroundId;
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
-  }, [settings, recommended, backdropId]);
-  const resolvedTheme = settings
-    ? resolveThemeSafe(settings.theme.mode, undefined, recommended)
-    : 'dark';
+    if (settings) applyUserTheme(settings, document.documentElement, backdropId);
+  }, [settings, backdropId]);
+  const resolvedTheme = settings ? resolveThemeSafe(settings.theme.mode) : 'dark';
   const backdrop = (
     <Backdrop
       backgroundId={choice.backgroundId}

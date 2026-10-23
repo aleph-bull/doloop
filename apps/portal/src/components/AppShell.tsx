@@ -40,7 +40,7 @@ import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
-import { PHONE_QUERY, useMediaQuery } from '../lib/media';
+import { NARROW_QUERY, PHONE_QUERY, useMediaQuery } from '../lib/media';
 import { preloadPage, preloadPages } from '../lib/page-loaders';
 import { useActiveSession, useAvatar, useMe, useNodes } from '../lib/queries';
 import { useExtensionStatus } from '../lib/extension-bridge';
@@ -434,6 +434,10 @@ export function AppShell() {
   };
   const location = useLocation();
   const { target, go } = useNavTarget();
+  // Social on a phone sits on one card over the window (the Backdrop's sheet), which fades
+  // in as the page opens and out as it goes. Never on a computer.
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const socialSheet = narrow ? location.pathname.startsWith('/social') : undefined;
 
   // The phone's bar and the switchers for the pages inside its places.
   const navigate = useNavigate();
@@ -696,6 +700,7 @@ export function AppShell() {
         texture={appearance.texture}
         frost={appearance.frost}
         adjust={appearance.adjust}
+        sheet={socialSheet}
       />
       <a href="#main" className="skip-link">
         Skip to content

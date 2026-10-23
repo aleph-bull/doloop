@@ -50,10 +50,11 @@ export function Social() {
       <Feed />
     );
 
-  // A phone: friends and the bell at the top beside the title, the views as plain words.
+  // A phone: friends and the bell at the top beside the title, the views as plain words, all
+  // on one big card that covers the window (the Backdrop's sheet, turned on by AppShell).
   if (phone)
     return (
-      <div className="flex flex-col gap-4">
+      <div className="social-page flex flex-col gap-4">
         <div className="social-top">
           <FriendsButton />
           <h1 className="page-title social-top-title">Social</h1>

@@ -1,4 +1,5 @@
 import {
+  DEFAULT_SETTINGS,
   matchingThemePreset,
   THEME_PRESETS,
   THEME_TAGS,
@@ -10,7 +11,6 @@ import {
 import {
   accentHexFor,
   backgroundById,
-  recommendedTheme,
   resolveTheme,
   Segmented,
   textureStyle,
@@ -46,9 +46,14 @@ const TAG_LABEL = Object.fromEntries(THEME_TAGS.map((t) => [t.id, t.label])) as 
 
 const rgb = (c: RGB) => `rgb(${c.join(' ')})`;
 
-/** Light or dark, as the preset comes out: its own mode, on its own background. */
-export function lookTheme(p: ThemePreset): ResolvedTheme {
-  return resolveTheme(p.look.mode, undefined, recommendedTheme(p.look.backgroundId));
+/**
+ * Light or dark, as the preset comes out: its own mode if it sets one (the flat colours), or
+ * the mode in use (`current`), which the others keep.
+ */
+export function lookTheme(p: ThemePreset, current?: ResolvedTheme): ResolvedTheme {
+  return p.look.mode
+    ? resolveTheme(p.look.mode)
+    : (current ?? resolveTheme(DEFAULT_SETTINGS.theme.mode));
 }
 
 /** The preview's background: the photo's thumbnail, or the colour or gradient with its texture. */
@@ -92,14 +97,17 @@ export function cardLook(
 
 function ThemeCard({
   preset,
+  current,
   active,
   onPick,
 }: {
   preset: ThemePreset;
+  /** Light or dark now, which a preset without its own mode keeps. */
+  current: ResolvedTheme;
   active: boolean;
   onPick: () => void;
 }) {
-  const resolved = lookTheme(preset);
+  const resolved = lookTheme(preset, current);
   const def = backgroundById(preset.look.backgroundId);
   const pattern = def.photo
     ? null
@@ -184,7 +192,13 @@ export function ThemePicker({ theme, resolved, patch, onImageApplied }: ThemePic
       ) : (
         <div className="preset-grid theme-grid">
           {shown.map((p) => (
-            <ThemeCard key={p.id} preset={p} active={current?.id === p.id} onPick={() => pick(p)} />
+            <ThemeCard
+              key={p.id}
+              preset={p}
+              current={resolved}
+              active={current?.id === p.id}
+              onPick={() => pick(p)}
+            />
           ))}
         </div>
       )}

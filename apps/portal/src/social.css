@@ -2848,8 +2848,53 @@
 /*
  * Laid out like the photo-sharing apps: friends, the title and the bell across the top, the
  * views as plain words, and posts straight on the page instead of in cards, the picture or
- * video big and first. The computer's feed is unchanged.
+ * video big and first. The whole page is one big card (owner, 2026-10-23): the Backdrop's
+ * sheet (styles.css, .backdrop-sheet), the cards' colour and blur over the whole window, fading
+ * in and out with the page, so the text keeps the mode's colours on any photo. The
+ * computer's feed is unchanged.
  */
+/* Text on it is text on a card: the theme's own, never the photo's. */
+.social-page {
+  --fg: var(--ink);
+  --fg-muted: var(--ink-muted);
+  --fg-subtle: var(--ink-subtle);
+  --border: var(--ink-line);
+  --border-strong: var(--ink-line-strong);
+  --accent-text: var(--accent-text-on-light);
+  color: var(--fg);
+}
+:root[data-theme='dark'] .social-page {
+  --accent-text: var(--accent-text-on-dark);
+}
+:root[data-panel='glass'] .social-page {
+  --fg: var(--fg-on-glass);
+  --fg-muted: var(--fg-on-glass-muted);
+  --fg-subtle: var(--fg-on-glass-subtle);
+  --border: var(--line-on-glass);
+  --border-strong: var(--line-strong-on-glass);
+  --accent-text: var(--accent-text-glass);
+}
+:root[data-panel='custom'] .social-page {
+  --fg: var(--panel-fg);
+  --fg-muted: var(--panel-fg-muted);
+  --fg-subtle: var(--panel-fg-subtle);
+  --border: var(--panel-border);
+  --accent-text: var(--panel-accent-text, var(--accent-text-on-dark));
+}
+.social-page .page-title {
+  text-shadow: none;
+}
+/* Cards on the big card (groups, jams, the board): a step lighter or darker, not a card again. */
+:root .social-page .panel,
+:root .social-page .glass:not(.glass-strong) {
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border-color: color-mix(in srgb, var(--fg) 8%, transparent);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+:root[data-panel='glass'][data-glass-image] .social-page .has-glass-pane > .glass-pane {
+  display: none;
+}
 .social-top {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) 42px;
@@ -2921,21 +2966,20 @@
     gap: 24px;
   }
 
-  /* Straight on the page: the backdrop's text colours, no surface. */
+  /* Straight on the page, no surface (and no pane of blurred photo behind them). */
   :root .panel.post,
   :root .panel.live,
   :root .panel.composer {
-    --fg: var(--fg-on-backdrop);
-    --fg-muted: var(--fg-on-backdrop-muted);
-    --fg-subtle: var(--fg-on-backdrop-subtle);
-    --border: var(--line-on-backdrop);
-    --border-strong: var(--line-strong-on-backdrop);
-    --accent-text: var(--accent-text-backdrop);
     padding: 0;
     background: none;
     border: 0;
     box-shadow: none;
     backdrop-filter: none;
+  }
+  :root[data-panel='glass'][data-glass-image] .panel.post.has-glass-pane > .glass-pane,
+  :root[data-panel='glass'][data-glass-image] .panel.live.has-glass-pane > .glass-pane,
+  :root[data-panel='glass'][data-glass-image] .panel.composer.has-glass-pane > .glass-pane {
+    display: none;
   }
 
   /* Who is studying now: round pictures in a row, ringed while they focus. */
@@ -3073,10 +3117,6 @@
     width: 19px;
     height: 19px;
   }
-  /* With no card behind it, the focus card needs a little more tint to show on a photo. */
-  .post-stat {
-    background: color-mix(in srgb, var(--accent) 18%, transparent);
-  }
   .post-streak {
     height: 36px;
   }
@@ -3107,29 +3147,5 @@
   .post-preview-post > .post-preview-video {
     order: -1;
     border-radius: var(--radius-lg);
-  }
-}
-
-/* Words straight on a photograph get the same soft halo as the page title. */
-:root[data-backdrop='photo'] .social-tabs,
-:root[data-backdrop='photo'] .feed-bar {
-  text-shadow:
-    0 0 2px color-mix(in srgb, var(--backdrop-halo) 25%, transparent),
-    0 1px 18px color-mix(in srgb, var(--backdrop-halo) 35%, transparent);
-}
-@media (max-width: 560px) {
-  :root[data-backdrop='photo'] .live-head,
-  :root[data-backdrop='photo'] .live-text,
-  :root[data-backdrop='photo'] .post-head,
-  :root[data-backdrop='photo'] .post-body,
-  :root[data-backdrop='photo'] .post-foot,
-  :root[data-backdrop='photo'] .post-comment {
-    text-shadow:
-      0 0 2px color-mix(in srgb, var(--backdrop-halo) 25%, transparent),
-      0 1px 18px color-mix(in srgb, var(--backdrop-halo) 35%, transparent);
-  }
-  .post-menu-pop,
-  .post-awards-tip {
-    text-shadow: none;
   }
 }

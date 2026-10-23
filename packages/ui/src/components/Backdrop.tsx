@@ -38,6 +38,11 @@ export interface BackdropProps {
    * the browser blurs the photo live (backdrop-tuning.ts).
    */
   adjust?: { blur: number; brightness: number };
+  /**
+   * One card over the whole window (Social on a phone): the photo blurred as the cards show
+   * it, under the cards' own colour. True fades it in, false fades it out; left out, none.
+   */
+  sheet?: boolean;
 }
 
 /** Wait this long after the window stops changing size before blurring the photo again. */
@@ -167,7 +172,9 @@ function applyChosenGlass(
  * wash the photo needs, if any.
  *
  * Panels keep the theme's own colours: a photo can only make their glass thicker. The text
- * that sits straight on the photo is the one thing that switches, to black or white.
+ * that sits straight on the photo keeps the mode's own colour too, and the photo is washed
+ * darker (or lighter) under it instead. A flat colour, which has no wash, keeps the text
+ * that reads on it.
  */
 function applyGlass(
   avg: RGB | null,
@@ -182,7 +189,7 @@ function applyGlass(
     applyChosenGlass(chosen, null, theme, THEME_GLASS[theme]);
     return null;
   }
-  const a = adaptToPhoto(avg, theme);
+  const a = adaptToPhoto(avg, theme, kind === 'photo');
   // Lets text that sits straight on a photo pick up a soft halo (see styles.css). A flat
   // colour has no busy patches to cover, so it gets none.
   root.dataset.backdrop = kind;
@@ -220,6 +227,7 @@ export function Backdrop({
   texture = 'none',
   frost,
   adjust,
+  sheet,
 }: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
@@ -487,6 +495,19 @@ export function Backdrop({
             background: washCss ?? undefined,
           }}
         />
+      )}
+      {/* The card over everything (styles.css, .backdrop-sheet): the photo blurred, then the
+          cards' colour. The photo blurred once for the panes, where there is one. */}
+      {sheet !== undefined && (
+        <div className={`backdrop-sheet${sheet ? ' is-on' : ''}`}>
+          {(imageUrl || photoUrl) && (
+            <div
+              className="backdrop-sheet-photo"
+              style={{ '--sheet-photo': `url("${bakedUrl ?? src}")` } as CSSProperties}
+            />
+          )}
+          <div className="backdrop-sheet-fill" />
+        </div>
       )}
     </div>
   );

@@ -4,16 +4,8 @@ import {
   type BackgroundTexture,
   type UserSettings,
 } from '@komogon/core';
-import {
-  applyUserTheme,
-  recommendedTheme,
-  resolveTheme,
-  sampleImage,
-  type GlassChoice,
-  type ResolvedTheme,
-  type RGB,
-} from '@komogon/ui';
-import { useEffect, useState } from 'react';
+import { applyUserTheme, resolveTheme, type GlassChoice, type ResolvedTheme } from '@komogon/ui';
+import { useEffect } from 'react';
 import { useCustomBackground } from './queries';
 
 export interface Appearance {
@@ -30,43 +22,18 @@ export interface Appearance {
   adjust: { blur: number; brightness: number };
 }
 
-interface Resolved extends Omit<Appearance, 'glass' | 'texture' | 'frost' | 'adjust'> {
-  /** The background's own pick, which the Recommended mode follows; null on a gradient. */
-  recommended: ResolvedTheme | null;
-}
+type Resolved = Omit<Appearance, 'glass' | 'texture' | 'frost' | 'adjust'>;
 
-/**
- * The theme and backdrop the settings come to, without touching <html>. A Recommended
- * theme is read off the background: a photo's or colour's own, an upload's sampled.
- */
+/** The theme and backdrop the settings come to, without touching <html>. */
 export function useResolvedAppearance(settings: UserSettings | undefined): Resolved {
   const wantsUpload = settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD;
   const uploaded = useCustomBackground(wantsUpload);
   const customImageUrl = wantsUpload ? (uploaded.data?.dataUrl ?? null) : null;
   const backgroundId = settings?.theme.backgroundId ?? 'aurora';
-
-  // Only Recommended needs an upload's colour, so only then is it measured.
-  const [uploadAvg, setUploadAvg] = useState<RGB | null>(null);
-  const measure = settings?.theme.mode === 'recommended' ? customImageUrl : null;
-  useEffect(() => {
-    if (!measure) return setUploadAvg(null);
-    let cancelled = false;
-    sampleImage(measure)
-      .then((avg) => !cancelled && setUploadAvg(avg))
-      .catch(() => !cancelled && setUploadAvg(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [measure]);
-
-  const recommended = customImageUrl
-    ? uploadAvg && recommendedTheme(backgroundId, uploadAvg)
-    : recommendedTheme(backgroundId);
   return {
-    theme: resolveTheme(settings?.theme.mode ?? 'system', undefined, recommended),
+    theme: resolveTheme(settings?.theme.mode ?? DEFAULT_SETTINGS.theme.mode),
     backgroundId,
     customImageUrl,
-    recommended,
   };
 }
 
@@ -81,27 +48,23 @@ export function useResolvedTheme(settings: UserSettings | undefined): ResolvedTh
  */
 export function useAppearance(settings: UserSettings | undefined): Appearance {
   const resolved = useResolvedAppearance(settings);
-  const { recommended } = resolved;
   // The background on screen: an upload has no colour of its own for matte panels to take.
   const backdropId = settings?.theme.customBackgroundUrl ? null : resolved.backgroundId;
 
   useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, recommended, backdropId);
-  }, [settings, recommended, backdropId]);
+    if (settings) applyUserTheme(settings, document.documentElement, backdropId);
+  }, [settings, backdropId]);
 
-  // Follow OS theme changes while the system decides: in system mode, or Recommended on a
-  // background that has no pick of its own.
-  const followsSystem =
-    settings?.theme.mode === 'system' || (settings?.theme.mode === 'recommended' && !recommended);
+  // Follow OS theme changes while the system decides: only when someone picked System.
+  const followsSystem = settings?.theme.mode === 'system';
   useEffect(() => {
     if (!settings || !followsSystem) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     // All of it, not just light or dark: matte panels on a solid colour shade for the theme.
-    const onChange = () =>
-      applyUserTheme(settings, document.documentElement, recommended, backdropId);
+    const onChange = () => applyUserTheme(settings, document.documentElement, backdropId);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
-  }, [settings, followsSystem, recommended, backdropId]);
+  }, [settings, followsSystem, backdropId]);
 
   return {
     theme: resolved.theme,
