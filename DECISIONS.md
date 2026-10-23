@@ -2495,3 +2495,12 @@ The owner asked for the background to be made lighter or darker and blurred, set
 - **Blur:** the Backdrop blurs the photo on a canvas (`blurPhoto` in glass-image.ts, the cards' own blur shared) and keeps it in the browser's Cache Storage (`backdrop-cache.ts`), with the cards' blurred image for each window size beside it. A visit or reload reads both from there instead of blurring again; only a new photo, a new blur or a new window size makes one. A shipped photo's soft placeholder shows for the moment it takes. Signing out empties the cache (an upload's blurred copy is someone's own photo).
 - **While dragging** (`backdrop-tuning.ts`) the browser blurs the sharp photo live, and the cards use the real blur over it. Letting go saves; leaving Appearance (another section or another page) is when the photo is blurred for good, once, at the last value.
 - Where a canvas can't blur (older Safari) the browser's live blur stays on.
+
+## Trimming a video already posted, 2026-10-23 (owner request)
+
+The owner asked to let people cut videos they've already posted, and to add only that.
+
+- **Where:** "Trim video" in the ⋯ under your own post, only when the post has a video. It opens the timelapse's trim (the same strip, handles, playhead and play, `.tl-trim-*`) over the posted video, in a dialog (a screen of its own on a phone). Save stays off until something is cut. Nothing else about a post can be changed from there: no swapping or removing files.
+- **A real cut, not a hidden range:** the browser cuts the file (`lib/video-cut.ts`, mediabunny), so the player, the length and the download are all the cut. A cut that starts on a key frame is copied as it is (instant, no loss); anywhere else it is re-encoded at about the video's own bitrate so it starts exactly where the handle was. Over the post's limit it shrinks like a new post's file.
+- **Saving:** the cut goes up the way a new post's file does (R2 upload link, counted in the daily quota, or with the request without R2), then `PUT /api/posts/:id/video` puts it in the old file's place with a new poster, and the old file is deleted from R2. The words, pictures, session and kudos stay.
+- **The old copy isn't played again:** a file kept by the API is asked for with its size in the address (`?v=`), because the browser keeps those for an hour under one address.

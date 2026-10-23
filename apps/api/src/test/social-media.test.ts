@@ -249,6 +249,86 @@ describe('post media in R2', () => {
     expect(own.statusCode).toBe(200);
   });
 
+  it("swaps a post's video for its cut, keeping the words and pictures", async () => {
+    const [s, other] = await t.db
+      .insert(sessions)
+      .values([
+        finished(USER_A.id, '2026-09-23T12:00:00Z', 1200),
+        finished(USER_A.id, '2026-09-23T13:00:00Z', 600),
+      ])
+      .returning();
+    const pic = await upload('image/jpeg', Buffer.from('pic'));
+    const video = await upload('video/mp4', Buffer.from('the whole video'));
+    const made = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: {
+        sessionId: s!.id,
+        body: 'Words',
+        files: [{ upload: pic }, { upload: video }],
+        poster: JPEG,
+      },
+    });
+    const id = made.json().post.id as string;
+    const before = await t.db.query.postMedia.findMany({ where: eq(postMedia.postId, id) });
+    const oldKey = before.find((f) => f.position === 1)!.key!;
+    const picKey = before.find((f) => f.position === 0)!.key!;
+
+    const cut = await upload('video/mp4', Buffer.from('the cut'));
+    const poster = 'data:image/jpeg;base64,/9j/4BBQ';
+    const res = await t.api({
+      method: 'PUT',
+      url: `/api/posts/${id}/video`,
+      payload: { upload: cut, poster },
+    });
+    expect(res.statusCode).toBe(200);
+    const post = res.json().post;
+    expect(post.body).toBe('Words');
+    expect(post.files).toEqual([
+      { n: 0, mime: 'image/jpeg', bytes: 3, poster: null },
+      { n: 1, mime: 'video/mp4', bytes: 7, poster },
+    ]);
+    const after = await t.db.query.postMedia.findMany({ where: eq(postMedia.postId, id) });
+    const newKey = after.find((f) => f.position === 1)!.key!;
+    expect(r2.files.get(newKey)?.bytes.toString()).toBe('the cut');
+    expect(after.find((f) => f.position === 0)!.key).toBe(picKey);
+    // The old video and the upload are gone; the picture stays.
+    expect(r2.files.has(oldKey)).toBe(false);
+    expect(r2.files.has(cut)).toBe(false);
+    expect(r2.files.has(picKey)).toBe(true);
+
+    // Someone else's post reads as not there.
+    const theirs = await t.api({
+      method: 'PUT',
+      url: `/api/posts/${id}/video`,
+      token: t.tokenB,
+      payload: { upload: await upload('video/mp4', Buffer.from('x'), t.tokenB) },
+    });
+    expect(theirs.statusCode).toBe(404);
+    // A cut is a video.
+    const asPicture = await t.api({
+      method: 'PUT',
+      url: `/api/posts/${id}/video`,
+      payload: { upload: await upload('image/png', Buffer.from('p')) },
+    });
+    expect(asPicture.statusCode).toBe(400);
+    // A post with no video has nothing to cut.
+    const words = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: other!.id, upload: await upload('image/png', Buffer.from('p')) },
+    });
+    const none = await t.api({
+      method: 'PUT',
+      url: `/api/posts/${words.json().post.id}/video`,
+      payload: { upload: await upload('video/mp4', Buffer.from('v')) },
+    });
+    expect(none.statusCode).toBe(404);
+
+    for (const p of [id, words.json().post.id])
+      await t.api({ method: 'DELETE', url: `/api/posts/${p}` });
+  });
+
   it('deletes the files with the account', async () => {
     const key = await upload('video/mp4', Buffer.from('bye'));
     await t.api({
@@ -281,6 +361,30 @@ describe('post media without R2', () => {
       payload: { mime: 'video/mp4', bytes: 100 },
     });
     expect(link.statusCode).toBe(409);
+  });
+
+  it("swaps a post's video for its cut, sent with the request", async () => {
+    const [s] = await t.db
+      .insert(sessions)
+      .values(finished(USER_A.id, '2026-09-23T10:00:00Z', 3600))
+      .returning();
+    const video = (text: string) => `data:video/mp4;base64,${Buffer.from(text).toString('base64')}`;
+    const made = await t.api({
+      method: 'POST',
+      url: '/api/social/posts',
+      payload: { sessionId: s!.id, media: video('the whole video'), poster: JPEG },
+    });
+    const id = made.json().post.id as string;
+    const res = await t.api({
+      method: 'PUT',
+      url: `/api/posts/${id}/video`,
+      payload: { media: video('the cut') },
+    });
+    expect(res.statusCode).toBe(200);
+    // No new poster sent: the old one stays.
+    expect(res.json().post.media).toEqual({ mime: 'video/mp4', bytes: 7, poster: JPEG });
+    const bytes = await t.api({ method: 'GET', url: `/api/posts/${id}/media` });
+    expect(bytes.rawPayload.toString()).toBe('the cut');
   });
 });
 

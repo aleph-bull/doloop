@@ -850,6 +850,13 @@ export const api = {
     request<{ post: FeedPost; people: Record<string, Person> }>('PATCH', `/api/posts/${id}`, {
       body,
     }),
+  /** Puts the cut of your own post's video in its place, with a new poster. */
+  cutPostVideo: (id: string, input: Pick<NewPost, 'media' | 'upload' | 'poster'>) =>
+    request<{ post: FeedPost; people: Record<string, Person> }>(
+      'PUT',
+      `/api/posts/${id}/video`,
+      input,
+    ),
   mediaLimits: () => request<MediaLimits>('GET', '/api/social/uploads'),
   startUpload: (mime: string, bytes: number) =>
     request<UploadLink>('POST', '/api/social/uploads', { mime, bytes }),
@@ -861,9 +868,12 @@ export const api = {
       'GET',
       `/api/posts/${id}/media/url?n=${n}`,
     ),
-  /** A file behind a post, as a blob to play from an object URL (files kept by the API). */
-  postMedia: async (id: string, n = 0): Promise<Blob> => {
-    const res = await fetch(`${BASE}/api/posts/${id}/media?n=${n}`, {
+  /**
+   * A file behind a post, as a blob to play from an object URL (files kept by the API).
+   * `bytes`, its size, changes with a trim, so the browser's copy of the old file isn't used.
+   */
+  postMedia: async (id: string, n = 0, bytes?: number): Promise<Blob> => {
+    const res = await fetch(`${BASE}/api/posts/${id}/media?n=${n}${bytes ? `&v=${bytes}` : ''}`, {
       headers: await authHeaders(),
     });
     if (!res.ok) throw new ApiError(res.status, res.statusText);
