@@ -2,13 +2,7 @@ import { aspectRatio, timelapseClock, videoSize, type TimelapsePlan } from '@kom
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@komogon/ui';
-import {
-  clockText,
-  knownScreenRatio,
-  timeOfDayText,
-  type Still,
-  type TimelapseLook,
-} from '../../lib/timelapse';
+import { knownScreenRatio, stillTexts, type Still, type TimelapseLook } from '../../lib/timelapse';
 import { composeFrame } from '../../lib/timelapse-compose';
 
 /** How many stills a phone's strip shows, spread over the whole recording. */
@@ -225,10 +219,7 @@ export function TimelapseTrim({
         {
           camera: p.camera,
           screen: look.layout.screen.visible ? p.screen : null,
-          clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
-          elapsed: clockText(still, look.breakClock),
-          title: still.title,
-          note: look.noteText?.trim() || null,
+          ...stillTexts(still, look),
           // By time, so the bar holds through a live clip as it does in the video.
           progress: keptSpan > 0 ? ((times[i] ?? keptFrom) - keptFrom) / keptSpan : 1,
         },

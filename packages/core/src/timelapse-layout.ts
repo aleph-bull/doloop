@@ -9,7 +9,17 @@
 
 /** The pieces a timelapse can show. The camera and the screen are pictures; the rest are drawn. */
 export type TimelapseElementId =
-  'camera' | 'screen' | 'clock' | 'elapsed' | 'title' | 'note' | 'progress' | 'watermark';
+  | 'camera'
+  | 'screen'
+  | 'clock'
+  | 'elapsed'
+  | 'total'
+  | 'start'
+  | 'end'
+  | 'title'
+  | 'note'
+  | 'progress'
+  | 'watermark';
 
 /** The order they are listed in, in the settings and the editor. */
 export const TIMELAPSE_ELEMENTS: readonly TimelapseElementId[] = [
@@ -17,6 +27,9 @@ export const TIMELAPSE_ELEMENTS: readonly TimelapseElementId[] = [
   'screen',
   'clock',
   'elapsed',
+  'total',
+  'start',
+  'end',
   'title',
   'note',
   'progress',
@@ -32,6 +45,9 @@ export const TIMELAPSE_MOVABLE: readonly TimelapseElementId[] = TIMELAPSE_ELEMEN
 export const TIMELAPSE_TEXT_ELEMENTS: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
+  'total',
+  'start',
+  'end',
   'title',
   'note',
   'watermark',
@@ -42,7 +58,10 @@ export const TIMELAPSE_ELEMENT_LABELS: Record<TimelapseElementId, string> = {
   camera: 'Camera',
   screen: 'Screen',
   clock: 'Current time',
-  elapsed: 'Time elapsed',
+  elapsed: 'Focus time',
+  total: 'Time elapsed',
+  start: 'Start time',
+  end: 'End time',
   title: 'Task name',
   note: 'Your text',
   progress: 'Progress bar',
@@ -184,7 +203,7 @@ export function fitBoxToRatio(
  * A starting layout for a shape, after the owner's sketch: the time of day top left, the
  * screen top right, the time elapsed bottom left, the task bottom right, the camera behind.
  * Tall videos stack the same pieces instead. The screen starts out of the layout, waiting
- * under the editor to be added. The person's own text sits under the time of day; it is
+ * under the editor to be added, and so do the time elapsed and the start and end times. The person's own text sits under the time of day; it is
  * drawn only once there is some.
  */
 export function defaultTimelapseLayout(
@@ -198,6 +217,9 @@ export function defaultTimelapseLayout(
       screen: fit(box(0.05, 0.1, 0.9, 0.3, false)),
       clock: box(0.05, 0.035, 0.3, 0.04),
       elapsed: box(0.05, 0.86, 0.25, 0.045),
+      total: box(0.05, 0.74, 0.25, 0.045, false),
+      start: box(0.05, 0.135, 0.3, 0.035, false),
+      end: box(0.05, 0.18, 0.3, 0.035, false),
       title: box(0.05, 0.8, 0.6, 0.045),
       note: box(0.05, 0.085, 0.7, 0.04),
       progress: box(0, 0.988, 1, 0.012),
@@ -210,6 +232,9 @@ export function defaultTimelapseLayout(
       screen: fit(box(0.45, 0.05, 0.5, 0.36, false)),
       clock: box(0.05, 0.05, 0.3, 0.06),
       elapsed: box(0.05, 0.86, 0.2, 0.065),
+      total: box(0.05, 0.68, 0.2, 0.065, false),
+      start: box(0.05, 0.2, 0.3, 0.055, false),
+      end: box(0.05, 0.27, 0.3, 0.055, false),
       title: box(0.05, 0.77, 0.5, 0.065),
       note: box(0.05, 0.125, 0.6, 0.055),
       progress: box(0, 0.986, 1, 0.014),
@@ -221,6 +246,9 @@ export function defaultTimelapseLayout(
     screen: fit(box(0.5, 0.06, 0.46, 0.46, false)),
     clock: box(0.04, 0.06, 0.2, 0.08),
     elapsed: box(0.04, 0.84, 0.12, 0.08),
+    total: box(0.04, 0.74, 0.12, 0.08, false),
+    start: box(0.04, 0.25, 0.2, 0.07, false),
+    end: box(0.04, 0.33, 0.2, 0.07, false),
     title: box(0.5, 0.76, 0.46, 0.08, true, 'right'),
     note: box(0.04, 0.16, 0.5, 0.07),
     progress: box(0, 0.982, 1, 0.018),

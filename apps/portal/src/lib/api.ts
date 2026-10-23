@@ -306,13 +306,23 @@ export interface FriendshipStatus {
   since: string | null;
 }
 
+/** The session on a post, as it was when shared. */
+export interface PostSession {
+  minutes: number;
+  subject: string | null;
+  elapsedMinutes: number | null;
+  startedAt: string | null;
+  endedAt: string | null;
+}
+
 /** A post on Social, with its counts as the viewer sees them. */
 export interface FeedPost {
   id: string;
   userId: string;
   body: string;
   createdAt: string;
-  session: { minutes: number; subject: string | null } | null;
+  /** Focus minutes, focus and breaks together (when shown), and when it started and ended. */
+  session: PostSession | null;
   media: { mime: string; bytes: number; poster: string | null } | null;
   likes: number;
   liked: boolean;
@@ -342,6 +352,8 @@ export interface NewPost {
   sessionId?: string;
   /** Show the session's minutes and task on the post (the API's default); false leaves them off. */
   showTime?: boolean;
+  /** Also show the time elapsed: focus and breaks together. */
+  showElapsed?: boolean;
   /** The file as a data URL, when the API keeps files itself (no R2; videos under 5 MB). */
   media?: string;
   /** The key of a file already uploaded to R2 (`startUpload`). */

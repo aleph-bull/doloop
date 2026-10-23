@@ -1,11 +1,10 @@
-import { sessionLine } from '@komogon/core';
-import { Timer } from 'lucide-react';
 import { memo, useCallback, useDeferredValue, useState } from 'react';
 import { Button, Modal, Toggle } from '@komogon/ui';
 import { useAvatar, useMe } from '../../lib/queries';
 import { Avatar } from '../social/Avatar';
 import { CompressOffer } from '../social/CompressOffer';
-import { figure } from '../social/PostCard';
+import type { PostSession } from '../../lib/api';
+import { SessionRow } from '../social/PostCard';
 
 /** The longest line a post on Social takes (POST_MAX_LENGTH in the API). */
 const SOCIAL_MAX = 500;
@@ -18,12 +17,15 @@ export interface PreviewVideo {
 export interface PostPreviewProps {
   open: boolean;
   video: PreviewVideo;
-  /** What the post says about the session: its focused minutes and what it was on. */
-  session: { minutes: number; subject: string | null } | null;
+  /** What the post says about the session: focus, elapsed, what it was on, start and end. */
+  session: PostSession | null;
   /** Biggest video a post takes; over it, compressing is offered first. */
   maxBytes: number;
   /** Post it; resolves true once it is up. */
-  onShare: (input: { body: string; showTime: boolean }, blob: Blob) => Promise<boolean>;
+  onShare: (
+    input: { body: string; showTime: boolean; showElapsed: boolean },
+    blob: Blob,
+  ) => Promise<boolean>;
   onClose: () => void;
 }
 
@@ -44,6 +46,7 @@ export function PostPreview({
 }: PostPreviewProps) {
   const [text, setText] = useState('');
   const [showTime, setShowTime] = useState(true);
+  const [showElapsed, setShowElapsed] = useState(false);
   const [busy, setBusy] = useState(false);
   /** Over the limit: the offer to compress shows in place of the buttons. */
   const [oversize, setOversize] = useState(false);
@@ -64,7 +67,7 @@ export function PostPreview({
     setOversize(false);
     setBusy(true);
     try {
-      if (await onShare({ body: text.trim(), showTime }, blob)) {
+      if (await onShare({ body: text.trim(), showTime, showElapsed }, blob)) {
         setText('');
         onClose();
       }
@@ -107,12 +110,10 @@ export function PostPreview({
             />
           </label>
           {session && session.minutes > 0 && (
-            <Toggle
-              checked={showTime}
-              onChange={setShowTime}
-              label="Show how long I studied"
-              description={sessionLine(session.minutes, session.subject)}
-            />
+            <Toggle checked={showTime} onChange={setShowTime} label="Show time" />
+          )}
+          {session && session.minutes > 0 && showTime && session.elapsedMinutes !== null && (
+            <Toggle checked={showElapsed} onChange={setShowElapsed} label="Time elapsed" />
           )}
           <p className="field-hint">
             {audience === 'Friends'
@@ -124,8 +125,11 @@ export function PostPreview({
           name={name}
           avatar={avatar}
           audience={audience}
-          minutes={session && showTime ? session.minutes : null}
-          subject={session?.subject ?? null}
+          session={
+            session && showTime
+              ? { ...session, elapsedMinutes: showElapsed ? session.elapsedMinutes : null }
+              : null
+          }
           body={shownText.trim()}
           videoUrl={video.url}
         />
@@ -152,21 +156,18 @@ const PreviewPost = memo(function PreviewPost({
   name,
   avatar,
   audience,
-  minutes,
-  subject,
+  session,
   body,
   videoUrl,
 }: {
   name: string;
   avatar: string | null;
   audience: string;
-  /** Null when the time studied is left off the post. */
-  minutes: number | null;
-  subject: string | null;
+  /** Null when the time is left off the post. */
+  session: PostSession | null;
   body: string;
   videoUrl: string;
 }) {
-  const fig = minutes !== null ? figure(minutes) : null;
   return (
     <div className="post-preview-card" aria-label="How the post will look">
       <span className="post-preview-label">Preview</span>
@@ -181,16 +182,7 @@ const PreviewPost = memo(function PreviewPost({
             <span className="post-when">Just now</span>
           </div>
         </header>
-        {fig && (
-          <div className="post-session">
-            <Timer size={18} aria-hidden className="post-session-icon" />
-            <span className="post-session-figure tabular">
-              {fig.value}
-              <small>{fig.unit}</small>
-            </span>
-            {subject && <span className="post-session-subject">on {subject}</span>}
-          </div>
-        )}
+        {session && <SessionRow session={session} />}
         {body && <p className="post-body">{body}</p>}
         {/* Still until pressed, like a post on the feed: a looping video under the box
             being typed in keeps the page repainting. */}

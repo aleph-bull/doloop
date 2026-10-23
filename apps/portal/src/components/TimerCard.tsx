@@ -100,8 +100,9 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
             </div>
           )}
           <div className="timer-focused tabular">
-            {formatClock(view.workSeconds)} focused
-            {view.breakSeconds > 0 && ` · ${formatClock(view.breakSeconds)} break`}
+            {formatClock(view.workSeconds)} focus
+            {view.breakSeconds > 0 &&
+              ` · ${formatClock(view.workSeconds + view.breakSeconds)} elapsed`}
           </div>
         </div>
 

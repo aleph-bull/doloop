@@ -36,6 +36,7 @@ export function Composer() {
   const { toast } = useToast();
   const [text, setText] = useState('');
   const [sessionId, setSessionId] = useState('');
+  const [showElapsed, setShowElapsed] = useState(false);
   const [video, setVideo] = useState<File | null>(null);
   /** A file over the limit, waiting on "Compress it". */
   const [oversize, setOversize] = useState<{ file: File; maxBytes: number } | null>(null);
@@ -53,7 +54,7 @@ export function Composer() {
       .slice(0, 10)
       .map((s) => ({
         id: s.id,
-        label: `${fmtDate(s.startedAt)} · ${fmtMinutes(s.workSeconds / 60)}${
+        label: `${fmtDate(s.startedAt)} · ${fmtMinutes(s.workSeconds / 60)} focus${
           s.nodeId && titles.get(s.nodeId)
             ? ` · ${titles.get(s.nodeId)}`
             : s.routineId
@@ -88,9 +89,16 @@ export function Composer() {
       const poster =
         video && isVideo(video) ? ((await posterFromVideo(video)) ?? undefined) : undefined;
       const file = video ? await sendMedia(video, limits, setUploaded) : {};
-      await create.mutateAsync({ body: text.trim() || undefined, sessionId, ...file, poster });
+      await create.mutateAsync({
+        body: text.trim() || undefined,
+        sessionId,
+        showElapsed,
+        ...file,
+        poster,
+      });
       setText('');
       setSessionId('');
+      setShowElapsed(false);
       clearFile();
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not post it');
@@ -135,6 +143,16 @@ export function Composer() {
                 ))}
               </select>
             </label>
+          )}
+          {sessionId && (
+            <button
+              type="button"
+              className="chip composer-toggle"
+              aria-pressed={showElapsed}
+              onClick={() => setShowElapsed((v) => !v)}
+            >
+              Elapsed
+            </button>
           )}
           {video ? (
             <span className="chip composer-file" title={video.name}>

@@ -35,15 +35,9 @@ export const TIMELAPSE_STYLES: readonly TimelapseStyle[] = [
   { id: 'clean', name: 'Clean', description: 'The camera, the mark and your text.' },
 ];
 
-/** The pieces a look places. */
-const STYLED: readonly TimelapseElementId[] = [
-  'clock',
-  'elapsed',
-  'title',
-  'note',
-  'progress',
-  'watermark',
-];
+/** The pieces a look places; the others (the screen, the time elapsed, start and end) stay put. */
+type StyledId = 'clock' | 'elapsed' | 'title' | 'note' | 'progress' | 'watermark';
+const STYLED: readonly StyledId[] = ['clock', 'elapsed', 'title', 'note', 'progress', 'watermark'];
 
 const box = (
   x: number,
@@ -74,7 +68,7 @@ function styledPieces(
   id: TimelapseStyleId,
   ratio: number,
   screenRatio: number,
-): Omit<TimelapseLayout, 'camera' | 'screen'> {
+): Record<StyledId, TimelapseBox> {
   const classic = defaultTimelapseLayout(ratio, screenRatio);
   if (id === 'classic') return classic;
   const { u, mx, my, bar, mark, gap } = metrics(ratio);

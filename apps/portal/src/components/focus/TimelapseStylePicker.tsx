@@ -12,7 +12,7 @@ import { composeFrame, type ComposeFrame } from '../../lib/timelapse-compose';
 /** What the pieces say in the little pictures, unless real ones are given. */
 const SAMPLE: Omit<ComposeFrame, 'camera' | 'screen'> = {
   clock: '2:14 PM',
-  elapsed: '42:17',
+  elapsed: 'Focus 42:17',
   title: 'Your task name',
   note: 'Your text',
   progress: 0.6,

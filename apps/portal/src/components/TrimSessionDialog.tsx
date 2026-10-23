@@ -101,10 +101,11 @@ export function TrimSessionDialog({ session, onClose, onTrimmed }: TrimSessionDi
       <div className="flex flex-col gap-4">
         <p className="muted text-sm">
           Started {clockWords(session.startedAt)}, ended {clockWords(session.endedAt)}.{' '}
-          {fmtMinutes(session.workSeconds / 60)} focused
+          {fmtMinutes(session.workSeconds / 60)} focus
           {session.breakSeconds > 0
-            ? `, ${fmtMinutes(session.breakSeconds / 60)} on breaks`
-            : ''}, {session.xpAwarded} XP.
+            ? `, ${fmtMinutes((session.workSeconds + session.breakSeconds) / 60)} elapsed`
+            : ''}
+          , {session.xpAwarded} XP.
         </p>
         <div className="grid grid-cols-2 gap-4">
           <Input

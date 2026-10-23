@@ -51,6 +51,7 @@ import {
 import { isUpright } from '../../lib/device';
 import { fmtMinutes } from '../../lib/format';
 import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
+import type { PostSession } from '../../lib/api';
 import { useCreatePost, useMe, useMediaLimits } from '../../lib/queries';
 import { PlatformMark } from '../PlatformMark';
 import {
@@ -68,8 +69,7 @@ import {
   timelapseFileName,
   videoSupported,
   clipTime,
-  clockText,
-  timeOfDayText,
+  stillTexts,
   type RecorderStatus,
   type ScreenStatus,
   type TimelapseLook,
@@ -814,8 +814,13 @@ export interface TimelapseExportProps {
   onSaved?: () => void;
   /** The session the stills came from, so sharing can attach it to the post. */
   sessionId?: string | null;
-  /** What a post says about that session, for its preview: focused minutes and the task. */
-  postSession?: { minutes: number; subject: string | null } | null;
+  /**
+   * What a post says about that session, for its preview: focus minutes, focus and breaks
+   * together, and the task.
+   */
+  postSession?: { minutes: number; elapsedMinutes: number; subject: string | null } | null;
+  /** When the session started and, once over, ended: the video's start and end times. */
+  sessionSpan?: { startedAt: string; endedAt: string | null } | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -828,6 +833,7 @@ export function TimelapseExport({
   onSaved,
   sessionId,
   postSession,
+  sessionSpan,
 }: TimelapseExportProps) {
   const value = presetOf(settings, device);
   const { toast } = useToast();
@@ -884,13 +890,20 @@ export function TimelapseExport({
   const clipCount = new Set(clipStills.map((s) => s.clip)).size;
   // A phone's video keeps the shape it starts in: the first kept still says which way up.
   const upright = all[startAt]?.portrait ?? true;
+  // The session's start and end; until it has ended, the end is the last still.
+  const startMs = sessionSpan ? Date.parse(sessionSpan.startedAt) : (all[0]?.takenAt ?? null);
+  const endMs = sessionSpan?.endedAt
+    ? Date.parse(sessionSpan.endedAt)
+    : (all[all.length - 1]?.takenAt ?? null);
   const look: TimelapseLook = useMemo(
     () => ({
       ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
       timeZone,
       noteText: cleanNoteText(noteText),
+      startAt: startMs,
+      endAt: endMs,
     }),
-    [settings, device, upright, timeZone, noteText],
+    [settings, device, upright, timeZone, noteText, startMs, endMs],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
@@ -899,13 +912,11 @@ export function TimelapseExport({
     () =>
       middle
         ? {
-            clock: middle.takenAt ? timeOfDayText(middle.takenAt, timeZone) : null,
-            elapsed: clockText(middle, value.breakClock),
-            title: middle.title,
+            ...stillTexts(middle, look),
             progress: kept > 1 ? (middleAt - startAt) / (kept - 1) : 1,
           }
         : {},
-    [middle, timeZone, value.breakClock, kept, middleAt, startAt],
+    [middle, look, kept, middleAt, startAt],
   );
 
   // A video replaced or gone gives back its memory. Making one stops only when the card
@@ -1011,7 +1022,7 @@ export function TimelapseExport({
    * `blob` may be a compressed copy. Resolves true once it is up.
    */
   const shareToSocial = async (
-    input: { body: string; showTime: boolean },
+    input: { body: string; showTime: boolean; showElapsed: boolean },
     blob: Blob,
   ): Promise<boolean> => {
     try {
@@ -1022,6 +1033,7 @@ export function TimelapseExport({
         body: input.body || undefined,
         sessionId: sessionId ?? undefined,
         showTime: input.showTime,
+        showElapsed: input.showElapsed,
         ...(await sendMedia(blob, limits)),
         poster: poster ?? undefined,
       });
@@ -1054,9 +1066,21 @@ export function TimelapseExport({
 
   // What the post says about the session: the finished session's, else the stills' own time.
   const lastStill = all[Math.max(0, endAt - 1)];
-  const session =
-    postSession ??
-    (lastStill ? { minutes: Math.round(lastStill.workSeconds / 60), subject: null } : null);
+  const session: PostSession | null = postSession
+    ? {
+        ...postSession,
+        startedAt: sessionSpan?.startedAt ?? null,
+        endedAt: sessionSpan?.endedAt ?? null,
+      }
+    : lastStill
+      ? {
+          minutes: Math.round(lastStill.workSeconds / 60),
+          elapsedMinutes: Math.round(lastStill.totalSeconds / 60),
+          subject: null,
+          startedAt: null,
+          endedAt: null,
+        }
+      : null;
 
   const postNote =
     video &&
