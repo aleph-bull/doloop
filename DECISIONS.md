@@ -2456,3 +2456,9 @@ The owner found the app's frame rate low and asked whether it was the app or the
 ## Sorbet theme removed, 2026-10-23 (owner request)
 
 The owner asked for the Sorbet theme (Abstract, on the Sherbet photo) to go. Only the preset is gone: the Sherbet photo stays in the background picker, and anyone already on that look keeps it (it now reads as their own look rather than a theme).
+
+## Themes: two gone, three new accents, 2026-10-23 (owner request)
+
+- **Morning Tide and Falling Leaves are gone**, with nothing in their place (owner: "dont get a replacement for these"). Their photos (Pier, Autumn) stay in the background picker. Nature keeps Dawn Skies, Cherry Peak and Deep Woods.
+- **New accents, sampled from the owner's swatches:** Paper Lanterns a warm grey (#8c857d, `custom:32,6,52`, was Lemon), Old Town a dusty pink (#c99cc2, `custom:309,29,70`, was Peach), Inkwell a peach orange (#ffb36b, `custom:29,100,71`, was Peach). Inkwell is also the Minimalist look's dark side in the first-time setup, so it gets the new orange there too.
+- **New theme, Last Light** (Nature), from the owner's own look in a screenshot: the Valley Light photo, dark mode, matte panels, and the same peach orange as Inkwell (read from the screenshot, which wasn't a file to sample). The name is ours; the photo already has its own.
