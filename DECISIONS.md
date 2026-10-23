@@ -2452,3 +2452,7 @@ The owner found the app's frame rate low and asked whether it was the app or the
 - **The badges' reveal on Achievements** is `backwards` now, not `both`: the same look, and a held end transform kept their slices from lining up.
 - **Measured** on the same build with Chrome's CPU renderer while scrolling, frames a second with the real blur → with panes: Home 13 → 43, Settings 17 → 55, Analytics 12 → 44, Social 16 → 52, Profile 9 → 28, Achievements 40 → 59. Rastered tiles: Analytics about 60 MB more, Social about the same.
 - **The owner's laptop** has Intel UHD graphics driving its 165 Hz screen, and an RTX 4050; browsers run on the Intel chip unless Windows is told otherwise (Settings › System › Display › Graphics).
+
+## Sorbet theme removed, 2026-10-23 (owner request)
+
+The owner asked for the Sorbet theme (Abstract, on the Sherbet photo) to go. Only the preset is gone: the Sherbet photo stays in the background picker, and anyone already on that look keeps it (it now reads as their own look rather than a theme).
