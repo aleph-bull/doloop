@@ -427,74 +427,27 @@ main {
   max-width: 44ch;
 }
 .tour-list {
-  position: relative;
   list-style: none;
   margin: 40px 0 0;
   padding: 0;
   display: grid;
   gap: 6px;
-  --fill: 1;
-}
-/* The line the icons hang on, filling as the tour goes. */
-.tour-list::before,
-.tour-list::after {
-  content: '';
-  position: absolute;
-  left: 19px;
-  top: 20px;
-  width: 2px;
-  margin-left: -1px;
-  border-radius: 2px;
-}
-.tour-list::before {
-  bottom: 20px;
-  background: rgb(27 26 43 / 0.08);
-}
-.tour-list::after {
-  height: calc((100% - 40px) * var(--fill));
-  background: var(--site-accent);
 }
 .tour-item {
-  position: relative;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-  padding: 10px 0;
+  padding: 6px 0;
 }
-.tour-icon {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: #fff;
-  color: var(--site-ink);
-  box-shadow:
-    0 0 0 1px rgb(27 26 43 / 0.08),
-    0 6px 16px -8px rgb(27 26 43 / 0.25);
-  transition:
-    background 400ms,
-    color 400ms,
-    transform 500ms var(--site-ease);
-}
-.tour-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+/* A thin accent bar beside each line's words; while the tour runs, only the one on show
+   keeps its colour and the rest grey out. */
 .tour-text {
-  padding-top: 1px;
+  display: block;
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--site-accent);
   font-size: 15px;
   line-height: 1.5;
   color: var(--site-muted);
-  transition: opacity 400ms;
+  transition:
+    opacity 400ms,
+    border-color 400ms;
 }
 .tour-text strong {
   display: block;
@@ -503,7 +456,6 @@ main {
   color: var(--site-ink);
 }
 .tour-inline-shot {
-  grid-column: 1 / -1;
   display: block;
   width: 100%;
   height: auto;
@@ -1004,23 +956,15 @@ html.has-motion .is-in .scribble-line path {
   html.has-scrub .tour-inline-shot {
     display: none;
   }
-  html.has-scrub .tour-list {
-    --fill: var(--p, 0);
-  }
   html.has-scrub .tour-item .tour-text {
     opacity: 0.42;
+    border-left-color: rgb(27 26 43 / 0.25);
   }
   html.has-scrub .tour[data-step='0'] .tour-item[data-i='0'] .tour-text,
   html.has-scrub .tour[data-step='1'] .tour-item[data-i='1'] .tour-text,
   html.has-scrub .tour[data-step='2'] .tour-item[data-i='2'] .tour-text {
     opacity: 1;
-  }
-  html.has-scrub .tour[data-step='0'] .tour-item[data-i='0'] .tour-icon,
-  html.has-scrub .tour[data-step='1'] .tour-item[data-i='1'] .tour-icon,
-  html.has-scrub .tour[data-step='2'] .tour-item[data-i='2'] .tour-icon {
-    background: var(--site-accent);
-    color: #fff;
-    transform: scale(1.06);
+    border-left-color: var(--site-accent);
   }
   html.has-scrub .tour-window {
     display: block;
@@ -1288,9 +1232,6 @@ html.has-motion .devices.rise.is-in {
   .tour-grid {
     grid-template-columns: 1fr;
     padding-block: 72px;
-  }
-  .tour-list::after {
-    display: none;
   }
   .feature-head {
     grid-template-columns: 1fr;

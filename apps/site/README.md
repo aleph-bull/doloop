@@ -41,6 +41,9 @@ pnpm build      # static output in dist/
   - **Plan**: pinned. The calendar week (classes from a timetable, finished sessions, what's
     due), then Plan my week's suggestions, then the week with them added; the phone's day
     view rises in at the end. It sits after Share so Social comes first.
+- **The docs are off for now** (the owner, 2026-10-22): `docs/index.html` isn't built, `/docs`
+  redirects home (`vercel.json`), and nothing links to it. Everything is kept; the comment in
+  `vite.config.js` says how to turn it back on.
 - **Docs** at `/docs/` and the **changelog** at `/changelog/`, each its own page in the Vite
   build (`docs/index.html`, `changelog/index.html`) sharing `src/docs.css` and
   `src/docs.js`. Their text lives in `src/content/docs.html` and `src/content/changelog.html`

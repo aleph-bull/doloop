@@ -39,11 +39,13 @@ export default defineConfig({
   server: { port: 5190, strictPort: true },
   build: {
     target: 'es2022',
-    // The homepage, the docs and the changelog, each its own page.
+    // The homepage and the changelog, each its own page. The docs (docs/index.html) are off
+    // for now (the owner, 2026-10-22): not built, and /docs redirects home (vercel.json). To
+    // bring them back, add `docs: page('./docs/index.html')` here, drop the redirects and put
+    // the Docs links back in the homepage and changelog.
     rollupOptions: {
       input: {
         main: page('./index.html'),
-        docs: page('./docs/index.html'),
         changelog: page('./changelog/index.html'),
       },
     },

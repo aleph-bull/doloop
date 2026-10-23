@@ -1,12 +1,34 @@
 {
+  "redirects": [
+    {
+      "source": "/docs",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/docs/:path*",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(docs|changelog)/(.*)",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noai, noimageai" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noai, noimageai"
+        }
+      ]
     },
     {
       "source": "/(docs|changelog)",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noai, noimageai" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noai, noimageai"
+        }
+      ]
     }
   ]
 }

@@ -2230,3 +2230,7 @@ The owner asked for an option on Social posts to show the total time elapsed ("t
 - **The changelog shows the last three days only** (owner, same day): older days stay in the
   file and in the sidebar back to September 20, greyed, and clicking them does nothing. Counted
   from the reader's today, so days drop off on their own; the newest day always shows.
+- **Docs off for now** (owner, same night): not built, `/docs` redirects to the homepage, and
+  the Docs links are gone from the homepage and the changelog. The page and its text are kept.
+- **The Track list lost its icons and connecting line** ("looks too ai"): each line has a thin
+  accent bar beside its words, and while the tour runs the lines not on show grey out.

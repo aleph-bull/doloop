@@ -999,7 +999,9 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   disliked them). The closing reads "The study app." with a hand-drawn underline under
   "The". Three clips are made from YouTube videos the owner downloaded; see
   apps/site/README.md before publishing.
-  The docs' text lives in `apps/site/src/content/docs.html` (`/docs/`), written from the code:
+  The docs are off for now (owner, 2026-10-22: not built, `/docs` redirects home, no links;
+  how to turn them back on is in `apps/site/vite.config.js`). Their text lives in
+  `apps/site/src/content/docs.html`, written from the code:
   when a feature's labels or where it lives change, update its topic there too. Keep formulas,
   thresholds and planning rules out of it (the owner doesn't want a blueprint for a copy).
   Satoshi for headings, Inter for everything else; no eyebrow
