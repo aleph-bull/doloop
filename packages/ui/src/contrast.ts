@@ -265,3 +265,89 @@ export function rgbToHsl([r, g, b]: RGB): [number, number, number] {
   else h = (rr - gg) / d + 4;
   return [Math.round(h * 60), Math.round(s * 100), Math.round(l * 100)];
 }
+
+/** The surfaces and text a solid colour gives matte panels (see `tonalSurfaces`). */
+export interface TonalSurfaces {
+  /** The colour itself, the page. */
+  bg: RGB;
+  /** Cards, the top bar or sidebar, and dialogs. */
+  card: RGB;
+  /** Things lifted off a card: menus, popovers. */
+  raised: RGB;
+  /** Wells set into a card. */
+  sunken: RGB;
+  /** Text on cards. */
+  ink: RGB;
+  inkMuted: RGB;
+  inkSubtle: RGB;
+  /** Text straight on the colour. */
+  page: RGB;
+  pageMuted: RGB;
+  pageSubtle: RGB;
+  /** Light text on the cards (the dark theme), else dark. */
+  lightText: boolean;
+}
+
+const clampPct = (v: number) => Math.max(0, Math.min(100, v));
+
+/** hsl(h, s, l), moving l by `step` until `against` reads on it (or it on `against`) at `ratio`. */
+function shadeUntil(
+  h: number,
+  s: number,
+  l: number,
+  step: number,
+  against: RGB,
+  ratio: number,
+): { rgb: RGB; l: number } {
+  let lig = clampPct(l);
+  while (contrastRatio(hslToRgb(h, s, lig), against) < ratio && lig > 0 && lig < 100)
+    lig = clampPct(lig + step);
+  return { rgb: hslToRgb(h, s, lig), l: lig };
+}
+
+/**
+ * Matte panels over a solid colour: every surface a shade of that colour, and the text
+ * tinted with its hue, rather than the theme's own blue-greys on top of it. A dark colour
+ * gets cards a step lighter, a light one cards a step whiter (paper), and
+ * a bright colour under the dark theme cards deep enough for light text. Every text colour
+ * is moved only as far as it takes to clear its ratio: 7:1 for the main text, 6:1 for
+ * muted, 4.6:1 for the quietest.
+ */
+export function tonalSurfaces(bg: RGB, theme: 'light' | 'dark'): TonalSurfaces {
+  const [h, s, l] = rgbToHsl(bg);
+  const lightText = theme === 'dark';
+  // Cards keep the hue but not a bright colour's full strength, so they read as surfaces.
+  const cs = Math.min(s, lightText ? 40 : 30);
+  const inkS = Math.min(s, lightText ? 12 : 25);
+  // Quieter text is greyer too, or a warm colour turns it olive.
+  const quietS = Math.round(inkS * 0.6);
+  const card = lightText
+    ? shadeUntil(h, cs, l <= 30 ? l + 4 : l - 10, -1, TEXT_LIGHT, 7)
+    : shadeUntil(h, cs, l >= 70 ? l + (100 - l) * 0.6 : l + 10, 1, TEXT_DARK, 7);
+  const raised = hslToRgb(h, cs, clampPct(card.l + (lightText ? 4 : 2)));
+  const sunken = hslToRgb(h, cs, clampPct(card.l - 3));
+  const away = lightText ? 1 : -1;
+  const ink = shadeUntil(h, inkS, lightText ? 95 : 11, away, card.rgb, 7).rgb;
+  const inkMuted = shadeUntil(h, quietS, lightText ? 74 : 33, away, card.rgb, 6).rgb;
+  const inkSubtle = shadeUntil(h, quietS, lightText ? 62 : 42, away, card.rgb, 4.6).rgb;
+  // The page's own text follows the colour, whatever the theme: dark on a light colour.
+  const pageLight = readsLight(bg);
+  const pageAway = pageLight ? 1 : -1;
+  const pageS = Math.min(s, pageLight ? 12 : 25);
+  const page = shadeUntil(h, pageS, pageLight ? 96 : 11, pageAway, bg, 7).rgb;
+  const pageMuted = shadeUntil(h, pageS, pageLight ? 80 : 30, pageAway, bg, 5).rgb;
+  const pageSubtle = shadeUntil(h, pageS, pageLight ? 70 : 40, pageAway, bg, 4.6).rgb;
+  return {
+    bg,
+    card: card.rgb,
+    raised,
+    sunken,
+    ink,
+    inkMuted,
+    inkSubtle,
+    page,
+    pageMuted,
+    pageSubtle,
+    lightText,
+  };
+}

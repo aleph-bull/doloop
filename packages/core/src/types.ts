@@ -49,6 +49,8 @@ export type ReducedMotion = 'system' | 'on' | 'off';
 export type QuoteMode = 'quotes' | 'research-tips' | 'both' | 'off';
 export type ThemeMode = 'system' | 'light' | 'dark' | 'recommended';
 export type PanelStyle = 'opaque' | 'glass' | 'custom' | 'matte';
+/** A faint pattern over a plain background (a solid colour or a gradient). */
+export type BackgroundTexture = 'none' | 'grain' | 'dots' | 'grid';
 /** 'accent' follows the app accent, 'custom' is one chosen colour, 'gradient' sweeps from the accent. */
 export type VisualizerColorMode = 'accent' | 'custom' | 'gradient';
 export const CUSTOM_BACKGROUND_UPLOAD = 'upload';
@@ -128,6 +130,8 @@ export interface UserSettings {
     glassBlur: number;
     /** How much the glass deepens the colours behind it, 100..200 (%). */
     glassSaturate: number;
+    /** Pattern over a plain background; photos and uploads never show it. */
+    texture: BackgroundTexture;
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
     extensionBackground: string;
     /** The user's own accent colours ('custom:h,s,l'), kept beside the built-in ones. */

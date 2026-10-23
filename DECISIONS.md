@@ -2254,6 +2254,53 @@ The owner asked for three things in one message: an option to post to friends on
 - **The carousel** (`Carousel` in PostCard.tsx): one frame at the first file's shape, kept between 4:5 and 16:9 (Instagram's range is 4:5 to 1.91:1), swiped on a touch screen (scroll snapping), arrows on hover on a computer, "2/4" in the corner and dots under it. Pictures fill the frame; the video sits in it on black, and pauses when swiped away. One file shows as before.
 - Tests: `post-files.test.ts` (the session rule, the carousel, friends only), an R2 case in `social-media.test.ts`; older tests now post a session each. Checked in a sandbox: a picture, the video and two pictures in one post at computer and phone widths (arrows, swipe, the video pausing), a friends-only post, and the composer listing only the sessions still free.
 
+## Preset themes, and solid colours that look finished, 2026-10-22 (owner request)
+
+The owner asked for preset themes: the current default named **Dawn Skies**, minimalist
+themes in **off white, Discord blue and Claude grey**, things that make solid-colour themes
+look better, a tag on each theme (minimalist, nature, cities and so on), and all of it in
+Settings › Appearance.
+
+- **Themes** (`packages/core/src/theme-presets.ts`, `components/ThemePicker.tsx`) sit at the
+  top of Appearance. A theme sets light or dark, accent, background,
+  panels, glass and texture in one click; the one in use is ticked (`matchingThemePreset`,
+  which ignores what doesn't show: glass on matte panels, a texture on a photo). Tags:
+  Minimalist, Nature, Cities, Night, Abstract, as a filter and in each card's foot. Under
+  All, two rows show until "Show all themes", like the background picker.
+- **Dawn Skies is the default exactly** (built from `DEFAULT_SETTINGS`), so new accounts
+  are on it. Nineteen themes: Dawn Skies, Off White (#f4f1ea, light, ink blue, grain),
+  Night Shift (#313338, the owner's Discord dark blue-grey, with a blurple accent; a first
+  try on the bright blurple itself was the wrong shade), Warm Charcoal (#262624, the
+  owner's Claude grey, with a clay deep enough for white labels), Quiet Stone (Graphite,
+  matte, grain), then photo themes (glass, Recommended mode).
+  Every background in them is a free one, which the tests check.
+- **No other company's name on a theme** (owner): only Dawn Skies and Off White kept the
+  names from the request; every other theme has its own name, not its background's.
+- **Matte on a solid colour takes its shades from it** (`tonalSurfaces` in contrast.ts,
+  applied by `applyUserTheme`, mapped in styles.css under `data-tonal`). Glass over a flat
+  colour has nothing to blur and laid the theme's blue-greys over it, which read muddy. Now
+  cards, the sidebar or top bar, and dialogs are a shade of the colour (a step lighter on a
+  dark one; a step whiter on a light one, like paper; deep enough for
+  light text on a bright one), text takes the colour's hue, borders are hairlines and
+  shadows short. Every text colour is measured: 7:1 main, 6:1 muted, 4.6:1 quietest, and
+  the contrast audit now checks the three minimalist colours and a few hard ones in both
+  modes. Only with Matte panels and a solid colour; other panels are as before.
+- **Texture** (`settings.theme.texture`: none, grain, dots, grid; API-validated, so Render
+  must be on this commit before it saves on komogon.app) shows under Background for a
+  solid colour or a Minimal gradient. A faint layer in the Backdrop; photos never get one.
+- The light/dark field is now labelled **Mode**, so it isn't read as the Themes above it.
+- **Saved looks are the Custom tab** of Themes (owner, same day), beside All and the tags,
+  with no heading of their own. The picker opens on Custom when there is at least one saved
+  look in this browser, otherwise on All. All lists the preset themes only.
+- Saved looks keep the texture too. The extension popup gets the texture and matte shades.
+
+- **Docs off for now** (owner, same night): not built, `/docs` redirects to the homepage, and
+  the Docs links are gone from the homepage and the changelog. The page and its text are kept.
+- **The Track list lost its icons and connecting line** ("looks too ai"): each line has a thin
+  accent bar beside its words, and while the tour runs the lines not on show grey out.
+- **The closing heading is "Try it out!"** (owner, same night): the hand-drawn underline under
+  "The" looked ugly, so it and "The study app." are gone.
+
 ## Jack mode: a die decides each break, 2026-10-22 (user request)
 
 The owner asked for "Jack mode", named after their friend Jack Chow: after every work session a dice animation plays and rolls a break from -1x (no break) to 3x, with odds that average -0.2x. Off by default, turned on only in Settings › Timer near the Pomodoro settings, with their warning under it. On for Jack Chow once pushed. Anyone with more than 45 minutes of sessions with it on gets the badge "Gambler" and a dice emoji by their name; the profile gets the break won and lost; achievements for how many times they rolled.

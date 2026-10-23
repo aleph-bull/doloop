@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import type { BackgroundTexture } from '@komogon/core';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { backgroundById, photoScrimCss } from '../backgrounds';
 import { adaptToPhoto, chooseGlass, THEME_GLASS, type GlassChoice, type RGB } from '../contrast';
 import type { ResolvedTheme } from '../theme';
@@ -15,6 +16,41 @@ export interface BackdropProps {
   assetBase?: string;
   /** Someone's own glass colour and weight (Appearance › Advanced). */
   glass?: GlassChoice;
+  /** A faint pattern over a solid colour or gradient. Photos and uploads never get one. */
+  texture?: BackgroundTexture;
+}
+
+/** A tile of fine noise: dark specks on a light background, light ones on a dark. */
+function grainTile(light: boolean): string {
+  const c = light ? 0 : 1;
+  const svg =
+    "<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'>" +
+    "<filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/>" +
+    `<feColorMatrix values='0 0 0 0 ${c} 0 0 0 0 ${c} 0 0 0 0 ${c} 1.6 0 0 0 -0.62'/></filter>` +
+    "<rect width='100%' height='100%' filter='url(#g)'/></svg>";
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+/** The texture layer's style over a background of the given luminance (0..1). */
+export function textureStyle(texture: BackgroundTexture, luminance: number): CSSProperties | null {
+  const light = luminance > 0.45;
+  const mark = (a: number) => (light ? `rgb(30 26 18 / ${a})` : `rgb(255 255 255 / ${a})`);
+  switch (texture) {
+    case 'grain':
+      return { backgroundImage: grainTile(light), opacity: light ? 0.1 : 0.08 };
+    case 'dots':
+      return {
+        backgroundImage: `radial-gradient(circle, ${mark(light ? 0.16 : 0.11)} 1px, transparent 1.5px)`,
+        backgroundSize: '20px 20px',
+      };
+    case 'grid':
+      return {
+        backgroundImage: `linear-gradient(${mark(light ? 0.06 : 0.045)} 1px, transparent 1px), linear-gradient(90deg, ${mark(light ? 0.06 : 0.045)} 1px, transparent 1px)`,
+        backgroundSize: '32px 32px',
+      };
+    default:
+      return null;
+  }
 }
 
 /** The wash over a photo that keeps text straight on the backdrop readable. */
@@ -125,6 +161,7 @@ export function Backdrop({
   customImageUrl,
   assetBase = '',
   glass,
+  texture = 'none',
 }: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
@@ -172,6 +209,7 @@ export function Backdrop({
   const imageUrl = customImageUrl && uploadOk ? customImageUrl : null;
   // `src` has no leading slash, so an empty base resolves to the app root.
   const photoUrl = photo ? `${assetBase}/${photo.src}` : null;
+  const pattern = photo || customImageUrl ? null : textureStyle(texture, variant.luminance);
 
   return (
     <div aria-hidden style={{ position: 'fixed', inset: 0, zIndex: -1 }}>
@@ -189,6 +227,7 @@ export function Backdrop({
             : { background: variant.css }),
         }}
       />
+      {pattern && <div style={{ position: 'absolute', inset: 0, ...pattern }} />}
       {(imageUrl || photoUrl) && (
         <div
           style={{

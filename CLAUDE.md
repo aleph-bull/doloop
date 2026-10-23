@@ -246,6 +246,14 @@ and never explain the difference on screen.
 - The glass's colour, weight, blur and colour boost are settings (Appearance › Advanced ›
   Glass, `settings.theme.glass*`); the defaults are the owner's pick, 11px blur and no boost.
   Use `--glass-blur` and `--glass-saturate` in new glass, never fixed numbers.
+- **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in
+  `packages/core/src/theme-presets.ts` (Dawn Skies is the default, built from
+  `DEFAULT_SETTINGS`; only free backgrounds, tested). **Matte panels on a solid colour are
+  shaded from it** (`tonalSurfaces` in contrast.ts, set by `applyUserTheme` as `--tone-*`
+  and `data-tonal`, mapped onto the theme tokens in styles.css): new surfaces should use
+  the usual tokens (`--ink`, `--matte-fill`, `--glass-solid`, `--accent-text`), which
+  follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
+  never use another company's name (owner).
 - Sideways overflow is clipped on `#root` (`overflow-x: clip`). Not on html or body: those
   pass it to the window as hidden, which blocks the scroll wheel but still lets
   `scrollIntoView` shift the whole page sideways with no way back.
@@ -1011,10 +1019,12 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   interlude of floating timelapses (no clocks: the owner disliked them), a drum of sixteen
   looks, a focus screen that grows to fill the window, a Share bento, then the calendar. The
   devices now show with the headline. No pastel fields behind screenshots (the owner
-  disliked them). The closing reads "The study app." with a hand-drawn underline under
-  "The". Three clips are made from YouTube videos the owner downloaded; see
+  disliked them). The closing reads "Try it out!" (the owner found the hand-drawn
+  underline ugly). Three clips are made from YouTube videos the owner downloaded; see
   apps/site/README.md before publishing.
-  The docs' text lives in `apps/site/src/content/docs.html` (`/docs/`), written from the code:
+  The docs are off for now (owner, 2026-10-22: not built, `/docs` redirects home, no links;
+  how to turn them back on is in `apps/site/vite.config.js`). Their text lives in
+  `apps/site/src/content/docs.html`, written from the code:
   when a feature's labels or where it lives change, update its topic there too. Keep formulas,
   thresholds and planning rules out of it (the owner doesn't want a blueprint for a copy).
   Satoshi for headings, Inter for everything else; no eyebrow
