@@ -1,3 +1,4 @@
+import { clearBackdropCache } from '@komogon/ui';
 import {
   createClient,
   type Session as SupabaseSession,
@@ -347,6 +348,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     if (supabase) await supabase.auth.signOut();
+    // The blurred background kept between visits may be someone's own uploaded photo.
+    void clearBackdropCache();
     try {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(EMAIL_KEY);

@@ -20,6 +20,8 @@ export { Bars, CHART_SERIES, DataTable, LineChart, StackedBars } from './compone
 export { Heatmap, type HeatmapDay, type HeatmapProps } from './components/Heatmap';
 export { Backdrop, sampleImage, textureStyle } from './components/Backdrop';
 export { pinnedGlassWorks, watchGlassPanes } from './glass-image';
+export { clearBackdropCache } from './backdrop-cache';
+export { finishBackdropTuning, tuneBackdrop } from './backdrop-tuning';
 export { BackgroundThumb, type BackgroundThumbProps } from './components/BackgroundThumb';
 export { LogoMark, type LogoMarkProps } from './components/LogoMark';
 export {

@@ -4,7 +4,7 @@
  * A glass card blurs whatever is behind it, and the browser redoes that blur on every frame
  * while the page scrolls: the costliest thing the app draws. Most cards sit straight on the
  * backdrop photo, though, so what they show is always the same photo, blurred. So the photo
- * is blurred once (`makeGlassImage`, by the Backdrop), and each of those cards gets a pane
+ * is blurred once (`blurPhoto`, by the Backdrop, kept between visits), and each card gets a pane
  * (`watchGlassPanes`) showing its slice of that image, pinned to the window like the photo
  * itself. styles.css then turns the card's own blur off. Anything that floats over other
  * content (the nav, dialogs, menus, toasts) keeps the real blur, and so does a card while it,
@@ -46,7 +46,7 @@ export function pinnedGlassWorks(): boolean {
 let canvasBlurs: boolean | null = null;
 
 /** Whether this browser's canvas can blur (older Safari ignores `filter` on a canvas). */
-function canvasCanBlur(): boolean {
+export function canvasCanBlur(): boolean {
   if (canvasBlurs !== null) return canvasBlurs;
   try {
     const canvas = document.createElement('canvas');
@@ -86,17 +86,28 @@ export function coverPlacement(
   return { size: `${w}px ${h}px`, x: `${(width - w) / 2}px`, y: `${(height - h) / 2}px` };
 }
 
+/** A blurred photo as a file, and the size of the photo it was made from. */
+export interface BlurredPhoto {
+  blob: Blob;
+  width: number;
+  height: number;
+}
+
 /**
- * The photo blurred as glass shows it, for a backdrop of `width` × `height` (the photo is
- * drawn to cover it, so its scale there sets how far to blur). `blur` is in CSS pixels. Null
- * when the browser can't make it; the cards keep their own blur. The caller revokes the URL.
+ * The photo at `src` blurred by `blur` CSS pixels as it shows covering a backdrop of
+ * `width` × `height` (its scale there sets how far to blur): the glass cards' image, and the
+ * background's own blur. `workBlur` is how many of the image's own pixels that blur comes
+ * to: the image is made only as big as that needs. Null when the browser can't blur a
+ * canvas; the cards then keep their own blur.
  */
-export async function makeGlassImage(
+export async function blurPhoto(
   src: string,
   blur: number,
   width: number,
   height: number,
-): Promise<GlassImage | null> {
+  workBlur = WORK_BLUR,
+  type = 'image/png',
+): Promise<BlurredPhoto | null> {
   if (blur <= 0 || !canvasCanBlur()) return null;
   const img = new Image();
   img.decoding = 'async';
@@ -108,12 +119,12 @@ export async function makeGlassImage(
   // The photo covers the backdrop, so one of its pixels is `cover` CSS pixels on screen.
   const cover = Math.max(width / iw, height / ih);
   const photoBlur = blur / cover;
-  const scale = Math.min(1, WORK_BLUR / photoBlur);
+  const scale = Math.min(1, workBlur / photoBlur);
   const w = Math.max(1, Math.round(iw * scale));
   const h = Math.max(1, Math.round(ih * scale));
-  const workBlur = photoBlur * scale;
+  const canvasBlur = photoBlur * scale;
   // Past the photo's edges a stretched copy, so the blur pulls in photo there, not nothing.
-  const pad = Math.ceil(workBlur * 3);
+  const pad = Math.ceil(canvasBlur * 3);
   const padded = document.createElement('canvas');
   padded.width = w + 2 * pad;
   padded.height = h + 2 * pad;
@@ -126,10 +137,10 @@ export async function makeGlassImage(
   p.imageSmoothingQuality = 'high';
   p.drawImage(img, 0, 0, padded.width, padded.height);
   p.drawImage(img, pad, pad, w, h);
-  o.filter = `blur(${workBlur}px)`;
+  o.filter = `blur(${canvasBlur}px)`;
   o.drawImage(padded, -pad, -pad);
-  const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/png'));
-  return blob ? { url: URL.createObjectURL(blob), width: iw, height: ih } : null;
+  const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, type, 0.92));
+  return blob ? { blob, width: iw, height: ih } : null;
 }
 
 /** Transform-like properties: a card or anything around it changing one comes loose. */

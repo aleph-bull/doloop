@@ -1,8 +1,16 @@
 import type { BackgroundTexture } from '@komogon/core';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { cachedBlur, sourceKey } from '../backdrop-cache';
+import { clearBackdropDraft, useBackdropDraft } from '../backdrop-tuning';
 import { backgroundById, photoScrimCss } from '../backgrounds';
 import { adaptToPhoto, chooseGlass, THEME_GLASS, type GlassChoice, type RGB } from '../contrast';
-import { coverPlacement, makeGlassImage, pinnedGlassWorks, type GlassImage } from '../glass-image';
+import {
+  blurPhoto,
+  canvasCanBlur,
+  coverPlacement,
+  pinnedGlassWorks,
+  type GlassImage,
+} from '../glass-image';
 import type { ResolvedTheme } from '../theme';
 
 export interface BackdropProps {
@@ -24,10 +32,25 @@ export interface BackdropProps {
    * once for the cards that sit straight on it (glass-image.ts); the app shell passes it.
    */
   frost?: { blur: number; saturate: number };
+  /**
+   * The photo's own blur (px) and brightness (-60..60), from Appearance. The blur is made
+   * once and kept between visits (backdrop-cache.ts); while it is being moved in Settings,
+   * the browser blurs the photo live (backdrop-tuning.ts).
+   */
+  adjust?: { blur: number; brightness: number };
 }
 
 /** Wait this long after the window stops changing size before blurring the photo again. */
 const RESIZE_SETTLE_MS = 300;
+
+/**
+ * How many of the blurred background's own pixels its blur comes to (`blurPhoto`). It fills
+ * the screen, so it keeps a little more detail than the cards' image.
+ */
+const PHOTO_WORK_BLUR = 8;
+
+/** If a save from Settings never lands, the saved look comes back after this long. */
+const DRAFT_GIVE_UP_MS = 10_000;
 
 /** What the blurred photo puts on <html> for the cards' panes (styles.css). */
 const GLASS_IMAGE_VARS = [
@@ -74,6 +97,22 @@ export function textureStyle(texture: BackgroundTexture, luminance: number): CSS
 interface PageWash {
   color: RGB;
   alpha: number;
+}
+
+/** The photo made darker (black over it) or lighter (white over it), from -60..60. */
+function toneOf(brightness: number): PageWash | null {
+  if (!brightness) return null;
+  return {
+    color: brightness < 0 ? [0, 0, 0] : [255, 255, 255],
+    alpha: Math.min(60, Math.abs(brightness)) / 100,
+  };
+}
+
+/** The photo's average colour under its tone, which the text and glass are worked out from. */
+function toned(avg: RGB, tone: PageWash | null): RGB {
+  if (!tone) return avg;
+  const mix = (i: number) => Math.round(avg[i]! * (1 - tone.alpha) + tone.color[i]! * tone.alpha);
+  return [mix(0), mix(1), mix(2)];
 }
 
 /** Every token `applyGlass` may set inline, so a plain gradient can clear them all. */
@@ -180,17 +219,31 @@ export function Backdrop({
   glass,
   texture = 'none',
   frost,
+  adjust,
 }: BackdropProps) {
   // Memoised: a solid colour's definition is built per call, and the effects below key on it.
   const def = useMemo(() => backgroundById(backgroundId), [backgroundId]);
   const variant = theme === 'dark' ? def.dark : def.light;
   const photo = customImageUrl ? null : def.photo;
   const solid = customImageUrl ? null : def.solid;
-  const [uploadOk, setUploadOk] = useState(false);
+  const [uploadAvg, setUploadAvg] = useState<RGB | null>(null);
   const [wash, setWash] = useState<PageWash | null>(null);
   // Kept as plain values, so a new settings object with the same glass changes nothing.
   const glassColor = glass?.color ?? null;
   const glassAlpha = glass?.alpha ?? null;
+
+  // What is being tried in Settings, over what is saved. Only the app's own backdrop, which
+  // is given `adjust`, follows it; the sign-in page's never does.
+  const tuning = useBackdropDraft();
+  const draft = adjust ? tuning : null;
+  const savedBlur = adjust?.blur ?? 0;
+  const savedBrightness = adjust?.brightness ?? 0;
+  const brightness = draft?.brightness ?? savedBrightness;
+  // Darker or lighter: a photo only; a colour is just picked darker or lighter.
+  const tone = useMemo(
+    () => (photo || customImageUrl ? toneOf(brightness) : null),
+    [photo, customImageUrl, brightness],
+  );
 
   // Shipped photographs: apply synchronously on change, so text never renders unreadable.
   useEffect(() => {
@@ -199,41 +252,112 @@ export function Backdrop({
     setWash(
       solid
         ? applyGlass(solid, theme, 'solid', chosen)
-        : applyGlass(photo ? photo.avg : null, theme, 'photo', chosen),
+        : applyGlass(photo ? toned(photo.avg, tone) : null, theme, 'photo', chosen),
     );
-  }, [photo, solid, customImageUrl, theme, glassColor, glassAlpha]);
+  }, [photo, solid, customImageUrl, theme, glassColor, glassAlpha, tone]);
 
   // A user's own image has to be measured in the browser.
   useEffect(() => {
     if (!customImageUrl) {
-      setUploadOk(false);
+      setUploadAvg(null);
       return;
     }
     let cancelled = false;
     sampleImage(customImageUrl)
       .then((avg) => {
-        if (cancelled) return;
-        setWash(applyGlass(avg, theme, 'photo', { color: glassColor, alpha: glassAlpha }));
-        setUploadOk(true);
+        if (!cancelled) setUploadAvg(avg);
       })
       .catch(() => {
-        if (!cancelled) setUploadOk(false);
+        if (!cancelled) setUploadAvg(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [customImageUrl, theme, glassColor, glassAlpha]);
+  }, [customImageUrl]);
+  useEffect(() => {
+    if (!customImageUrl || !uploadAvg) return;
+    const chosen = { color: glassColor, alpha: glassAlpha };
+    setWash(applyGlass(toned(uploadAvg, tone), theme, 'photo', chosen));
+  }, [customImageUrl, uploadAvg, theme, glassColor, glassAlpha, tone]);
 
-  const imageUrl = customImageUrl && uploadOk ? customImageUrl : null;
+  const imageUrl = customImageUrl && uploadAvg ? customImageUrl : null;
   // `src` has no leading slash, so an empty base resolves to the app root.
   const photoUrl = photo ? `${assetBase}/${photo.src}` : null;
   const pattern = photo || customImageUrl ? null : textureStyle(texture, variant.luminance);
-
-  // The photo blurred once for the cards' panes (glass-image.ts). Not for a PNG upload,
-  // which may be see-through, and not with a colour boost: those cards keep blurring.
-  const glassSrc = imageUrl?.startsWith('data:image/jpeg') ? imageUrl : imageUrl ? null : photoUrl;
-  const glassBlur = frost && frost.saturate === 100 ? frost.blur : null;
+  const src = imageUrl ?? photoUrl;
+  // What the kept images are filed under: a shipped photo by its path and colour (a new
+  // photo under the same name has a new colour), an upload by a hash of the image itself.
+  const srcKey = useMemo(
+    () => (photoUrl && photo ? `${photo.src}#${photo.avg.join(',')}` : src && sourceKey(src)),
+    [photoUrl, photo, src],
+  );
   const layerRef = useRef<HTMLDivElement>(null);
+
+  // The photo's own blur, made once and kept (backdrop-cache.ts). While it is moved in
+  // Settings the browser blurs the sharp photo live, and the photo is made at the new blur
+  // only once Appearance is left (`done`).
+  const blur = src ? (draft?.blur ?? savedBlur) : 0;
+  const moving = draft?.blur !== undefined && !draft.done;
+  const canBake = useMemo(() => canvasCanBlur(), []);
+  const [bakeBlur, setBakeBlur] = useState(blur);
+  if (!moving && bakeBlur !== blur) setBakeBlur(blur);
+  const bakeKey = srcKey && bakeBlur > 0 && canBake ? `${srcKey}|${bakeBlur}` : null;
+  const [baked, setBaked] = useState<{ key: string; url: string } | null>(null);
+  // A photo that couldn't be blurred this way is blurred live instead.
+  const [failed, setFailed] = useState<string | null>(null);
+  useEffect(() => {
+    const layer = layerRef.current;
+    if (!bakeKey || !src || !layer) return;
+    let cancelled = false;
+    const { clientWidth: width, clientHeight: height } = layer;
+    cachedBlur('photo', bakeKey, () =>
+      blurPhoto(src, bakeBlur, width, height, PHOTO_WORK_BLUR, 'image/webp'),
+    )
+      .then((made) => {
+        if (cancelled) return;
+        if (made) setBaked({ key: bakeKey, url: URL.createObjectURL(made.blob) });
+        else setFailed(bakeKey);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(bakeKey);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [bakeKey, src, bakeBlur]);
+  useEffect(() => {
+    if (!baked) return;
+    const { url } = baked;
+    // A moment after it's replaced, so a glass image still being made from it can finish.
+    return () => void window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, [baked]);
+  const bakedUrl = baked && baked.key === bakeKey && bakeBlur === blur ? baked.url : null;
+  const cantBake = !canBake || (!!bakeKey && failed === bakeKey);
+  // The browser's own blur over the sharp photo: while the blur is being chosen and until
+  // it's made, on an upload until it's made, and where it can't be made. A shipped photo's
+  // soft placeholder shows instead while it's made the first time.
+  const live = blur > 0 && !bakedUrl && (draft?.blur !== undefined || cantBake || !photo);
+  const shownUrl = blur === 0 ? src : (bakedUrl ?? (live ? src : null));
+
+  // Once the saved settings show what was tried in Settings and the photo is made at it,
+  // the draft goes.
+  useEffect(() => {
+    if (!draft?.done) return;
+    const saved =
+      (draft.blur === undefined || draft.blur === savedBlur) &&
+      (draft.brightness === undefined || draft.brightness === savedBrightness);
+    const ready = blur === 0 || !!bakedUrl || cantBake;
+    const wait = window.setTimeout(clearBackdropDraft, saved && ready ? 0 : DRAFT_GIVE_UP_MS);
+    return () => window.clearTimeout(wait);
+  }, [draft, savedBlur, savedBrightness, blur, bakedUrl, cantBake]);
+
+  // The photo blurred once for the cards' panes (glass-image.ts), from the blurred photo when
+  // it has a blur of its own. Not for a PNG upload, which may be see-through, not with a
+  // colour boost, and not while the browser blurs the photo live: those cards keep blurring.
+  const glassOk = !imageUrl || imageUrl.startsWith('data:image/jpeg');
+  const glassSrc = glassOk && !live ? (blur === 0 ? src : bakedUrl) : null;
+  const glassBlur = frost && frost.saturate === 100 ? frost.blur : null;
+  const glassKey = `${srcKey}|${blur}|${glassBlur}`;
   useEffect(() => {
     const layer = layerRef.current;
     if (!glassSrc || glassBlur === null || !layer || !pinnedGlassWorks()) return;
@@ -254,12 +378,14 @@ export function Backdrop({
     };
     const make = () => {
       made = size();
-      makeGlassImage(glassSrc, glassBlur, made.width, made.height)
-        .then((next) => {
-          if (cancelled || !next) {
-            if (next) URL.revokeObjectURL(next.url);
-            return;
-          }
+      const { width, height } = made;
+      // Kept between visits too, for this window size (backdrop-cache.ts).
+      cachedBlur('glass', `${glassKey}|${width}x${height}`, () =>
+        blurPhoto(glassSrc, glassBlur, width, height),
+      )
+        .then((blurred) => {
+          if (cancelled || !blurred) return;
+          const next = { ...blurred, url: URL.createObjectURL(blurred.blob) };
           const old = image;
           image = next;
           root.style.setProperty('--glass-image', `url("${next.url}")`);
@@ -292,13 +418,18 @@ export function Backdrop({
       for (const v of GLASS_IMAGE_VARS) root.style.removeProperty(v);
       if (image) URL.revokeObjectURL(image.url);
     };
-  }, [glassSrc, glassBlur]);
+  }, [glassSrc, glassBlur, glassKey]);
 
   // What the backdrop lays over the photo, laid over the blurred copy the same way.
   const washCss = wash ? `rgb(${wash.color.join(' ')} / ${wash.alpha})` : null;
+  const toneCss = tone ? rgba(tone.color, tone.alpha) : null;
   const glassOver =
     photo || imageUrl
-      ? [washCss && `linear-gradient(${washCss}, ${washCss})`, photoScrimCss(theme)]
+      ? [
+          washCss && `linear-gradient(${washCss}, ${washCss})`,
+          photoScrimCss(theme),
+          toneCss && `linear-gradient(${toneCss}, ${toneCss})`,
+        ]
           .filter(Boolean)
           .join(', ')
       : null;
@@ -328,17 +459,21 @@ export function Backdrop({
         }}
       />
       {pattern && <div style={{ position: 'absolute', inset: 0, ...pattern }} />}
-      {(imageUrl || photoUrl) && (
+      {shownUrl && (
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundImage: `url("${imageUrl ?? photoUrl}")`,
+            backgroundImage: `url("${shownUrl}")`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
         />
       )}
+      {live && (
+        <div style={{ position: 'absolute', inset: 0, backdropFilter: `blur(${blur}px)` }} />
+      )}
+      {toneCss && <div style={{ position: 'absolute', inset: 0, background: toneCss }} />}
       {/* Scrim, so a bright photo does not fight the glass. */}
       {(photo || imageUrl) && (
         <div style={{ position: 'absolute', inset: 0, background: photoScrimCss(theme) }} />

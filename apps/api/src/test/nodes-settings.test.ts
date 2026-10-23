@@ -225,6 +225,9 @@ describe('settings and profile', () => {
       glassAlpha: null,
       glassBlur: 11,
       glassSaturate: 100,
+      // The photo itself starts sharp and as it is.
+      backgroundBlur: 0,
+      backgroundBrightness: 0,
     });
     const res = await t.api({
       method: 'PATCH',
@@ -244,9 +247,21 @@ describe('settings and profile', () => {
       payload: { theme: { glassColor: null, glassAlpha: null } },
     });
     expect(back.json().settings.theme).toMatchObject({ glassColor: null, glassAlpha: null });
+    const photo = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { backgroundBlur: 12, backgroundBrightness: -30 } },
+    });
+    expect(photo.json().settings.theme).toMatchObject({
+      backgroundBlur: 12,
+      backgroundBrightness: -30,
+    });
     for (const theme of [
       { glassBlur: 41 },
       { glassSaturate: 99 },
+      { backgroundBlur: 41 },
+      { backgroundBrightness: 61 },
+      { backgroundBrightness: 2.5 },
       { glassAlpha: 0.2 },
       { glassColor: 'red' },
     ]) {

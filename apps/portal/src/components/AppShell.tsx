@@ -695,6 +695,7 @@ export function AppShell() {
         glass={appearance.glass}
         texture={appearance.texture}
         frost={appearance.frost}
+        adjust={appearance.adjust}
       />
       <a href="#main" className="skip-link">
         Skip to content

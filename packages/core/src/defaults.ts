@@ -69,6 +69,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     // The owner's pick on 2026-10-22: a light frost that leaves the card's colour in charge.
     glassBlur: 11,
     glassSaturate: 100,
+    backgroundBlur: 0,
+    backgroundBrightness: 0,
     texture: 'none',
     extensionBackground: 'same',
     savedAccents: [],

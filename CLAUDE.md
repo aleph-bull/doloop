@@ -264,6 +264,12 @@ and never explain the difference on screen.
   copies the glass-mode `.btn-primary` tints: change both together. Check it in
   headless Chrome screenshots: deleting `data-glass-image` from <html> brings the real blur
   back for a side-by-side.
+- **The background's own blur** (2026-10-23, Appearance under the background): the photo is
+  blurred on a canvas once and kept in Cache Storage (`packages/ui/src/backdrop-cache.ts`),
+  with the cards' blurred image beside it; visits and reloads read it from there. While the
+  slider moves, the browser blurs it live (`backdrop-tuning.ts`); leaving Appearance blurs it
+  for good. Brightness is a flat black or white layer, never baked. Bump `CACHE` in
+  backdrop-cache.ts when the way it is blurred changes, or old copies keep showing.
 - **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in
   `packages/core/src/theme-presets.ts` (Dawn Skies is the default, built from
   `DEFAULT_SETTINGS`; only free backgrounds, tested). **Matte panels on a solid colour are

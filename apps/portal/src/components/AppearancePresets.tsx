@@ -211,6 +211,12 @@ export function AppearancePresets({
               glassSaturate: p.glassSaturate ?? 100,
             }),
         ...(p.texture ? { texture: p.texture } : {}),
+        ...(p.backgroundBlur === undefined
+          ? {}
+          : {
+              backgroundBlur: p.backgroundBlur,
+              backgroundBrightness: p.backgroundBrightness ?? 0,
+            }),
       };
       if (p.hasImage) {
         const image = await presetImage(p.id);

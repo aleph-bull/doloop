@@ -47,6 +47,7 @@ import {
 } from '../components/SettingsNav';
 import { AccentPicker } from '../components/AccentPicker';
 import { ThemePicker } from '../components/ThemePicker';
+import { BackgroundAdjust } from '../components/BackgroundAdjust';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
 import { GlassSettings } from '../components/GlassSettings';
@@ -584,6 +585,13 @@ export function Settings() {
                     patch({ theme: { backgroundId: id, customBackgroundUrl: null } })
                   }
                 />
+                {(!!s.theme.customBackgroundUrl || !isPlainBackground(s.theme.backgroundId)) && (
+                  <BackgroundAdjust
+                    blur={s.theme.backgroundBlur}
+                    brightness={s.theme.backgroundBrightness}
+                    onChange={patch}
+                  />
+                )}
               </div>
               {!s.theme.customBackgroundUrl && isPlainBackground(s.theme.backgroundId) && (
                 <div className="field">

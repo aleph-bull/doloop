@@ -25,6 +25,9 @@ export interface AppearancePreset {
   glassAlpha?: number | null;
   glassBlur?: number;
   glassSaturate?: number;
+  /** The photo's own blur and brightness. Missing on looks saved before they existed. */
+  backgroundBlur?: number;
+  backgroundBrightness?: number;
   /** The pattern on a plain background. Missing on looks saved before it existed. */
   texture?: Theme['texture'];
 }
@@ -108,6 +111,8 @@ export async function savePreset(
     glassAlpha: theme.glassAlpha,
     glassBlur: theme.glassBlur,
     glassSaturate: theme.glassSaturate,
+    backgroundBlur: theme.backgroundBlur,
+    backgroundBrightness: theme.backgroundBrightness,
     texture: theme.texture,
   };
   if (preset.hasImage) await idb('readwrite', (s) => s.put(image, preset.id));

@@ -26,9 +26,11 @@ export interface Appearance {
   texture: BackgroundTexture;
   /** The glass's blur and colour boost, so the Backdrop can blur the photo once for cards. */
   frost: { blur: number; saturate: number };
+  /** The photo's own blur and brightness (Appearance, under the background). */
+  adjust: { blur: number; brightness: number };
 }
 
-interface Resolved extends Omit<Appearance, 'glass' | 'texture' | 'frost'> {
+interface Resolved extends Omit<Appearance, 'glass' | 'texture' | 'frost' | 'adjust'> {
   /** The background's own pick, which the Recommended mode follows; null on a gradient. */
   recommended: ResolvedTheme | null;
 }
@@ -120,6 +122,10 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
         200,
         Math.max(100, settings?.theme.glassSaturate ?? DEFAULT_SETTINGS.theme.glassSaturate),
       ),
+    },
+    adjust: {
+      blur: Math.min(40, Math.max(0, settings?.theme.backgroundBlur ?? 0)),
+      brightness: Math.min(60, Math.max(-60, settings?.theme.backgroundBrightness ?? 0)),
     },
   };
 }

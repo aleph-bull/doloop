@@ -130,6 +130,10 @@ export interface UserSettings {
     glassBlur: number;
     /** How much the glass deepens the colours behind it, 100..200 (%). */
     glassSaturate: number;
+    /** The background photo's own blur in px, 0..40. Photos and uploads only. */
+    backgroundBlur: number;
+    /** The background photo darker (below 0) or lighter (above 0), -60..60 (%). */
+    backgroundBrightness: number;
     /** Pattern over a plain background; photos and uploads never show it. */
     texture: BackgroundTexture;
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */

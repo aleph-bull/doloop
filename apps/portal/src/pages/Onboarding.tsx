@@ -133,6 +133,7 @@ export function Onboarding() {
         theme={appearance.theme}
         customImageUrl={appearance.customImageUrl}
         glass={appearance.glass}
+        adjust={appearance.adjust}
       />
       <main className="ob-page on-backdrop">
         <Glass strong className="ob-card">

@@ -2452,3 +2452,13 @@ The owner found the app's frame rate low and asked whether it was the app or the
 - **The badges' reveal on Achievements** is `backwards` now, not `both`: the same look, and a held end transform kept their slices from lining up.
 - **Measured** on the same build with Chrome's CPU renderer while scrolling, frames a second with the real blur → with panes: Home 13 → 43, Settings 17 → 55, Analytics 12 → 44, Social 16 → 52, Profile 9 → 28, Achievements 40 → 59. Rastered tiles: Analytics about 60 MB more, Social about the same.
 - **The owner's laptop** has Intel UHD graphics driving its 165 Hz screen, and an RTX 4050; browsers run on the Intel chip unless Windows is told otherwise (Settings › System › Display › Graphics).
+
+## The background's own blur and brightness, 2026-10-23 (owner request)
+
+The owner asked for the background to be made lighter or darker and blurred, set right under the background in Appearance, and for the blur to be worked out once, when Appearance is saved or left, so it isn't blurred again on every visit or reload.
+
+- **Settings:** `theme.backgroundBlur` (0-40 px) and `theme.backgroundBrightness` (-60..60), API-validated. Two sliders, Blur and Brightness, under the background picker (`BackgroundAdjust.tsx`), only on a photo or an upload: a colour is just picked lighter or darker. Saved looks keep them.
+- **Brightness** is black (darker) or white (lighter) over the photo at up to 60%, under the scrim and the page's wash. It is a flat layer, so it costs nothing to draw and isn't baked into anything; the cards' blurred image gets the same layer (`--glass-image-over`), and the text and glass are worked out from the photo's colour under it.
+- **Blur:** the Backdrop blurs the photo on a canvas (`blurPhoto` in glass-image.ts, the cards' own blur shared) and keeps it in the browser's Cache Storage (`backdrop-cache.ts`), with the cards' blurred image for each window size beside it. A visit or reload reads both from there instead of blurring again; only a new photo, a new blur or a new window size makes one. A shipped photo's soft placeholder shows for the moment it takes. Signing out empties the cache (an upload's blurred copy is someone's own photo).
+- **While dragging** (`backdrop-tuning.ts`) the browser blurs the sharp photo live, and the cards use the real blur over it. Letting go saves; leaving Appearance (another section or another page) is when the photo is blurred for good, once, at the last value.
+- Where a canvas can't blur (older Safari) the browser's live blur stays on.
