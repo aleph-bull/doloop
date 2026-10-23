@@ -14,8 +14,13 @@
 
 /** The cards that can take a pane: every card, never the strong glass of dialogs and toasts. */
 const CARDS = '.panel, .glass:not(.glass-strong)';
-/** What else blurs in glass mode (styles.css), besides cards. */
-const BLURS_TOO = '.glass, .btn-primary, .chrome';
+/** What else blurs in glass mode (styles.css), besides cards and accent buttons. */
+const BLURS_TOO = '.glass, .chrome';
+/** Accent buttons, whose blur over a card is worked out instead (`underColor`). */
+const ACCENT = '.btn-primary';
+const ACCENT_UNDER = 'pane-under';
+/** The accent buttons' colour boost in glass mode (styles.css: saturate(160%)). */
+const ACCENT_SATURATE = 1.6;
 const PANE_CLASS = 'glass-pane';
 const HAS_PANE = 'has-glass-pane';
 const PANE_HOST = 'glass-pane-host';
@@ -233,17 +238,70 @@ function wholeInside(card: HTMLElement, el: HTMLElement): boolean {
   );
 }
 
+type RGBA = [number, number, number, number];
+
+/** A computed colour as rgba (0-255, alpha 0-1); null for anything else. */
+function parseColor(c: string): RGBA | null {
+  const rgb = /^rgba?\(([\d.]+), ([\d.]+), ([\d.]+)(?:, ([\d.]+))?\)$/.exec(c);
+  if (rgb) return [+rgb[1]!, +rgb[2]!, +rgb[3]!, rgb[4] === undefined ? 1 : +rgb[4]];
+  const srgb = /^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/.exec(c);
+  if (srgb) {
+    return [
+      +srgb[1]! * 255,
+      +srgb[2]! * 255,
+      +srgb[3]! * 255,
+      srgb[4] === undefined ? 1 : +srgb[4],
+    ];
+  }
+  return null;
+}
+
+/**
+ * What an accent button inside a card blurs. While the card blurs, the button sees only what
+ * the card itself paints under it: its fill, and the flat fills of anything between. Blurred,
+ * that is the same flat colour, and the button's colour boost makes it a little brighter. So
+ * over a pane the button shows that colour under its tint instead (styles.css), and looks
+ * as it did. Null when something under it isn't flat; the card then keeps its own blur.
+ */
+function underColor(button: Element, card: Element): string | null {
+  const chain: Element[] = [];
+  for (let el = button.parentElement; el && el !== card; el = el.parentElement) chain.unshift(el);
+  let [r, g, b, a] = [0, 0, 0, 0];
+  for (const el of [card, ...chain]) {
+    const s = getComputedStyle(el);
+    if (s.backgroundImage !== 'none' || s.opacity !== '1' || s.filter !== 'none') return null;
+    const c = parseColor(s.backgroundColor);
+    if (!c) return null;
+    const out = c[3] + a * (1 - c[3]);
+    if (out > 0) {
+      const mix = (top: number, under: number) => (top * c[3] + under * a * (1 - c[3])) / out;
+      [r, g, b] = [mix(c[0], r), mix(c[1], g), mix(c[2], b)];
+    }
+    a = out;
+  }
+  // The saturate() filter's matrix, on the colour as it stands.
+  const s = ACCENT_SATURATE;
+  const clamp = (v: number) => Math.round(Math.min(255, Math.max(0, v)));
+  const sr = (0.213 + 0.787 * s) * r + (0.715 - 0.715 * s) * g + (0.072 - 0.072 * s) * b;
+  const sg = (0.213 - 0.213 * s) * r + (0.715 + 0.285 * s) * g + (0.072 - 0.072 * s) * b;
+  const sb = (0.213 - 0.213 * s) * r + (0.715 - 0.715 * s) * g + (0.072 + 0.928 * s) * b;
+  return `rgb(${clamp(sr)} ${clamp(sg)} ${clamp(sb)} / ${Math.round(a * 1000) / 1000})`;
+}
+
 /** Whether a card can show a pinned slice of the image. `seen` keeps answers for one sweep. */
 function canTakePane(card: HTMLElement, cards: string, seen: Map<HTMLElement, Around>): boolean {
   if (card.parentElement?.closest(cards)) return false; // a card inside a card
   if (card.closest('dialog, [popover]')) return false;
   const display = getComputedStyle(card).display;
   if (display === 'none' || display === 'contents') return false;
-  // Something inside that blurs too (an accent button) sees only the card's own fill while
-  // the card blurs; over a pane it would blur the photo through the card and come out
-  // different. Such a card keeps its own blur.
+  // Glass inside the card sees only the card's own paint while the card blurs; over a pane
+  // it would blur the photo through the card and come out different. Such a card keeps its
+  // own blur, unless it's an accent button whose blur can be worked out.
   for (const el of card.querySelectorAll(`${cards}, ${BLURS_TOO}`)) {
     if (el.getClientRects().length > 0) return false;
+  }
+  for (const el of card.querySelectorAll(ACCENT)) {
+    if (el.getClientRects().length > 0 && underColor(el, card) === null) return false;
   }
   if (keepsSlice(card, true) === 'breaks') return false;
   for (let el = card.parentElement; el && el !== document.body; el = el.parentElement) {
@@ -310,10 +368,18 @@ function addPane(card: HTMLElement, sizes: ResizeObserver): void {
   placePane(card);
   // The pane sits inside the card, so the card must be positioned (sticky ones already are).
   if (getComputedStyle(card).position === 'static') card.classList.add(PANE_HOST);
+  for (const button of card.querySelectorAll<HTMLElement>(ACCENT)) {
+    const under = underColor(button, card);
+    button.classList.toggle(ACCENT_UNDER, under !== null);
+    if (under) setVar(button, '--pane-under', under);
+  }
   card.classList.add(HAS_PANE);
 }
 
 function removePane(card: HTMLElement, sizes: ResizeObserver): void {
+  for (const button of card.querySelectorAll(`.${ACCENT_UNDER}`)) {
+    button.classList.remove(ACCENT_UNDER);
+  }
   card.classList.remove(HAS_PANE, PANE_HOST);
   card.querySelector(`:scope > .${PANE_CLASS}`)?.remove();
   sizes.unobserve(card);
@@ -393,7 +459,11 @@ export function watchGlassPanes(container: HTMLElement, more?: string): () => vo
     subtree: true,
   });
   const settings = new MutationObserver(queue);
-  settings.observe(root, { attributes: true, attributeFilter: ['data-glass-image', 'data-panel'] });
+  // The theme and glass colour change the fills an accent button's colour is worked out from.
+  settings.observe(root, {
+    attributes: true,
+    attributeFilter: ['data-glass-image', 'data-panel', 'data-theme', 'style'],
+  });
 
   // Moving cards, and anything moving around cards, use the real blur until they settle.
   const holdsCards = (el: Element) =>

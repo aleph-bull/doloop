@@ -259,7 +259,9 @@ and never explain the difference on screen.
   an entrance (`backwards`, never `both` or `forwards`); a card under a scroller, filter or
   mask keeps the real blur; and anything that floats over other content must be
   `glass-strong`, positioned or in a dialog, and a sticky card must never have content
-  scrolling under it, or it would show the photo instead of what is behind it. Check it in
+  scrolling under it, or it would show the photo instead of what is behind it. Accent buttons
+  on such cards get a worked-out colour under their tint (`.btn-primary.pane-under`), which
+  copies the glass-mode `.btn-primary` tints: change both together. Check it in
   headless Chrome screenshots: deleting `data-glass-image` from <html> brings the real blur
   back for a side-by-side.
 - **Preset themes** (2026-10-22): Settings › Appearance › Themes, from `THEME_PRESETS` in

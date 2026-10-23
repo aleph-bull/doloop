@@ -287,6 +287,29 @@ a:hover {
     border: inherit;
     box-shadow: inherit;
   }
+  /*
+   * An accent button on such a card: its blur only ever saw the card's flat fill, which
+   * comes out one flat colour (--pane-under, underColor in glass-image.ts), so that colour
+   * goes under its tint instead (the tints match .btn-primary in glass mode below).
+   */
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *)
+    .btn-primary.pane-under {
+    backdrop-filter: none;
+    background-color: var(--pane-under);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--accent) 38%, transparent),
+      color-mix(in srgb, var(--accent) 38%, transparent)
+    );
+  }
+  :root[data-panel='glass'][data-glass-image]
+    .has-glass-pane:not([data-glass-moving], [data-glass-moving] *)
+    .btn-primary.pane-under:hover:not(:disabled) {
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--accent) 50%, transparent),
+      color-mix(in srgb, var(--accent) 50%, transparent)
+    );
+  }
 }
 /* Opaque, custom and matte: glass cards become panels too. */
 :root:not([data-panel='glass']) .glass {
@@ -1281,7 +1304,9 @@ a:hover {
 
 /*
  * Glass mode: accent buttons are coloured glass, a tint of the accent over the backdrop,
- * and their label is the same text colour as the rest of the screen.
+ * and their label is the same text colour as the rest of the screen. On a card with a glass
+ * pane the same tints sit over a worked-out colour instead (.btn-primary.pane-under above);
+ * change both together.
  */
 :root[data-panel='glass'] .btn-primary {
   background: color-mix(in srgb, var(--accent) 38%, transparent);
