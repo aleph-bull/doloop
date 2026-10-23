@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { displayNameError } from '@komogon/core';
 import { Button, Modal, useToast } from '@komogon/ui';
 import type { PublicProfile } from '../lib/api';
 import { useUpdateSettings } from '../lib/queries';
@@ -36,6 +37,7 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
   }, [open]);
 
   const save = async () => {
+    if (displayNameError(name)) return;
     try {
       await update.mutateAsync({
         profile: { name: name.trim() || null, bio: bio.trim() || null },
@@ -57,7 +59,12 @@ export function ProfileSettingsDialog({ open, onClose, profile }: ProfileSetting
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={() => void save()} loading={update.isPending}>
+          <Button
+            variant="primary"
+            onClick={() => void save()}
+            loading={update.isPending}
+            disabled={!!displayNameError(name)}
+          >
             Save
           </Button>
         </>

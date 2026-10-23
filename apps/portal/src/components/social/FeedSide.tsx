@@ -35,6 +35,7 @@ import { NotificationsBell } from './Notifications';
 const unknown = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });
@@ -92,7 +93,10 @@ function PersonRow({
             </span>
           </span>
         ) : (
-          <span className="side-person-name">{person.name}</span>
+          <>
+            <span className="side-person-name">{person.name}</span>
+            {person.username && <span className="side-person-handle">@{person.username}</span>}
+          </>
         )}
       </Link>
       <span className="side-person-actions">{children}</span>
@@ -164,7 +168,7 @@ export function FriendsCard() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Find people"
-          aria-label="Find people by name"
+          aria-label="Find people by name or username"
         />
       </label>
       {deferred && (
@@ -348,6 +352,7 @@ export function ProfileCard() {
       <Link to="/profile" className="side-me">
         <Avatar name={name} url={avatar} size="sm" />
         <span className="side-name">{name}</span>
+        {user.username && <span className="side-uni">@{user.username}</span>}
         {uni && <span className="side-uni">{uni.name}</span>}
       </Link>
       <ul className="side-stats">

@@ -92,14 +92,17 @@ function Head({
         <Avatar name={profile.name} url={profile.avatarUrl} />
       )}
       <div className="profile-id">
-        <h1 className="page-title profile-name">
-          {profile.name}
-          {profile.gambler && (
-            <span className="profile-gambler" role="img" aria-label="Gambler" title="Gambler">
-              🎲
-            </span>
-          )}
-        </h1>
+        <div className="profile-names">
+          <h1 className="page-title profile-name">
+            {profile.name}
+            {profile.gambler && (
+              <span className="profile-gambler" role="img" aria-label="Gambler" title="Gambler">
+                🎲
+              </span>
+            )}
+          </h1>
+          {profile.username && <span className="profile-username">@{profile.username}</span>}
+        </div>
         <div className="pill-row">
           {live && (
             <span className="chip chip-neutral profile-chip profile-live">

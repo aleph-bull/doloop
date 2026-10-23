@@ -4,11 +4,13 @@ import type { Db } from '../db/client';
 import { userAssets, users, type UserRow } from '../db/schema';
 import { settingsOf } from './users';
 
-/** What anyone signed in may see of a person: the chosen name, picture and university. */
+/** What anyone signed in may see of a person: the names, picture and university. */
 export interface Person {
   id: string;
   /** The chosen name, or "Someone"; never an email. */
   name: string;
+  /** Without the @. */
+  username: string | null;
   avatarUrl: string | null;
   university: { id: string; name: string; short?: string } | null;
 }
@@ -19,6 +21,7 @@ export function personOf(row: UserRow, avatar?: { mime: string; data: string } |
   return {
     id: row.id,
     name: settings.profile.name?.trim() || 'Someone',
+    username: row.username,
     avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,
     university: uni ? { id: uni.id, name: uni.name, short: uni.short } : null,
   };

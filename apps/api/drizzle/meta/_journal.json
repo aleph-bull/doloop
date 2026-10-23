@@ -232,6 +232,13 @@
       "when": 1792721363407,
       "tag": "0032_onboarding_answers",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1792722379834,
+      "tag": "0033_usernames",
+      "breakpoints": true
     }
   ]
 }

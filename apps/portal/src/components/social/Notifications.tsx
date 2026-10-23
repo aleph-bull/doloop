@@ -11,6 +11,7 @@ import { Avatar } from './Avatar';
 const someone = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });

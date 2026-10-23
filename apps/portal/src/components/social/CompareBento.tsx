@@ -10,6 +10,7 @@ import { Avatar } from './Avatar';
 const unknown = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });

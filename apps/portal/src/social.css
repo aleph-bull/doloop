@@ -1468,6 +1468,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.side-person-handle {
+  flex: none;
+  max-width: 45%;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .side-person-actions {
   display: inline-flex;
   align-items: center;

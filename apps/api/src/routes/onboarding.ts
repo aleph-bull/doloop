@@ -25,6 +25,7 @@ const sectionEnd = z.enum(['done', 'skipped']);
 /** Some answers; `null` is a skipped question. Lists are trimmed of repeats. */
 export const onboardingPatchSchema = z
   .object({
+    name: z.literal(true),
     look: z
       .object({ id: oneOf(ONBOARDING_LOOKS), dark: z.boolean() })
       .strict()

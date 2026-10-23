@@ -82,6 +82,12 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   `account_suspended`, and the portal signs out with a message). Suspended accounts are left
   off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
   blocked from there.
+- **Usernames** (2026-10-22): every account has a unique @username (`users.username`, stored
+  without the @; rules in core `names.ts`: a to z, numbers and `_ - ! .`, no two symbols
+  together; names take no symbols). Accounts get two random words when made, and migration
+  0033 gave every older account some; the first-time setup opens with "Pick a username" (no
+  skip), and older accounts are asked once to change theirs (`UsernameNotice`). A chosen one
+  holds for 14 days. DECISIONS.md has the details.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.

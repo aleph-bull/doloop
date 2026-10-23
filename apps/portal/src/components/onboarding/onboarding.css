@@ -540,3 +540,13 @@
 .ob-actions > :last-child {
   margin-left: auto;
 }
+
+/* Your name: the username, then the name */
+.ob-names {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ob-names-go {
+  margin-left: auto;
+}

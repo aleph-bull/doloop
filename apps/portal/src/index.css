@@ -7643,6 +7643,16 @@
   margin-left: 0.3em;
   font-size: 0.85em;
 }
+.profile-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-username {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
 .profile-chip {
   display: inline-flex;
   align-items: center;
@@ -7776,6 +7786,36 @@
 .profile-uni-row .input {
   flex: 1 1 200px;
   min-width: 0;
+}
+/* The username's @ sits inside the well, before what is typed. */
+.username-input {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+.profile-uni-row .username-input {
+  flex: 1 1 200px;
+}
+.username-notice-field {
+  margin-top: 14px;
+}
+.username-input .input {
+  flex: 1;
+  padding-left: calc(var(--space-3) + 0.9em);
+}
+.username-at {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+.input[aria-invalid='true'] {
+  border-color: color-mix(in srgb, var(--status-bad) 45%, transparent);
+}
+.field-error {
+  color: color-mix(in srgb, var(--status-bad) 62%, var(--fg));
 }
 .profile-uni-row .profile-uni-code {
   flex: 0 1 140px;

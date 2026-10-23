@@ -46,6 +46,8 @@ export interface PublicProfile {
   id: string;
   /** The chosen name, or "Someone"; never an email. */
   name: string;
+  /** Without the @. */
+  username: string | null;
   university: { id: string; name: string; short?: string } | null;
   bio: string | null;
   /** The profile picture as a data URL, or null for the initial. */
@@ -161,6 +163,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       profile: {
         id: row.id,
         name: settings.profile.name?.trim() || 'Someone',
+        username: row.username,
         university: uni ? { id: uni.id, name: uni.name, short: uni.short } : null,
         bio: settings.profile.bio?.trim() || null,
         avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,

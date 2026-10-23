@@ -1,6 +1,7 @@
 import {
   dayStartUnlocksAt,
   isPlainBackground,
+  displayNameError,
   minCostUnlocksAt,
   REWARDS,
   resolveBackgroundId,
@@ -128,6 +129,8 @@ const MOVED_SECTIONS = new Map([
   ['social', 'profile'],
   ['review', 'timer'],
   ['rest-days', 'pace'],
+  // The username field, which focuses itself (`UsernameField`).
+  ['username', 'profile'],
 ]);
 
 function NumberField({
@@ -382,7 +385,11 @@ export function Settings() {
                 onBioChange={setBio}
                 onCommit={() => {
                   const next: { name?: string | null; bio?: string | null } = {};
-                  if (name !== null && name.trim() !== (s.profile.name ?? ''))
+                  if (
+                    name !== null &&
+                    !displayNameError(name) &&
+                    name.trim() !== (s.profile.name ?? '')
+                  )
                     next.name = name.trim() || null;
                   if (bio !== null && bio.trim() !== (s.profile.bio ?? ''))
                     next.bio = bio.trim() || null;

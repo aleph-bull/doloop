@@ -279,6 +279,8 @@ type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]>
 export interface PublicProfile {
   id: string;
   name: string;
+  /** Without the @. */
+  username: string | null;
   university: { id: string; name: string; short?: string } | null;
   bio: string | null;
   avatarUrl: string | null;
@@ -297,6 +299,8 @@ export interface PublicProfile {
 export interface Person {
   id: string;
   name: string;
+  /** Without the @. */
+  username: string | null;
   avatarUrl: string | null;
   university: { id: string; name: string; short?: string } | null;
 }
@@ -625,6 +629,8 @@ export const api = {
     request<{ answers: OnboardingAnswers }>('PATCH', '/api/me/onboarding', patch),
   updateSettings: (patch: DeepPartial<UserSettings>) =>
     request<{ settings: UserSettings }>('PATCH', '/api/me/settings', patch),
+  setUsername: (username: string) =>
+    request<{ user: User }>('PUT', '/api/me/username', { username }),
   regenerateIcsToken: () => request<{ icsToken: string }>('POST', '/api/me/ics-token'),
   exportData: () => request<unknown>('GET', '/api/me/export'),
   deleteAccount: () => request<void>('DELETE', '/api/me'),
