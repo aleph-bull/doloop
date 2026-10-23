@@ -409,6 +409,10 @@ export interface User {
    * Optional because the portal's offline cache can hold a user from before it existed.
    */
   devAccount?: boolean;
+  /** Unique, lower case, without the @. Null only until the first /api/me picks one. */
+  username: string | null;
+  /** When the person last chose it; null while it is still the one the app picked. */
+  usernameChangedAt: ISODateTime | null;
 }
 
 /**

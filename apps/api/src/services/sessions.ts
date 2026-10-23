@@ -42,7 +42,7 @@ import {
   type SessionRow,
   type UserRow,
 } from '../db/schema';
-import { badRequest, conflict, notFound } from '../errors';
+import { badRequest, conflict, isUniqueViolation, notFound } from '../errors';
 import type {
   endSessionSchema,
   reviewSchema,
@@ -67,15 +67,6 @@ export interface SessionView {
    * `FREE_SESSION_TITLE` for a session started with nothing picked.
    */
   nodeTitle: string;
-}
-
-/** Postgres's unique_violation, from the driver or wrapped by Drizzle. */
-function isUniqueViolation(err: unknown): boolean {
-  for (let e = err as { code?: unknown; cause?: unknown } | undefined, i = 0; e && i < 4; i++) {
-    if (e.code === '23505') return true;
-    e = e.cause as typeof e;
-  }
-  return false;
 }
 
 /** What a session with no task and no routine is called. */

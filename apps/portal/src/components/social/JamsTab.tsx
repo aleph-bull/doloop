@@ -21,6 +21,7 @@ import { Subjects } from './GroupsTab';
 const unknown = (id: string): Person => ({
   id,
   name: 'Someone',
+  username: null,
   avatarUrl: null,
   university: null,
 });

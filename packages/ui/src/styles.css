@@ -182,15 +182,6 @@ a:hover {
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   border-radius: var(--radius-lg);
 }
-/* The specular sheen: light catching the top edge. */
-.glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--glass-highlight);
-  pointer-events: none;
-}
 .glass > * {
   position: relative;
 }
@@ -244,9 +235,6 @@ a:hover {
   border-color: var(--panel-border);
   box-shadow: var(--panel-shadow);
   backdrop-filter: none;
-}
-:root:not([data-panel='glass']) .glass::before {
-  display: none;
 }
 :root[data-theme='dark']:not([data-panel='glass']) .glass {
   --accent-text: var(--accent-text-on-dark);

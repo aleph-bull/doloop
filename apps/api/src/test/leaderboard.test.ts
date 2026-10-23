@@ -43,7 +43,8 @@ describe('leaderboard', () => {
       {
         rank: 1,
         userId: USER_B.id,
-        name: 'Someone',
+        // No name of their own: their username, without its @.
+        name: expect.stringMatching(/^[a-z]+.[a-z]+$/),
         avatarUrl: null,
         focusMinutes: 120,
         you: false,

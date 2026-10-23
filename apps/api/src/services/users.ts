@@ -7,9 +7,13 @@ import {
   evaluateWeekStreak,
   levelForXp,
   materializePendingRestDays,
+  normalizeUsername,
+  randomUsername,
   resolveAccent,
   resolveBackgroundId,
   streakDay,
+  usernameError,
+  usernameUnlocksAt,
   withDefaults,
   type RestDayPolicy,
   type Session,
@@ -18,7 +22,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import { randomBytes } from 'node:crypto';
-import { and, eq, gte, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, gte, isNotNull, isNull, ne, sql } from 'drizzle-orm';
 import type { AuthUser } from '../auth/verify';
 import type { Db } from '../db/client';
 import {
@@ -31,6 +35,7 @@ import {
   type RestDayPolicyRow,
   type UserRow,
 } from '../db/schema';
+import { badRequest, conflict, isUniqueViolation } from '../errors';
 import type { SettingsPatch } from '../validation';
 import { removeAll, type MediaLog, type MediaStore } from './media-store';
 import { dt, toSession } from './sessions-mapper';
@@ -67,7 +72,7 @@ export async function ensureUser(
     .returning();
   if (row) {
     await db.insert(restDayPolicies).values({ userId: row.id }).onConflictDoNothing();
-    return row;
+    return ensureUsername(db, row);
   }
   // Lost a race with a concurrent first request; read it back.
   return (await db.query.users.findFirst({ where: eq(users.id, auth.id) }))!;
@@ -137,6 +142,8 @@ export function toUser(row: UserRow): User {
     level: row.level,
     streak: row.streak,
     devAccount: row.devAccount,
+    username: row.username,
+    usernameChangedAt: row.usernameChangedAt?.toISOString() ?? null,
   };
 }
 
@@ -276,6 +283,83 @@ export async function updateProfile(
   if (Object.keys(set).length === 0) return row;
   const [updated] = await db.update(users).set(set).where(eq(users.id, row.id)).returning();
   return updated!;
+}
+
+/**
+ * Give someone without a username a random one, two words ("quiet.otter"). New accounts get
+ * one as they are made (`ensureUser`), and migration 0033 gave every older account one;
+ * /api/me calls this too, for any row that slipped through. It doesn't count as a change:
+ * the first one the person makes is free.
+ */
+export async function ensureUsername(db: Db, row: UserRow): Promise<UserRow> {
+  if (row.username) return row;
+  for (let attempt = 0; attempt < 16; attempt++) {
+    // About four thousand pairs; if they keep colliding, a third word follows.
+    const name = randomUsername(Math.random, attempt >= 8);
+    const taken = await db.query.users.findFirst({
+      where: eq(users.username, name),
+      columns: { id: true },
+    });
+    if (taken) continue;
+    try {
+      const [updated] = await db
+        .update(users)
+        .set({ username: name })
+        .where(and(eq(users.id, row.id), isNull(users.username)))
+        .returning({ username: users.username });
+      if (updated) return { ...row, username: updated.username };
+      // Another request picked one first.
+      const current = await db.query.users.findFirst({
+        where: eq(users.id, row.id),
+        columns: { username: true },
+      });
+      return { ...row, username: current?.username ?? null };
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err;
+    }
+  }
+  return row;
+}
+
+/**
+ * Change someone's username. Unique across everyone, and once chosen it holds for
+ * `USERNAME.LOCK_DAYS` days; the one we picked can be swapped straight away.
+ */
+export async function setUsername(
+  db: Db,
+  row: UserRow,
+  raw: string,
+  now: string,
+): Promise<UserRow> {
+  const error = usernameError(raw);
+  if (error) throw badRequest(error);
+  const name = normalizeUsername(raw);
+  if (name === row.username) return row;
+  const until = usernameUnlocksAt(row.usernameChangedAt?.toISOString() ?? null, now);
+  if (until) {
+    const day = new Intl.DateTimeFormat('en', {
+      month: 'short',
+      day: 'numeric',
+      timeZone: row.timezone,
+    }).format(new Date(until));
+    throw badRequest(`You can change your username again on ${day}.`);
+  }
+  const taken = await db.query.users.findFirst({
+    where: and(eq(users.username, name), ne(users.id, row.id)),
+    columns: { id: true },
+  });
+  if (taken) throw conflict('That username is taken.');
+  try {
+    const [updated] = await db
+      .update(users)
+      .set({ username: name, usernameChangedAt: dt(now) })
+      .where(eq(users.id, row.id))
+      .returning();
+    return updated!;
+  } catch (err) {
+    if (isUniqueViolation(err)) throw conflict('That username is taken.');
+    throw err;
+  }
 }
 
 /**

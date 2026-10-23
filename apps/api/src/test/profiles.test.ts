@@ -79,14 +79,15 @@ describe('profiles', () => {
     expect(res.body).not.toContain('@example.com');
   });
 
-  it('opens someone else by id, with "Someone" when they chose no name', async () => {
+  it('opens someone else by id, with their username when they chose no name', async () => {
     const res = await t.api({ method: 'GET', url: `/api/profiles/${USER_A.id}`, token: t.tokenB });
     expect(res.statusCode).toBe(200);
     expect(res.json().profile.you).toBe(false);
     expect(res.json().profile.name).toBe('Ada');
 
     const other = await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` });
-    expect(other.json().profile).toMatchObject({ name: 'Someone', university: null, you: false });
+    expect(other.json().profile).toMatchObject({ university: null, you: false });
+    expect(other.json().profile.name).toBe(other.json().profile.username);
     expect(other.body).not.toContain('@example.com');
   });
 

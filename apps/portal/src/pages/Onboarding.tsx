@@ -1,4 +1,8 @@
 import {
+  DISPLAY_NAME_MAX,
+  displayNameError,
+  normalizeDisplayName,
+  normalizeUsername,
   NOT_IN_UNIVERSITY,
   ONBOARDING_APPS,
   ONBOARDING_CALENDARS,
@@ -8,6 +12,7 @@ import {
   type OnboardingAnswers,
   type OnboardingCalendar,
   type OnboardingLookId,
+  usernameError,
 } from '@komogon/core';
 import {
   accentHexFor,
@@ -29,17 +34,27 @@ import { eventsLabel, useRefreshFeeds } from '../components/CalendarFeedsSetting
 import { ErrorPanel } from '../components/ErrorState';
 import { backgroundStyle, cardLook, lookTheme as presetTheme } from '../components/ThemePicker';
 import { SectionProgress } from '../components/onboarding/SectionProgress';
+import { UsernameInput } from '../components/UsernameInput';
 import '../components/onboarding/onboarding.css';
 import { api, type MeResponse } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
 import { lookPatch, lookPreset } from '../lib/onboarding-looks';
-import { keys, useMe, useUpdateSettings } from '../lib/queries';
+import { useHints } from '../lib/hints';
+import { keys, useMe, useSetUsername, useUpdateSettings } from '../lib/queries';
 import { saveAnswers, setTour } from '../lib/tour';
 
-/** The questions in order, each named for the answer it fills. */
-const STEPS = ['look', 'university', 'uses', 'apps', 'calendar'] as const satisfies ReadonlyArray<
-  keyof OnboardingAnswers
->;
+/**
+ * The questions in order, each named for the answer it fills. The names come first and are
+ * the one step that can't be skipped: everyone picks a username (owner, 2026-10-22).
+ */
+const STEPS = [
+  'name',
+  'look',
+  'university',
+  'uses',
+  'apps',
+  'calendar',
+] as const satisfies ReadonlyArray<keyof OnboardingAnswers>;
 type Step = (typeof STEPS)[number];
 
 /**
@@ -126,14 +141,16 @@ export function Onboarding() {
               <LogoMark size={24} />
               Komodon
             </span>
-            <button
-              type="button"
-              className="link-button ob-skip-section"
-              onClick={() => void finish('skipped')}
-              disabled={leaving}
-            >
-              Skip section
-            </button>
+            {current !== 'name' && (
+              <button
+                type="button"
+                className="link-button ob-skip-section"
+                onClick={() => void finish('skipped')}
+                disabled={leaving}
+              >
+                Skip section
+              </button>
+            )}
           </div>
           <SectionProgress section={0} progress={step === null ? 0 : (step + 1) / STEPS.length} />
           {error ? (
@@ -144,6 +161,14 @@ export function Onboarding() {
             </div>
           ) : (
             <div key={current} className="ob-step">
+              {current === 'name' && (
+                <NamesStep
+                  onDone={() => {
+                    answer({ name: true });
+                    next();
+                  }}
+                />
+              )}
               {current === 'look' && (
                 <LookStep
                   initial={answers.look ?? null}
@@ -243,6 +268,94 @@ function Question({
           ))}
       </div>
     </>
+  );
+}
+
+/**
+ * A name (optional) and a username (required). The username box starts empty so it is the
+ * person's own pick; the random one the account was given stays until Continue saves this.
+ */
+function NamesStep({ onDone }: { onDone: () => void }) {
+  const me = useMe();
+  const update = useUpdateSettings();
+  const setUsername = useSetUsername();
+  const { dismiss } = useHints();
+  const user = me.data?.user;
+  const [name, setName] = useState(user?.settings.profile.name ?? '');
+  // Coming back to this step after a reload: the username already picked here.
+  const [username, setUsernameDraft] = useState(user?.usernameChangedAt ? user.username! : '');
+  const [refused, setRefused] = useState<string | null>(null);
+  const nameProblem = displayNameError(name);
+  const usernameProblem = refused ?? (username ? usernameError(username) : null);
+  const busy = update.isPending || setUsername.isPending;
+  const ready = username !== '' && !usernameProblem && !nameProblem;
+
+  const save = async () => {
+    if (!ready || busy) return;
+    try {
+      if (normalizeUsername(username) !== user?.username) await setUsername.mutateAsync(username);
+    } catch (err) {
+      setRefused(err instanceof Error ? err.message : 'Could not save it');
+      return;
+    }
+    const trimmed = normalizeDisplayName(name);
+    if (trimmed && trimmed !== (user?.settings.profile.name ?? ''))
+      await update.mutateAsync({ profile: { name: trimmed } }).catch(() => undefined);
+    // They picked it here: no "Change your username" later.
+    dismiss('username');
+    onDone();
+  };
+
+  return (
+    <Question
+      title="Pick a username"
+      actions={
+        <Button
+          variant="primary"
+          className="ob-names-go"
+          loading={busy}
+          disabled={!ready}
+          onClick={() => void save()}
+        >
+          Continue
+        </Button>
+      }
+    >
+      <form
+        className="ob-names"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <div className="field">
+          <label className="field-label" htmlFor="ob-username">
+            Username
+          </label>
+          <UsernameInput
+            id="ob-username"
+            aria-invalid={!!usernameProblem}
+            value={username}
+            onChange={(v) => {
+              setUsernameDraft(v);
+              setRefused(null);
+            }}
+            onEnter={() => void save()}
+          />
+          {usernameProblem && <span className="field-hint field-error">{usernameProblem}</span>}
+        </div>
+        <Input
+          label="Name (optional)"
+          placeholder="e.g. John"
+          maxLength={DISPLAY_NAME_MAX}
+          aria-invalid={!!nameProblem}
+          hint={nameProblem ? <span className="field-error">{nameProblem}</span> : undefined}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <button type="submit" hidden />
+      </form>
+    </Question>
   );
 }
 

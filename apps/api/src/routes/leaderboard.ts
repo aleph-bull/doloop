@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { addDays, startOfWeekMonday, toLocalDate } from '@komogon/core';
+import { addDays, personName, startOfWeekMonday, toLocalDate } from '@komogon/core';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
@@ -117,30 +117,30 @@ export function leaderboardRoutes(
       .limit(LEADERBOARD_SIZE);
     const friendSet = new Set(friends);
     const now = clock();
-    const streaks = new Map(
+    const accounts = new Map(
       (
         await db.query.users.findMany({
           where: inArray(
             users.id,
             rows.map((r) => r.userId),
           ),
-          columns: { id: true, streak: true },
+          columns: { id: true, streak: true, username: true },
         })
-      ).map((u) => [u.id, u.streak.current]),
+      ).map((u) => [u.id, u]),
     );
     const entries: LeaderboardEntry[] = await Promise.all(
       rows.map(async (r, i) => {
         const week = compareRow(
           r.userId,
           await loadCompletedSessions(db, r.userId),
-          streaks.get(r.userId) ?? 0,
+          accounts.get(r.userId)?.streak.current ?? 0,
           now,
           req.user.timezone,
         );
         return {
           rank: i + 1,
           userId: r.userId,
-          name: r.name?.trim() || 'Someone',
+          name: personName(r.name, accounts.get(r.userId)?.username),
           avatarUrl: r.mime && r.data ? `data:${r.mime};base64,${r.data}` : null,
           focusMinutes: Math.round(Number(r.focusSeconds) / 60),
           you: r.userId === req.user.id,

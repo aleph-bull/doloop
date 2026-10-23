@@ -786,6 +786,15 @@ export function useUpdateSettings() {
   });
 }
 
+/** Choose a username. The API checks it is free and wasn't chosen in the last 14 days. */
+export function useSetUsername() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: (username: string) => api.setUsername(username),
+    onSuccess: () => invalidate(keys.me, ['profiles'], ['social']),
+  });
+}
+
 /* ---------- tasks (undoable) ---------- */
 
 const NODE_KEYS = [keys.nodes, keys.pace, keys.active, keys.grades] as const;

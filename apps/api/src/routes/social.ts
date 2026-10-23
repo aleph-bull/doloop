@@ -813,10 +813,11 @@ export function socialRoutes(
     return { friends, incoming, outgoing, people };
   });
 
-  /** People by name, to find someone to add. Only accounts that finished onboarding. */
+  /** People by name or username, to find someone to add. Only accounts that finished onboarding. */
   app.get('/api/social/people', async (req) => {
     const { q } = z.object({ q: z.string().trim().min(1).max(60) }).parse(req.query);
     const name = sql`${users.settings} -> 'profile' ->> 'name'`;
+    const like = '%' + q.replace(/^@/, '').replace(/[%_\\]/g, '\\$&') + '%';
     const rows = await db
       .select({ id: users.id, settings: users.settings })
       .from(users)
@@ -826,7 +827,7 @@ export function socialRoutes(
           sql`${users.bannedAt} is null`,
           inWorldOf(req.user),
           sql`${users.id} <> ${req.user.id}`,
-          sql`${name} ilike ${'%' + q.replace(/[%_\\]/g, '\\$&') + '%'}`,
+          sql`(${name} ilike ${like} or ${users.username} ilike ${like})`,
         ),
       )
       .orderBy(sql`lower(${name})`)

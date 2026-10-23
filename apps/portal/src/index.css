@@ -7426,6 +7426,10 @@ button.start-subject:hover,
   box-shadow: var(--glass-border-inner), var(--glass-shadow);
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
 }
+/* The trophies keep the lit top edge the other cards lost (owner, 2026-10-22). */
+:root[data-panel='glass'] .trophy {
+  box-shadow: var(--glass-top-edge), var(--glass-border-inner), var(--glass-shadow);
+}
 :root[data-panel='custom'] .eq-card,
 :root[data-panel='custom'] .trophy {
   --fg: var(--panel-fg);
@@ -7675,7 +7679,6 @@ button.start-subject:hover,
 .preset-panel.is-glossy {
   background: rgb(255 255 255 / 0.16);
   border: 1px solid rgb(255 255 255 / 0.28);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   backdrop-filter: blur(6px);
 }
 .preset-panel.is-matte {
@@ -7871,6 +7874,16 @@ button.start-subject:hover,
   margin-left: 0.3em;
   font-size: 0.85em;
 }
+.profile-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-username {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  overflow-wrap: anywhere;
+}
 .profile-chip {
   display: inline-flex;
   align-items: center;
@@ -8004,6 +8017,36 @@ button.start-subject:hover,
 .profile-uni-row .input {
   flex: 1 1 200px;
   min-width: 0;
+}
+/* The username's @ sits inside the well, before what is typed. */
+.username-input {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+.profile-uni-row .username-input {
+  flex: 1 1 200px;
+}
+.username-notice-field {
+  margin-top: 14px;
+}
+.username-input .input {
+  flex: 1;
+  padding-left: calc(var(--space-3) + 0.9em);
+}
+.username-at {
+  position: absolute;
+  left: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fg-muted);
+  pointer-events: none;
+}
+.input[aria-invalid='true'] {
+  border-color: color-mix(in srgb, var(--status-bad) 45%, transparent);
+}
+.field-error {
+  color: color-mix(in srgb, var(--status-bad) 62%, var(--fg));
 }
 .profile-uni-row .profile-uni-code {
   flex: 0 1 140px;

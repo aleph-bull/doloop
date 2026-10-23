@@ -1,10 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { BadgeCheck, ImagePlus } from 'lucide-react';
+import {
+  DISPLAY_NAME_MAX,
+  displayNameError,
+  normalizeUsername,
+  personName,
+  usernameError,
+  usernameUnlocksAt,
+} from '@komogon/core';
 import { Button, Input, Textarea, useToast } from '@komogon/ui';
 import { api } from '../lib/api';
-import { keys, useUniversityStatus } from '../lib/queries';
+import { fmtDate } from '../lib/format';
+import { keys, useMe, useSetUsername, useUniversityStatus } from '../lib/queries';
 import { Avatar } from '../pages/Profile';
+import { UsernameInput } from './UsernameInput';
 
 export const BIO_MAX = 280;
 /** The picture is shown at 88px at most; this leaves room for sharp screens. */
@@ -271,6 +281,74 @@ function UniversityField({ active }: { active: boolean }) {
   );
 }
 
+/**
+ * The username, with its @ drawn in front. It saves on its own button, never on blur: a
+ * chosen one holds for two weeks, so a half-typed name must not be kept by accident. The one
+ * the app picked can be swapped at once. `/settings#username` focuses it.
+ */
+function UsernameField() {
+  const me = useMe();
+  const set = useSetUsername();
+  const { toast } = useToast();
+  const [draft, setDraft] = useState<string | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  const user = me.data?.user;
+  if (!user) return null;
+
+  const current = user.username ?? '';
+  const value = draft ?? current;
+  const changed = normalizeUsername(value) !== current;
+  const problem = refused ?? (changed ? usernameError(value) : null);
+  const until = usernameUnlocksAt(user.usernameChangedAt, new Date().toISOString());
+
+  const save = async () => {
+    if (!changed || problem || until) return;
+    try {
+      await set.mutateAsync(value);
+      setDraft(null);
+      toast('Username saved.');
+    } catch (err) {
+      setRefused(say(err, 'Could not save it'));
+    }
+  };
+
+  return (
+    <div className="field">
+      <label className="field-label" htmlFor="username">
+        Username
+      </label>
+      <div className="profile-uni-row">
+        <UsernameInput
+          id="username"
+          disabled={!!until}
+          autoFocus={window.location.hash === '#username'}
+          aria-invalid={!!problem}
+          value={value}
+          onChange={(next) => {
+            setDraft(next);
+            setRefused(null);
+          }}
+          onEnter={() => void save()}
+        />
+        <Button
+          size="sm"
+          variant="primary"
+          loading={set.isPending}
+          disabled={!changed || !!problem || !!until}
+          onClick={() => void save()}
+        >
+          Save
+        </Button>
+      </div>
+      {problem ? (
+        <span className="field-hint field-error">{problem}</span>
+      ) : (
+        until && <span className="field-hint">Can change again {fmtDate(until)}</span>
+      )}
+    </div>
+  );
+}
+
 export interface ProfileFieldsProps {
   avatarUrl: string | null;
   name: string;
@@ -284,10 +362,11 @@ export interface ProfileFieldsProps {
 }
 
 /**
- * Everything on a profile that can be changed, in one place: the picture, the name, the
- * university and a line about you. Used by the gear dialog on the profile and by
- * Settings › Account. The picture and the university save themselves; the name and the line
- * are the caller's to save (on a button, or on blur through `onCommit`).
+ * Everything on a profile that can be changed, in one place: the picture, the display name,
+ * the username, the university and a line about you. Used by the gear dialog on the profile
+ * and by Settings › Account. The picture, the username and the university save themselves;
+ * the display name and the line are the caller's to save (on a button, or on blur through
+ * `onCommit`), and only when `displayNameError` has nothing to say.
  */
 export function ProfileFields({
   avatarUrl,
@@ -298,18 +377,28 @@ export function ProfileFields({
   onCommit,
   active = true,
 }: ProfileFieldsProps) {
+  const username = useMe().data?.user.username;
+  const nameProblem = displayNameError(name);
   return (
     <>
-      <PictureField avatarUrl={avatarUrl} name={name} />
+      <PictureField avatarUrl={avatarUrl} name={personName(name, username)} />
       <Input
-        label="Name"
-        hint="Shown on your profile and the leaderboard, and used to say hello."
+        label="Display name"
+        hint={
+          nameProblem ? (
+            <span className="field-error">{nameProblem}</span>
+          ) : (
+            'Shown on your profile and the leaderboard, and used to say hello.'
+          )
+        }
         placeholder="e.g. John"
-        maxLength={60}
+        maxLength={DISPLAY_NAME_MAX}
+        aria-invalid={!!nameProblem}
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         onBlur={onCommit}
       />
+      <UsernameField />
       <UniversityField active={active} />
       <Textarea
         label="About you"
