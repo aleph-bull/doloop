@@ -6,7 +6,12 @@
       "permanent": false
     },
     {
-      "source": "/docs/:path*",
+      "source": "/docs/",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/docs/:path+",
       "destination": "/",
       "permanent": false
     }
