@@ -2343,3 +2343,8 @@ The owner asked for "Jack mode", named after their friend Jack Chow: after every
 - **Sorbet** takes a muted plum accent (hsl 320 35% 36%) instead of rose. On its light-pink glass every built-in accent measured 1.0 to 1.7 against the sidebar, so Komo vanished; the plum measures about 4.5 to 5.2.
 - **Komo goes white when the accent is too dark** (owner: "when komo is too dark along a dark background just resort to making him white"): `logoColor` in ui theme.ts sets `--logo-color` to white on a dark theme when the accent is under 3:1 against the nav (the solid colour's own shades when there is one, else a dark card); otherwise the accent as before. The sidebar's mark now uses it too, and on matte solid colours it takes the same lightened accent as the top bar's (it used the raw accent, which is how Night Shift's indigo Komo got lost on its grey sidebar). Light themes are unchanged.
 - A "Recommended" note on Dawn Skies was added and then taken off at the owner's word the same evening.
+
+## Glass cards lose the top sheen, 2026-10-22 (owner request)
+
+- **No sheen on any card in glass mode** (owner: "remove the top sheen efect off of all panels in glass mode"): the white gradient over the top of Glass cards (`.glass::before`, `--glass-highlight`) is gone, and so is the bright 1px line along every glass card's top edge (it was the first part of `--glass-border-inner`, which now keeps only the even inner ring). The Panels setting's glass preview lost its line too.
+- **The trophies keep theirs** (owner: "except for those badges that have that nice animated sheen"): the shimmer on new records is untouched, and trophies keep the top edge as `--glass-top-edge`.
