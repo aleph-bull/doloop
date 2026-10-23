@@ -678,6 +678,12 @@ export function Settings() {
                 label="Auto-start work after a break"
               />
               <Toggle
+                checked={s.pomodoro.jackMode}
+                onChange={(v) => patch({ pomodoro: { jackMode: v } })}
+                label="Jack mode"
+                description="A gambling mode for your timer. Would not recommend turning this on because it is very stupid. Thanks Jack."
+              />
+              <Toggle
                 checked={s.pomodoro.showTimerByDefault}
                 onChange={(v) => patch({ pomodoro: { showTimerByDefault: v } })}
                 label="Show the timer by default"

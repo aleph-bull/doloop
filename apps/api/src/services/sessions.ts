@@ -28,6 +28,7 @@ import {
   type TimerState,
   type TimerView,
 } from '@komogon/core';
+import { randomUUID } from 'node:crypto';
 import { and, desc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import type { z } from 'zod';
 import type { Db } from '../db/client';
@@ -242,6 +243,7 @@ export async function startSession(
     pomodoro: snapshot,
     plannedEndAt: input.plannedEndAt ?? null,
     showTimer: input.showTimer ?? settings.pomodoro.showTimerByDefault,
+    jackSeed: settings.pomodoro.jackMode ? randomUUID() : null,
   });
   let row: SessionRow | undefined;
   try {

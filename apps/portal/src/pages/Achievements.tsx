@@ -61,6 +61,9 @@ export function Achievements() {
   const lp = levelProgress(s.xp);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
+  // Jack mode's badges show once it is on, or once one is earned.
+  const jackOn = me.data?.user.settings.pomodoro.jackMode ?? false;
+  const badges = s.badges.filter((b) => !b.jack || jackOn || unlocked.has(b.key));
 
   const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
     setBusy(key);
@@ -217,11 +220,11 @@ export function Achievements() {
             Badges
           </h2>
           <span className="ach-count tabular">
-            <strong>{unlocked.size}</strong> of {s.badges.length} unlocked
+            <strong>{unlocked.size}</strong> of {badges.length} unlocked
           </span>
         </div>
-        <BadgeFold count={s.badges.length}>
-          {s.badges.map((b) => {
+        <BadgeFold count={badges.length}>
+          {badges.map((b) => {
             const at = unlocked.get(b.key);
             return (
               <Panel key={b.key} className={`badge-card${at ? ' is-earned' : ''}`}>

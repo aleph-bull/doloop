@@ -27,6 +27,13 @@ export function toSession(row: SessionRow): Session {
     xpAwarded: row.xpAwarded,
     badgesAwarded: row.badgesAwarded,
     sleeps: row.sleeps ?? [],
+    jack: row.timer.jack
+      ? {
+          rolls: row.timer.jack.rolls,
+          wonSeconds: row.timer.jack.wonSeconds,
+          lostSeconds: row.timer.jack.lostSeconds,
+        }
+      : null,
   };
 }
 

@@ -288,6 +288,8 @@ export interface PublicProfile {
   friendship: FriendshipStatus;
   /** They take friend requests. */
   acceptsRequests: boolean;
+  /** Over 45 minutes of focus with Jack mode on. Optional for older cached copies. */
+  gambler?: boolean;
 }
 
 /** Someone as the feed, comments and friend lists name them. */
@@ -576,6 +578,8 @@ export interface ProfileStats {
   level: number;
   /** How far into the level, 0 to 1. Optional for older cached copies. */
   levelRatio?: number;
+  /** Break Jack mode's dice gave and took; null before the first roll. */
+  jack?: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
 
 /** One of the badges a profile shows: the ones that paid the most XP. */
@@ -784,7 +788,7 @@ export const api = {
         owned: boolean;
       }>;
       accents: Array<{ id: string; name: string; minLevel: number; unlocked: boolean }>;
-      badges: Array<{ key: string; name: string; description: string; xp: number }>;
+      badges: Array<{ key: string; name: string; description: string; xp: number; jack?: true }>;
       achievements: Array<{ key: string; unlockedAt: string }>;
     }>('GET', '/api/shop'),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),

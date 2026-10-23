@@ -4969,6 +4969,109 @@
   }
 }
 
+/* ---------- Jack mode's die (after a work interval) ---------- */
+.jack-dice-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.28);
+  cursor: pointer;
+}
+/* Rises without fading: the card is glass (see "That includes a fade" in CLAUDE.md). */
+.jack-dice-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+  width: min(300px, 100%);
+  padding: 34px var(--card-pad) 24px;
+  border-radius: var(--radius-lg);
+  animation: jack-card-in 420ms var(--ease-spring) both;
+}
+@keyframes jack-card-in {
+  from {
+    transform: translateY(26px) scale(0.94);
+  }
+  to {
+    transform: none;
+  }
+}
+.jack-dice-scene {
+  --jack-size: 84px;
+  --jack-half: 42px;
+  width: var(--jack-size);
+  height: var(--jack-size);
+  perspective: 600px;
+}
+.jack-die {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+.jack-die-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  /* Square corners on purpose (owner, 2026-10-22). Solid, so the faces behind don't show
+     through; tinted like the glass buttons, with the screen's own text colour (an accent
+     fill can be pale enough to want a black label). */
+  background: color-mix(in srgb, var(--accent) 24%, var(--bg-elevated));
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--fg-on-glass);
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  backface-visibility: hidden;
+}
+.jack-dice-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+.jack-dice-roll {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  min-height: 1.4em;
+}
+.jack-dice-result.is-won .jack-dice-roll {
+  color: var(--accent-text);
+}
+.jack-dice-line {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.jack-dice-result.is-shown .jack-dice-roll,
+.jack-dice-result.is-shown .jack-dice-line {
+  animation: jack-result-in 360ms var(--ease-out) both;
+}
+@keyframes jack-result-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+:root[data-motion='off'] .jack-dice-card,
+:root[data-motion='off'] .jack-dice-result.is-shown span {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .jack-dice-card,
+  :root:not([data-motion='on']) .jack-dice-result.is-shown span {
+    animation: none;
+  }
+}
+
 /* ---------- end-of-session score sheet ---------- */
 .summary {
   display: flex;
@@ -7490,6 +7593,11 @@
 }
 .profile-name {
   overflow-wrap: anywhere;
+}
+/* Jack mode's Gambler: a die after the name. */
+.profile-gambler {
+  margin-left: 0.3em;
+  font-size: 0.85em;
 }
 .profile-chip {
   display: inline-flex;

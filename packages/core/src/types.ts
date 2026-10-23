@@ -40,6 +40,8 @@ export interface PomodoroConfig {
   autoStartBreaks: boolean;
   autoStartWork: boolean;
   showTimerByDefault: boolean;
+  /** Jack mode: a die after each work interval changes the break. Off unless turned on. */
+  jackMode: boolean;
 }
 
 export type ReviewMode = 'quick' | 'full' | 'off';
@@ -507,6 +509,15 @@ export interface Session {
   badgesAwarded: string[];
   /** Times the computer slept while this session ran, and what the user said about each. */
   sleeps: SleepGap[];
+  /** Jack mode's dice over the session, when it ran with Jack mode on. */
+  jack?: SessionJack | null;
+}
+
+/** What Jack mode's dice did over one session. */
+export interface SessionJack {
+  rolls: number;
+  wonSeconds: number;
+  lostSeconds: number;
 }
 
 export interface PlannedBlock {

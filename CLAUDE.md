@@ -252,6 +252,10 @@ and never explain the difference on screen.
 
 ## Recent changes (2026-10-20)
 
+- Jack mode (2026-10-22): an opt-in Pomodoro mode in Settings › Timer where a die after each
+  work block changes the break (-1x to +3x, average -0.2x), seeded in `timer.jack` so every
+  client rolls the same; its badges show only to people using it, and its die emoji on the
+  profile is the one emoji in the UI, at the owner's request. See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
   `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table
   (`components/Tags.tsx`), tags on the dashboard task cards, and a play button on courses.

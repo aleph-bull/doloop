@@ -1,4 +1,5 @@
 import { addDays, dayOfWeek, localHour, startOfWeekMonday, toLocalDate } from './dates';
+import { jackTotals, GAMBLER_FOCUS_SECONDS } from './jack';
 import type { ISODate, PlannedBlock, Session, StreakState, StudyNode } from './types';
 
 /** Badge catalogue (spec §7). Keys are stable; conditions are evaluated in `evaluateBadges`. */
@@ -8,6 +9,11 @@ export interface BadgeDef {
   description: string;
   /** XP paid once, when the badge unlocks: more for what takes longer or asks more. */
   xp: number;
+  /**
+   * Jack mode's badges: listed only for someone who has Jack mode on or has earned one, so
+   * the mode stays something people turn on, not something the badges advertise.
+   */
+  jack?: true;
 }
 
 /**
@@ -61,6 +67,13 @@ export const BADGE_XP: Record<string, number> = {
   'streak-100': 1500,
   'sessions-500': 1500,
   'hours-250': 2000,
+  // Jack mode
+  'gamble-1': 25,
+  'gamble-10': 50,
+  gambler: 75,
+  'gamble-25': 75,
+  'gamble-50': 100,
+  'gamble-100': 150,
 };
 
 /** What a badge pays when it unlocks. */
@@ -213,6 +226,33 @@ const CATALOGUE: Array<Omit<BadgeDef, 'xp'>> = [
     key: 'reviewer-100',
     name: 'Thoughtful',
     description: 'Submit one hundred end-of-session reviews.',
+  },
+  // --- Jack mode (2026-10-22) ---
+  {
+    key: 'gambler',
+    name: 'Gambler',
+    description: '45 minutes of focus with Jack mode on.',
+    jack: true,
+  },
+  { key: 'gamble-1', name: 'Feeling lucky', description: 'Roll the dice once.', jack: true },
+  { key: 'gamble-10', name: 'Ten rolls', description: 'Roll the dice ten times.', jack: true },
+  {
+    key: 'gamble-25',
+    name: 'Regular',
+    description: 'Roll the dice twenty-five times.',
+    jack: true,
+  },
+  {
+    key: 'gamble-50',
+    name: 'High roller',
+    description: 'Roll the dice fifty times.',
+    jack: true,
+  },
+  {
+    key: 'gamble-100',
+    name: 'The house always wins',
+    description: 'Roll the dice one hundred times.',
+    jack: true,
   },
 ];
 
@@ -372,6 +412,14 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if ((input.rewardsRedeemed ?? 0) >= 1) done.add('first-reward');
   if ((input.rewardsRedeemed ?? 0) >= 5) done.add('reward-5');
 
+  /* --- Jack mode --- */
+  const { rolls, focusSeconds } = jackTotals(sessions);
+  if (focusSeconds > GAMBLER_FOCUS_SECONDS) done.add('gambler');
+  if (rolls >= 1) done.add('gamble-1');
+  if (rolls >= 10) done.add('gamble-10');
+  if (rolls >= 25) done.add('gamble-25');
+  if (rolls >= 50) done.add('gamble-50');
+  if (rolls >= 100) done.add('gamble-100');
   if (input.streak.current >= 30) {
     // Freeze used within the current 30-day run disqualifies.
     const start = new Date(Date.parse(`${input.today}T00:00:00Z`) - 29 * 86_400_000)

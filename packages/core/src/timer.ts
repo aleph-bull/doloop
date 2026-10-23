@@ -1,3 +1,4 @@
+import { rollJack, startJack, type JackState } from './jack';
 import type { ISODateTime, PomodoroSnapshot, SessionMode } from './types';
 
 /**
@@ -37,6 +38,8 @@ export interface TimerState {
   /** Per-session timer visibility (remembered by the client). */
   showTimer: boolean;
   endedAt: ISODateTime | null;
+  /** Jack mode, when it was on as the session started: a die decides each break. */
+  jack?: JackState | null;
 }
 
 export const SCHEDULED_GRACE_SECONDS = 60;
@@ -47,6 +50,8 @@ export interface StartTimerInput {
   pomodoro: PomodoroSnapshot;
   plannedEndAt?: ISODateTime | null;
   showTimer?: boolean;
+  /** Jack mode's seed: a pomodoro started with one rolls a die after each work interval. */
+  jackSeed?: string | null;
 }
 
 function ms(iso: ISODateTime): number {
@@ -92,6 +97,7 @@ export function startTimer(input: StartTimerInput): TimerState {
   if (input.mode === 'pomodoro') {
     // The first work interval; the planned end, if any, cuts the session short later.
     base.phaseEndsAt = iso(ms(input.now) + intervalMs('work', input.pomodoro));
+    if (input.jackSeed) base.jack = startJack(input.jackSeed);
   } else {
     base.phaseEndsAt = base.plannedEndAt;
   }
@@ -178,15 +184,26 @@ export function advance(state: TimerState, now: ISODateTime, opts: AdvanceOption
     const wasWork = s.phase === 'work';
     s = bank(s, boundary);
     const cycle = wasWork ? s.cycle + 1 : s.cycle;
-    const next: IntervalPhase = wasWork ? nextBreak(cycle, opts.pomodoro) : 'work';
-    const autoStart = wasWork ? opts.autoStartBreaks : opts.autoStartWork;
+    let next: IntervalPhase = wasWork ? nextBreak(cycle, opts.pomodoro) : 'work';
+    let length = intervalMs(next, opts.pomodoro);
+    // Jack mode: the die decides the break. Losing all of it goes straight on to work.
+    if (wasWork && s.jack) {
+      const rolled = rollJack(s.jack, cycle, length, boundary);
+      s = { ...s, jack: rolled.jack };
+      length = rolled.roll.breakMs;
+      if (length === 0) {
+        next = 'work';
+        length = intervalMs('work', opts.pomodoro);
+      }
+    }
+    const autoStart = next === 'work' ? opts.autoStartWork : opts.autoStartBreaks;
     if (autoStart) {
       s = {
         ...s,
         cycle,
         phase: next,
         phaseStartedAt: boundary,
-        phaseEndsAt: iso(ms(boundary) + intervalMs(next, opts.pomodoro)),
+        phaseEndsAt: iso(ms(boundary) + length),
       };
     } else {
       s = {
@@ -196,7 +213,7 @@ export function advance(state: TimerState, now: ISODateTime, opts: AdvanceOption
         phaseStartedAt: boundary,
         phaseEndsAt: null,
         resumePhase: next,
-        resumeRemainingMs: intervalMs(next, opts.pomodoro),
+        resumeRemainingMs: length,
       };
       break;
     }

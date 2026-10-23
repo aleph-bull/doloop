@@ -10,6 +10,7 @@ import {
   pathLabel,
   viewTimer,
   type AdvanceOptions,
+  type JackRoll,
   type SoundEvent,
   type StudyNode,
   type TimerState,
@@ -19,10 +20,31 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Modal, useToast } from '@komogon/ui';
+import { JackDice } from '../components/focus/JackDice';
 import { ReviewDialog, type ReviewSubject } from '../components/ReviewDialog';
 import { api, type ActiveSession, type EndSummary, type ReviewInput } from './api';
 import { keys } from './queries';
 import { playSound, preloadSounds } from './sounds';
+
+/** A roll this recent still gets its die when the timer comes into view. */
+const DICE_FRESH_MS = 3 * 60_000;
+const DICE_SEEN_KEY = 'komogon.jack.seen';
+
+/** The latest roll this tab has shown, so the die plays once per roll. */
+function diceSeen(key: string): boolean {
+  try {
+    return sessionStorage.getItem(DICE_SEEN_KEY) === key;
+  } catch {
+    return false;
+  }
+}
+function markDiceSeen(key: string) {
+  try {
+    sessionStorage.setItem(DICE_SEEN_KEY, key);
+  } catch {
+    // Storage blocked: the die may play again after a reload, which is harmless.
+  }
+}
 
 export const PHASE_LABEL: Record<TimerState['phase'], string> = {
   work: 'Focus',
@@ -193,6 +215,21 @@ export function useSessionController({
     else if (to === 'ended') alert('sessionEnd');
   }, [timer.phase, alert]);
 
+  // Jack mode: the die for each roll, once, on the surface that owns the alerts. A roll
+  // made while the timer was out of view still plays if it is only a few minutes old.
+  const [dice, setDice] = useState<JackRoll | null>(null);
+  const lastRoll = timer.jack?.last ?? null;
+  useEffect(() => {
+    if (!lastRoll || muteAlerts) return;
+    const key = `${sessionId}:${lastRoll.cycle}`;
+    if (diceSeen(key)) return;
+    markDiceSeen(key);
+    if (Date.now() - Date.parse(lastRoll.at) > DICE_FRESH_MS) return;
+    setDice(lastRoll);
+    // A roll is identified by its cycle; the object is rebuilt on every refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lastRoll?.cycle, lastRoll?.at, muteAlerts, sessionId]);
+
   // The planned end of a session: sound once when the grace period opens.
   const graceChimed = useRef(false);
   useEffect(() => {
@@ -354,6 +391,7 @@ export function useSessionController({
 
   const dialogs = (
     <>
+      {dice && <JackDice roll={dice} onDone={() => setDice(null)} />}
       <Modal
         open={!!slept && !reviewOpen && !stopping}
         onClose={() => {}}

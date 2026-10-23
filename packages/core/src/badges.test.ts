@@ -300,3 +300,33 @@ describe('badge XP', () => {
     expect(badgeXp('hours-250')).toBeGreaterThan(badgeXp('hours-10'));
   });
 });
+
+describe('Jack mode badges', () => {
+  const rolled = (workMinutes: number, rolls: number, startedAt = '2026-09-20T14:00:00.000Z') =>
+    session('n', startedAt, workMinutes, {
+      mode: 'pomodoro',
+      jack: { rolls, wonSeconds: 0, lostSeconds: 0 },
+    });
+
+  it('counts rolls across sessions', () => {
+    const s = satisfiedBadges(input({ sessions: [rolled(25, 6), rolled(25, 5)] }));
+    expect(s.has('gamble-1')).toBe(true);
+    expect(s.has('gamble-10')).toBe(true);
+    expect(s.has('gamble-25')).toBe(false);
+  });
+
+  it('makes a Gambler after more than 45 minutes with Jack mode on', () => {
+    const has = (sessions: Session[]) => satisfiedBadges(input({ sessions })).has('gambler');
+    expect(has([rolled(45, 1)])).toBe(false);
+    expect(has([rolled(25, 1), rolled(21, 0)])).toBe(true);
+    // Time without Jack mode doesn't count toward it.
+    expect(has([session('n', '2026-09-20T16:00:00.000Z', 120), rolled(20, 1)])).toBe(false);
+  });
+
+  it('marks every Jack mode badge, and only those', () => {
+    const jack = BADGES.filter((b) => b.jack).map((b) => b.key);
+    expect(jack.sort()).toEqual(
+      ['gambler', 'gamble-1', 'gamble-10', 'gamble-25', 'gamble-50', 'gamble-100'].sort(),
+    );
+  });
+});

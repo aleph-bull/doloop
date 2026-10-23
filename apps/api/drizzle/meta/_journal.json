@@ -218,6 +218,13 @@
       "when": 1792716914052,
       "tag": "0030_post_files",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1792719011993,
+      "tag": "0031_jack_mode",
+      "breakpoints": true
     }
   ]
 }

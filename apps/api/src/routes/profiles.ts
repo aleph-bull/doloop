@@ -1,6 +1,8 @@
 import type { FastifyInstance } from 'fastify';
 import {
   badgeByKey,
+  GAMBLER_FOCUS_SECONDS,
+  jackTotals,
   levelProgress,
   lifetimeStats,
   studyHeatmap,
@@ -54,6 +56,8 @@ export interface PublicProfile {
   friendCount: number;
   /** Where the person asking stands with this profile; 'none' on your own. */
   friendship: FriendshipStatus;
+  /** Over 45 minutes of focus with Jack mode on: a die by the name. */
+  gambler: boolean;
   /** They take friend requests (Settings › Social). */
   acceptsRequests: boolean;
 }
@@ -71,6 +75,8 @@ export interface ProfileStats {
   level: number;
   /** How far into the level they are, 0 to 1. The XP itself stays on Achievements. */
   levelRatio: number;
+  /** Break Jack mode's dice gave and took, all time; null before the first roll. */
+  jack: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
 
 export interface ProfileBadge {
@@ -145,6 +151,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       now,
       joinedAt: row.createdAt.toISOString(),
     });
+    const jack = jackTotals(sessions);
     const uni = universityById(settings.profile.university);
     const showPosts =
       you || friendship.status === 'friends' || settings.social.posts === 'everyone';
@@ -162,6 +169,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         friendCount: friends.length,
         friendship,
         acceptsRequests: settings.social.requests,
+        gambler: jack.focusSeconds > GAMBLER_FOCUS_SECONDS,
       },
       stats: showStats
         ? {
@@ -179,6 +187,10 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
             },
             level: row.level,
             levelRatio: levelProgress(row.xp).ratio,
+            jack:
+              jack.rolls > 0
+                ? { rolls: jack.rolls, wonSeconds: jack.wonSeconds, lostSeconds: jack.lostSeconds }
+                : null,
           }
         : null,
       heatmap: showStats

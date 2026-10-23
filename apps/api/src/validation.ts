@@ -204,6 +204,7 @@ const pomodoro = z.object({
   autoStartBreaks: z.boolean(),
   autoStartWork: z.boolean(),
   showTimerByDefault: z.boolean(),
+  jackMode: z.boolean(),
 });
 
 export const gradeBand = z.object({

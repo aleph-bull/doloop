@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     autoStartBreaks: true,
     autoStartWork: true,
     showTimerByDefault: true,
+    jackMode: false,
   },
   review: { mode: 'quick' },
   streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null, daysPerWeek: 1 },
