@@ -240,6 +240,29 @@ describe('settings: timelapse', () => {
     expect(tooDark.statusCode).toBe(400);
   });
 
+  it('asks a phone horizontal or vertical until an answer is remembered', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.timelapsePhone.orientation).toBe('ask');
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapsePhone: { orientation: 'sideways' } },
+    });
+    expect(ok.statusCode).toBe(200);
+    expect(ok.json().settings.timelapsePhone.orientation).toBe('sideways');
+    const odd = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapsePhone: { orientation: 'diagonal' } },
+    });
+    expect(odd.statusCode).toBe(400);
+    await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapsePhone: { orientation: 'ask' } },
+    });
+  });
+
   it('keeps a resolution on each preset, in whole percents up to 100', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
     expect(me.json().user.settings.timelapse.resolution).toBe(100);

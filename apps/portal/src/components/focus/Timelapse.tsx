@@ -33,6 +33,8 @@ import {
   Download,
   LayoutTemplate,
   MonitorUp,
+  RectangleHorizontal,
+  RectangleVertical,
   Share2,
   Square,
   Video,
@@ -200,6 +202,71 @@ export function TimelapsePrompt({
         </Link>
       </p>
     </Modal>
+  );
+}
+
+export interface OrientationPromptProps {
+  open: boolean;
+  /** Which way the video goes, and whether to skip the question from now on. */
+  onPick: (o: TimelapseOrientation, remember: boolean) => void;
+  /** Closed without an answer: no recording this time. */
+  onClose: () => void;
+}
+
+/** On a phone, before its camera opens: which way the video goes. */
+export function OrientationPrompt({ open, onPick, onClose }: OrientationPromptProps) {
+  const [remember, setRemember] = useState(false);
+  return (
+    <Modal open={open} onClose={onClose} title="Record horizontally or vertically?">
+      <div className="tl-orient">
+        <button
+          type="button"
+          className="tl-orient-pick"
+          onClick={() => onPick('sideways', remember)}
+        >
+          <RectangleHorizontal size={30} strokeWidth={1.6} aria-hidden />
+          Horizontal
+        </button>
+        <button
+          type="button"
+          className="tl-orient-pick"
+          onClick={() => onPick('upright', remember)}
+        >
+          <RectangleVertical size={30} strokeWidth={1.6} aria-hidden />
+          Vertical
+        </button>
+      </div>
+      <Toggle checked={remember} onChange={setRemember} label="Remember my decision" />
+    </Modal>
+  );
+}
+
+/** A phone's "horizontal or vertical": asked each time, or the remembered answer. */
+export function OrientationChoice({
+  value,
+  onChange,
+}: {
+  value: UserSettings['timelapsePhone']['orientation'];
+  onChange: (patch: DeepPartial<UserSettings>) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="field-label">Horizontal or vertical</span>
+      <Segmented
+        ariaLabel="Horizontal or vertical"
+        value={value}
+        onChange={(v) =>
+          onChange({
+            timelapsePhone: { orientation: v as UserSettings['timelapsePhone']['orientation'] },
+          })
+        }
+        options={[
+          { value: 'ask', label: 'Ask' },
+          { value: 'sideways', label: 'Horizontal' },
+          { value: 'upright', label: 'Vertical' },
+        ]}
+      />
+    </div>
   );
 }
 
@@ -449,6 +516,9 @@ export function TimelapseSettings({
       )}
       {withRecordChoice && (
         <TimelapseRecordChoice value={settings.timelapse.record} onChange={onChange} />
+      )}
+      {device === 'phone' && (
+        <OrientationChoice value={settings.timelapsePhone.orientation} onChange={onChange} />
       )}
       <DimField value={value.dim} onChange={(dim) => set({ dim })} />
       <TimelapseTips device={device} linkToLayout={linkToLayout} />
@@ -832,6 +902,8 @@ export interface TimelapseExportProps {
   postSession?: { minutes: number; elapsedMinutes: number; subject: string | null } | null;
   /** When the session started and, once over, ended: the video's start and end times. */
   sessionSpan?: { startedAt: string; endedAt: string | null } | null;
+  /** Which way a phone's video goes, picked before the camera opened. */
+  orientation?: TimelapseOrientation | null;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -845,6 +917,7 @@ export function TimelapseExport({
   sessionId,
   postSession,
   sessionSpan,
+  orientation,
 }: TimelapseExportProps) {
   const value = presetOf(settings, device);
   const { toast } = useToast();
@@ -903,8 +976,9 @@ export function TimelapseExport({
     [kept, startAt],
   );
   const clipCount = new Set(clipStills.map((s) => s.clip)).size;
-  // A phone's video keeps the shape it starts in: the first kept still says which way up.
-  const upright = all[startAt]?.portrait ?? true;
+  // A phone's video goes the way picked before it started; without that, the first kept
+  // still says which way up.
+  const upright = orientation ? orientation === 'upright' : (all[startAt]?.portrait ?? true);
   // The session's start and end; until it has ended, the end is the last still.
   const startMs = sessionSpan ? Date.parse(sessionSpan.startedAt) : (all[0]?.takenAt ?? null);
   const endMs = sessionSpan?.endedAt
@@ -917,8 +991,9 @@ export function TimelapseExport({
       noteText: cleanNoteText(noteText),
       startAt: startMs,
       endAt: endMs,
+      orientation: device === 'phone' ? (orientation ?? undefined) : undefined,
     }),
-    [settings, device, upright, timeZone, noteText, startMs, endMs],
+    [settings, device, upright, timeZone, noteText, startMs, endMs, orientation],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);

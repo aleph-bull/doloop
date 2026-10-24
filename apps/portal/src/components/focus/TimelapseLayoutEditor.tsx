@@ -715,7 +715,7 @@ export function TimelapseLayoutEditor({
             options={targets.map((t) => ({ value: t.id, label: t.label }))}
           />
           <span className="field-hint">
-            A video takes the layout for how the phone was held when it started.
+            Upright is for a vertical video, sideways for a horizontal one.
           </span>
         </div>
       )}

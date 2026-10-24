@@ -1,4 +1,4 @@
-import type { FocusContext } from '@komogon/core';
+import type { FocusContext, TimelapseOrientation } from '@komogon/core';
 import {
   Clapperboard,
   Eye,
@@ -33,6 +33,8 @@ export interface PhoneCameraProps {
   recorder: TimelapseRecorder;
   /** Stills are being taken right now. */
   filming: boolean;
+  /** Which way the video goes, picked before the camera opened. */
+  orientation: TimelapseOrientation;
   /** Which camera is filming, so the front one shows as a mirror. */
   facing: CameraFacing;
   /** Swap cameras; absent when there is only one. */
@@ -72,6 +74,7 @@ export function PhoneCamera({
   chromeVisible,
   recorder,
   filming,
+  orientation,
   facing,
   onFlip,
   onStopRecording,
@@ -109,26 +112,20 @@ export function PhoneCamera({
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, []);
 
-  // Turning the phone after the video started: the video keeps its first shape. Said once.
+  // Held the other way from the video picked: said once, on opening or on a turn. The video
+  // keeps its shape either way; a still the other way round is cropped to the middle.
   const toldTurn = useRef(false);
   useEffect(() => {
     const media = window.matchMedia?.('(orientation: portrait)');
-    if (!media) return;
-    const onTurn = () => {
-      const firstStill = recorderRef.current.stills()[0];
-      if (!firstStill || toldTurn.current) return;
-      if ((firstStill.portrait ?? true) !== isUpright()) {
-        toldTurn.current = true;
-        toast(
-          firstStill.portrait
-            ? 'The video stays upright, the way it started.'
-            : 'The video stays sideways, the way it started.',
-        );
-      }
+    const check = () => {
+      if (toldTurn.current || isUpright() === (orientation === 'upright')) return;
+      toldTurn.current = true;
+      toast(orientation === 'upright' ? 'Turn your phone upright.' : 'Turn your phone sideways.');
     };
-    media.addEventListener('change', onTurn);
-    return () => media.removeEventListener('change', onTurn);
-  }, [toast]);
+    check();
+    media?.addEventListener('change', check);
+    return () => media?.removeEventListener('change', check);
+  }, [toast, orientation]);
 
   const { clip } = recorder;
   const status =

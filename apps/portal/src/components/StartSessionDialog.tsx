@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import {
   Check,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Eye,
   EyeOff,
@@ -20,8 +21,9 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router';
-import { Button, Modal, Segmented, Toggle, useToast } from '@komogon/ui';
+import { Button, Modal, prefersStill, Segmented, Toggle, useToast } from '@komogon/ui';
 import { api, ApiError } from '../lib/api';
 import { fmtTime } from '../lib/format';
 import { isPhone } from '../lib/device';
@@ -129,8 +131,13 @@ import {
   nodeKey,
   routineKey,
   SubjectButton,
+  SubjectPicker,
   useSubjectIndex,
 } from './SubjectPicker';
+
+/** Moving between the card's two pages, in milliseconds: the old one out, the new one in. */
+const PAGE_OUT_MS = 110;
+const PAGE_IN_MS = 240;
 
 function fmtLength(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -216,20 +223,84 @@ export function StartSessionDialog({
   const [replacing, setReplacing] = useState(false);
   /**
    * On a phone the session is a screen of its own, and what to study is a page pushed over
-   * it; on a computer it stays the card with the picker inside.
+   * it; on a computer the card turns to a second page with the picker.
    */
   const narrow = useMediaQuery(NARROW_QUERY);
   const phone = useMemo(() => isPhone(), []);
   const [pickerOpen, setPickerOpen] = useState(false);
   const subjectRowRef = useRef<HTMLButtonElement>(null);
+  /** The computer card's content on either page, to find the card around it. */
+  const faceRef = useRef<HTMLDivElement>(null);
+  const turning = useRef(false);
   const subjectIndex = useSubjectIndex(nodes);
   // Back from the picker, focus returns to the row that opened it, once the form is no
-  // longer inert under the page.
+  // longer inert under the page. On a computer, the picker's page starts in the search.
   const pickerWasOpen = useRef(false);
   useEffect(() => {
     if (pickerWasOpen.current && !pickerOpen) subjectRowRef.current?.focus({ preventScroll: true });
+    if (pickerOpen && !narrow)
+      faceRef.current?.querySelector('input')?.focus({ preventScroll: true });
     pickerWasOpen.current = pickerOpen;
+    // Only a change of page moves focus.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pickerOpen]);
+
+  /**
+   * Move the computer's card to the picker's page or back to the session, like turning a
+   * page: what is there slides away, the other page comes in from the side it lives on (the
+   * picker to the right), and the card grows or shrinks to fit it. The card itself, and the
+   * X on both pages, stay where they are.
+   */
+  const turnPage = (toPicker: boolean) => {
+    const card = faceRef.current?.closest<HTMLElement>('.modal-body');
+    if (!card || prefersStill()) return setPickerOpen(toPicker);
+    if (turning.current) return;
+    turning.current = true;
+    const side = toPicker ? 1 : -1;
+    const pageParts = () =>
+      [...card.children].filter((el) => !el.classList.contains('start-close'));
+    const from = card.offsetHeight;
+    card.style.overflow = 'hidden';
+    const out = pageParts().map((el) =>
+      el.animate(
+        [
+          { opacity: 1, transform: 'none' },
+          { opacity: 0, transform: `translateX(${-28 * side}px)` },
+        ],
+        { duration: PAGE_OUT_MS, easing: 'cubic-bezier(0.4, 0, 1, 1)', fill: 'forwards' },
+      ),
+    );
+    void Promise.all(out.map((a) => a.finished))
+      .then(() => {
+        flushSync(() => setPickerOpen(toPicker));
+        const ease = 'cubic-bezier(0.2, 0, 0, 1)';
+        const to = card.offsetHeight;
+        const moves = [
+          card.animate([{ height: `${from}px` }, { height: `${to}px` }], {
+            duration: PAGE_IN_MS,
+            easing: ease,
+          }),
+          ...pageParts().map((el) =>
+            el.animate(
+              [
+                { opacity: 0, transform: `translateX(${28 * side}px)` },
+                { opacity: 1, transform: 'none' },
+              ],
+              { duration: PAGE_IN_MS, easing: ease, fill: 'backwards' },
+            ),
+          ),
+        ];
+        // The new page covers the old one's last frame from here on.
+        out.forEach((a) => a.cancel());
+        return Promise.all(moves.map((a) => a.finished));
+      })
+      .catch(() => setPickerOpen(toPicker))
+      .finally(() => {
+        out.forEach((a) => a.cancel());
+        card.style.overflow = '';
+        turning.current = false;
+      });
+  };
 
   // Fill the form once each time the dialog opens. Reading the props through a ref keeps a
   // background refetch (new task list, saved settings) from wiping what the user picked.
@@ -668,167 +739,204 @@ export function StartSessionDialog({
       ) : (
         <Modal
           open={open}
-          onClose={onClose}
-          title="Start a session"
-          className="start-dialog"
+          // Escape and a click outside go back from the picker first.
+          onClose={pickerOpen ? () => turnPage(false) : onClose}
+          title={pickerOpen ? 'What to study' : 'Start a session'}
+          className={`start-dialog${pickerOpen ? ' is-picking' : ''}`}
           actions={
-            <Button
-              variant="primary"
-              size="lg"
-              className="start-go"
-              onClick={go}
-              loading={start.isPending}
-              disabled={!subject}
-            >
-              <Play size={16} aria-hidden className="start-go-icon" />
-              {confirmCut ? 'Start anyway' : 'Start'}
-            </Button>
+            pickerOpen ? (
+              // Coloured once something is chosen, a course or unit opened included.
+              <Button variant="primary" onClick={() => turnPage(false)} disabled={!subject}>
+                I&rsquo;m all set
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                size="lg"
+                className="start-go"
+                onClick={go}
+                loading={start.isPending}
+                disabled={!subject}
+              >
+                <Play size={16} aria-hidden className="start-go-icon" />
+                {confirmCut ? 'Start anyway' : 'Start'}
+              </Button>
+            )
           }
         >
-          <div className="start-body">
-            {lockSubject && node ? (
-              <div className="start-subject is-locked">
-                <span className="start-subject-text">
-                  <span className="start-subject-title truncate">{node.title}</span>
-                  {lockedPath && <span className="start-subject-where truncate">{lockedPath}</span>}
-                </span>
+          {pickerOpen && !lockSubject ? (
+            <>
+              <div ref={faceRef} className="start-picker">
+                <SubjectPicker
+                  nodes={nodes}
+                  routines={routineOptions}
+                  today={today}
+                  value={subject}
+                  onChange={(v, opened) => {
+                    setSubject(v);
+                    // A pick goes straight back. A course or unit opened is chosen too, but
+                    // stays open for something inside, until "I'm all set".
+                    if (!opened) turnPage(false);
+                  }}
+                />
               </div>
-            ) : (
-              <SubjectButton
-                nodes={nodes}
-                routines={routineOptions}
-                today={today}
-                value={subject}
-                onChange={setSubject}
-              />
-            )}
-
-            {/* How it runs, a pill each; the first two pop out their choices. */}
-            <div className="start-pills">
-              <Popout
-                label="How you work"
-                triggerClassName="start-pill"
-                className="is-menu"
-                width={260}
-                room={200}
-                trigger={
-                  <>
-                    <Timer size={15} aria-hidden />
-                    {style === 'pomodoro' ? 'Pomodoro' : 'Continuous'}
-                    <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
-                  </>
-                }
-              >
-                {(close) => (
-                  <ul className="start-menu">
-                    {menuOption(
-                      style === 'pomodoro',
-                      'Pomodoro',
-                      settings
-                        ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break`
-                        : undefined,
-                      () => {
-                        setStyle('pomodoro');
-                        setConfirmCut(null);
-                        close();
-                      },
-                    )}
-                    {menuOption(style === 'continuous', 'Continuous', undefined, () => {
-                      setStyle('continuous');
-                      setConfirmCut(null);
-                      close();
-                    })}
-                    <li className="start-menu-foot">
-                      <button
-                        type="button"
-                        className="start-option is-link"
-                        onClick={() => {
-                          // The lengths live in Settings, under Timer; the dialog closes on the way.
-                          onClose();
-                          navigate('/settings#timer');
-                        }}
-                      >
-                        Change lengths
-                      </button>
-                    </li>
-                  </ul>
-                )}
-              </Popout>
-
-              <Popout
-                label="How long"
-                triggerClassName="start-pill"
-                className="is-menu"
-                width={260}
-                room={240}
-                trigger={
-                  <>
-                    <Hourglass size={15} aria-hidden />
-                    {lengthLabel}
-                    <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
-                  </>
-                }
-              >
-                {(close) => (
-                  <div className="start-length">
-                    <ul className="start-menu">
-                      {menuOption(duration === 'unlimited', 'Unlimited', undefined, () => {
-                        setDuration('unlimited');
-                        setConfirmCut(null);
-                        close();
-                      })}
-                      {menuOption(duration === 'for', 'For a while', undefined, () => {
-                        setDuration('for');
-                        setConfirmCut(null);
-                      })}
-                      {menuOption(duration === 'until', 'Until a time', undefined, () => {
-                        setDuration('until');
-                        setConfirmCut(null);
-                      })}
-                    </ul>
-                    {duration === 'for' && (
-                      <div className="start-length-field">
-                        <MinutesStepper
-                          value={minutes}
-                          onChange={(v) => {
-                            setMinutes(v);
-                            setConfirmCut(null);
-                          }}
-                        />
-                      </div>
-                    )}
-                    {duration === 'until' && (
-                      <div className="start-length-field">
-                        <input
-                          type="time"
-                          className="input"
-                          aria-label="Stop at"
-                          value={endTime}
-                          onChange={(e) => {
-                            setEndTime(e.target.value);
-                            setConfirmCut(null);
-                          }}
-                        />
-                        {untilHint && <span className="field-hint">{untilHint}</span>}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Popout>
-
               <button
                 type="button"
-                className={`start-pill${showTimer ? '' : ' is-off'}`}
-                aria-pressed={showTimer}
-                onClick={() => setShowTimer(!showTimer)}
+                className="start-back"
+                aria-label="Back"
+                onClick={() => turnPage(false)}
               >
-                {showTimer ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />}
-                {showTimer ? 'Timer shown' : 'Timer hidden'}
+                <ChevronLeft size={20} aria-hidden />
               </button>
-            </div>
+            </>
+          ) : (
+            <div ref={faceRef} className="start-body">
+              {lockSubject && node ? (
+                <div className="start-subject is-locked">
+                  <span className="start-subject-text">
+                    <span className="start-subject-title truncate">{node.title}</span>
+                    {lockedPath && (
+                      <span className="start-subject-where truncate">{lockedPath}</span>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <SubjectButton
+                  ref={subjectRowRef}
+                  nodes={nodes}
+                  routines={routineOptions}
+                  value={subject}
+                  onOpen={() => turnPage(true)}
+                />
+              )}
 
-            {cutLine}
-          </div>
+              {/* How it runs, a pill each; the first two pop out their choices. */}
+              <div className="start-pills">
+                <Popout
+                  label="How you work"
+                  triggerClassName="start-pill"
+                  className="is-menu"
+                  width={260}
+                  room={200}
+                  trigger={
+                    <>
+                      <Timer size={15} aria-hidden />
+                      {style === 'pomodoro' ? 'Pomodoro' : 'Continuous'}
+                      <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
+                    </>
+                  }
+                >
+                  {(close) => (
+                    <ul className="start-menu">
+                      {menuOption(
+                        style === 'pomodoro',
+                        'Pomodoro',
+                        settings
+                          ? `${settings.pomodoro.workMin} min work, ${settings.pomodoro.shortBreakMin} min break`
+                          : undefined,
+                        () => {
+                          setStyle('pomodoro');
+                          setConfirmCut(null);
+                          close();
+                        },
+                      )}
+                      {menuOption(style === 'continuous', 'Continuous', undefined, () => {
+                        setStyle('continuous');
+                        setConfirmCut(null);
+                        close();
+                      })}
+                      <li className="start-menu-foot">
+                        <button
+                          type="button"
+                          className="start-option is-link"
+                          onClick={() => {
+                            // The lengths live in Settings, under Timer; the dialog closes on the way.
+                            onClose();
+                            navigate('/settings#timer');
+                          }}
+                        >
+                          Change lengths
+                        </button>
+                      </li>
+                    </ul>
+                  )}
+                </Popout>
+
+                <Popout
+                  label="How long"
+                  triggerClassName="start-pill"
+                  className="is-menu"
+                  width={260}
+                  room={240}
+                  trigger={
+                    <>
+                      <Hourglass size={15} aria-hidden />
+                      {lengthLabel}
+                      <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
+                    </>
+                  }
+                >
+                  {(close) => (
+                    <div className="start-length">
+                      <ul className="start-menu">
+                        {menuOption(duration === 'unlimited', 'Unlimited', undefined, () => {
+                          setDuration('unlimited');
+                          setConfirmCut(null);
+                          close();
+                        })}
+                        {menuOption(duration === 'for', 'For a while', undefined, () => {
+                          setDuration('for');
+                          setConfirmCut(null);
+                        })}
+                        {menuOption(duration === 'until', 'Until a time', undefined, () => {
+                          setDuration('until');
+                          setConfirmCut(null);
+                        })}
+                      </ul>
+                      {duration === 'for' && (
+                        <div className="start-length-field">
+                          <MinutesStepper
+                            value={minutes}
+                            onChange={(v) => {
+                              setMinutes(v);
+                              setConfirmCut(null);
+                            }}
+                          />
+                        </div>
+                      )}
+                      {duration === 'until' && (
+                        <div className="start-length-field">
+                          <input
+                            type="time"
+                            className="input"
+                            aria-label="Stop at"
+                            value={endTime}
+                            onChange={(e) => {
+                              setEndTime(e.target.value);
+                              setConfirmCut(null);
+                            }}
+                          />
+                          {untilHint && <span className="field-hint">{untilHint}</span>}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </Popout>
+
+                <button
+                  type="button"
+                  className={`start-pill${showTimer ? '' : ' is-off'}`}
+                  aria-pressed={showTimer}
+                  onClick={() => setShowTimer(!showTimer)}
+                >
+                  {showTimer ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />}
+                  {showTimer ? 'Timer shown' : 'Timer hidden'}
+                </button>
+              </div>
+
+              {cutLine}
+            </div>
+          )}
           {/* Last in the card so the keys reach it after the form; drawn at the top right. */}
           <button type="button" className="start-close" aria-label="Close" onClick={onClose}>
             <X size={18} aria-hidden />

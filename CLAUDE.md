@@ -808,12 +808,22 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
     timer and task, then hide the clock, a big round pause/resume and stop the session.
     Skip break and +15 min show above them when they apply. Controls fade with stillness like
     the focus screen; the pill stays. Light text always, whatever the theme.
+  - **Horizontal or vertical** (2026-10-23, owner's words): before the camera opens, a sheet
+    asks "Record horizontally or vertically?" (`OrientationPrompt`, once a session, also when
+    recording is switched on from the controls), with a "Remember my decision" switch that
+    saves the answer to `timelapsePhone.orientation` ('ask', 'upright', 'sideways'; Settings
+    › Timelapse › Phone, "Horizontal or vertical", puts it back to Ask). Closing the sheet
+    records nothing. Focus.tsx holds the answer per session (`picked`), and the camera and
+    recorder wait for it (`recording` = asked to record and, on a phone, a direction known).
   - **It turns with the phone** by CSS alone (`@media (orientation: landscape)`): sideways,
     the controls run down the right side and the timer sits bottom left. The video keeps the
-    shape it started in: each still records `portrait`, the first kept one picks the
-    upright or sideways layout (`timelapseLook`), and a still the other way round is cropped
-    to the middle by `fillBuffer` in the render rather than squashed. Turning the phone after
-    the first still says so once in a toast.
+    direction picked whichever way the phone is held: `TimelapseExport` takes `orientation`
+    for the upright or sideways layout (`timelapseLook`) and puts it on the look, so the
+    render and the trim turn the camera's shape to match (`lookRatio`) and the blend buffer
+    is turned too (`blendBuffer`); a still the other way round is cropped to the middle by
+    `fillBuffer` rather than squashed. Without a picked direction (older code paths), the
+    first kept still's `portrait` decides as before. Held the other way from the pick, the
+    camera screen says "Turn your phone sideways." (or upright) once.
   - **Dimming:** `.pcam-dim` (40% black) while the phase is `work`, off for breaks and
     pauses. It is a layer over the preview only; stills come from the camera track.
   - **Breaks** always show; the phone preset's `recordBreaks` decides whether they're filmed.

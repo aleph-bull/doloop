@@ -81,6 +81,10 @@ function ringScene(scene) {
   // Arc per second on its own: a card's width about every second and a half.
   const CRUISE = 0.11;
   let W = window.innerWidth;
+  // How far the cards spread (a share of the width) and how much they grow toward the sides.
+  // A phone gets bigger cards in the middle and a gentler spread, or they'd be specks.
+  let spread = 0.6;
+  let grow = [0.36, 1.45];
   let fan = 0.06;
   let slide = 0;
   let push = 0;
@@ -91,7 +95,10 @@ function ringScene(scene) {
 
   const measure = () => {
     W = view.clientWidth || window.innerWidth;
-    scene.style.setProperty('--cw', `${Math.max(150, W * 0.19)}px`);
+    const phone = W < 640;
+    spread = phone ? 0.5 : 0.6;
+    grow = phone ? [0.42, 0.8] : [0.36, 1.45];
+    scene.style.setProperty('--cw', `${phone ? W * 0.6 : Math.max(150, W * 0.19)}px`);
   };
 
   const draw = () => {
@@ -104,8 +111,8 @@ function ringScene(scene) {
       if (seen <= 0) continue;
       const f = u * fan;
       const a = Math.abs(f);
-      const x = Math.sign(f) * W * 0.6 * a ** 1.4;
-      const s = 0.36 + 1.45 * a ** 2;
+      const x = Math.sign(f) * W * spread * a ** 1.4;
+      const s = grow[0] + grow[1] * a ** 2;
       card.style.zIndex = String(Math.round(a * 100));
       card.style.transform = `translateX(${x.toFixed(1)}px) perspective(1100px) rotateY(${(-f * 58).toFixed(2)}deg) scale(${s.toFixed(3)})`;
     }
@@ -259,8 +266,11 @@ function fallScene(scene) {
     raf = 0;
     const t = now / 1000;
     const vh = window.innerHeight / 100;
+    // On a phone the cards have half a screen under the words: they fall half as far, from a
+    // little lower, so two or three are always in view.
+    const [k, b] = window.innerWidth < 640 ? [0.5, 10] : [1, 0];
     for (const c of cards) {
-      const goal = c.y + target * c.v;
+      const goal = (c.y + target * c.v) * k + b;
       c.at = c.at === null ? goal : c.at + (goal - c.at) * (0.035 + 0.04 * c.near);
       const w = t * c.rate + c.phase;
       const x = Math.sin(w) * 16 * c.near;

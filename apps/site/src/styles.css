@@ -549,9 +549,12 @@ main {
     animation: none;
   }
 }
+/* Pinned stages are the screen's height with a phone's toolbars showing (svh), so the
+   toolbars never cover their bottom; on a computer it's the same as vh. */
 .fall-stage {
   position: relative;
   height: 100vh;
+  height: 100svh;
   min-height: 560px;
   overflow: hidden;
 }
@@ -980,6 +983,7 @@ html.has-scrub .looks-stage {
   top: 0;
   box-sizing: border-box;
   height: 100vh;
+  height: 100svh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
@@ -1026,6 +1030,7 @@ html.has-scrub .zoom-stage {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh;
   padding: 0;
   overflow: hidden;
 }
@@ -1111,6 +1116,7 @@ html.has-scrub .plan-stage {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh;
   display: grid;
 }
 html.has-scrub .plan-grid {
@@ -1243,7 +1249,8 @@ html.has-motion .devices.rise.is-in {
     border-radius: 17px;
   }
 }
-/* On a phone the words sit high and fewer, smaller timelapses fall out from under them. */
+/* On a phone the words sit high and fewer, smaller timelapses fall out from under them,
+   fading in rather than cut off, and every card stays inside the screen's width. */
 @media (max-width: 640px) {
   .cell {
     padding: 20px;
@@ -1254,8 +1261,29 @@ html.has-motion .devices.rise.is-in {
   }
   .floaters {
     top: 46vh;
-    overflow: hidden;
     --fs: 0.55;
+    mask-image: linear-gradient(
+      180deg,
+      transparent 0,
+      #000 12vh,
+      #000 calc(100% - 8vh),
+      transparent
+    );
+  }
+  .floater {
+    left: clamp(16px, var(--x), calc(100% - var(--w) * var(--fs) - 16px));
+  }
+  /* The ring fades out at the sides instead of stopping at the screen's edge. */
+  html.has-scrub .ring-view {
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  /* The focus phone sits under the screen and drops fully out of sight when it goes. */
+  html.has-scrub .zoom-phone {
+    width: 30vw;
+    bottom: 5vh;
+  }
+  .plan-phone {
+    right: 2%;
   }
   .floater:nth-child(6),
   .floater:nth-child(7) {
@@ -1268,6 +1296,7 @@ html.has-motion .devices.rise.is-in {
   }
   .hero {
     padding-top: 120px;
+    min-height: 0;
   }
   .devices {
     margin-top: 40px;
