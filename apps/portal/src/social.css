@@ -3166,3 +3166,121 @@
     border-radius: var(--radius-lg);
   }
 }
+
+/* Verified schools */
+.school-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.school-main,
+.school-posts {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.school-main > section,
+.school-rankings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.school-main > section.panel,
+.school-rankings {
+  padding: var(--card-pad);
+}
+.school-live-list .live-subject {
+  display: inline;
+}
+.school-live-list .live-line {
+  white-space: normal;
+}
+.school-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.school-heading h2 {
+  flex: 1;
+  min-width: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.school-mark {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent-text);
+}
+.school-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.profile-chip .school-mark {
+  width: 20px;
+  height: 20px;
+}
+.school-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.school-board,
+.school-live-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.school-board li {
+  display: grid;
+  grid-template-columns: 20px 40px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+.school-board .is-you {
+  color: var(--accent-text);
+}
+.school-person {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.school-focus-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  text-align: right;
+}
+.school-live-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .school-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 520px) {
+  .school-board li {
+    grid-template-columns: 18px 28px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .school-board .school-mark {
+    width: 28px;
+    height: 28px;
+  }
+}

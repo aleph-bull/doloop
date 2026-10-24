@@ -70,7 +70,7 @@ export interface UserSettings {
     /** What the greeting calls you. Asked at onboarding, editable in settings. */
     name: string | null;
     /**
-     * An Ontario university's id (see ONTARIO_UNIVERSITIES), shown on the profile. Only the
+     * A school directory id, shown on the profile. Only the
      * API writes it, after a code sent to an address on that university's domain comes back.
      */
     university: string | null;
@@ -293,6 +293,8 @@ export interface UserSettings {
     requests: boolean;
     /** Friends can see when you are in a session, for how long, and on what. */
     live: boolean;
+    /** Share current study activity with other verified members of your school. */
+    schoolActivity: boolean;
   };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };

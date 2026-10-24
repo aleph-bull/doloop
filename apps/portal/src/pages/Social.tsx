@@ -6,13 +6,15 @@ import { GroupsTab } from '../components/social/GroupsTab';
 import { JamsTab } from '../components/social/JamsTab';
 import { LeaderboardTab } from '../components/social/LeaderboardTab';
 import { NotificationsBell } from '../components/social/Notifications';
+import { SchoolTab } from '../components/social/SchoolTab';
 import { NARROW_QUERY, useMediaQuery } from '../lib/media';
 import { useFriends, useJams } from '../lib/queries';
 
-const TABS = ['feed', 'groups', 'jams', 'leaderboard'] as const;
+const TABS = ['feed', 'school', 'groups', 'jams', 'leaderboard'] as const;
 type Tab = (typeof TABS)[number];
 const TAB_LABELS: Record<Tab, string> = {
   feed: 'Feed',
+  school: 'School',
   groups: 'Groups',
   jams: 'Jams',
   leaderboard: 'Leaderboard',
@@ -40,7 +42,9 @@ export function Social() {
       </span>
     );
   const content =
-    tab === 'groups' ? (
+    tab === 'school' ? (
+      <SchoolTab />
+    ) : tab === 'groups' ? (
       <GroupsTab />
     ) : tab === 'jams' ? (
       <JamsTab />
@@ -96,6 +100,7 @@ export function Social() {
                 </>
               ),
             },
+            { value: 'school', label: 'School' },
             { value: 'groups', label: 'Groups' },
             {
               value: 'jams',

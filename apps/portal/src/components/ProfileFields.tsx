@@ -15,6 +15,7 @@ import { fmtDate } from '../lib/format';
 import { keys, useMe, useSetUsername, useUniversityStatus } from '../lib/queries';
 import { Avatar } from '../pages/Profile';
 import { UsernameInput } from './UsernameInput';
+import { LocalMailInbox } from './LocalMailInbox';
 
 export const BIO_MAX = 280;
 /** The picture is shown at 88px at most; this leaves room for sharp screens. */
@@ -120,7 +121,7 @@ function PictureField({ avatarUrl, name }: { avatarUrl: string | null; name: str
  * university's domain, a code goes there, and the university appears once the code comes
  * back. Three states: verified, a code on its way, or nothing yet.
  */
-function UniversityField({ active }: { active: boolean }) {
+export function UniversityField({ active }: { active: boolean }) {
   const status = useUniversityStatus(active);
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -141,6 +142,8 @@ function UniversityField({ active }: { active: boolean }) {
     await qc.invalidateQueries({ queryKey: keys.university });
     await qc.invalidateQueries({ queryKey: ['profiles'] });
     await qc.invalidateQueries({ queryKey: keys.me });
+    await qc.invalidateQueries({ queryKey: ['schools'] });
+    await qc.invalidateQueries({ queryKey: ['leaderboard'] });
   };
 
   const run = async (fn: () => Promise<unknown>, fallback: string, ok?: string) => {
@@ -173,7 +176,7 @@ function UniversityField({ active }: { active: boolean }) {
       await run(
         () => api.confirmUniversityCode(code.trim()),
         'Could not check the code',
-        'Your university is on your profile now.',
+        'School verified.',
       )
     )
       setCode('');
@@ -188,7 +191,7 @@ function UniversityField({ active }: { active: boolean }) {
   if (s.university)
     return (
       <div className="field">
-        <span className="field-label">University</span>
+        <span className="field-label">School</span>
         <div className="profile-uni-row">
           <span className="profile-uni-name">
             <BadgeCheck size={16} aria-hidden className="profile-verified" />
@@ -239,6 +242,7 @@ function UniversityField({ active }: { active: boolean }) {
             Confirm
           </Button>
         </div>
+        <LocalMailInbox email={s.pending.email} />
         <span className="field-hint">
           We sent a code to {s.pending.email} for {s.pending.university.name}. It works for 15
           minutes.{' '}
@@ -252,7 +256,7 @@ function UniversityField({ active }: { active: boolean }) {
   return (
     <div className="field">
       <label className="field-label" htmlFor="uni-email">
-        University email
+        School email
       </label>
       <div className="profile-uni-row">
         <Input
@@ -273,10 +277,7 @@ function UniversityField({ active }: { active: boolean }) {
           Send code
         </Button>
       </div>
-      <span className="field-hint">
-        The address your Ontario university gave you. We send a code there to confirm it, and the
-        profile shows only the university, never the address.
-      </span>
+      <span className="field-hint">Use your school-issued email. Your address stays private.</span>
     </div>
   );
 }

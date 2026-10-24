@@ -8,7 +8,6 @@ import {
   CalendarCheck,
   CalendarDays,
   ChevronRight,
-  GraduationCap,
   Settings as SettingsIcon,
   Trophy,
   Users,
@@ -19,6 +18,7 @@ import { ProfileSettingsDialog } from '../components/ProfileSettingsDialog';
 import { clockLabel, StudyClock } from '../components/recap/StudyClock';
 import { SignOutButton } from '../components/SignOutButton';
 import { Avatar } from '../components/social/Avatar';
+import { SchoolMark } from '../components/social/SchoolMark';
 import { FriendButton } from '../components/social/FriendButton';
 import { LiveDot, LiveLine } from '../components/social/LiveNow';
 import { PostCard } from '../components/social/PostCard';
@@ -115,7 +115,7 @@ function Head({
               className="chip chip-neutral profile-chip"
               title="Verified with a university email address"
             >
-              <GraduationCap size={13} aria-hidden />
+              <SchoolMark school={profile.university} />
               {profile.university.name}
               <BadgeCheck size={13} aria-hidden className="profile-verified" />
               <span className="sr-only">, verified</span>

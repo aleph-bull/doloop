@@ -143,6 +143,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     leaderboard: 'global',
     requests: true,
     live: true,
+    schoolActivity: false,
   },
   dashboard: { focusOnly: false },
   nav: { style: 'sidebar' },

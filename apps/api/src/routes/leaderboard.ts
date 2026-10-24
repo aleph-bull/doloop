@@ -3,7 +3,8 @@ import { addDays, personName, startOfWeekMonday, toLocalDate } from '@komogon/co
 import { and, desc, eq, gte, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
-import { sessions, userAssets, users } from '../db/schema';
+import { sessions, universityVerifications, userAssets, users } from '../db/schema';
+import { forbidden } from '../errors';
 import { inWorldOf } from '../services/dev-accounts';
 import { compareRow } from './compare';
 import { loadCompletedSessions } from '../services/pace';
@@ -41,7 +42,7 @@ export interface GlobalStats {
 /** How many people the leaderboard shows. */
 export const LEADERBOARD_SIZE = 10;
 
-export type LeaderboardScope = 'global' | 'friends';
+export type LeaderboardScope = 'global' | 'friends' | 'school';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -78,8 +79,18 @@ export function leaderboardRoutes(
 ) {
   app.get('/api/leaderboard', async (req) => {
     const { scope } = z
-      .object({ scope: z.enum(['global', 'friends']).default('global') })
+      .object({ scope: z.enum(['global', 'friends', 'school']).default('global') })
       .parse(req.query);
+    const school =
+      scope === 'school'
+        ? await db.query.universityVerifications.findFirst({
+            where: and(
+              eq(universityVerifications.userId, req.user.id),
+              isNotNull(universityVerifications.verifiedAt),
+            ),
+          })
+        : null;
+    if (scope === 'school' && !school) throw forbidden('Verify your school email first.');
     const friends = await friendIds(db, req.user.id);
     const joined = sql`coalesce(${users.settings} -> 'social' ->> 'leaderboard', 'global')`;
     const focusSeconds = sql<number>`sum(${sessions.workSeconds})::int`;
@@ -103,6 +114,11 @@ export function leaderboardRoutes(
           eq(users.isTestAccount, false),
           inWorldOf(req.user),
           isNull(users.bannedAt),
+          ...(school
+            ? [
+                sql`exists(select 1 from university_verifications v where v.user_id = ${users.id} and v.verified_at is not null and v.university_id = ${school.universityId})`,
+              ]
+            : []),
           ...(scope === 'friends'
             ? [
                 inArray(sessions.userId, [req.user.id, ...friends]),

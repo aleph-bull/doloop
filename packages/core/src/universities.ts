@@ -1,3 +1,5 @@
+import directory from '../data/schools/directory.json';
+
 /**
  * Ontario's universities, for the profile. The id is what the account stores; the name is
  * what a profile shows. A university goes on a profile only after a code sent to an
@@ -10,6 +12,10 @@ export interface OntarioUniversity {
   short?: string;
   /** Email domains the university gives students and staff; subdomains count too. */
   domains: string[];
+  country?: string;
+  crestUrl?: string;
+  crestSource?: string;
+  crestCredit?: string;
 }
 
 export const ONTARIO_UNIVERSITIES: readonly OntarioUniversity[] = [
@@ -26,7 +32,15 @@ export const ONTARIO_UNIVERSITIES: readonly OntarioUniversity[] = [
     short: 'Laurier',
     domains: ['wlu.ca', 'mylaurier.ca'],
   },
-  { id: 'mcmaster', name: 'McMaster University', domains: ['mcmaster.ca'] },
+  {
+    id: 'mcmaster',
+    name: 'McMaster University',
+    short: 'McMaster',
+    domains: ['mcmaster.ca'],
+    crestUrl: '/schools/mcmaster.gif',
+    crestSource: 'https://www.mcmaster.ca/coat/',
+    crestCredit: 'McMaster University, official school mark',
+  },
   { id: 'nipissing', name: 'Nipissing University', domains: ['nipissingu.ca'] },
   { id: 'ocad', name: 'OCAD University', domains: ['ocadu.ca'] },
   {
@@ -43,7 +57,15 @@ export const ONTARIO_UNIVERSITIES: readonly OntarioUniversity[] = [
     domains: ['rmc.ca', 'rmc-cmr.ca'],
   },
   { id: 'tmu', name: 'Toronto Metropolitan University', short: 'TMU', domains: ['torontomu.ca'] },
-  { id: 'toronto', name: 'University of Toronto', short: 'U of T', domains: ['utoronto.ca'] },
+  {
+    id: 'toronto',
+    name: 'University of Toronto',
+    short: 'U of T',
+    domains: ['utoronto.ca'],
+    crestUrl: '/schools/toronto.png',
+    crestSource: 'https://trademarks.utoronto.ca/branding-information/',
+    crestCredit: 'University of Toronto, official school mark',
+  },
   { id: 'trent', name: 'Trent University', domains: ['trentu.ca'] },
   { id: 'uof', name: "Université de l'Ontario français", domains: ['uontario.ca'] },
   { id: 'waterloo', name: 'University of Waterloo', domains: ['uwaterloo.ca'] },
@@ -52,9 +74,41 @@ export const ONTARIO_UNIVERSITIES: readonly OntarioUniversity[] = [
   { id: 'york', name: 'York University', domains: ['yorku.ca'] },
 ];
 
+/** Legacy Ontario ids are retained, including student mail domain overrides. */
+function buildRegistry() {
+  const schools = new Map<string, OntarioUniversity>();
+  for (const [name, country, rawDomains] of directory as Array<[string, string, string[]]>) {
+    const id = `school:${rawDomains[0]}`;
+    const previous = schools.get(id);
+    if (previous) previous.domains = [...new Set([...previous.domains, ...rawDomains])];
+    else schools.set(id, { id, name, country, domains: [...rawDomains] });
+  }
+  for (const university of ONTARIO_UNIVERSITIES) {
+    for (const [id, school] of schools) {
+      if (school.domains.some((d) => university.domains.includes(d))) schools.delete(id);
+    }
+    schools.set(university.id, { ...university, country: 'CA' });
+  }
+  const domains = new Map<string, OntarioUniversity | null>();
+  for (const school of schools.values())
+    for (const domain of school.domains) {
+      const previous = domains.get(domain);
+      domains.set(domain, previous === undefined || previous?.id === school.id ? school : null);
+    }
+  // Curated email domains take precedence over duplicate campus records in the source.
+  for (const school of ONTARIO_UNIVERSITIES)
+    for (const domain of school.domains) domains.set(domain, schools.get(school.id)!);
+  return { schools, domains, list: [...schools.values()] };
+}
+let cachedRegistry: ReturnType<typeof buildRegistry> | undefined;
+const registry = () => (cachedRegistry ??= buildRegistry());
+export function schoolDirectory(): readonly OntarioUniversity[] {
+  return registry().list;
+}
+
 export function universityById(id: string | null | undefined): OntarioUniversity | null {
   if (!id) return null;
-  return ONTARIO_UNIVERSITIES.find((u) => u.id === id) ?? null;
+  return registry().schools.get(id) ?? null;
 }
 
 export function isOntarioUniversityId(id: string): boolean {
@@ -73,9 +127,10 @@ export function universityForEmail(email: string): OntarioUniversity | null {
     .trim()
     .toLowerCase();
   if (!domain) return null;
-  return (
-    ONTARIO_UNIVERSITIES.find((u) =>
-      u.domains.some((d) => domain === d || domain.endsWith(`.${d}`)),
-    ) ?? null
-  );
+  const parts = domain.split('.');
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join('.');
+    if (registry().domains.has(candidate)) return registry().domains.get(candidate) ?? null;
+  }
+  return null;
 }

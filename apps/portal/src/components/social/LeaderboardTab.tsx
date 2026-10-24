@@ -2,11 +2,13 @@ import { Link, useSearchParams } from 'react-router';
 import { Crown, Flame } from 'lucide-react';
 import { Panel, Segmented, Sparkline, Spinner } from '@komogon/ui';
 import type { GlobalStats, LeaderboardEntry, LeaderboardScope } from '../../lib/api';
+import { ApiError } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
 import { useLeaderboard, useLeaderboardStats } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { CompareBento } from './CompareBento';
+import { SchoolRankings } from './SchoolTab';
 
 const to = (e: LeaderboardEntry) => (e.you ? '/profile' : `/profile/${e.userId}`);
 
@@ -207,14 +209,16 @@ function Everyone({ stats }: { stats: GlobalStats }) {
  */
 export function LeaderboardTab() {
   const [params, setParams] = useSearchParams();
-  const scope: LeaderboardScope = params.get('scope') === 'friends' ? 'friends' : 'global';
-  const setScope = (next: LeaderboardScope) => {
+  const rawScope = params.get('scope');
+  const scope: LeaderboardScope | 'schools' =
+    rawScope === 'friends' || rawScope === 'school' || rawScope === 'schools' ? rawScope : 'global';
+  const setScope = (next: LeaderboardScope | 'schools') => {
     const p = new URLSearchParams(params);
     if (next === 'global') p.delete('scope');
     else p.set('scope', next);
     setParams(p);
   };
-  const board = useLeaderboard(scope);
+  const board = useLeaderboard(scope === 'schools' ? 'global' : scope);
   const stats = useLeaderboardStats();
   const picker = (
     <div className="board-scope">
@@ -225,10 +229,36 @@ export function LeaderboardTab() {
         options={[
           { value: 'global', label: 'Global' },
           { value: 'friends', label: 'Friends' },
+          { value: 'school', label: 'My school' },
+          { value: 'schools', label: 'Schools' },
         ]}
       />
     </div>
   );
+  if (scope === 'schools')
+    return (
+      <div className="board">
+        {picker}
+        <SchoolRankings />
+      </div>
+    );
+  if (
+    board.isError &&
+    scope === 'school' &&
+    board.error instanceof ApiError &&
+    board.error.status === 403
+  )
+    return (
+      <div className="board">
+        {picker}
+        <Panel>
+          <p>Verify your school email to see this board.</p>
+          <Link to="/social?tab=school" className="btn btn-secondary">
+            Verify school
+          </Link>
+        </Panel>
+      </div>
+    );
   if (board.isError)
     return <ErrorPanel message="The leaderboard could not load." onRetry={() => board.refetch()} />;
   if (!board.data)
@@ -300,7 +330,11 @@ export function LeaderboardTab() {
           )}
         </>
       )}
-      {scope === 'global' ? stats.data && <Everyone stats={stats.data} /> : <CompareBento />}
+      {scope === 'global' ? (
+        stats.data && <Everyone stats={stats.data} />
+      ) : scope === 'friends' ? (
+        <CompareBento />
+      ) : null}
     </div>
   );
 }

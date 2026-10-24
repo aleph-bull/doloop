@@ -436,6 +436,7 @@ export const settingsSchema = z
         leaderboard: z.enum(['global', 'friends', 'off']),
         requests: z.boolean(),
         live: z.boolean(),
+        schoolActivity: z.boolean(),
       })
       .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),

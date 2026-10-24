@@ -35,6 +35,7 @@ import { compareRoutes } from './routes/compare';
 import { groupRoutes } from './routes/groups';
 import { notificationRoutes } from './routes/notifications';
 import { universityRoutes } from './routes/university';
+import { schoolRoutes } from './routes/schools';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
 import type { MediaStore } from './services/media-store';
 import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
@@ -186,6 +187,7 @@ export async function buildServer(opts: BuildOptions) {
   notificationRoutes(app, opts.db, clock);
   // Codes go through the same mailer as account email; with none, verifying is off.
   universityRoutes(app, opts.db, clock, opts.mailer ?? null);
+  schoolRoutes(app, opts.db, clock);
   nodeRoutes(app, opts.db, clock);
   tagRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.

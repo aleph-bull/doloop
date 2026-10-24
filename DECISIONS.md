@@ -1459,6 +1459,7 @@ as password sign-in, so password reset revokes sessions from both methods. Reser
 test identities remain blocked from hosted signup and Google sign-in. Migrations 0014–0016
 are additive; existing study records are preserved. Resend still requires a verified
 komogon.app domain and private server key before hosted password signup can send codes.
+
 ## Sidebar sign out, top bar words, Navigation in Appearance, and the lost blur, 2026-10-21 (user request)
 
 - **The sidebar has a Sign out row** under Settings, above the pin: the icon while slim, the label once it opens. It asks first, like the top bar's icon.
@@ -1529,6 +1530,7 @@ komogon.app domain and private server key before hosted password signup can send
 - **Origin's main had a second Social** from another session (`social_profiles` with organization verification, a Social page and a people directory), already deployed. The user chose to keep the profile pages from this session. The merge keeps everything else origin added (simplified onboarding, calendar imports, local test accounts, account email verification, the marketing site) and drops only the other Social: its routes, page, API client calls and tests.
 - **Nothing is dropped in the database.** `social_profiles`, `email_codes` and `email_rate_limits` stay (the first is unused; drop it in a later migration once the alpha data is not needed). This session's tables arrive as migration 0017, after origin's 0014 to 0016, so the hosted database applies them cleanly.
 - **One mailer.** The university codes go through origin's `services/mailer.ts` (Resend, or the local inbox with `LOCAL_TEST_ACCOUNTS=true`); this session's console mailer is gone. With no mailer the university route answers 503 instead of printing codes.
+
 ## Card shadows in the scrolling rows, 2026-10-21 (user request)
 
 - **The dashboard's Tasks row keeps its cards' whole shadow.** It scrolls sideways, and a scroller clips everything outside its box. CSS blurs a shadow along a bell curve whose faint tail runs well past the blur value, so the dark glass shadow is still about 8% black 40px below a card. The earlier 14px and 40px of room cut it into a hard line that showed on the cloud photos. The row now keeps 12px above, 46px at the sides and 72px below, where the shadow has faded to about 1%, pulled back with matching margins. The rail's edge fade grew by the same amount, so it falls on the cards as before.
@@ -2504,3 +2506,22 @@ The owner asked to let people cut videos they've already posted, and to add only
 - **A real cut, not a hidden range:** the browser cuts the file (`lib/video-cut.ts`, mediabunny), so the player, the length and the download are all the cut. A cut that starts on a key frame is copied as it is (instant, no loss); anywhere else it is re-encoded at about the video's own bitrate so it starts exactly where the handle was. Over the post's limit it shrinks like a new post's file.
 - **Saving:** the cut goes up the way a new post's file does (R2 upload link, counted in the daily quota, or with the request without R2), then `PUT /api/posts/:id/video` puts it in the old file's place with a new poster, and the old file is deleted from R2. The words, pictures, session and kudos stay.
 - **The old copy isn't played again:** a file kept by the API is asked for with its size in the address (`?v=`), because the browser keeps those for an hour under one address.
+
+## School verification and Social, 2026-10-24 (user request)
+
+Updated this checkout to the latest main before extending its existing school email-code
+flow. A pinned MIT-licensed Hipo directory adds international university/college names,
+countries and domains while preserving Ontario IDs and student email overrides. Matching
+uses domain boundaries and rejects ambiguous domains. No email leaves the API for lookup.
+Official identifying marks for Toronto and McMaster include provenance; other schools
+have a fallback icon. The directory loads only where needed, not in the extension.
+
+Social adds School: verified schoolmates' live subjects and public posts, with activity
+sharing off until explicitly enabled. Verifying or unlinking a school resets that consent.
+Private posts remain private. Membership comes from confirmed email proof. Leaderboard
+adds My school (all-time focused time) and Schools (school totals this week or all time),
+with contributor counts and equal ranks for ties. Existing leaderboard opt-outs, suspensions,
+test-account exclusion and dev-world isolation apply. The All boards setting now names the
+expanded scope. No new onboarding step or schema migration is introduced.
+
+Directory provenance, mark sources, limitations and refresh instructions: docs/SCHOOLS.md.

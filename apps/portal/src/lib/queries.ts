@@ -75,7 +75,7 @@ export const keys = {
   notifications: ['social', 'notifications'] as const,
   postable: ['social', 'postable'] as const,
   // Versioned: the persisted cache held older shapes of these without the per-row lines.
-  leaderboard: (scope: LeaderboardScope) => ['leaderboard', 2, scope] as const,
+  leaderboard: (scope: LeaderboardScope) => ['leaderboard', 3, scope] as const,
   university: ['me', 'university'] as const,
   // Not under ['me']: a settings change should not refetch the picture.
   avatar: ['avatar', 'me'] as const,
@@ -461,7 +461,7 @@ export function useUniversityStatus(enabled = true) {
 /* ---------- Social ---------- */
 
 /** Everything that lists posts: the feed and the profiles. */
-const POST_KEYS = [['social', 'feed'], ['profiles']] as const;
+const POST_KEYS = [['social', 'feed'], ['profiles'], ['schools', 1, 'community']] as const;
 
 export function useFeed(scope: FeedScope) {
   return useInfiniteQuery({
@@ -523,6 +523,10 @@ function patchPost(
   );
   qc.setQueriesData<{ posts: FeedPost[] }>(
     { queryKey: ['profiles'] },
+    (data) => data && { ...data, posts: apply(data.posts) },
+  );
+  qc.setQueriesData<{ posts: FeedPost[] }>(
+    { queryKey: ['schools', 1, 'community'] },
     (data) => data && { ...data, posts: apply(data.posts) },
   );
 }
@@ -798,6 +802,7 @@ export function useUpdateSettings() {
     onSuccess: () =>
       invalidate(
         keys.me,
+        ['schools'],
         keys.quote,
         keys.pace,
         keys.rewards,

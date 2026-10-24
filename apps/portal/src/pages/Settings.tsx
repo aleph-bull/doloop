@@ -442,13 +442,13 @@ export function Settings() {
                   value={s.social.leaderboard}
                   onChange={(leaderboard) => patch({ social: { leaderboard } })}
                   options={[
-                    { value: 'global', label: 'Global and friends' },
+                    { value: 'global', label: 'All boards' },
                     { value: 'friends', label: 'Friends only' },
-                    { value: 'off', label: 'Neither' },
+                    { value: 'off', label: 'Off' },
                   ]}
                 />
                 <span className="field-hint">
-                  Where your focused time counts. Friends see a board of their own.
+                  Global, friends and school rankings, or friends only.
                 </span>
               </div>
               <Toggle
@@ -461,6 +461,12 @@ export function Settings() {
                 onChange={(v) => patch({ social: { live: v } })}
                 label="Show friends when I’m studying"
                 description="While a session runs, friends see how long you’ve been at it and on what. People in your groups and jams see it either way."
+              />
+              <Toggle
+                checked={s.social.schoolActivity}
+                onChange={(schoolActivity) => patch({ social: { schoolActivity } })}
+                label="Share study activity with my school"
+                description="Show your current session and public posts to verified schoolmates."
               />
               <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />

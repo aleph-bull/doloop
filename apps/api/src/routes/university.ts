@@ -80,7 +80,10 @@ export function universityRoutes(
         settings: sql`${users.settings} || jsonb_build_object(
           'profile',
           coalesce(${users.settings} -> 'profile', '{}'::jsonb)
-            || jsonb_build_object('university', ${universityId}::text)
+            || jsonb_build_object('university', ${universityId}::text),
+          'social',
+          coalesce(${users.settings} -> 'social', '{}'::jsonb)
+            || jsonb_build_object('schoolActivity', false)
         )`,
       })
       .where(eq(users.id, userId));
@@ -109,9 +112,7 @@ export function universityRoutes(
       );
     const uni = universityForEmail(email);
     if (!uni)
-      throw badRequest(
-        'That address is not from an Ontario university we know. Use the one your university gave you.',
-      );
+      throw badRequest('School not found for this email domain. Use your school-issued address.');
     const now = Date.parse(clock());
     const existing = await db.query.universityVerifications.findFirst({
       where: eq(universityVerifications.userId, req.user.id),

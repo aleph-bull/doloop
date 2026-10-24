@@ -542,7 +542,7 @@ export interface NotificationsResponse {
   unread: number;
 }
 
-export type LeaderboardScope = 'global' | 'friends';
+export type LeaderboardScope = 'global' | 'friends' | 'school';
 
 /** You beside everyone on the global board; see the API's GlobalStats. */
 export interface GlobalStats {
@@ -623,7 +623,36 @@ export interface ProfileResponse {
   live?: LiveMember | null;
 }
 
+export interface SchoolSummary {
+  id: string;
+  name: string;
+  short?: string;
+  country?: string;
+  crestUrl?: string;
+  crestSource?: string;
+  crestCredit?: string;
+}
+export interface SchoolCommunity {
+  school: SchoolSummary | null;
+  live: LiveMember[];
+  posts: FeedPost[];
+  people: Record<string, Person>;
+}
+export interface SchoolBoard {
+  period: 'week' | 'all';
+  school: SchoolSummary | null;
+  entries: Array<{
+    rank: number;
+    school: SchoolSummary;
+    focusMinutes: number;
+    members: number;
+    you: boolean;
+  }>;
+}
 export const api = {
+  schoolCommunity: () => request<SchoolCommunity>('GET', '/api/schools/community'),
+  schoolLeaderboard: (period: 'week' | 'all') =>
+    request<SchoolBoard>('GET', `/api/schools/leaderboard?period=${period}`),
   health: () => request<{ ok: boolean }>('GET', '/api/health'),
   me: () => request<MeResponse>('GET', '/api/me'),
   updateMe: (patch: { timezone?: string; onboarded?: boolean }) =>
