@@ -69,6 +69,7 @@ export interface BuildOptions {
   devLogin?: Pick<DevLoginOptions, 'passwordHash' | 'limits'> | null;
   localTestAccounts?: boolean;
   mailer?: Mailer | null;
+  /** Sign-up waits for an emailed code before making the account. Off by default (2026-10-24). */
   requireEmailVerification?: boolean;
   /** Injectable clock for tests. */
   clock?: () => string;
@@ -140,7 +141,7 @@ export async function buildServer(opts: BuildOptions) {
       adminEmails: admins,
       localTestAccounts: opts.localTestAccounts ?? false,
       mailer: opts.mailer,
-      requireVerification: opts.requireEmailVerification ?? !!opts.mailer,
+      requireVerification: opts.requireEmailVerification ?? false,
       clock,
       google: opts.passwordAuth.google,
     });
@@ -170,7 +171,7 @@ export async function buildServer(opts: BuildOptions) {
   const email = {
     mailer: opts.mailer ?? null,
     secret: opts.passwordAuth?.secret ?? calendar.stateSecret,
-    verificationRequired: opts.requireEmailVerification ?? !!opts.mailer,
+    verificationRequired: opts.requireEmailVerification ?? false,
     localTestAccounts: opts.localTestAccounts ?? false,
     passwordAuth: !!opts.passwordAuth,
   };

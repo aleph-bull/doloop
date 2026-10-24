@@ -119,15 +119,14 @@ connection, showing the last data it had.
 **Admin.** `ADMIN_EMAILS` on Render (already set to your email in `render.yaml`) turns
 on the Admin page: a shield icon in the top bar, then every account with its sign-up
 date and figures, a download of everything each account has saved, and a way to give
-someone a new password. Members are told so on the sign-in page, which also asks them not
-to use a password they use anywhere else. When an admin email creates an account and that
+someone a new password. Members are told so on the sign-in page. When an admin email creates an account and that
 email already has data with no password (for example, your own data moved over from this
 computer), the password goes on that account and the data carries on.
 
-**Verification and password reset.** Password signup now requires an email code. Configure
-Resend on the API before enabling live signup: verify `komogon.app`, set `RESEND_API_KEY`
-privately on Render, and use `MAIL_FROM=Komodon <noreply@komogon.app>`. Forgot password uses
-the same mailer and revokes existing sessions after reset. Missing mail configuration
+**Verification and password reset.** Password signup makes the account at once, with no
+email code (since 2026-10-24). Forgot password still emails a code: verify `komogon.app` in
+Resend, set `RESEND_API_KEY` privately on Render, and use
+`MAIL_FROM=Komodon <noreply@komogon.app>`. Reset revokes existing sessions. Missing mail configuration
 leaves existing sign-in available and returns an unavailable message for code requests.
 See [SETUP.md](SETUP.md#verification-emails-and-password-reset-resend). Google sign-in
 continues to use Google's email proof; school/organization verification is separate.
@@ -140,7 +139,7 @@ on a phone. Tick each line; anything that fails goes on the known-issues list or
 **First run**
 
 - [ ] Create an account with email and password (not dev sign-in), sign out, sign back in.
-- [ ] Verify the signup email code, then enter the dashboard without course/task questions.
+- [ ] Signing up goes straight in (no email code), then the dashboard without course/task questions.
 - [ ] Start a session with inline options; navigation, including Social, stays available.
 - [ ] Forgot password sends a code, changes the password and signs out previous sessions.
 - [ ] Reload the page: still signed in, nothing lost.

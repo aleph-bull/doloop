@@ -72,7 +72,9 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   in a local sandbox run with `AUTH_SECRET`; signing in to the live site is the owner's to do.
 - `ADMIN_EMAILS` (the owner) unlocks `/admin`: every account, a JSON download of each one's
   data, and setting a new password. Testers are told on the sign-in page that the owner can
-  see accounts and study data, and are asked not to reuse a personal password.
+  see accounts and study data. The "don't reuse a password" hint was dropped on 2026-10-24
+  (passwords are salted scrypt hashes), and so was the emailed code at sign-up: the account
+  is made at once (`requireEmailVerification` is off; the tests still turn it on).
 - Admin tools (2026-10-21): each account's Manage dialog adds study time, takes time off or
   deletes a session, restarts onboarding, and suspends or deletes the account; the page also
   has Dev tools (go through onboarding again on your own account) and Blocked emails. A

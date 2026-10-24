@@ -2551,3 +2551,11 @@ The owner, on the computer's Start a session card: "instead of choose what to st
 - **How it moves** (`turnPage` in StartSessionDialog.tsx): the page there slides a little to the side and fades (110 ms), the other one comes in from the side it lives on (the picker from the right, the session from the left) while the card grows or shrinks to fit it (240 ms). The card and its X don't move, so the glass keeps its real blur. With motion off it swaps at once.
 - **"I'm all set"**, a normal-sized button at the bottom right (a full-width one like Start was "way too big"), grey until something is chosen and then the accent. Clicking a course or unit chooses it as well as opening it (the owner: "if i click a task that is a parent it does not let me go all set"), so "I'm all set" takes the parent; its first row inside is "All of" it, ticked, except on the last level down, where everything inside is a task with nothing under it (owner: "on the most child task remove the "all of" indicator"). Picking anything inside, a task, No task, a routine, a search result, "All of" or the mark at a row's right still goes straight back.
 - The phone is unchanged: it already pushes its own picker page.
+
+## No email code at sign-up, and no password warning, 2026-10-24 (owner request)
+
+The owner: "remove the mandatory email verification when a user makes an account" and "remove the warning about unsafe passwords because now theyre hashed and salted".
+
+- **Sign-up makes the account at once**, like Google sign-in: email, password, Create account, and you're in. The API's `requireEmailVerification` now defaults to off (it was on whenever a mailer was set, and `index.ts` forced it on), so `POST /api/auth/signup` answers a token straight away. The code flow is kept behind the option (the email tests still turn it on), and the portal still shows the code card if a server ever asks for one. Accounts made this way start with no `email_verified_at`, like before the code existed.
+- Forgot password, the school email check and Resend are unchanged: they still email codes.
+- **The password field's hint** "Don't use a password you use anywhere else." is gone; making an account still says "At least 6 characters.". The line under it saying the owner can see accounts and study data stays (not asked).

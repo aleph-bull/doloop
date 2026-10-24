@@ -220,3 +220,27 @@ it('keeps existing sign-in available but requires a configured mailer for verifi
     await unconfigured.close();
   }
 });
+
+it('signs up at once, with no code, unless verification is asked for', async () => {
+  const open = await buildServer({
+    db: pg.db,
+    verifier: createHsVerifier(secret),
+    passwordAuth: { secret },
+    mailer,
+    clock: () => now,
+  });
+  try {
+    const sent = mailer.messages!.length;
+    const up = await open.inject({
+      method: 'POST',
+      url: '/api/auth/signup',
+      payload: { email: 'straight-in@example.test', password: 'original-password' },
+    });
+    expect(up.statusCode, up.body).toBe(200);
+    expect(up.json().token).toBeTruthy();
+    expect(up.json().verificationRequired).toBeUndefined();
+    expect(mailer.messages!.length).toBe(sent);
+  } finally {
+    await open.close();
+  }
+});

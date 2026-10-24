@@ -187,11 +187,7 @@ export function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
                 required={auth.mode !== 'dev'}
                 minLength={auth.mode !== 'dev' ? 6 : undefined}
-                hint={
-                  auth.mode === 'dev'
-                    ? undefined
-                    : `${creating ? 'At least 6 characters. ' : ''}Don't use a password you use anywhere else.`
-                }
+                hint={auth.mode !== 'dev' && creating ? 'At least 6 characters.' : undefined}
               />
               {auth.mode !== 'dev' && (
                 <p className="field-hint">

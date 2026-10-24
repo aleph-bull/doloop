@@ -34,8 +34,9 @@ hostname and (when sent) origin. They do not grant access to hosted accounts.
 
 ## Verification emails and password reset (Resend)
 
-The API's password signup sends a six-digit email code before creating an account.
-Codes expire after ten minutes and allow five guesses. Password reset uses the same
+The API's password signup makes the account straight away (the emailed signup code was
+turned off on 2026-10-24; `requireEmailVerification` in `buildServer` turns it back on).
+Codes expire after ten minutes and allow five guesses. Password reset uses the
 plain-text mailer and signs out existing sessions after a successful reset. Existing
 accounts can verify their account email from Social without repeating onboarding.
 
@@ -64,8 +65,8 @@ Resend account consume that allowance too. Monitor provider usage before increas
 the limit. See [Resend pricing](https://resend.com/pricing) and
 [domain verification](https://resend.com/docs/dashboard/domains/introduction).
 
-Without a mailer configured, hosted signup and code requests return an unavailable
-message. Existing users can still sign in. Supabase sign-in, when enabled, continues
+Without a mailer configured, code requests return an unavailable message. Signup and
+sign-in still work. Supabase sign-in, when enabled, continues
 to use Supabase's own account confirmation and recovery settings.
 
 For local testing, run `pnpm sandbox:test:api` and `pnpm sandbox:test:portal`, then open

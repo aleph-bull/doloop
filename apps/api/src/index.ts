@@ -86,7 +86,6 @@ const app = await buildServer({
     : env.resendApiKey
       ? createResendMailer(env.resendApiKey, env.mailFrom)
       : null,
-  requireEmailVerification: true,
   localTestAccounts,
   db,
   verifier,
