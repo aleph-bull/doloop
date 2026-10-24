@@ -1,17 +1,7 @@
 import { buildIndex, type RoutineOccurrence, type StudyNode } from '@komogon/core';
-import {
-  ArrowLeft,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  CircleDot,
-  Search,
-  Timer,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, CircleDot, Search, Timer, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { fmtDate } from '../lib/format';
-import { Popout } from './Popout';
 
 /** The picker's value: a task, one occurrence of a routine, or nothing at all. */
 export const NONE = 'none';
@@ -105,16 +95,19 @@ export interface SubjectPickerProps {
   /** Today's date, so an older occurrence can say which day it is from. */
   today?: string;
   value: string;
-  onChange: (value: string) => void;
+  /** `opened` when a course or unit was chosen by opening it: the picker shows its insides. */
+  onChange: (value: string, opened?: boolean) => void;
 }
 
 /**
  * What to study, laid out like the task tree but one page at a time. It always opens on
- * the courses. A row with things inside opens on click and turns the page to them; a row
- * without is chosen on click. A course or unit can still be studied as a whole through the
- * small mark at its right. Back goes up one level, "See all courses" back to the top.
- * "No task" is the first row at the top, and the routines the last. On a computer it pops
- * out of `SubjectButton`, which shows what is chosen.
+ * the courses. A row with things inside is chosen on click and turns the page to them, so
+ * something inside can still be picked instead; its first row there is "All of" it, unless
+ * everything inside is a task with nothing under it (the last level down). A row
+ * without is chosen on click, and so is a course or unit through the small mark at its
+ * right. Back goes up one level, "See all courses" back to the top.
+ * "No task" is the first row at the top, and the routines the last. On a computer it is
+ * the Start a session card's second page, turned to from `SubjectButton`.
  */
 export function SubjectPicker({ nodes, routines, today, value, onChange }: SubjectPickerProps) {
   const index = useSubjectIndex(nodes);
@@ -126,6 +119,8 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
   const here = path[path.length - 1];
   const inRoutines = here === ROUTINES;
   const items = here && !inRoutines ? (index.childrenOf.get(here) ?? []) : index.roots;
+  /** The last level down: nothing here has anything under it. */
+  const lastLevel = items.every((n) => !index.childrenOf.get(n.id)?.length);
   const titleOf = (id: string) =>
     id === ROUTINES ? 'Routines' : (index.byId.get(id)?.title ?? '');
   const heading = here ? titleOf(here) : 'All courses';
@@ -233,6 +228,26 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
               </li>
             )}
 
+            {/* Inside a course or unit, the first row is all of it, except on the last level. */}
+            {here && !inRoutines && !lastLevel && (
+              <li>
+                <button
+                  type="button"
+                  className={`picker-row${value === nodeKey(here) ? ' is-chosen' : ''}`}
+                  aria-pressed={value === nodeKey(here)}
+                  onClick={() => onChange(nodeKey(here))}
+                >
+                  <CircleDot size={16} aria-hidden className="picker-row-icon" />
+                  <span className="picker-row-text">
+                    <span className="picker-row-title">All of {titleOf(here)}</span>
+                  </span>
+                  {value === nodeKey(here) && (
+                    <Check size={16} aria-hidden className="picker-check" />
+                  )}
+                </button>
+              </li>
+            )}
+
             {inRoutines
               ? routines.map((o) => {
                   const key = routineKey(o);
@@ -284,7 +299,10 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
                       <button
                         type="button"
                         className="picker-row picker-open"
-                        onClick={() => setPath([...path, n.id])}
+                        onClick={() => {
+                          setPath([...path, n.id]);
+                          onChange(key, true);
+                        }}
                         aria-label={`Open ${n.title}, ${kids} inside`}
                       >
                         <span className="picker-row-text">
@@ -339,46 +357,39 @@ export function SubjectPicker({ nodes, routines, today, value, onChange }: Subje
   );
 }
 
+export interface SubjectButtonProps {
+  nodes: StudyNode[];
+  routines: RoutineOccurrence[];
+  value: string;
+  /** Turns the card over to the picker. */
+  onOpen: () => void;
+  ref?: React.Ref<HTMLButtonElement>;
+}
+
 /**
- * What to study, on a computer: a big button showing what is chosen, which pops the picker
- * out under it, over the rest of the card. Choosing something closes it. Each time it opens
- * it starts on the courses.
+ * What to study, on a computer: a big button showing what is chosen. It turns the card to
+ * the picker, a page of its own, and choosing something (or "I'm all set") turns it back.
  */
-export function SubjectButton({ nodes, routines, today, value, onChange }: SubjectPickerProps) {
+export function SubjectButton({ nodes, routines, value, onOpen, ref }: SubjectButtonProps) {
   const index = useSubjectIndex(nodes);
   const chosen = describeSubject(value, index, routines);
   // "No task" stands alone here; the phone's row still says more under it.
   const where = value === NONE ? '' : chosen?.where;
 
   return (
-    <Popout
-      label="What to study"
-      triggerClassName={`start-subject${chosen ? '' : ' is-empty'}`}
-      className="is-subject"
-      trigger={
-        <>
-          <span className="start-subject-text">
-            <span className="start-subject-title truncate">
-              {chosen?.title ?? 'Choose what to study'}
-            </span>
-            {where && <span className="start-subject-where truncate">{where}</span>}
-          </span>
-          <ChevronDown size={18} aria-hidden className="start-subject-chevron" />
-        </>
-      }
+    <button
+      ref={ref}
+      type="button"
+      className={`start-subject${chosen ? '' : ' is-empty'}`}
+      onClick={onOpen}
     >
-      {(close) => (
-        <SubjectPicker
-          nodes={nodes}
-          routines={routines}
-          today={today}
-          value={value}
-          onChange={(v) => {
-            onChange(v);
-            close();
-          }}
-        />
-      )}
-    </Popout>
+      <span className="start-subject-text">
+        <span className="start-subject-title truncate">
+          {chosen?.title ?? 'Choose what to study'}
+        </span>
+        {where && <span className="start-subject-where truncate">{where}</span>}
+      </span>
+      <ChevronRight size={18} aria-hidden className="start-subject-chevron" />
+    </button>
   );
 }

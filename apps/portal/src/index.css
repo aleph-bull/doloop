@@ -2219,8 +2219,9 @@
 /*
  * ---------- Starting a session on a computer ----------
  * One narrow card: what to study as a big button, then a pill each for how it runs, then
- * one big Start. The task button and the first two pills pop their choices out under them
- * (Popout); the X at the top right closes the card. The phone has its own screen.
+ * one big Start. The task button turns the card to a second page, the picker, with "I'm all
+ * set" where Start was; the first two pills pop their choices out under them (Popout); the
+ * X at the top right closes the card. The phone has its own screen.
  */
 @media (min-width: 561px) {
   .modal.start-dialog {
@@ -2262,8 +2263,7 @@
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
-button.start-subject:hover,
-.start-subject.is-open {
+button.start-subject:hover {
   background: color-mix(in srgb, var(--fg) 9%, transparent);
 }
 .start-subject.is-locked {
@@ -2348,33 +2348,27 @@ button.start-subject:hover,
   display: flex;
   flex-direction: column;
 }
-.start-pop .picker {
-  flex: 1;
-  min-height: 0;
-}
-/* The list gives up height first when the window is short. */
-.start-pop .picker-list {
-  height: auto;
-  flex: 0 1 264px;
-  min-height: 120px;
+/* The picker's page: what to study, with Back at the top left, level with the title. */
+.start-dialog.is-picking .modal-title {
+  padding-left: 32px;
 }
 /* A slim thumb and no arrow buttons (Windows draws arrows even on a thin standard bar). */
-.start-pop .picker-list::-webkit-scrollbar {
+.start-picker .picker-list::-webkit-scrollbar {
   width: 10px;
 }
-.start-pop .picker-list::-webkit-scrollbar-button {
+.start-picker .picker-list::-webkit-scrollbar-button {
   display: none;
 }
-.start-pop .picker-list::-webkit-scrollbar-track {
+.start-picker .picker-list::-webkit-scrollbar-track {
   background: transparent;
 }
-.start-pop .picker-list::-webkit-scrollbar-thumb {
+.start-picker .picker-list::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 10px;
   background: color-mix(in srgb, var(--fg) 22%, transparent) padding-box;
 }
 @supports not selector(::-webkit-scrollbar) {
-  .start-pop .picker-list {
+  .start-picker .picker-list {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
   }
@@ -2457,8 +2451,9 @@ button.start-subject:hover,
   height: 42px;
   text-align: center;
 }
-/* Close, at the card's top right, level with the title. */
-.modal-body > .start-close {
+/* Close, at the card's top right, level with the title; on the back, Back at its top left. */
+.modal-body > .start-close,
+.modal-body > .start-back {
   position: absolute;
   top: 22px;
   right: 18px;
@@ -2475,7 +2470,12 @@ button.start-subject:hover,
     background var(--dur-fast) var(--ease-out),
     color var(--dur-fast) var(--ease-out);
 }
-.modal-body > .start-close:hover {
+.modal-body > .start-back {
+  right: auto;
+  left: 16px;
+}
+.modal-body > .start-close:hover,
+.modal-body > .start-back:hover {
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg);
 }
@@ -2565,6 +2565,7 @@ button.start-subject:hover,
   font: inherit;
   font-size: var(--text-sm);
   color: var(--accent);
+  white-space: nowrap;
   cursor: pointer;
   transition: background var(--dur-fast) var(--ease-out);
 }
