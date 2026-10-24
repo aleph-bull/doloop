@@ -34,3 +34,5 @@ Disallow: /changelog/
 
 User-agent: *
 Allow: /
+
+Sitemap: https://app.komogon.app/sitemap.xml

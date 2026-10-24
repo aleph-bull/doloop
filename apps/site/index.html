@@ -3,11 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Komodon — productive, every time</title>
+    <title>Komodon: study planner, Pomodoro timer and focus tracker</title>
     <meta
       name="description"
-      content="Komodon plans your work, times your focus, and shows the hours adding up. Track focus sessions, stay accountable, and share your wins with friends."
+      content="Komodon plans your work, times your focus, and shows the hours adding up. A Pomodoro timer, study timelapses, a week planner and friends to study with. Free."
     />
+    <link rel="canonical" href="https://app.komogon.app/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Komodon" />
     <meta property="og:url" content="https://app.komogon.app/" />
@@ -25,6 +26,40 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#f7f3fa" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- What search engines read about the app: no ratings or reviews, only what's true. -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://app.komogon.app/#website",
+            "url": "https://app.komogon.app/",
+            "name": "Komodon"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://app.komogon.app/#org",
+            "name": "Komodon",
+            "url": "https://app.komogon.app/",
+            "logo": "https://app.komogon.app/icon-512.png",
+            "sameAs": ["https://discord.gg/bUkqd58FF5"]
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Komodon",
+            "url": "https://komogon.app/",
+            "image": "https://app.komogon.app/og.jpg",
+            "applicationCategory": "EducationalApplication",
+            "operatingSystem": "Web",
+            "description": "Komodon plans your work, times your focus, and shows the hours adding up. A Pomodoro timer, study timelapses, a week planner and friends to study with.",
+            "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
+            "publisher": { "@id": "https://app.komogon.app/#org" }
+          }
+        ]
+      }
+    </script>
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="preload" as="image" href="/backgrounds/cotton-candy.webp" />
@@ -106,15 +141,15 @@
                 <ol class="tour-list rise" style="--d: 200ms">
                   <li class="tour-item" data-i="0">
                     <span class="tour-text"><strong>Your week at a glance</strong> Hours this week beside last week, and your goal.</span>
-                    <img class="tour-inline-shot" src="/shots/analytics.webp" alt="" width="2400" height="1500" loading="lazy" />
+                    <img class="tour-inline-shot" src="/shots/analytics.webp" alt="Komodon Analytics: hours studied this week beside last week, the weekly goal and each day" width="2400" height="1500" loading="lazy" />
                   </li>
                   <li class="tour-item" data-i="1">
                     <span class="tour-text"><strong>Friends studying with you</strong> Their timelapses, kudos, and who's studying right now.</span>
-                    <img class="tour-inline-shot" src="/shots/social.webp" alt="" width="2400" height="1500" loading="lazy" />
+                    <img class="tour-inline-shot" src="/shots/social.webp" alt="The Komodon feed: friends studying now, their posts and a timelapse" width="2400" height="1500" loading="lazy" />
                   </li>
                   <li class="tour-item" data-i="2">
                     <span class="tour-text"><strong>A friendly leaderboard</strong> All-time hours, with your friends or with everyone.</span>
-                    <img class="tour-inline-shot" src="/shots/board.webp" alt="" width="2400" height="1500" loading="lazy" />
+                    <img class="tour-inline-shot" src="/shots/board.webp" alt="The Komodon leaderboard: all-time study hours with friends or everyone" width="2400" height="1500" loading="lazy" />
                   </li>
                 </ol>
               </div>
