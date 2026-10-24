@@ -142,8 +142,14 @@ main {
   background: rgb(255 255 255 / 0.16);
   color: #fff;
 }
-.site-nav > .cta {
+.site-nav-actions {
+  display: flex;
+  gap: 10px;
   margin-left: auto;
+}
+.cta-discord {
+  box-sizing: border-box;
+  gap: 8px;
 }
 
 /* ---------- Buttons ---------- */
@@ -1293,6 +1299,16 @@ html.has-motion .devices.rise.is-in {
   .site-footer-inner p {
     margin: 0;
     width: 100%;
+  }
+}
+/* On a phone the Discord button is just the mark. */
+@media (max-width: 480px) {
+  .cta-discord {
+    width: 38px;
+    padding: 0;
+  }
+  .cta-discord-label {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

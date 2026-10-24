@@ -469,13 +469,11 @@
 }
 /*
  * Every page is an icon; the current one widens into a pill with its name beside it. Each tab
- * is as wide as what it shows plus an equal share of the rest, so as the name slides open
- * (its column going from 0fr to 1fr) the other tabs give way in step, with no jump. The
- * highlight moves on the tap itself (AppShell's useNavTarget), before the page has rendered.
+ * is as wide as what it shows plus an equal share of the rest. The highlight moves on the tap
+ * itself (AppShell's useNavTarget), before the page has rendered, and it snaps there: no
+ * sliding. A width can only slide on the main thread, where the new page is being built at
+ * that moment, so on a phone the slide stuttered and came late (owner, 2026-10-23).
  */
-:root[data-tabbar] .tabbar {
-  --tab-ease: cubic-bezier(0.32, 0.72, 0, 1);
-}
 :root[data-tabbar] .tabbar-link {
   display: flex;
   flex: 1 1 auto;
@@ -488,10 +486,6 @@
   color: var(--fg-muted);
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    background-color 260ms var(--ease-out),
-    color 160ms var(--ease-out),
-    padding 340ms var(--tab-ease);
 }
 :root[data-tabbar] .tabbar-link[aria-current='page'] {
   padding: 0 14px 0 12px;
@@ -524,11 +518,8 @@
   grid-template-columns: 0fr;
   min-width: 0;
   opacity: 0;
-  transition:
-    grid-template-columns 340ms var(--tab-ease),
-    opacity 200ms var(--ease-out);
 }
-/* Cut off, not "…": while the name slides open it would read "So…" before "Social". */
+/* Cut off, not "…": a name that doesn't fit would read "So…". */
 :root[data-tabbar] .tabbar-label > span {
   min-width: 0;
   overflow: hidden;
@@ -542,20 +533,11 @@
 :root[data-tabbar] .tabbar-link[aria-current='page'] .tabbar-label {
   grid-template-columns: 1fr;
   opacity: 1;
-  transition:
-    grid-template-columns 340ms var(--tab-ease),
-    opacity 260ms var(--ease-out) 60ms;
 }
-:root[data-motion='off'] .tabbar-link,
-:root[data-motion='off'] .tabbar-label,
-:root[data-motion='off'] .tabbar-link[aria-current='page'] .tabbar-label,
 :root[data-motion='off'] .tabbar-icon {
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='on']) .tabbar-link,
-  :root:not([data-motion='on']) .tabbar-label,
-  :root:not([data-motion='on']) .tabbar-link[aria-current='page'] .tabbar-label,
   :root:not([data-motion='on']) .tabbar-icon {
     transition: none;
   }

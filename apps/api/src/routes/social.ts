@@ -665,6 +665,86 @@ export function socialRoutes(
     return { post: page.posts[0], people: page.people };
   });
 
+  /**
+   * Your own post's video, cut shorter in the browser: the cut takes the old file's place and
+   * its poster the old poster's. The words, the pictures and the session stay as they were.
+   */
+  app.put('/api/posts/:id/video', { bodyLimit: POST_BODY_LIMIT }, async (req) => {
+    const { id } = idParam.parse(req.params);
+    const input = z
+      .object({
+        /** The cut as a data URL (no R2), or the key from POST /api/social/uploads. */
+        media: z
+          .string()
+          .max(POST_VIDEO_MAX_BYTES_INLINE * 1.4)
+          .optional(),
+        upload: z.string().max(200).optional(),
+        poster: z
+          .string()
+          .max(POST_POSTER_MAX_BYTES * 1.4)
+          .optional(),
+      })
+      .parse(req.body);
+    if (!input.media === !input.upload) throw badRequest('One file');
+    const post = await db.query.posts.findFirst({
+      where: and(eq(posts.id, id), eq(posts.userId, req.user.id)),
+      columns: { id: true },
+    });
+    if (!post) throw notFound('No such post');
+    const old = (await db.query.postMedia.findMany({ where: eq(postMedia.postId, id) })).find((f) =>
+      VIDEO_TYPES.has(f.mime),
+    );
+    if (!old) throw notFound('No video on this post');
+    const poster = input.poster
+      ? parseDataUrl(
+          input.poster,
+          new Set(['image/jpeg', 'image/webp']),
+          POST_POSTER_MAX_BYTES,
+          'poster',
+        )
+      : null;
+
+    let next: { mime: string; bytes: number; data: string | null; key: string | null };
+    if (input.media) {
+      const f = parseDataUrl(input.media, VIDEO_TYPES, POST_VIDEO_MAX_BYTES_INLINE, 'video');
+      next = { mime: f.mime, bytes: f.bytes, data: f.data, key: null };
+    } else {
+      if (!store) throw badRequest('Send the file with the post');
+      if (!new RegExp(`^uploads/${req.user.id}/[0-9a-f-]{36}$`).test(input.upload!))
+        throw badRequest('That upload is not yours');
+      const head = await store.head(input.upload!);
+      if (!head) throw badRequest('The file did not finish uploading. Try again.');
+      if (!VIDEO_TYPES.has(head.mime)) throw badRequest('MP4 or WebM only');
+      checkMedia(head.mime, head.bytes, limits);
+      const key = `posts/${req.user.id}/${randomUUID()}.${EXTENSIONS[head.mime]}`;
+      await store.copy(input.upload!, key);
+      next = { mime: head.mime, bytes: head.bytes, data: null, key };
+    }
+
+    try {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(postMedia)
+          .set(next)
+          .where(and(eq(postMedia.postId, id), eq(postMedia.position, old.position)));
+        const patch = {
+          ...(poster ? { poster: `data:${poster.mime};base64,${poster.data}` } : {}),
+          // The first file's type and size, for portals from before `files`.
+          ...(old.position === 0 ? { mediaMime: next.mime, mediaBytes: next.bytes } : {}),
+        };
+        if (Object.keys(patch).length) await tx.update(posts).set(patch).where(eq(posts.id, id));
+      });
+    } catch (err) {
+      if (next.key) await removeAll(store!, [next.key], req.log);
+      throw err;
+    }
+    // The old file and the upload it was copied from.
+    const gone = [old.key, input.upload].flatMap((k) => (k ? [k] : []));
+    if (gone.length && store) await removeAll(store, gone, req.log);
+    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1);
+    return { post: page.posts[0], people: page.people };
+  });
+
   /** Which of a post's files: `?n=1` is the second; without it, the first. */
   const fileQuery = z.object({ n: z.coerce.number().int().min(0).max(9).default(0) });
   const mediaRow = async (viewer: UserRow, postId: string, n: number) => {

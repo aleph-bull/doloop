@@ -535,6 +535,21 @@ export function useEditPost() {
   });
 }
 
+/** The cut of your own post's video in place of the old one; the old file isn't played again. */
+export function useCutPostVideo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: Parameters<typeof api.cutPostVideo>[1] }) =>
+      api.cutPostVideo(id, input),
+    onSuccess: ({ post }) => {
+      // A player showing it now asks again; one mounted later doesn't take the old copy.
+      void qc.invalidateQueries({ queryKey: ['social', 'media-url', post.id] });
+      void qc.invalidateQueries({ queryKey: ['social', 'media', post.id] });
+      patchPost(qc, post.id, (p) => ({ ...p, media: post.media, files: post.files }));
+    },
+  });
+}
+
 export function useLikePost() {
   const qc = useQueryClient();
   return useMutation({

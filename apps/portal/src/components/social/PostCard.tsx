@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   Pencil,
   Play,
+  Scissors,
   ThumbsUp,
   Timer,
   Trash2,
@@ -39,6 +40,7 @@ import {
   useLikePost,
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { TrimVideoDialog } from './TrimVideo';
 
 const unknown = (id: string): Person => ({
   id,
@@ -131,10 +133,19 @@ function SessionWins({ session }: { session: PostSession }) {
 }
 
 /**
- * The ⋯ under every post. Yours: edit the words, or delete it after "Are you sure?".
- * Someone else's: Hide and Report, which only close the menu for now (not built yet).
+ * The ⋯ under every post. Yours: edit the words, trim the video when there is one, or delete
+ * it after "Are you sure?". Someone else's: Hide and Report, which only close the menu for
+ * now (not built yet).
  */
-function PostMenu({ post, onEdit }: { post: FeedPost; onEdit: () => void }) {
+function PostMenu({
+  post,
+  onEdit,
+  onTrim,
+}: {
+  post: FeedPost;
+  onEdit: () => void;
+  onTrim?: () => void;
+}) {
   const del = useDeletePost();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -212,6 +223,19 @@ function PostMenu({ post, onEdit }: { post: FeedPost; onEdit: () => void }) {
               >
                 <Pencil size={14} aria-hidden /> Edit
               </button>
+              {onTrim && (
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="post-menu-item"
+                  onClick={() => {
+                    setOpen(false);
+                    onTrim();
+                  }}
+                >
+                  <Scissors size={14} aria-hidden /> Trim video
+                </button>
+              )}
               <button
                 type="button"
                 role="menuitem"
@@ -302,9 +326,11 @@ function usePostFile(post: FeedPost, n: number, enabled: boolean) {
     gcTime: 50 * 60_000,
   });
   const inApi = link.data !== undefined && link.data.url === null;
+  // Its size changes when the video is trimmed, and with it the address asked.
+  const size = postFiles(post).find((f) => f.n === n)?.bytes;
   const bytes = useQuery({
-    queryKey: ['social', 'media', post.id, n],
-    queryFn: () => api.postMedia(post.id, n),
+    queryKey: ['social', 'media', post.id, n, size],
+    queryFn: () => api.postMedia(post.id, n, size),
     enabled: enabled && inApi,
     staleTime: Infinity,
   });
@@ -596,9 +622,11 @@ export function PostCard({
   const author = people[post.userId] ?? unknown(post.userId);
   const like = useLikePost();
   const [editing, setEditing] = useState(false);
+  const [trimming, setTrimming] = useState(false);
   const [open, setOpen] = useState(focus === 'comments');
   const [marked, setMarked] = useState(!!focus);
   const files = postFiles(post);
+  const video = post.you ? files.find((f) => f.mime.startsWith('video/')) : undefined;
 
   useEffect(() => {
     if (!focus) return;
@@ -672,9 +700,16 @@ export function PostCard({
           {post.comments > 0 && <span className="tabular">{post.comments}</span>}
         </button>
         {post.session && <SessionWins session={post.session} />}
-        <PostMenu post={post} onEdit={() => setEditing(true)} />
+        <PostMenu
+          post={post}
+          onEdit={() => setEditing(true)}
+          onTrim={video ? () => setTrimming(true) : undefined}
+        />
       </footer>
       {open && <Comments post={post} people={people} />}
+      {trimming && video && (
+        <TrimVideoDialog post={post} file={video} onClose={() => setTrimming(false)} />
+      )}
     </Panel>
   );
 }
