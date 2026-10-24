@@ -1,8 +1,14 @@
-import { aspectRatio, timelapseClock, videoSize, type TimelapsePlan } from '@komogon/core';
+import { timelapseClock, videoSize, type TimelapsePlan } from '@komogon/core';
 import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@komogon/ui';
-import { knownScreenRatio, stillTexts, type Still, type TimelapseLook } from '../../lib/timelapse';
+import {
+  knownScreenRatio,
+  lookRatio,
+  stillTexts,
+  type Still,
+  type TimelapseLook,
+} from '../../lib/timelapse';
 import { composeFrame } from '../../lib/timelapse-compose';
 
 /** How many stills a phone's strip shows, spread over the whole recording. */
@@ -193,7 +199,7 @@ export function TimelapseTrim({
   );
 
   /* ----- the viewer ----- */
-  const ratio = aspectRatio(look.aspect, shapes.camera, shapes.screen ?? knownScreenRatio());
+  const ratio = lookRatio(look, shapes.camera, shapes.screen ?? knownScreenRatio());
   const { w: vw, h: vh } = videoSize(ratio, wide ? 960 : 640);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const latest = useRef(-1);

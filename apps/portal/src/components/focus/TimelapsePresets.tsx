@@ -112,7 +112,7 @@ export function TimelapsePresets({
                 <div id={`timelapse-${d}-body`} className="tl-preset-body">
                   <p className="field-hint">
                     {d === 'phone'
-                      ? 'On a phone, recording opens the camera with your timer on it, in place of the focus screen. Turn the phone and the screen turns too; the video keeps the shape it started in.'
+                      ? 'On a phone, recording opens the camera with your timer on it, in place of the focus screen. Turn the phone and the screen turns too.'
                       : 'On a computer, the camera records beside the focus screen, with your screen too if you like.'}
                   </p>
                   <h3 className="font-medium">Layout</h3>

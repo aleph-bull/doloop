@@ -321,6 +321,11 @@ export interface UserSettings {
   timelapsePhone: TimelapsePreset & {
     sidewaysAspect: TimelapseAspect;
     sidewaysLayout: TimelapseLayout;
+    /**
+     * Which way the video goes: asked before the camera opens ('ask'), or the answer
+     * remembered from that question. The video keeps that shape however the phone is held.
+     */
+    orientation: 'ask' | 'upright' | 'sideways';
   };
   dismissed: string[];
 }

@@ -64,6 +64,17 @@ describe('phone timelapse preset', () => {
     expect(s.timelapsePhone.layout.watermark.visible).toBe(true);
   });
 
+  it('asks horizontal or vertical until an answer is remembered', () => {
+    expect(withDefaults({}).timelapsePhone.orientation).toBe('ask');
+    expect(
+      withDefaults({ timelapsePhone: { orientation: 'sideways' } }).timelapsePhone.orientation,
+    ).toBe('sideways');
+    const odd = { timelapsePhone: { orientation: 'diagonal' } } as unknown as Parameters<
+      typeof withDefaults
+    >[0];
+    expect(withDefaults(odd).timelapsePhone.orientation).toBe('ask');
+  });
+
   it('gives a recording the look of its device and of how the phone started', () => {
     const s = withDefaults({ timelapsePhone: { sidewaysAspect: '4:3' } });
     expect(timelapseLook(s, 'computer')).toBe(s.timelapse);

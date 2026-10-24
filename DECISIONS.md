@@ -2513,6 +2513,15 @@ The owner, on a phone: switching tabs is janky, the animation is choppy and does
 - **Now it snaps:** the highlight, the name and the other tabs giving way all change in one frame on the tap, with no slide (`.tabbar-link` and `.tabbar-label` in index.css have no transitions). The settled bar is unchanged to the pixel. The icon still gives a little under the finger. Same test: the name is fully open one or two frames after the finger lifts.
 - This replaces "The bar's animation" from 2026-10-22. The name's `clip` from earlier today stays, so a name that doesn't fit is cut rather than "…".
 
+## A phone asks horizontal or vertical before it records, 2026-10-23 (owner request)
+
+The owner asked: "ask the user on mobile whether they want to record horizontally or vertically before a session", with "another enable thing called remember my decision".
+
+- **When:** on a phone, whenever a recording is about to start (after Record on "Record a timelapse?", with Always record, or from "Record this session" in the controls), a sheet asks "Record horizontally or vertically?" with two big choices, Horizontal and Vertical, and a "Remember my decision" switch. It is asked once a session; stopping and starting the recording again keeps the answer. The clock waits while it is up, like the other questions. Closing it records nothing this time.
+- **Remember my decision** saves the answer to the phone's preset (`timelapsePhone.orientation`, 'ask' by default, API-validated: Render must deploy before it saves on komogon.app), and the sheet stops appearing. Settings › Timelapse › Phone (and the focus screen's controls on a phone) has "Horizontal or vertical": Ask, Horizontal, Vertical, to change it or ask again.
+- **What it does:** the video takes the shape picked, however the phone is held. Until now the first still decided (the phone upright or sideways when recording began). Stills taken the other way round are cropped to the middle, as a turn mid-recording already was. Held the other way, the camera screen says once "Turn your phone sideways." or "Turn your phone upright.".
+- The computer is untouched. The words are the owner's (horizontal, vertical); the layout editor still calls its two layouts Upright and Sideways, and its hint now says which is which.
+
 ## Choosing what to study is a page of its own, 2026-10-23 (owner request)
 
 The owner, on the computer's Start a session card: "instead of choose what to study opening a drop down open like a new page of sorts like a flipping animation and after its been chosen go back". A card flip was built first and rejected ("the animation looks bad", "replace the flip animation with something else"); they also asked to "make it more obvious that theyre supposed to go back so add like a button that goes coloured whens omethings selected thats like "im all set" but keep the auto go back thing too".

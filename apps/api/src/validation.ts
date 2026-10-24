@@ -457,6 +457,7 @@ export const settingsSchema = z
         aspect: z.enum(['camera', '9:16', '4:5', '1:1']),
         sidewaysAspect: z.enum(['camera', '16:9', '4:3', '1:1']),
         sidewaysLayout: timelapseLayout,
+        orientation: z.enum(['ask', 'upright', 'sideways']),
       })
       .partial()
       .strict(),

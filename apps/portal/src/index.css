@@ -4796,6 +4796,35 @@ button.start-subject:hover {
   text-underline-offset: 2px;
 }
 
+/* A phone's "horizontal or vertical?": two big choices side by side. */
+.tl-orient {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.tl-orient-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 104px;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: inherit;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.tl-orient-pick:hover,
+.tl-orient-pick:focus-visible {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
 /* The timelapse settings' tips: a quiet toggle, folded until opened. */
 .tl-tips-toggle {
   display: inline-flex;
