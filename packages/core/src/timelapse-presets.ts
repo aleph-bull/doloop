@@ -1,8 +1,9 @@
 /**
  * The two timelapse presets: one for a computer, one for a phone. A recording follows the
  * preset of the device it is made on. The phone's has two layouts, upright and sideways,
- * and a video takes the one for how the phone was held when it started; turning the phone
- * later doesn't change its shape.
+ * and a video takes the one picked before the camera opened (`orientation`), or else the
+ * one for how the phone was held when it started; turning the phone later doesn't change
+ * its shape.
  */
 import {
   aspectRatio,
@@ -63,8 +64,15 @@ export function defaultPhoneTimelapse(): UserSettings['timelapsePhone'] {
     sidewaysAspect: 'camera',
     sidewaysLayout: sideways,
     noteText: '',
+    orientation: 'ask',
   };
 }
+
+const ORIENTATIONS: readonly UserSettings['timelapsePhone']['orientation'][] = [
+  'ask',
+  'upright',
+  'sideways',
+];
 
 /**
  * The phone's preset read back from storage, made whole: each layout mended the way a
@@ -90,6 +98,7 @@ export function normalizePhoneTimelapse(
     layout: fix(saved?.layout, d.layout),
     sidewaysLayout: fix(saved?.sidewaysLayout, d.sidewaysLayout),
     noteText: noteTextOf(saved),
+    orientation: ORIENTATIONS.includes(merged.orientation) ? merged.orientation : 'ask',
   };
 }
 
@@ -105,7 +114,7 @@ export function noteTextOf(
 
 /**
  * What a recording follows: the computer's preset, or the phone's with the shape and layout
- * for how the phone was held when the video starts.
+ * for the way its video goes.
  */
 export function timelapseLook(
   settings: Pick<UserSettings, 'timelapse' | 'timelapsePhone'>,

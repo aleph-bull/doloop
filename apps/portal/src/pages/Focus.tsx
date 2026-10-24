@@ -10,6 +10,7 @@ import {
   viewTimer,
   type StudyNode,
   type TimelapseDevice,
+  type TimelapseOrientation,
   type UserSettings,
 } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
@@ -75,6 +76,7 @@ import {
 import { FocusWake } from '../components/focus/FocusWake';
 import { PhoneCamera, type CameraView } from '../components/focus/PhoneCamera';
 import {
+  OrientationPrompt,
   presetOf,
   recorderProblem,
   ScreenPrompt,
@@ -256,7 +258,29 @@ export function Focus() {
   const phone = useMemo(() => isPhone(), []);
   const device: TimelapseDevice = phone ? 'phone' : 'computer';
   const preset = settings ? presetOf(settings, device) : undefined;
-  const [recording, setRecording] = useState(false);
+  /** Asked to record; on a phone the camera waits for "horizontal or vertical" first. */
+  const [wantsRecording, setRecording] = useState(false);
+  // A phone asks which way the video goes before its camera opens, once a session, unless the
+  // answer is remembered in its preset. The answer holds for that session's video.
+  const [picked, setPicked] = useState<{ session: string; o: TimelapseOrientation } | null>(null);
+  const pickSession = session?.session.id ?? null;
+  const rememberedOrientation = settings?.timelapsePhone.orientation;
+  const orientation =
+    !phone || !pickSession
+      ? null
+      : picked?.session === pickSession
+        ? picked.o
+        : rememberedOrientation && rememberedOrientation !== 'ask'
+          ? rememberedOrientation
+          : null;
+  const recording = wantsRecording && (!phone || orientation !== null);
+  const orientAskOpen = phone && wantsRecording && !!pickSession && orientation === null;
+  // A remembered answer is kept for the session once the camera is on, so changing the
+  // setting mid-session can't turn the video round.
+  useEffect(() => {
+    if (recording && orientation && pickSession && picked?.session !== pickSession)
+      setPicked({ session: pickSession, o: orientation });
+  }, [recording, orientation, pickSession, picked]);
   const [tlAskOpen, setTlAskOpen] = useState(false);
   /** The session the timelapse question was settled for, so it is asked once per session. */
   const tlAskedFor = useRef<string | null>(null);
@@ -493,7 +517,7 @@ export function Focus() {
    * While a question or the browser's picker is up, the clock waits: choosing a window to
    * share, or whether to film, is not studying. Released the moment it closes, however it went.
    */
-  const holdTimer = askOpen || tlAskOpen || audio.state === 'requesting';
+  const holdTimer = askOpen || tlAskOpen || orientAskOpen || audio.state === 'requesting';
   /** The "try again" line after a share that fell short. Closed with its x for this visit. */
   const [retryClosed, setRetryClosed] = useState(false);
   useEffect(() => {
@@ -718,6 +742,7 @@ export function Focus() {
               ? {
                   recorder,
                   filming: inFocus,
+                  orientation: orientation ?? 'upright',
                   facing,
                   onFlip: twoCameras ? flipCamera : undefined,
                   onStopRecording: () => setRecording(false),
@@ -754,6 +779,7 @@ export function Focus() {
                 startedAt: summary.session.startedAt,
                 endedAt: summary.session.endedAt,
               }}
+              orientation={picked?.o ?? null}
               postSession={{
                 minutes: Math.round(summary.session.workSeconds / 60),
                 elapsedMinutes: Math.round(
@@ -855,6 +881,7 @@ export function Focus() {
                   sessionSpan={
                     session ? { startedAt: session.session.startedAt, endedAt: null } : null
                   }
+                  orientation={orientation ?? picked?.o ?? null}
                 />
               )}
             </SheetFold>
@@ -902,6 +929,15 @@ export function Focus() {
         }}
       />
 
+      <OrientationPrompt
+        open={orientAskOpen}
+        onPick={(o, remember) => {
+          if (pickSession) setPicked({ session: pickSession, o });
+          if (remember) void patch({ timelapsePhone: { orientation: o } });
+        }}
+        onClose={() => setRecording(false)}
+      />
+
       <AudioPermissionModal
         open={askOpen}
         alreadyEnabled={!!vis?.enabled}
@@ -931,6 +967,7 @@ interface FocusSessionProps {
   camera: {
     recorder: TimelapseRecorder;
     filming: boolean;
+    orientation: TimelapseOrientation;
     facing: CameraFacing;
     onFlip?: () => void;
     onStopRecording: () => void;

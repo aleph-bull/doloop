@@ -4,6 +4,7 @@ import {
   LIVE_CLIP_FPS,
   LIVE_CLIP_MAX_SECONDS,
   LIVE_CLIP_TOTAL_SECONDS,
+  phoneAspectRatio,
   startIntervalMs,
   stillCap,
   thinIfFull,
@@ -15,6 +16,7 @@ import {
   type TimelapseAspect,
   type TimelapseLayout,
   type TimelapseOptions,
+  type TimelapseOrientation,
   type TimelapsePlan,
 } from '@komogon/core';
 import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
@@ -778,6 +780,22 @@ export interface TimelapseLook {
   /** When the session started and ended (epoch ms), for the start and end pieces. */
   startAt?: number | null;
   endAt?: number | null;
+  /**
+   * A phone's video: which way it goes. The camera's shape is turned to match, so a still
+   * taken the other way round is cropped to the middle.
+   */
+  orientation?: TimelapseOrientation;
+}
+
+/** The video's width over height for a look, from the camera's and the screen's shapes. */
+export function lookRatio(
+  look: Pick<TimelapseLook, 'aspect' | 'orientation'>,
+  cameraRatio: number | null,
+  screenRatio: number | null,
+): number {
+  return look.orientation
+    ? phoneAspectRatio(look.aspect, look.orientation, cameraRatio)
+    : aspectRatio(look.aspect, cameraRatio, screenRatio);
 }
 
 /** "2:14 PM EST": the time a still was taken, in the account's timezone. */
@@ -859,22 +877,28 @@ type FrameDrawer = ((j: number, mark: WatermarkTone | null) => Promise<DrawnRect
 };
 
 /** A canvas the size of a source's stills, where the stills behind a frame are blended. */
-function blendBuffer(first: ImageBitmap | null): {
+function blendBuffer(
+  first: ImageBitmap | null,
+  o?: TimelapseOrientation,
+): {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
 } | null {
   if (!first) return null;
+  // A phone's video goes the way that was picked, even when its first still doesn't.
+  const tall = first.height > first.width;
+  const turn = !!o && (o === 'upright') !== tall;
   const canvas = document.createElement('canvas');
-  canvas.width = first.width;
-  canvas.height = first.height;
+  canvas.width = turn ? first.height : first.width;
+  canvas.height = turn ? first.width : first.height;
   const ctx = canvas.getContext('2d');
   return ctx ? { canvas, ctx } : null;
 }
 
 /**
  * A still drawn over the whole buffer. A still the same shape as the buffer just fills it;
- * one the other way round (the phone turned after the video started) is cropped to the
- * middle rather than squashed, since the video keeps the shape it started in.
+ * one the other way round (the phone held the other way from the video) is cropped to the
+ * middle rather than squashed, since the video keeps its one shape.
  */
 function fillBuffer(b: CanvasRenderingContext2D, bmp: ImageBitmap, bw: number, bh: number) {
   if (Math.abs(bmp.width / bmp.height - bw / bh) < 0.01) {
@@ -1127,14 +1151,17 @@ export async function renderTimelapse(
   if (!shapeFrom) throw new Error('Nothing to make yet');
   const cameraSize = firstCamera ? sourceSize(firstCamera) : null;
   const screenSize = firstScreen ? sourceSize(firstScreen) : null;
-  const ratio = aspectRatio(
-    look.aspect,
+  const ratio = lookRatio(
+    look,
     cameraSize ? cameraSize.w / cameraSize.h : null,
     screenSize ? screenSize.w / screenSize.h : knownScreenRatio(),
   );
   const { w, h } = timelapseOutputSize(ratio, look.resolution ?? 100, knownCameraSize());
   const bitrate = timelapseBitrate(w, h, plan.fps);
-  const buffers = { camera: blendBuffer(firstCamera), screen: blendBuffer(firstScreen) };
+  const buffers = {
+    camera: blendBuffer(firstCamera, look.orientation),
+    screen: blendBuffer(firstScreen),
+  };
   firstCamera?.close();
   firstScreen?.close();
   const canvas = document.createElement('canvas');
