@@ -2504,3 +2504,11 @@ The owner asked to let people cut videos they've already posted, and to add only
 - **A real cut, not a hidden range:** the browser cuts the file (`lib/video-cut.ts`, mediabunny), so the player, the length and the download are all the cut. A cut that starts on a key frame is copied as it is (instant, no loss); anywhere else it is re-encoded at about the video's own bitrate so it starts exactly where the handle was. Over the post's limit it shrinks like a new post's file.
 - **Saving:** the cut goes up the way a new post's file does (R2 upload link, counted in the daily quota, or with the request without R2), then `PUT /api/posts/:id/video` puts it in the old file's place with a new poster, and the old file is deleted from R2. The words, pictures, session and kudos stay.
 - **The old copy isn't played again:** a file kept by the API is asked for with its size in the address (`?v=`), because the browser keeps those for an hour under one address.
+
+## The bottom bar snaps to the tapped tab, 2026-10-23 (owner request)
+
+The owner, on a phone: switching tabs is janky, the animation is choppy and doesn't snap straight away.
+
+- **Why it was choppy:** the tapped tab's name slid open by animating its width (a grid column going 0fr to 1fr, and the padding), over 340 ms. A width can only animate on the main thread, and that is exactly when the new page is being built, so the slide got a few frames and stalled in the middle. Measured on a phone-sized Chrome slowed down 4x: the name took 70-224 ms to open, with frames of up to 150 ms stuck in it.
+- **Now it snaps:** the highlight, the name and the other tabs giving way all change in one frame on the tap, with no slide (`.tabbar-link` and `.tabbar-label` in index.css have no transitions). The settled bar is unchanged to the pixel. The icon still gives a little under the finger. Same test: the name is fully open one or two frames after the finger lifts.
+- This replaces "The bar's animation" from 2026-10-22. The name's `clip` from earlier today stays, so a name that doesn't fit is cut rather than "…".
