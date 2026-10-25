@@ -7,6 +7,7 @@ import {
   backgroundsInCategory,
   DEFAULT_BACKGROUND_ID,
   breakDayCost,
+  customBackgroundCost,
   isAccentUnlocked,
   isBackgroundAvailable,
   purchaseBackground,
@@ -37,6 +38,14 @@ describe('freezes', () => {
     expect(purchaseFreeze({ xp: 1000, streak: { ...emptyStreak(), freezesHeld: 2 } }).ok).toBe(
       false,
     );
+  });
+});
+
+describe('uploaded backgrounds', () => {
+  it('makes the first free and every one kept beside it 50 XP', () => {
+    expect(customBackgroundCost(0)).toBe(0);
+    expect(customBackgroundCost(1)).toBe(50);
+    expect(customBackgroundCost(5)).toBe(SHOP.CUSTOM_BACKGROUND_COST);
   });
 });
 

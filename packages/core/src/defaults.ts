@@ -63,6 +63,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     accent: 'sky',
     backgroundId: 'cotton-candy',
     customBackgroundUrl: null,
+    customBackgroundId: null,
     panel: 'glass',
     panelColor: '#151827',
     panelAlpha: 0.92,

@@ -22,18 +22,24 @@ export interface Appearance {
   adjust: { blur: number; brightness: number };
 }
 
-type Resolved = Omit<Appearance, 'glass' | 'texture' | 'frost' | 'adjust'>;
+type Resolved = Omit<Appearance, 'glass' | 'texture' | 'frost' | 'adjust'> & {
+  /** An upload is on and its picture is (or may yet be) in this browser. */
+  uploadOn: boolean;
+};
 
 /** The theme and backdrop the settings come to, without touching <html>. */
 export function useResolvedAppearance(settings: UserSettings | undefined): Resolved {
   const wantsUpload = settings?.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD;
-  const uploaded = useCustomBackground(wantsUpload);
-  const customImageUrl = wantsUpload ? (uploaded.data?.dataUrl ?? null) : null;
+  const uploaded = useCustomBackground(wantsUpload, settings?.theme.customBackgroundId ?? null);
+  const customImageUrl = wantsUpload ? (uploaded.data ?? null) : null;
+  // An upload whose picture isn't in this browser shows the theme's own background instead.
+  const missing = wantsUpload && uploaded.isSuccess && !uploaded.data;
   const backgroundId = settings?.theme.backgroundId ?? 'aurora';
   return {
     theme: resolveTheme(settings?.theme.mode ?? DEFAULT_SETTINGS.theme.mode),
     backgroundId,
     customImageUrl,
+    uploadOn: wantsUpload && !missing,
   };
 }
 
@@ -49,7 +55,7 @@ export function useResolvedTheme(settings: UserSettings | undefined): ResolvedTh
 export function useAppearance(settings: UserSettings | undefined): Appearance {
   const resolved = useResolvedAppearance(settings);
   // The background on screen: an upload has no colour of its own for matte panels to take.
-  const backdropId = settings?.theme.customBackgroundUrl ? null : resolved.backgroundId;
+  const backdropId = resolved.uploadOn ? null : resolved.backgroundId;
 
   useEffect(() => {
     if (settings) applyUserTheme(settings, document.documentElement, backdropId);

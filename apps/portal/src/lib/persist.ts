@@ -34,14 +34,14 @@ const USER_KEY_STORAGE = 'komogon.user';
 /**
  * Queries that must never come back from disk:
  *  - the active session carries the running timer, which only the server can be right about;
- *  - the custom background is a multi-megabyte data URL, far too large to rewrite on every
- *    cache change;
+ *  - uploaded backgrounds' pictures are multi-megabyte data URLs, far too large to rewrite on
+ *    every cache change (they are in IndexedDB already, `local-backgrounds.ts`);
  *  - links to post files in R2 expire within the hour, so one from disk is likely dead;
  *  - the first-time setup's answers decide which question it carries on from.
  */
 const VOLATILE_PREFIXES: readonly (readonly unknown[])[] = [
   ['sessions', 'active'],
-  ['me', 'background'],
+  ['custom-background'],
   ['social', 'media-url'],
   ['onboarding'],
 ];

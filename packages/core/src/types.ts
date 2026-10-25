@@ -124,6 +124,12 @@ export interface UserSettings {
      * Remote image URLs are not supported: an uploaded file is the only custom background.
      */
     customBackgroundUrl: typeof CUSTOM_BACKGROUND_UPLOAD | null;
+    /**
+     * Which of their uploaded backgrounds is on while customBackgroundUrl is 'upload' (an id in
+     * /api/me/backgrounds; the picture is in the browser it was added in). Null with 'upload'
+     * is an older upload still kept by the API, until the portal moves it into the browser.
+     */
+    customBackgroundId: string | null;
     /** Surface for dense panels (task tree, tables, settings). */
     panel: PanelStyle;
     /** Hex colour for panel 'custom'. */

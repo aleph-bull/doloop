@@ -331,6 +331,8 @@ export const settingsSchema = z
         backgroundId: z.string().max(32),
         // Only the uploaded image (or none). Remote URLs are deliberately not accepted.
         customBackgroundUrl: z.literal(CUSTOM_BACKGROUND_UPLOAD).nullable(),
+        // Which of their uploads; the route checks it is theirs.
+        customBackgroundId: z.string().uuid().nullable(),
         panel: z.enum(['opaque', 'glass', 'custom', 'matte']),
         panelColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
         panelAlpha: z.number().min(0.2).max(1),

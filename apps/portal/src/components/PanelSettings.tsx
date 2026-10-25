@@ -1,7 +1,6 @@
 import type { PanelStyle } from '@komogon/core';
-import { useRef, useState } from 'react';
-import { Button, Panel, Segmented, Slider, useToast } from '@komogon/ui';
-import { api } from '../lib/api';
+import { useState } from 'react';
+import { Panel, Segmented, Slider } from '@komogon/ui';
 
 type DeepPatch = { theme: { panel?: PanelStyle; panelColor?: string; panelAlpha?: number } };
 
@@ -68,85 +67,6 @@ export function PanelSettings({ panel, panelColor, panelAlpha, onChange }: Panel
       <Panel className="p-4 text-sm">
         <div className="font-medium">Preview</div>
       </Panel>
-    </div>
-  );
-}
-
-const MAX_EDGE = 2048;
-
-/** Downscale to <= 2048px on the long edge and encode as JPEG (or keep PNG for transparency). */
-async function prepareImage(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Canvas unavailable');
-  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-  const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
-  return canvas.toDataURL(mime, 0.86);
-}
-
-export interface BackgroundUploadProps {
-  hasUpload: boolean;
-  onChanged: () => void;
-}
-
-export function BackgroundUpload({ hasUpload, onChanged }: BackgroundUploadProps) {
-  const { toast } = useToast();
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-
-  const upload = async (file: File) => {
-    setBusy(true);
-    try {
-      const dataUrl = await prepareImage(file);
-      const res = await api.uploadBackground(dataUrl);
-      toast(`Background set (${Math.round(res.bytes / 1024)} KB)`, { tone: 'ok' });
-      onChanged();
-    } catch (err) {
-      toast(err instanceof Error ? err.message : 'Upload failed');
-    } finally {
-      setBusy(false);
-      if (input.current) input.current.value = '';
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <input
-        ref={input}
-        type="file"
-        accept="image/png,image/jpeg,image/webp"
-        className="sr-only"
-        id="bg-upload"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) void upload(f);
-        }}
-      />
-      <Button loading={busy} onClick={() => input.current?.click()}>
-        {hasUpload ? 'Replace uploaded image' : 'Upload an image'}
-      </Button>
-      {hasUpload && (
-        <Button
-          variant="ghost"
-          disabled={busy}
-          onClick={() =>
-            api
-              .deleteBackground()
-              .then(onChanged)
-              .catch((e) => toast(e.message))
-          }
-        >
-          Remove upload
-        </Button>
-      )}
-      <span className="field-hint">
-        JPEG, PNG, or WebP. Resized to 2048 px and stored with your account.
-      </span>
     </div>
   );
 }

@@ -28,6 +28,7 @@ import {
   type RecapRangeParam,
   type TrackerBoard,
 } from './api';
+import { adoptServerCopy, localPicture } from './local-backgrounds';
 import { recordUndo } from './undo';
 
 export const keys = {
@@ -50,7 +51,10 @@ export const keys = {
   google: ['calendar', 'google'] as const,
   feeds: ['calendar', 'feeds'] as const,
   shop: ['shop'] as const,
-  background: ['me', 'background'] as const,
+  /** An uploaded background's picture in this browser, by id ('server' for one the API kept). */
+  customBackground: (id: string | null) => ['custom-background', id ?? 'server'] as const,
+  customBackgroundTile: (id: string) => ['custom-background', 'tile', id] as const,
+  customBackgrounds: ['custom-backgrounds'] as const,
   rewards: ['rewards'] as const,
   routines: (from?: string, to?: string) => ['routines', from ?? '', to ?? ''] as const,
   routineList: ['routines', 'list'] as const,
@@ -283,13 +287,34 @@ export function useDeleteBlock() {
   });
 }
 
-export function useCustomBackground(enabled: boolean) {
+/**
+ * The picture of the upload on screen, from this browser (null when it isn't here). With no
+ * id it is one the API kept from before, which is moved into this browser first.
+ */
+export function useCustomBackground(enabled: boolean, id: string | null) {
+  const qc = useQueryClient();
   return useQuery({
-    queryKey: keys.background,
-    queryFn: api.getBackground,
+    queryKey: keys.customBackground(id),
+    queryFn: async () => {
+      if (id) return localPicture(id);
+      const picture = await adoptServerCopy();
+      // The API now names it in the settings, and lists it.
+      void qc.invalidateQueries({ queryKey: keys.me, exact: true });
+      void qc.invalidateQueries({ queryKey: keys.customBackgrounds });
+      return picture;
+    },
     enabled,
     staleTime: Infinity,
     retry: false,
+  });
+}
+
+/** Their uploaded backgrounds and what one more costs. */
+export function useCustomBackgrounds() {
+  return useQuery({
+    queryKey: keys.customBackgrounds,
+    queryFn: api.customBackgrounds,
+    staleTime: 30_000,
   });
 }
 

@@ -9,6 +9,8 @@ export const SHOP = {
   BREAK_DAY_MULTIPLIER: 1.5,
   MAX_BREAK_DAYS: 2,
   BREAK_DAY_MIN_LEAD_HOURS: 24,
+  /** Backgrounds people upload themselves: the first is free, each one kept beside it costs this. */
+  CUSTOM_BACKGROUND_COST: 50,
 } as const;
 
 export type Result<T> = { ok: true; value: T } | { ok: false; reason: string };
@@ -22,6 +24,14 @@ export interface Wallet {
 export function breakDayCost(purchasedThisMonth: number): number {
   const n = Math.max(0, Math.floor(purchasedThisMonth));
   return Math.round(SHOP.BREAK_DAY_BASE_COST * SHOP.BREAK_DAY_MULTIPLIER ** n);
+}
+
+/**
+ * What the next uploaded background costs, given how many they keep now. Counted from what is
+ * kept, not ever uploaded: with none left, the next is free again.
+ */
+export function customBackgroundCost(held: number): number {
+  return held > 0 ? SHOP.CUSTOM_BACKGROUND_COST : 0;
 }
 
 export function purchaseFreeze(w: Wallet): Result<Wallet> {

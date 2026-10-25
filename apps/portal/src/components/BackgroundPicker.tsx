@@ -7,9 +7,10 @@ import {
   type BackgroundMeta,
 } from '@komogon/core';
 import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { UploadedTile, UploadTile, type UploadedBackgrounds } from './CustomBackgrounds';
 
 /** Where the colour chooser starts before one was ever picked: a quiet dark slate. */
 const DEFAULT_SOLID = '#1f2433';
@@ -58,6 +59,8 @@ export interface BackgroundPickerProps {
   onChange: (id: string) => void;
   /** Rendered as the first tile of the first group, e.g. the uploaded image. */
   leading?: React.ReactNode;
+  /** Their own uploads, shown first as "Yours" with an Upload tile (Appearance only). */
+  uploads?: UploadedBackgrounds;
   /**
    * No longer used: pickers always open minimized now (2026-10-20). Kept so callers that
    * still pass it compile.
@@ -95,6 +98,7 @@ export function BackgroundPicker({
   theme,
   onChange,
   leading,
+  uploads,
 }: BackgroundPickerProps) {
   const navigate = useNavigate();
   // Opens minimized every time: the full grid is long, and most visits to Settings are for
@@ -112,10 +116,14 @@ export function BackgroundPicker({
   })).filter((g) => g.items.length > 0);
 
   const preset = BACKGROUNDS.some((b) => b.id === value);
+  const chosenUpload = uploads?.items.find((b) => b.id === uploads.chosen);
   if (minimized)
     return (
       <div className="bg-minimized">
-        {preset ? (
+        {uploads?.ui}
+        {chosenUpload ? (
+          <UploadedTile item={chosenUpload} selected onPick={() => setMinimized(false)} />
+        ) : preset ? (
           <BackgroundThumb id={value} theme={theme} label={chosenName(value)} selected />
         ) : (
           <span className="bg-minimized-name">{chosenName(value)}</span>
@@ -123,16 +131,44 @@ export function BackgroundPicker({
         <button type="button" className="btn btn-secondary btn-sm" onClick={() => setMinimized(false)}>
           <ChevronDown size={14} aria-hidden /> Show all backgrounds
         </button>
+        {uploads && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            disabled={uploads.busy}
+            onClick={uploads.add}
+          >
+            <ImagePlus size={14} aria-hidden /> Upload
+          </button>
+        )}
       </div>
     );
 
   return (
     <div className="bg-groups">
+      {uploads?.ui}
       <div className="bg-groups-head">
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMinimized(true)}>
           <ChevronUp size={14} aria-hidden /> Minimize
         </button>
       </div>
+      {uploads && (
+        <div className="bg-group">
+          <h4 className="bg-group-title">Yours</h4>
+          <div className="bg-grid">
+            <UploadTile uploads={uploads} />
+            {uploads.items.map((b) => (
+              <UploadedTile
+                key={b.id}
+                item={b}
+                selected={uploads.chosen === b.id}
+                onPick={() => uploads.pick(b.id)}
+                onRemove={() => uploads.remove(b.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
       {groups.map((group, gi) => (
         <div key={group.id} className="bg-group">
           <h4 className="bg-group-title">{group.label}</h4>

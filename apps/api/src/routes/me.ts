@@ -26,7 +26,7 @@ import {
 import { settingsSchema, updateMeSchema, usernameSchema } from '../validation';
 import { exportUserData } from '../services/export';
 import { and, eq } from 'drizzle-orm';
-import { userAssets } from '../db/schema';
+import { customBackgrounds, userAssets } from '../db/schema';
 import type { MediaStore } from '../services/media-store';
 
 export function meRoutes(
@@ -40,6 +40,8 @@ export function meRoutes(
     const streak = await syncStreak(db, req.user, now);
     const policy = await viewPolicy(db, req.user.id, now);
     const row = await ensureUsername(db, req.user);
+    // A background uploaded before they were kept in the browser, while the API still has it:
+    // the extension shows it, and the portal moves it into the browser.
     const bg = await db.query.userAssets.findFirst({
       where: and(eq(userAssets.userId, req.user.id), eq(userAssets.kind, 'background')),
       columns: { updatedAt: true },
@@ -91,6 +93,14 @@ export function meRoutes(
       !isBackgroundAvailable(ext, req.user.level, req.user.purchasedBackgrounds)
     )
       throw badRequest('That background is locked or not yet purchased');
+    const upload = patch.theme?.customBackgroundId;
+    if (upload) {
+      const own = await db.query.customBackgrounds.findFirst({
+        where: and(eq(customBackgrounds.id, upload), eq(customBackgrounds.userId, req.user.id)),
+        columns: { id: true },
+      });
+      if (!own) throw badRequest('That background was deleted');
+    }
     // Saved accents can't grow past the limit, but a longer list from an older limit can
     // still shrink.
     const saved = patch.theme?.savedAccents;

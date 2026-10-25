@@ -188,8 +188,9 @@ and never explain the difference on screen.
 
 **Product.**
 
-- XP amounts appear only on Achievements (and the "+N XP" on ticking a routine). Not on
-  Today, Routines, Settings, Analytics or the session overlay.
+- XP amounts appear only on Achievements (and the "+N XP" on ticking a routine, and the
+  50 XP asked before another uploaded background is added). Not on Today, Routines,
+  Settings, Analytics or the session overlay.
 - Analytics shows wins only: never a discouraging or zero-value card.
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
 - People are compared in two places, both asked for by the owner: the leaderboard (Social ›
@@ -294,6 +295,14 @@ and never explain the difference on screen.
 
 ## Recent changes (2026-10-20)
 
+- Your own backgrounds (2026-10-25): Settings › Appearance › Background has Upload and a
+  "Yours" row; the first is free, each one kept beside it 50 XP (asked first). **The pictures
+  stay in the browser** (owner: "make sure custom background storage is local"): IndexedDB
+  through `lib/local-backgrounds.ts`; the API only records an id and a fingerprint per
+  background (`custom_backgrounds`, routes in `routes/assets.ts`) to count and charge. Never
+  send the pictures to the API or R2. Another browser shows "Not on this device", and the
+  extension can't show them. Uploads from before, kept in `user_assets`, are moved into the
+  browser on first sight (`adopt`). DECISIONS.md has the details.
 - Jack mode (2026-10-22, slot machine 2026-10-25): an opt-in Pomodoro mode in Settings ›
   Timer where a slot machine after each work block sets the break (0x to 3x of it in tenths,
   1x 30% of the time, average 0.9x), seeded in `timer.jack` so every client spins the same.

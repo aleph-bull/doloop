@@ -9,7 +9,8 @@ import {
 } from '@komogon/ui';
 import { Pencil, Plus, X } from 'lucide-react';
 import { useEffect, useState, type CSSProperties } from 'react';
-import { api } from '../lib/api';
+import { localPicture } from '../lib/local-backgrounds';
+import { restoreUpload } from './CustomBackgrounds';
 import {
   deletePreset,
   loadPresets,
@@ -179,8 +180,11 @@ export function AppearancePresets({
   const save = async () => {
     setBusy(true);
     try {
-      // An uploaded background is copied into this browser along with the preset.
-      const image = theme.customBackgroundUrl ? (await api.getBackground()).dataUrl : null;
+      // An uploaded background's picture is kept with the preset too.
+      const image =
+        theme.customBackgroundUrl && theme.customBackgroundId
+          ? await localPicture(theme.customBackgroundId)
+          : null;
       await savePreset(name, theme, image);
       setPresets(loadPresets());
       setNaming(false);
@@ -221,7 +225,7 @@ export function AppearancePresets({
       if (p.hasImage) {
         const image = await presetImage(p.id);
         if (image) {
-          await api.uploadBackground(image);
+          if (!(await restoreUpload(image))) return;
           await patch({ theme: look });
           onImageApplied();
         } else {

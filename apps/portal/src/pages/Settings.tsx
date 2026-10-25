@@ -49,7 +49,8 @@ import { AccentPicker } from '../components/AccentPicker';
 import { ThemePicker } from '../components/ThemePicker';
 import { BackgroundAdjust } from '../components/BackgroundAdjust';
 import { BackgroundPicker } from '../components/BackgroundPicker';
-import { BackgroundUpload, PanelSettings } from '../components/PanelSettings';
+import { PanelSettings } from '../components/PanelSettings';
+import { useUploadedBackgrounds } from '../components/CustomBackgrounds';
 import { GlassSettings } from '../components/GlassSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
@@ -57,7 +58,6 @@ import { TimelapseRecordChoice } from '../components/focus/Timelapse';
 import { TimelapsePresets } from '../components/focus/TimelapsePresets';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
-import { CUSTOM_BACKGROUND_UPLOAD } from '@komogon/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
 import { keys, useAvatar } from '../lib/queries';
@@ -302,6 +302,16 @@ export function Settings() {
   const [bio, setBio] = useState<string | null>(null);
   // For the picture, which lives with the profile rather than in settings.
   const avatar = useAvatar();
+  const uploads = useUploadedBackgrounds({
+    theme: s?.theme,
+    xp: me.data?.user.xp ?? 0,
+    serverCopy: !!me.data?.backgroundUpdatedAt,
+    patch: (p) =>
+      update
+        .mutateAsync(p)
+        .catch((err) => toast(err instanceof Error ? err.message : 'Could not save')),
+    onChanged: () => void me.refetch(),
+  });
 
   // Links elsewhere in the app point at a group by hash (/settings#rest-days), so honour
   // it on arrival and whenever it changes.
@@ -546,7 +556,8 @@ export function Settings() {
                 resolved={theme}
                 patch={patch}
                 onImageApplied={() => {
-                  void qc.invalidateQueries({ queryKey: keys.background });
+                  void qc.invalidateQueries({ queryKey: keys.customBackgrounds });
+                  void qc.invalidateQueries({ queryKey: ['custom-background'] });
                   void me.refetch();
                 }}
               />
@@ -584,6 +595,7 @@ export function Settings() {
                   onChange={(id) =>
                     patch({ theme: { backgroundId: id, customBackgroundUrl: null } })
                   }
+                  uploads={uploads}
                 />
                 {(!!s.theme.customBackgroundUrl || !isPlainBackground(s.theme.backgroundId)) && (
                   <BackgroundAdjust
@@ -611,7 +623,6 @@ export function Settings() {
               )}
               <ExtensionBackgroundPicker
                 value={s.theme.extensionBackground}
-                hasUpload={s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD}
                 level={level}
                 purchased={purchased}
                 theme={theme}
@@ -651,26 +662,16 @@ export function Settings() {
                   ]}
                 />
               </div>
-              <Toggle
-                checked={advanced || !!s.theme.customBackgroundUrl}
-                onChange={setAdvanced}
-                label="Advanced"
-                description={
-                  s.theme.panel === 'matte'
-                    ? 'Upload your own image.'
-                    : 'Upload your own image, and set how the glass looks.'
-                }
-              />
-              {(advanced || !!s.theme.customBackgroundUrl) && (
-                <BackgroundUpload
-                  hasUpload={s.theme.customBackgroundUrl === CUSTOM_BACKGROUND_UPLOAD}
-                  onChanged={() => {
-                    void qc.invalidateQueries({ queryKey: keys.background });
-                    void me.refetch();
-                  }}
+              {/* Uploading your own image moved into the background picker (2026-10-25). */}
+              {s.theme.panel !== 'matte' && (
+                <Toggle
+                  checked={advanced}
+                  onChange={setAdvanced}
+                  label="Advanced"
+                  description="Set how the glass looks."
                 />
               )}
-              {(advanced || !!s.theme.customBackgroundUrl) && s.theme.panel !== 'matte' && (
+              {advanced && s.theme.panel !== 'matte' && (
                 <GlassSettings
                   glassColor={s.theme.glassColor}
                   glassAlpha={s.theme.glassAlpha}

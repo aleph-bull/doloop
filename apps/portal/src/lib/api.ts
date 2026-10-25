@@ -102,6 +102,13 @@ export interface RecapResponse {
   totals: { minutes: number; sessions: number; rangeMinutes: number; rangeSessions: number };
 }
 
+/** The API's record of a background they uploaded; the picture is in the browser. */
+export interface CustomBackground {
+  id: string;
+  hash: string;
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -176,6 +183,8 @@ export interface MeResponse {
   restDays: { policy: RestDayPolicy; editsRemaining: number };
   purchasedBackgrounds: string[];
   icsToken: string;
+  /** Set while the API still keeps a background uploaded before they lived in the browser. */
+  backgroundUpdatedAt: string | null;
 }
 
 export interface ActiveSession {
@@ -853,10 +862,25 @@ export const api = {
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>
     request<{ breakDays: string[] }>('POST', '/api/shop/break-day/apply', { date }),
-  getBackground: () => request<{ dataUrl: string; bytes: number }>('GET', '/api/me/background'),
-  uploadBackground: (dataUrl: string) =>
-    request<{ ok: boolean; bytes: number }>('PUT', '/api/me/background', { dataUrl }),
-  deleteBackground: () => request<void>('DELETE', '/api/me/background'),
+  customBackgrounds: () =>
+    request<{ backgrounds: CustomBackground[]; cost: number }>('GET', '/api/me/backgrounds'),
+  /** `cost` is the price shown; a different one comes back as a 409 with the real one. */
+  addCustomBackground: (body: { id: string; hash: string; cost: number }) =>
+    request<{ background: CustomBackground; xp: number; cost: number }>(
+      'POST',
+      '/api/me/backgrounds',
+      body,
+    ),
+  deleteCustomBackground: (id: string) => request<void>('DELETE', `/api/me/backgrounds/${id}`),
+  /** A background the API kept from before: recorded as theirs, with its picture. */
+  adoptBackground: (id: string) =>
+    request<{ background: CustomBackground; dataUrl: string }>(
+      'POST',
+      '/api/me/backgrounds/adopt',
+      { id },
+    ),
+  /** The picture is filed in this browser, so the API's copy can go. */
+  adoptedBackground: () => request<void>('POST', '/api/me/backgrounds/adopted'),
   avatar: () => request<{ dataUrl: string | null }>('GET', '/api/me/avatar'),
   uploadAvatar: (dataUrl: string) =>
     request<{ ok: boolean; bytes: number }>('PUT', '/api/me/avatar', { dataUrl }),

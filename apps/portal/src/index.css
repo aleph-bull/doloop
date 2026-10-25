@@ -3659,6 +3659,68 @@ button.start-subject:hover {
 .bg-thumb:disabled {
   cursor: not-allowed;
 }
+/* Upload, at the start of "Yours": dashed like the + for a new accent. */
+.bg-thumb-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 2px dashed var(--border-strong);
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 500;
+}
+.bg-thumb-add:hover:not(:disabled) {
+  color: var(--fg);
+}
+.bg-thumb-add:disabled {
+  cursor: progress;
+}
+/* One of their uploads: the tile, and a delete in its corner. */
+.bg-own {
+  position: relative;
+}
+.bg-minimized > .bg-own {
+  width: 132px;
+  flex: none;
+}
+.bg-own > .bg-thumb {
+  display: block;
+  background: var(--matte-fill);
+}
+/* Added in another browser: its picture isn't here, so it can only be deleted. */
+.bg-own > .bg-thumb.is-away {
+  opacity: 0.6;
+  cursor: default;
+}
+.bg-own-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms var(--ease-out);
+}
+.bg-own:hover > .bg-own-remove,
+.bg-own-remove:focus-visible {
+  opacity: 1;
+}
+/* No hover on a touch screen: the delete stays showing. */
+@media (hover: none) {
+  .bg-own-remove {
+    opacity: 1;
+  }
+}
 /* Locked but clickable: it offers the way to the shop. */
 .bg-thumb.is-locked {
   opacity: 0.5;

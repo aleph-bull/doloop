@@ -367,7 +367,11 @@ export const weeklyReviews = pgTable(
   (t) => [primaryKey({ columns: [t.userId, t.weekStart] })],
 );
 
-/** Small per-user binary assets: the custom background image and the profile picture. */
+/**
+ * Small per-user binary assets: the profile picture, and a background uploaded before they
+ * were kept in the browser (2026-10-25). The portal moves such a background into the browser
+ * and deletes it here (`/api/me/backgrounds/adopt`).
+ */
 export const userAssets = pgTable(
   'user_assets',
   {
@@ -381,6 +385,27 @@ export const userAssets = pgTable(
     updatedAt: ts('updated_at').notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.userId, t.kind] })],
+);
+
+/**
+ * Backgrounds people upload themselves (Settings › Appearance). The pictures stay in the
+ * browser they were added in (the portal's IndexedDB, owner 2026-10-25); a row is only the
+ * record that one is kept, so the first can be free and each one beside it cost XP
+ * (`customBackgroundCost`). `theme.customBackgroundId` says which is on.
+ */
+export const customBackgrounds = pgTable(
+  'custom_backgrounds',
+  {
+    /** Made by the portal, which files the picture under it before asking for the row. */
+    id: uuid('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** sha256 of the picture's data URL, so the same picture twice is one, never paid twice. */
+    hash: text('hash').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('custom_backgrounds_user_hash_idx').on(t.userId, t.hash)],
 );
 
 /**
@@ -1026,6 +1051,7 @@ export const schema = {
   calendarFeeds,
   streakEvents,
   userAssets,
+  customBackgrounds,
   posts,
   postMedia,
   mediaUploads,
