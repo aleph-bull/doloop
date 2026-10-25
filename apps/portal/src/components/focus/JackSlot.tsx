@@ -9,6 +9,8 @@ const COIN_COLLECT = 'sounds/coin-collect.mp3';
 /** The owner's voice line, played when the lever hasn't been pulled after NUDGE_MS. */
 const GO_BACK = 'sounds/go-back-to-focus.mp3';
 const NUDGE_MS = 7000;
+/** The voice line 3 dB over the other sounds (owner, 2026-10-25): 10^(3/20). */
+const GO_BACK_LEVEL = 1.413;
 
 /** Decode the machine's sounds ahead of the first spin, so they play on time. */
 export function preloadJackSounds(): void {
@@ -224,7 +226,7 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
     l.onCount(0);
     // Seven seconds without a pull: the owner's voice line, once.
     const nudge = window.setTimeout(() => {
-      if (!started && !closed) playEffect(GO_BACK, latest.current.volume);
+      if (!started && !closed) playEffect(GO_BACK, latest.current.volume, 1, GO_BACK_LEVEL);
     }, NUDGE_MS);
 
     if (stillMotion()) {
