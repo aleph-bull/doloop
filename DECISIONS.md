@@ -2630,3 +2630,9 @@ The owner: "theres a blur that stays in the middle of the screen after the card 
 
 - The owner: "deep sea dusk rose and tide pool are too saturated". Same hues and lightness, about half the saturation on the page colour and the accent (picked from a side by side of now, a middle step and a greyer one; the greyer one lost the colour): **Deep Sea** #323652 with accent `custom:165,34,46` (was #2c3060, `165,50,45`), **Dusk Rose** #1c263f with accent `custom:318,24,66` and text #e4d3db (was #0d1e4c, `318,32,66`, #e5c9d7), **Tidepool** #152c2d with accent `custom:183,44,40` (was #032f30, `183,86,33`). `SOLID_TEXT` moved to the new colours. Anyone who already put the old ones on keeps them until they pick again.
 - Then: "make salt air the default light mode minimalist and make gold leaf default dark minimalist on onboarding". Setup's Minimalist look is now Salt Air in light and Gold Leaf in dark (`lib/onboarding-looks.ts`); Linen and Deep Sea stay where they are in the list.
+
+## The palette themes very muted or dark, 2026-10-25 (owner request)
+
+- The owner, on the halved versions: "looks shit, make them all very unsaturated or dark, it hurts to look at them". Every palette theme except Linen (already muted) now has a page colour at 14% saturation or less, dark ones near black, and an accent at 26% or less. The dark themes' accents are dark enough for white labels (lightness about 40) rather than bright pills with dark labels.
+- **Deep Sea** #1d1e26, `custom:165,18,40`, white text. **Dusk Rose** #1a1c23, `custom:320,12,46`, text #e3dee0. **Tidepool** #191f1f, `custom:183,18,38`. **Gold Leaf** #0d0f11, `custom:42,26,40`. **Salt Air** #e2e6e9, `custom:195,20,32`. **Wisteria** #f2f1f4, `custom:266,10,42`, text #2f2d39.
+- Don't bring the palettes' bright colours back: the owner found them painful.

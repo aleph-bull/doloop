@@ -121,7 +121,7 @@ export const THEME_PRESETS: ThemePreset[] = [
     },
   },
   solid('linen', 'Linen', '#e7e6e3', 'light', 'custom:232,24,30', 'none'),
-  solid('deep-sea', 'Deep Sea', '#323652', 'dark', 'custom:165,34,46', 'none'),
+  solid('deep-sea', 'Deep Sea', '#1d1e26', 'dark', 'custom:165,18,40', 'none'),
   solid('off-white', 'Off White', '#f4f1ea', 'light', DEFAULT_SETTINGS.theme.accent, 'grain'),
   solid('night-shift', 'Night Shift', '#313338', 'dark', 'custom:235,86,65', 'none'),
   solid('inkwell', 'Inkwell', '#1c1c21', 'dark', 'custom:29,100,71', 'none'),
@@ -160,24 +160,24 @@ export const THEME_PRESETS: ThemePreset[] = [
   photo('still-water', 'Still Water', 'abstract', 'lagoon', 'mint'),
   // The owner's palettes (2026-10-25), at the end of the list. Salt Air and Gold Leaf are
   // also setup's Minimalist look.
-  solid('dusk-rose', 'Dusk Rose', '#1c263f', 'dark', 'custom:318,24,66', 'none'),
-  solid('salt-air', 'Salt Air', '#c8d8e4', 'light', 'custom:193,47,32', 'none'),
-  solid('wisteria', 'Wisteria', '#f3eef8', 'light', 'custom:266,20,44', 'none'),
-  solid('tidepool', 'Tidepool', '#152c2d', 'dark', 'custom:183,44,40', 'none'),
-  solid('gold-leaf', 'Gold Leaf', '#020b13', 'dark', 'custom:44,70,52', 'none'),
+  solid('dusk-rose', 'Dusk Rose', '#1a1c23', 'dark', 'custom:320,12,46', 'none'),
+  solid('salt-air', 'Salt Air', '#e2e6e9', 'light', 'custom:195,20,32', 'none'),
+  solid('wisteria', 'Wisteria', '#f2f1f4', 'light', 'custom:266,10,42', 'none'),
+  solid('tidepool', 'Tidepool', '#191f1f', 'dark', 'custom:183,18,38', 'none'),
+  solid('gold-leaf', 'Gold Leaf', '#0d0f11', 'dark', 'custom:42,26,40', 'none'),
 ];
 
 /**
  * Flat colours that came with their own text colour (the owner's palettes, 2026-10-25: Linen's
- * #33322e, white on Deep Sea, Dusk Rose's pale pink, Wisteria's deep violet). Matte panels on
- * one use it for the main text wherever it reads (`tonalSurfaces` in the ui package); the
- * quieter text is still worked out from the colour.
+ * #33322e, white on Deep Sea, a faint pink on Dusk Rose, a faint violet on Wisteria). Matte
+ * panels on one use it for the main text wherever it reads (`tonalSurfaces` in the ui
+ * package); the quieter text is still worked out from the colour.
  */
 export const SOLID_TEXT: Record<string, string> = {
   '#e7e6e3': '#33322e',
-  '#323652': '#ffffff',
-  '#1c263f': '#e4d3db',
-  '#f3eef8': '#2a2550',
+  '#1d1e26': '#ffffff',
+  '#1a1c23': '#e3dee0',
+  '#f2f1f4': '#2f2d39',
 };
 
 /** A solid colour or one of the Minimal gradients: the backgrounds a texture shows on. */
