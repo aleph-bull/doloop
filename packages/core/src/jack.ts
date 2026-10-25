@@ -63,6 +63,12 @@ export interface JackState {
   lostSeconds: number;
   /** The latest spin, for the machine on screen. */
   last: JackRoll | null;
+  /**
+   * The timer is paused at the end of a work interval until the lever is pulled (owner,
+   * 2026-10-25): the break, or after 0x the next work block, waits for it. Absent on
+   * sessions from before.
+   */
+  waiting?: boolean;
 }
 
 export interface JackRoll {

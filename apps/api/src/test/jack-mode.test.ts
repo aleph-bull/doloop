@@ -43,10 +43,20 @@ describe('Jack mode', () => {
     const after = (await t.api({ method: 'GET', url: '/api/sessions/active' })).json().active;
     expect(after.timer.jack.rolls).toBe(1);
     expect(after.timer.jack.last).toMatchObject({ cycle: 1, baseMs: 5 * 60_000 });
-
-    // A spin never gives a break longer than 15 minutes, so 75 minutes holds 50 of focus.
-    advanceClock(t, 49);
+    // The timer waits for the lever.
+    expect(after.timer).toMatchObject({ phase: 'paused', jack: { waiting: true } });
     const id = active.session.id;
+    const pull = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${id}/events`,
+      payload: { type: 'jack-pull' },
+    });
+    expect(pull.statusCode).toBe(200);
+    expect(pull.json().active.timer.jack.waiting).toBe(false);
+    expect(pull.json().active.timer.phase).not.toBe('paused');
+
+    // A spin never gives a break longer than 15 minutes, so 49 more minutes hold 25 of focus.
+    advanceClock(t, 49);
     const end = await t.api({ method: 'POST', url: `/api/sessions/${id}/end`, payload: {} });
     expect(end.statusCode).toBe(200);
     const badges: string[] = end.json().summary.badges;

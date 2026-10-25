@@ -2609,6 +2609,15 @@ The owner: "MAKE jack mode feel better, use a slot machine, re rate the x system
 - A click or Escape still puts it away. Reduced motion shows the result at once with one coin sound.
 - Badges now say spin ("Spin the slot machine once.", "Ten spins", ...); keys unchanged. Settings search also finds "slot machine".
 
+### Later the same day: the lever is pulled by hand, a voice line, and no blur left behind
+
+The owner: "theres a blur that stays in the middle of the screen after the card disapears remove that", "let the user pull the slot machine instead of automatically going", and with their recording "add this sound if the user doesnt pull the slot machine within 7 seconds".
+
+- **The break waits for the pull.** At the end of a work block in Jack mode the timer pauses (`timer.jack.waiting`, set in `advance()`), holding the spun break (or, after 0x, the next work block) whole; otherwise waiting at the machine would use up the break. The machine opens on "Pull the lever" with the reels resting on 1.0x and the clock at 0:00. When its show ends, the portal sends the new `jack-pull` event (core `applyEvent`, API `timerEventSchema`), and the timer carries on as it would have: the break starts with its full length, unless auto-start says to wait. Resume or Skip break from anywhere (the extension, another tab) also count as the pull; an unpulled machine then goes away. The machine shows on the surface that owns the alerts whenever the timer waits, so a reload brings it back; the old "seen" note in sessionStorage is gone.
+- **The lever** is a button: drag the knob down (it follows the pointer, clicks as it passes the point of no return, and springs back if let go early), or click it, or Space or Enter. A click on the dimmed page doesn't close it before the pull; Escape skips the show and starts the break. The card is a dialog, so the focus screen's Space (pause) stays out of it.
+- **The voice line**: seven seconds without a pull, the owner's "go back to your focus screen" plays once (`public/sounds/go-back-to-focus.mp3`, their .m4a with the quiet start trimmed), at the sound settings' volume. It plays from a background tab too, which is the point when the focus screen is in another tab.
+- **The blur**: the card shrinking away left a patch of its glass blur over the clock. The card now drops its blur as it shrinks and is taken off the page 300 ms into the burst.
+
 ## Two new minimalist themes, Linen and Deep Sea, offered at setup, 2026-10-25 (owner request)
 
 - **Linen** (light): the owner's palette, Neutral #e7e6e3 as the page, Accent #3a3f5f (`custom:232,24,30`) and Text #33322e, no texture. It is the white minimalist theme now and sits first in the list after Dawn Skies.

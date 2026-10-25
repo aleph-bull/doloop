@@ -85,54 +85,87 @@ describe('the timer in Jack mode', () => {
     );
   });
 
-  it('stretches the break by the roll', () => {
+  it('waits for the lever, then gives the break the spin set', () => {
     const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(20) });
-    const b = advance(s, at(26), opts());
-    expect(b.phase).toBe('short-break');
-    // 2x: two breaks' worth, 10 minutes, from the end of work.
-    expect(b.phaseEndsAt).toBe(at(35));
-    expect(b.jack?.last).toMatchObject({ cycle: 1, at: at(25), face: 20 });
-    expect(b.jack?.wonSeconds).toBe(5 * 60);
+    const w = advance(s, at(26), opts());
+    // 2x: two breaks' worth, 10 minutes, held until the lever is pulled.
+    expect(w).toMatchObject({
+      phase: 'paused',
+      cycle: 1,
+      resumePhase: 'short-break',
+      resumeRemainingMs: 10 * 60_000,
+    });
+    expect(w.jack).toMatchObject({ waiting: true, wonSeconds: 5 * 60 });
+    expect(w.jack?.last).toMatchObject({ cycle: 1, at: at(25), face: 20 });
+    // Nothing runs out while it waits.
+    expect(advance(w, at(60), opts())).toEqual(w);
+    const b = applyEvent(w, { type: 'jack-pull' }, at(27), opts());
+    expect(b).toMatchObject({ phase: 'short-break', phaseStartedAt: at(27), phaseEndsAt: at(37) });
+    expect(b.jack?.waiting).toBe(false);
+    // A second pull changes nothing.
+    expect(applyEvent(b, { type: 'jack-pull' }, at(28), opts())).toEqual(
+      advance(b, at(28), opts()),
+    );
   });
 
-  it('goes straight back to work when the whole break is lost', () => {
+  it('goes straight back to work after the pull when the whole break is lost', () => {
     const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(0) });
     const w = advance(s, at(26), opts());
-    expect(w.phase).toBe('work');
-    expect(w.cycle).toBe(1);
-    expect(w.phaseStartedAt).toBe(at(25));
-    expect(w.phaseEndsAt).toBe(at(50));
+    expect(w).toMatchObject({
+      phase: 'paused',
+      resumePhase: 'work',
+      resumeRemainingMs: 25 * 60_000,
+    });
     expect(w.jack?.lostSeconds).toBe(5 * 60);
+    const r = applyEvent(w, { type: 'jack-pull' }, at(26), opts());
+    expect(r).toMatchObject({
+      phase: 'work',
+      cycle: 1,
+      phaseStartedAt: at(26),
+      phaseEndsAt: at(51),
+    });
     // With auto-start work off it waits before the next work block instead.
-    const p = advance(s, at(26), opts({ autoStartWork: false }));
+    const p = applyEvent(w, { type: 'jack-pull' }, at(26), opts({ autoStartWork: false }));
     expect(p).toMatchObject({
       phase: 'paused',
       resumePhase: 'work',
       resumeRemainingMs: 25 * 60_000,
     });
+    expect(p.jack?.waiting).toBe(false);
   });
 
-  it('keeps the rolled break while waiting to start it', () => {
+  it('keeps the spun break while waiting to start it', () => {
     const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(30) });
-    const p = advance(s, at(26), opts({ autoStartBreaks: false }));
+    const w = advance(s, at(26), opts({ autoStartBreaks: false }));
+    const p = applyEvent(w, { type: 'jack-pull' }, at(27), opts({ autoStartBreaks: false }));
     expect(p).toMatchObject({ phase: 'paused', resumePhase: 'short-break' });
     expect(p.resumeRemainingMs).toBe(15 * 60_000);
+    expect(p.jack?.waiting).toBe(false);
     const r = applyEvent(p, { type: 'resume' }, at(30), opts({ autoStartBreaks: false }));
     expect(r.phaseEndsAt).toBe(at(45));
   });
 
-  it('rolls once per work block, however often it is advanced', () => {
+  it('counts resume or skip break as the pull', () => {
+    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(10) });
+    const w = advance(s, at(26), opts());
+    expect(applyEvent(w, { type: 'pause' }, at(27), opts())).toEqual(w);
+    const r = applyEvent(w, { type: 'resume' }, at(27), opts());
+    expect(r).toMatchObject({ phase: 'short-break', phaseEndsAt: at(32) });
+    expect(r.jack?.waiting).toBe(false);
+    const k = applyEvent(w, { type: 'skip-break' }, at(27), opts());
+    expect(k).toMatchObject({ phase: 'work', phaseEndsAt: at(52) });
+    expect(k.jack?.waiting).toBe(false);
+  });
+
+  it('spins once per work block, however often it is advanced', () => {
     let s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: 'steady' });
-    for (let m = 0; m <= 300; m++) s = advance(s, at(m), opts());
+    for (let m = 0; m <= 300; m++) {
+      s = advance(s, at(m), opts());
+      if (s.jack?.waiting) s = applyEvent(s, { type: 'jack-pull' }, at(m), opts());
+    }
     expect(advance(s, at(300), opts())).toEqual(s);
+    expect(s.cycle).toBeGreaterThan(5);
     expect(s.jack?.rolls).toBe(s.cycle);
-    // Advancing in one jump lands on the same state as minute by minute.
-    const jumped = advance(
-      startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: 'steady' }),
-      at(300),
-      opts(),
-    );
-    expect(jumped).toEqual(s);
   });
 });
 

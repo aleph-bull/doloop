@@ -5264,6 +5264,9 @@ button.start-subject:hover {
   cursor: pointer;
   transition: background-color 360ms var(--ease-out);
 }
+.jack-slot-layer.is-ready {
+  cursor: default;
+}
 /* Once it bursts the coins fly over the page to the clock: nothing in the way. */
 .jack-slot-layer.is-burst:not(.is-own-clock) {
   background: transparent;
@@ -5308,6 +5311,8 @@ button.start-subject:hover {
 }
 .jack-slot-layer.is-burst:not(.is-own-clock) .jack-slot-card {
   animation: jack-slot-out 280ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
+  /* No blur on the way out: it is taken off the page as soon as it has shrunk. */
+  backdrop-filter: none;
 }
 @keyframes jack-slot-out {
   to {
@@ -5459,16 +5464,37 @@ button.start-subject:hover {
   text-decoration-thickness: 3px;
 }
 
-/* The lever: pulled toward you, so the stick shortens past its base and comes back. */
+/* The lever, a button: dragged down (or clicked) it pulls toward you, so the stick shortens
+   past its base and comes back. The pull and the spring back are played from JackSlot. */
 .jack-lever {
   position: relative;
-  width: 26px;
+  width: 44px;
   height: 164px;
+  margin: 0 -9px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: grab;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
-.jack-lever::before {
-  content: '';
+.jack-lever:disabled {
+  cursor: default;
+}
+.jack-lever:focus-visible {
+  outline: none;
+}
+.jack-lever:focus-visible .jack-lever-knob {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.jack-slot-layer.is-holding,
+.jack-slot-layer.is-holding .jack-lever {
+  cursor: grabbing;
+}
+.jack-lever-stick {
   position: absolute;
-  left: 10px;
+  left: 19px;
   top: 13px;
   width: 6px;
   height: 69px;
@@ -5476,10 +5502,9 @@ button.start-subject:hover {
   background: color-mix(in srgb, var(--fg) 30%, transparent);
   transform-origin: 50% 100%;
 }
-.jack-lever::after {
-  content: '';
+.jack-lever-base {
   position: absolute;
-  left: 5px;
+  left: 14px;
   top: 76px;
   width: 16px;
   height: 13px;
@@ -5488,7 +5513,7 @@ button.start-subject:hover {
 }
 .jack-lever-knob {
   position: absolute;
-  left: 0;
+  left: 9px;
   top: 0;
   width: 26px;
   height: 26px;
@@ -5496,20 +5521,21 @@ button.start-subject:hover {
   background: var(--accent-fill);
   z-index: 1;
 }
-.jack-slot-layer.is-spin .jack-lever::before {
-  animation: jack-pull-stick 640ms var(--ease-in-out);
+/* Waiting for a hand: the knob dips a little, over and over. */
+.jack-slot-layer.is-ready:not(.is-holding) .jack-lever-knob {
+  animation: jack-knob-bob 1.5s var(--ease-in-out) infinite;
 }
-.jack-slot-layer.is-spin .jack-lever-knob {
-  animation: jack-pull-knob 640ms var(--ease-in-out);
+.jack-slot-layer.is-ready:not(.is-holding) .jack-lever-stick {
+  animation: jack-stick-bob 1.5s var(--ease-in-out) infinite;
 }
-@keyframes jack-pull-stick {
-  40% {
-    transform: scaleY(-1);
+@keyframes jack-knob-bob {
+  50% {
+    transform: translateY(12px);
   }
 }
-@keyframes jack-pull-knob {
-  40% {
-    transform: translateY(138px);
+@keyframes jack-stick-bob {
+  50% {
+    transform: scaleY(0.83);
   }
 }
 

@@ -26,26 +26,6 @@ import { api, type ActiveSession, type EndSummary, type ReviewInput } from './ap
 import { keys } from './queries';
 import { playSound, preloadSounds } from './sounds';
 
-/** A spin this recent still gets its slot machine when the timer comes into view. */
-const DICE_FRESH_MS = 3 * 60_000;
-const DICE_SEEN_KEY = 'komogon.jack.seen';
-
-/** The latest spin this tab has shown, so the machine plays once per spin. */
-function diceSeen(key: string): boolean {
-  try {
-    return sessionStorage.getItem(DICE_SEEN_KEY) === key;
-  } catch {
-    return false;
-  }
-}
-function markDiceSeen(key: string) {
-  try {
-    sessionStorage.setItem(DICE_SEEN_KEY, key);
-  } catch {
-    // Storage blocked: the machine may play again after a reload, which is harmless.
-  }
-}
-
 export const PHASE_LABEL: Record<TimerState['phase'], string> = {
   work: 'Focus',
   'short-break': 'Short break',
@@ -217,27 +197,29 @@ export function useSessionController({
     else if (to === 'ended') alert('sessionEnd');
   }, [timer.phase, alert]);
 
-  // Jack mode: the slot machine for each spin, once, on the surface that owns the alerts. A
-  // spin made while the timer was out of view still plays if it is only a few minutes old.
-  // While it plays, the break clock shows what its coins have counted in so far (`held`).
+  // Jack mode: the slot machine, on the surface that owns the alerts, whenever the timer waits
+  // for its lever at the end of a work block (the break waits for the pull, owner 2026-10-25).
+  // While it plays, the break clock shows what its coins have counted in so far (`held`);
+  // when it is done the pull goes to the server, which starts the break.
   const [dice, setDice] = useState<JackRoll | null>(null);
   const [held, setHeld] = useState<number | null>(null);
   const lastRoll = timer.jack?.last ?? null;
+  const waiting = timer.phase === 'paused' && !!timer.jack?.waiting;
+  const waitingRef = useRef(waiting);
+  useEffect(() => {
+    waitingRef.current = waiting;
+  }, [waiting]);
   const jackOn = !!timer.jack;
   useEffect(() => {
     if (jackOn) preloadJackSounds();
   }, [jackOn]);
   useEffect(() => {
-    if (!lastRoll || muteAlerts) return;
-    const key = `${sessionId}:${lastRoll.cycle}`;
-    if (diceSeen(key)) return;
-    markDiceSeen(key);
-    if (Date.now() - Date.parse(lastRoll.at) > DICE_FRESH_MS) return;
+    if (!waiting || !lastRoll || muteAlerts) return;
     setHeld(0);
     setDice(lastRoll);
     // A spin is identified by its cycle; the object is rebuilt on every refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastRoll?.cycle, lastRoll?.at, muteAlerts, sessionId]);
+  }, [waiting, lastRoll?.cycle, muteAlerts, sessionId]);
 
   // The planned end of a session: sound once when the grace period opens.
   const graceChimed = useRef(false);
@@ -387,6 +369,7 @@ export function useSessionController({
   const closeSlot = () => {
     setDice(null);
     setHeld(null);
+    if (waitingRef.current) void send({ type: 'jack-pull' });
   };
 
   const digits =
@@ -421,6 +404,7 @@ export function useSessionController({
       {dice && (
         <JackSlot
           roll={dice}
+          waiting={waiting}
           volume={settings.sounds.enabled ? settings.sounds.volume : 0}
           remaining={remainingBreak}
           onCount={setHeld}

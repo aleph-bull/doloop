@@ -186,17 +186,20 @@ export function advance(state: TimerState, now: ISODateTime, opts: AdvanceOption
     const cycle = wasWork ? s.cycle + 1 : s.cycle;
     let next: IntervalPhase = wasWork ? nextBreak(cycle, opts.pomodoro) : 'work';
     let length = intervalMs(next, opts.pomodoro);
-    // Jack mode: the slot machine decides the break. 0x goes straight on to work.
+    // Jack mode: the slot machine decides the break. 0x goes straight on to work. Either
+    // way the timer waits for the lever to be pulled (`jack-pull`).
+    let pull = false;
     if (wasWork && s.jack) {
       const rolled = rollJack(s.jack, cycle, length, boundary);
-      s = { ...s, jack: rolled.jack };
+      s = { ...s, jack: { ...rolled.jack, waiting: true } };
+      pull = true;
       length = rolled.roll.breakMs;
       if (length === 0) {
         next = 'work';
         length = intervalMs('work', opts.pomodoro);
       }
     }
-    const autoStart = next === 'work' ? opts.autoStartWork : opts.autoStartBreaks;
+    const autoStart = !pull && (next === 'work' ? opts.autoStartWork : opts.autoStartBreaks);
     if (autoStart) {
       s = {
         ...s,
@@ -227,7 +230,14 @@ export type TimerEvent =
   | { type: 'skip-break' }
   | { type: 'extend'; plannedEndAt: ISODateTime }
   | { type: 'set-timer-visibility'; showTimer: boolean }
+  /** Jack mode's lever, pulled: the timer carries on as it would have without the wait. */
+  | { type: 'jack-pull' }
   | { type: 'end' };
+
+/** No longer waiting for Jack mode's lever: any other way out of the wait counts as pulled. */
+function pulled(s: TimerState): TimerState {
+  return s.jack?.waiting ? { ...s, jack: { ...s.jack, waiting: false } } : s;
+}
 
 /** Apply a user/client event at `now`. Call `advance()` first so auto-transitions are banked. */
 export function applyEvent(
@@ -257,8 +267,17 @@ export function applyEvent(
       };
     }
 
+    case 'jack-pull': {
+      if (s.phase !== 'paused' || !s.jack?.waiting) return s;
+      s = pulled(s);
+      const next = s.resumePhase ?? 'work';
+      const autoStart = next === 'work' ? opts.autoStartWork : opts.autoStartBreaks;
+      return autoStart ? applyEvent(s, { type: 'resume' }, now, opts) : s;
+    }
+
     case 'resume': {
       if (s.phase !== 'paused') return s;
+      s = pulled(s);
       const phase = s.resumePhase ?? 'work';
       const remaining = s.resumeRemainingMs;
       const endsAt =
@@ -283,7 +302,7 @@ export function applyEvent(
       const pausedBeforeBreak =
         s.phase === 'paused' && (s.resumePhase === 'short-break' || s.resumePhase === 'long-break');
       if (!inBreak && !pausedBeforeBreak) return s;
-      s = bank(s, now);
+      s = bank(pulled(s), now);
       return {
         ...s,
         phase: 'work',

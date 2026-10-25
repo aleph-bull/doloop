@@ -139,6 +139,7 @@ export const timerEventSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('skip-break') }),
   z.object({ type: z.literal('extend'), plannedEndAt: isoDateTime }),
   z.object({ type: z.literal('set-timer-visibility'), showTimer: z.boolean() }),
+  z.object({ type: z.literal('jack-pull') }),
 ]);
 
 export const reviewSchema = z.object({

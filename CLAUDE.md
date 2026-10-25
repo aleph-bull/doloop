@@ -297,8 +297,9 @@ and never explain the difference on screen.
 - Jack mode (2026-10-22, slot machine 2026-10-25): an opt-in Pomodoro mode in Settings ›
   Timer where a slot machine after each work block sets the break (0x to 3x of it in tenths,
   1x 30% of the time, average 0.9x), seeded in `timer.jack` so every client spins the same.
-  The result bursts into coins that fly into the break clock (`data-jack-target`), which
-  waits at 0:00 and counts up as they land (`JackSlot.tsx`). Its badges show only to people
+  The timer then waits for the lever (`jack.waiting`, ended by the `jack-pull` event, or by
+  resume or skip break). The result bursts into coins that fly into the break clock
+  (`data-jack-target`), which waits at 0:00 and counts up as they land (`JackSlot.tsx`). Its badges show only to people
   using it, and its die emoji on the profile is the one emoji in the UI, at the owner's
   request. See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette

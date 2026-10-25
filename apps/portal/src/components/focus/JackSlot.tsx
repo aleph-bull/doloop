@@ -6,10 +6,13 @@ import { playEffect, playTick, preloadEffects } from '../../lib/sounds';
 
 const COIN_DROP = 'sounds/coin-drop.mp3';
 const COIN_COLLECT = 'sounds/coin-collect.mp3';
+/** The owner's voice line, played when the lever hasn't been pulled after NUDGE_MS. */
+const GO_BACK = 'sounds/go-back-to-focus.mp3';
+const NUDGE_MS = 7000;
 
-/** Decode the coins ahead of the first spin, so they land on time. */
+/** Decode the machine's sounds ahead of the first spin, so they play on time. */
 export function preloadJackSounds(): void {
-  preloadEffects([COIN_DROP, COIN_COLLECT]);
+  preloadEffects([COIN_DROP, COIN_COLLECT, GO_BACK]);
 }
 
 /** The two reels: whole breaks, then tenths. */
@@ -35,6 +38,10 @@ const FLIGHT_MS = 400;
 const OUTRO_MS = 750;
 /** Without motion, how long the result stays. */
 const STILL_STAY_MS = 3200;
+/** How far the lever's knob travels when pulled all the way, in px (styles: .jack-lever). */
+const LEVER_TRAVEL = 138;
+/** Let go past this much of the way down and it pulls; less and it springs back. */
+const LEVER_PULLS = 0.45;
 
 function stillMotion(): boolean {
   const motion = document.documentElement.dataset.motion;
@@ -78,13 +85,14 @@ function coinsFor(seconds: number, multiplier: number): { count: number; step: n
 }
 
 /**
- * A reel's strip: the numbers it runs through, from one above the first to one past where it
- * lands on `value`. It travels `length - 3` numbers.
+ * A reel's strip: the numbers it runs through, from one above `from` (where it rests before
+ * the pull) to one past where it lands on `value`. It travels `length - 3` numbers.
  */
-function strip(values: number[], value: number, spins: number): number[] {
+function strip(values: number[], from: number, value: number, spins: number): number[] {
   const n = values.length;
-  const end = n * (spins + 1) + values.indexOf(value);
-  return Array.from({ length: end + 3 }, (_, k) => values[(k - 1 + n) % n]!);
+  const start = values.indexOf(from);
+  const end = n * (spins + 1) + ((values.indexOf(value) - start + n) % n);
+  return Array.from({ length: end + 3 }, (_, k) => values[(start + k - 1 + n) % n]!);
 }
 
 /** The visible break clock: the focus screen's or the dashboard card's. */
@@ -132,10 +140,12 @@ interface Coin {
   landed: boolean;
 }
 
-type Stage = 'spin' | 'result' | 'time' | 'burst';
+type Stage = 'ready' | 'spin' | 'result' | 'time' | 'burst';
 
 export interface JackSlotProps {
   roll: JackRoll;
+  /** The timer is still waiting for the lever; if that ends elsewhere, an unpulled machine goes. */
+  waiting: boolean;
   /** 0..1, or 0 for no sound. */
   volume: number;
   /** Seconds left in the break right now, or null once the break is over. */
@@ -146,17 +156,23 @@ export interface JackSlotProps {
 }
 
 /**
- * Jack mode's slot machine: when a work interval ends the lever pulls, the reels spin and
- * land on the multiplier the timer already used to set the break. The result turns into the
- * break it gives, which bursts into coins that fly into the break clock, counting it up from
- * 0:00 as each lands (or into the machine's own clock when the timer isn't on screen). 0x
- * drops its coins instead. A click or Escape puts it away.
+ * Jack mode's slot machine: when a work interval ends it waits for its lever, pulled by
+ * dragging it down (or a click, Space or Enter); after seven seconds without a pull it says
+ * so out loud. The reels spin and land on the multiplier the timer already used to set the
+ * break. The result turns into the break it gives, which bursts into coins that fly into the
+ * break clock, counting it up from 0:00 as each lands (or into the machine's own clock when
+ * the timer isn't on screen). 0x drops its coins instead. Once pulled, a click or Escape puts
+ * it away; Escape before the pull skips the show.
  */
-export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotProps) {
+export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: JackSlotProps) {
   const face = JACK_FACES[roll.face] ?? JACK_FACES[10]!;
   const tenths = roll.face;
   const bust = roll.breakMs === 0;
-  const [stage, setStage] = useState<Stage>('spin');
+  const [stage, setStage] = useState<Stage>('ready');
+  /** The card is taken out once it has shrunk away, so its glass leaves nothing behind. */
+  const [cardGone, setCardGone] = useState(false);
+  /** The lever is being held. */
+  const [holding, setHolding] = useState(false);
   /** True when the coins come back into the machine, the timer not being on screen. */
   const [ownClock, setOwnClock] = useState(false);
   const [tense, setTense] = useState(false);
@@ -165,13 +181,25 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
   const tenthsRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
   const layerRef = useRef<HTMLDivElement>(null);
+  const knobRef = useRef<HTMLSpanElement>(null);
+  const stickRef = useRef<HTMLSpanElement>(null);
+  /** Set by the show once it is ready: pulls the lever from `dy` px down. */
+  const pullRef = useRef<((dy: number) => void) | null>(null);
+  const finishRef = useRef<(() => void) | null>(null);
+  const drag = useRef<{ y0: number; dy: number; moved: boolean } | null>(null);
   const latest = useRef({ remaining, onCount, onDone, volume });
   useEffect(() => {
     latest.current = { remaining, onCount, onDone, volume };
   });
 
-  const wholeStrip = useMemo(() => strip(WHOLE, Math.floor(tenths / 10), 3), [tenths]);
-  const tenthsStrip = useMemo(() => strip(TENTHS, tenths % 10, 5), [tenths]);
+  // At rest the machine shows 1.0x, the usual break.
+  const wholeStrip = useMemo(() => strip(WHOLE, 1, Math.floor(tenths / 10), 3), [tenths]);
+  const tenthsStrip = useMemo(() => strip(TENTHS, 0, tenths % 10, 5), [tenths]);
+
+  // Let go elsewhere (resumed from another tab, say) before the pull: nothing left to show.
+  useEffect(() => {
+    if (!waiting && stage === 'ready') finishRef.current?.();
+  }, [waiting, stage]);
 
   useEffect(() => {
     const l = latest.current;
@@ -182,26 +210,44 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
       latest.current.onCount(null);
       latest.current.onDone();
     };
+    finishRef.current = finish;
+    let started = false;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') finish();
+      else if (!started && (e.key === ' ' || e.key === 'Enter')) {
+        e.preventDefault();
+        pullRef.current?.(0);
+      }
     };
     window.addEventListener('keydown', onKey);
+    // The clock waits at 0:00 until the coins come in.
+    l.onCount(0);
+    // Seven seconds without a pull: the owner's voice line, once.
+    const nudge = window.setTimeout(() => {
+      if (!started && !closed) playEffect(GO_BACK, latest.current.volume);
+    }, NUDGE_MS);
 
     if (stillMotion()) {
       // Straight to the result: the reels already on it, the clock as it is.
-      for (const [ref, s] of [
-        [wholeRef, wholeStrip],
-        [tenthsRef, tenthsStrip],
-      ] as const) {
-        if (ref.current)
-          ref.current.style.transform = `translateY(${(-0.5 - (s.length - 3)) * 1.2}em)`;
-      }
-      l.onCount(null);
-      setStage('result');
-      if (!bust) playEffect(COIN_COLLECT, l.volume);
-      const id = window.setTimeout(finish, STILL_STAY_MS);
+      let id = 0;
+      pullRef.current = () => {
+        if (started) return;
+        started = true;
+        for (const [ref, s] of [
+          [wholeRef, wholeStrip],
+          [tenthsRef, tenthsStrip],
+        ] as const) {
+          if (ref.current)
+            ref.current.style.transform = `translateY(${(-0.5 - (s.length - 3)) * 1.2}em)`;
+        }
+        latest.current.onCount(null);
+        setStage('result');
+        if (!bust) playEffect(COIN_COLLECT, latest.current.volume);
+        id = window.setTimeout(finish, STILL_STAY_MS);
+      };
       return () => {
         window.clearTimeout(id);
+        window.clearTimeout(nudge);
         window.removeEventListener('keydown', onKey);
       };
     }
@@ -220,7 +266,8 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
     let t = 0;
     let prev = performance.now();
     let frame = 0;
-    let stageNow: Stage = 'spin';
+    let stageNow: Stage = 'ready';
+    let ownClockNow = false;
     let leaning = false;
     let coins: Coin[] = [];
     let target: HTMLElement | null = null;
@@ -228,6 +275,7 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
     let landedCoins = 0;
     let shown = 0;
     let doneAt = Infinity;
+    let gone = false;
     const accent =
       getComputedStyle(document.documentElement).getPropertyValue('--accent-text').trim() ||
       'currentColor';
@@ -245,7 +293,10 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
       const { count, step } = coinsFor(seconds, bust ? 1 : face.multiplier);
       const label = `${bust ? '−' : '+'}${formatClock(step)}`;
       target = bust ? null : findTarget();
-      if (!bust && !target) setOwnClock(true);
+      if (!bust && !target) {
+        ownClockNow = true;
+        setOwnClock(true);
+      }
       if (!bust) {
         shown = 0;
         latest.current.onCount(0);
@@ -338,6 +389,11 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
         if (!coins.length) doneAt = t + OUTRO_MS;
         else if (bust) doneAt = t + BURST_MS + 900;
       }
+      // Once the card has shrunk away it goes from the page.
+      if (stageNow === 'burst' && !ownClockNow && t >= burstAt + 300 && !gone) {
+        gone = true;
+        setCardGone(true);
+      }
 
       if (coins.length) {
         if (target?.isConnected) goal = textCentre(target);
@@ -392,10 +448,41 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
       frame = requestAnimationFrame(step);
     };
 
-    // The clock waits at 0:00 until the coins come in.
-    l.onCount(0);
-    frame = requestAnimationFrame(step);
+    /** The lever comes down from where the hand left it, swings back up, and the reels go. */
+    pullRef.current = (dy: number) => {
+      if (started) return;
+      started = true;
+      window.clearTimeout(nudge);
+      const knob = knobRef.current;
+      const stick = stickRef.current;
+      if (knob && stick && typeof knob.animate === 'function') {
+        knob.style.transform = '';
+        stick.style.transform = '';
+        const timing = { duration: 620, easing: 'cubic-bezier(0.3, 0, 0.2, 1)' };
+        knob.animate(
+          [
+            { transform: `translateY(${dy}px)` },
+            { transform: `translateY(${LEVER_TRAVEL}px)`, offset: 0.3 },
+            { transform: 'none' },
+          ],
+          timing,
+        );
+        stick.animate(
+          [
+            { transform: `scaleY(${1 - (2 * dy) / LEVER_TRAVEL})` },
+            { transform: 'scaleY(-1)', offset: 0.3 },
+            { transform: 'none' },
+          ],
+          timing,
+        );
+      }
+      playTick(sound(), 0.6, 1.6);
+      enter('spin');
+      prev = performance.now();
+      frame = requestAnimationFrame(step);
+    };
     return () => {
+      window.clearTimeout(nudge);
       cancelAnimationFrame(frame);
       window.removeEventListener('keydown', onKey);
       for (const c of coins) c.el.remove();
@@ -411,6 +498,34 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
     tenthsStrip,
   ]);
 
+  /** Where the lever's knob is while held, `dy` px down. */
+  const placeLever = (dy: number) => {
+    if (knobRef.current) knobRef.current.style.transform = dy ? `translateY(${dy}px)` : '';
+    if (stickRef.current)
+      stickRef.current.style.transform = dy ? `scaleY(${1 - (2 * dy) / LEVER_TRAVEL})` : '';
+  };
+  const letGo = (cancelled: boolean) => {
+    const d = drag.current;
+    drag.current = null;
+    setHolding(false);
+    if (!d) return;
+    if (!cancelled && (!d.moved || d.dy > LEVER_TRAVEL * LEVER_PULLS)) {
+      pullRef.current?.(d.dy);
+      return;
+    }
+    // Not far enough: it springs back up.
+    placeLever(0);
+    const spring = { duration: 380, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' };
+    knobRef.current?.animate?.(
+      [{ transform: `translateY(${d.dy}px)` }, { transform: 'none' }],
+      spring,
+    );
+    stickRef.current?.animate?.(
+      [{ transform: `scaleY(${1 - (2 * d.dy) / LEVER_TRAVEL})` }, { transform: 'none' }],
+      spring,
+    );
+  };
+
   const tone = bust ? ' is-bust' : tenths > 10 ? ' is-won' : tenths < 10 ? ' is-lost' : '';
   const big = tenths >= 20 ? ' is-big' : '';
   const showTime = stage === 'time' || stage === 'burst';
@@ -425,51 +540,85 @@ export function JackSlot({ roll, volume, remaining, onCount, onDone }: JackSlotP
   return createPortal(
     <div
       ref={layerRef}
-      className={`jack-slot-layer is-${stage}${ownClock ? ' is-own-clock' : ''}${tense ? ' is-tense' : ''}`}
+      className={`jack-slot-layer is-${stage}${ownClock ? ' is-own-clock' : ''}${tense ? ' is-tense' : ''}${holding ? ' is-holding' : ''}`}
       onClick={() => {
-        onCount(null);
-        onDone();
+        if (stage !== 'ready') finishRef.current?.();
       }}
     >
-      <div
-        className={`jack-slot-card glass glass-strong${tone}${big}`}
-        role="status"
-        aria-live="polite"
-        aria-label={stage === 'spin' ? 'Spinning' : `${face.label}. ${resultLine(roll)}`}
-      >
-        <div className="jack-slot-machine" aria-hidden>
-          <div className={`jack-slot-window${showTime ? ' is-time' : ''}`}>
-            <div className="jack-slot-reels">
-              <div className="jack-reel">
-                <div ref={wholeRef} className="jack-reel-strip">
-                  {wholeStrip.map((v, i) => (
-                    <span key={i}>{v}</span>
-                  ))}
+      {!cardGone && (
+        <div
+          className={`jack-slot-card glass glass-strong${tone}${big}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Slot machine"
+        >
+          <div className="jack-slot-machine" aria-hidden>
+            <div className={`jack-slot-window${showTime ? ' is-time' : ''}`}>
+              <div className="jack-slot-reels">
+                <div className="jack-reel">
+                  <div ref={wholeRef} className="jack-reel-strip">
+                    {wholeStrip.map((v, i) => (
+                      <span key={i}>{v}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <span className="jack-slot-dot">.</span>
-              <div className="jack-reel">
-                <div ref={tenthsRef} className="jack-reel-strip">
-                  {tenthsStrip.map((v, i) => (
-                    <span key={i}>{v}</span>
-                  ))}
+                <span className="jack-slot-dot">.</span>
+                <div className="jack-reel">
+                  <div ref={tenthsRef} className="jack-reel-strip">
+                    {tenthsStrip.map((v, i) => (
+                      <span key={i}>{v}</span>
+                    ))}
+                  </div>
                 </div>
+                <span className="jack-slot-x">×</span>
               </div>
-              <span className="jack-slot-x">×</span>
+              <div
+                ref={timeRef}
+                className={`jack-slot-time tabular${timeText.length > 5 ? ' is-long' : ''}`}
+              >
+                {timeText}
+              </div>
             </div>
-            <div
-              ref={timeRef}
-              className={`jack-slot-time tabular${timeText.length > 5 ? ' is-long' : ''}`}
+            <button
+              type="button"
+              className="jack-lever"
+              aria-label="Pull"
+              disabled={stage !== 'ready'}
+              onPointerDown={(e) => {
+                if (stage !== 'ready' || e.button !== 0) return;
+                e.currentTarget.setPointerCapture(e.pointerId);
+                drag.current = { y0: e.clientY, dy: 0, moved: false };
+                setHolding(true);
+              }}
+              onPointerMove={(e) => {
+                const d = drag.current;
+                if (!d) return;
+                const dy = Math.min(LEVER_TRAVEL, Math.max(0, e.clientY - d.y0));
+                // A click as it passes the point where letting go pulls it.
+                const line = LEVER_TRAVEL * LEVER_PULLS;
+                if (d.dy <= line !== dy <= line) playTick(volume, 0.75, 1.2);
+                if (Math.abs(e.clientY - d.y0) > 5) d.moved = true;
+                d.dy = dy;
+                placeLever(dy);
+              }}
+              onPointerUp={() => letGo(false)}
+              onPointerCancel={() => letGo(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                // A keyboard press (no pointer): pull it.
+                if (e.detail === 0) pullRef.current?.(0);
+              }}
             >
-              {timeText}
-            </div>
+              <span ref={stickRef} className="jack-lever-stick" />
+              <span className="jack-lever-base" />
+              <span ref={knobRef} className="jack-lever-knob" />
+            </button>
           </div>
-          <div className="jack-lever">
-            <span className="jack-lever-knob" />
+          <div className="jack-slot-line tabular" aria-live="polite">
+            {stage === 'ready' ? 'Pull the lever' : stage === 'spin' ? ' ' : resultLine(roll)}
           </div>
         </div>
-        <div className="jack-slot-line tabular">{stage === 'spin' ? ' ' : resultLine(roll)}</div>
-      </div>
+      )}
     </div>,
     document.body,
   );
