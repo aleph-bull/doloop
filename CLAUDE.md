@@ -399,7 +399,9 @@ reasons. What to keep doing:
   button opens the friends card in a sheet. The whole page sits on one big card
   (2026-10-23): the Backdrop's `sheet` (`.backdrop-sheet`, turned on by AppShell), the
   cards' blurred photo and colour over the window, fading in and out with the page, with
-  card text (`.social-page`) and the cards on it a step lighter or darker.
+  card text (`.social-page`) and the cards on it a step lighter or darker. Tapping a post
+  (or its comments button) opens it on a screen of its own with every comment and the box
+  pinned at the bottom (2026-10-25, `PostSheet`); the computer keeps comments under the post.
 
 ## Streaks: how they work (weekly streak added 2026-10-21)
 

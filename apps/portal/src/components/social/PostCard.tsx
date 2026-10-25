@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -20,7 +21,7 @@ import {
   X,
 } from 'lucide-react';
 import { badgeByKey, findMentions, showsUsername } from '@komogon/core';
-import { Button, Panel, Spinner, useToast } from '@komogon/ui';
+import { Button, Modal, Panel, Spinner, useToast } from '@komogon/ui';
 import {
   api,
   postFiles,
@@ -32,6 +33,7 @@ import {
 } from '../../lib/api';
 import { timeRange } from '../../lib/calendar';
 import { fmtAgo } from '../../lib/format';
+import { NARROW_QUERY, useMediaQuery } from '../../lib/media';
 import {
   useAddComment,
   useComments,
@@ -561,14 +563,14 @@ function CommentBody({
   return <span className="post-comment-body">{parts}</span>;
 }
 
-function Comments({ post, people }: { post: FeedPost; people: Record<string, Person> }) {
-  const q = useComments(post.id, true);
-  const add = useAddComment(post.id);
-  const remove = useDeleteComment(post.id);
+/** The comment box: what is typed, Reply filling it in, and sending. `field` is its input. */
+type CommentBox = ReturnType<typeof useCommentBox>;
+type FieldRef = RefObject<HTMLInputElement | null>;
+
+function useCommentBox(postId: string, field: FieldRef) {
+  const add = useAddComment(postId);
   const [text, setText] = useState('');
-  const field = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const who = { ...people, ...(q.data?.people ?? {}) };
 
   /** Reply: their @username at the start of the box (no threads), then type after it. */
   const reply = (username: string) => {
@@ -591,8 +593,56 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
     });
   };
 
+  return {
+    text,
+    setText,
+    focus: () => field.current?.focus(),
+    reply,
+    submit,
+    sending: add.isPending,
+  };
+}
+
+function CommentForm({ box, field }: { box: CommentBox; field: FieldRef }) {
   return (
-    <div className="post-comments">
+    <form className="post-comment-form" onSubmit={box.submit}>
+      <input
+        ref={field}
+        className="input"
+        value={box.text}
+        onChange={(e) => box.setText(e.target.value)}
+        placeholder="Say something"
+        maxLength={500}
+        aria-label="Your comment"
+      />
+      <Button
+        type="submit"
+        size="sm"
+        variant="primary"
+        disabled={!box.text.trim()}
+        loading={box.sending}
+      >
+        Send
+      </Button>
+    </form>
+  );
+}
+
+function CommentList({
+  post,
+  people,
+  onReply,
+}: {
+  post: FeedPost;
+  people: Record<string, Person>;
+  onReply: (username: string) => void;
+}) {
+  const q = useComments(post.id, true);
+  const remove = useDeleteComment(post.id);
+  const who = { ...people, ...(q.data?.people ?? {}) };
+
+  return (
+    <>
       {q.isPending ? (
         <Spinner />
       ) : (
@@ -613,7 +663,7 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
                     <button
                       type="button"
                       className="post-comment-reply"
-                      onClick={() => reply(p.username!)}
+                      onClick={() => onReply(p.username!)}
                     >
                       Reply
                     </button>
@@ -636,46 +686,82 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
           );
         })
       )}
-      <form className="post-comment-form" onSubmit={submit}>
-        <input
-          ref={field}
-          className="input"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Say something"
-          maxLength={500}
-          aria-label="Your comment"
-        />
-        <Button
-          type="submit"
-          size="sm"
-          variant="primary"
-          disabled={!text.trim()}
-          loading={add.isPending}
-        >
-          Send
-        </Button>
-      </form>
+    </>
+  );
+}
+
+function Comments({ post, people }: { post: FeedPost; people: Record<string, Person> }) {
+  const field = useRef<HTMLInputElement>(null);
+  const box = useCommentBox(post.id, field);
+  return (
+    <div className="post-comments">
+      <CommentList post={post} people={people} onReply={box.reply} />
+      <CommentForm box={box} field={field} />
     </div>
   );
 }
+
+/**
+ * On a phone, a post on a screen of its own (owner, 2026-10-25): the post, every comment
+ * under it, and the box pinned at the bottom, above the keyboard. The computer keeps the
+ * comments opening under the post.
+ */
+function PostSheet({
+  post,
+  people,
+  open,
+  onClose,
+}: {
+  post: FeedPost;
+  people: Record<string, Person>;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const field = useRef<HTMLInputElement>(null);
+  const box = useCommentBox(post.id, field);
+  // On the body: inside the post it would take on the feed's text styles.
+  return createPortal(
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Post"
+      phone="full"
+      initialFocus="dialog"
+      className="post-sheet"
+      actions={<CommentForm box={box} field={field} />}
+    >
+      <PostCard post={post} people={people} sheet={box} />
+    </Modal>,
+    document.body,
+  );
+}
+
+/** What already does something when tapped, so a tap there never opens the post's screen. */
+const TAPPABLE = 'a, button, input, textarea, video, dialog, .post-carousel, .post-menu-pop';
 
 /** One post: who, when, the session or video shared, what they said, and the replies. */
 export function PostCard({
   post,
   people,
   focus,
+  sheet,
 }: {
   post: FeedPost;
   people: Record<string, Person>;
   /** Opened from the notifications: scroll to it and outline it, its comments open if asked. */
   focus?: 'post' | 'comments';
+  /** Shown on a phone's post screen (`PostSheet`), whose comment box this is. */
+  sheet?: CommentBox;
 }) {
   const author = people[post.userId] ?? unknown(post.userId);
   const like = useLikePost();
+  const phone = useMediaQuery(NARROW_QUERY);
   const [editing, setEditing] = useState(false);
   const [trimming, setTrimming] = useState(false);
+  // On a phone the comments are the post's own screen; it stays mounted once opened, so it
+  // can slide away when closed.
   const [open, setOpen] = useState(focus === 'comments');
+  const [sheetUsed, setSheetUsed] = useState(focus === 'comments');
   const [marked, setMarked] = useState(!!focus);
   const files = postFiles(post);
   const video = post.you ? files.find((f) => f.mime.startsWith('video/')) : undefined;
@@ -687,8 +773,26 @@ export function PostCard({
     return () => clearTimeout(done);
   }, [focus, post.id]);
 
+  const openComments = () => {
+    if (sheet) return sheet.focus();
+    if (!phone) return setOpen((v) => !v);
+    setOpen(true);
+    setSheetUsed(true);
+  };
+
   return (
-    <Panel as="article" id={`post-${post.id}`} className={`post${marked ? ' is-focus' : ''}`}>
+    <Panel
+      as="article"
+      id={sheet ? undefined : `post-${post.id}`}
+      className={`post${marked ? ' is-focus' : ''}`}
+      onClick={
+        phone && !sheet
+          ? (e: React.MouseEvent) => {
+              if (!(e.target as Element).closest(TAPPABLE)) openComments();
+            }
+          : undefined
+      }
+    >
       <header className="post-head">
         <Link to={`/profile/${post.userId}`} aria-label={author.name}>
           <Avatar name={author.name} url={author.avatarUrl} size="sm" />
@@ -743,10 +847,11 @@ export function PostCard({
         </button>
         <button
           type="button"
-          className={`post-action${open ? ' is-on' : ''}`}
-          aria-expanded={open}
-          aria-label={open ? 'Hide comments' : 'Comments'}
-          onClick={() => setOpen((v) => !v)}
+          className={`post-action${open && !phone ? ' is-on' : ''}`}
+          aria-expanded={phone ? undefined : open}
+          aria-haspopup={phone && !sheet ? 'dialog' : undefined}
+          aria-label={open && !phone ? 'Hide comments' : 'Comments'}
+          onClick={openComments}
         >
           <MessageCircle size={17} aria-hidden />
           {post.comments > 0 && <span className="tabular">{post.comments}</span>}
@@ -758,7 +863,16 @@ export function PostCard({
           onTrim={video ? () => setTrimming(true) : undefined}
         />
       </footer>
-      {open && <Comments post={post} people={people} />}
+      {sheet ? (
+        <div className="post-comments">
+          <CommentList post={post} people={people} onReply={sheet.reply} />
+        </div>
+      ) : (
+        open && !phone && <Comments post={post} people={people} />
+      )}
+      {phone && !sheet && sheetUsed && (
+        <PostSheet post={post} people={people} open={open} onClose={() => setOpen(false)} />
+      )}
       {trimming && video && (
         <TrimVideoDialog post={post} file={video} onClose={() => setTrimming(false)} />
       )}

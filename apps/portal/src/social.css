@@ -3190,6 +3190,11 @@
     padding-top: 2px;
     border-top: 0;
   }
+  /* A post on its own screen: the box takes the whole bottom bar. */
+  .post-sheet .modal-actions > .post-comment-form {
+    flex: 1;
+    min-width: 0;
+  }
   .post-comment-form .input {
     min-height: 42px;
     padding-inline: 16px;

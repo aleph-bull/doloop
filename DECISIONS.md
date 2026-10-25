@@ -2588,3 +2588,12 @@ The owner: "Add replies to comments. format: @ the username, and then having tha
 - Kept when the comment is written (`comment_mentions`, migration **0037_comment_mentions**; next is 0038), so changing a username later doesn't lose it, and deleting the comment takes it away. Only people who can see the post are kept (friends-only posts, Settings › Social, dev worlds), at most 10 a comment, never the writer; the bell checks again when it is opened, so someone who can no longer see the post stops seeing the line. A mention on your own post is already its comment, so it shows once, as the comment.
 - In the comment, each @username that names someone is the accent colour and links to their profile.
 - Not built: suggestions while typing after @ (not asked).
+
+## A post on its own screen, on a phone, 2026-10-25 (owner request)
+
+The owner: "add a feature on mobile to click to focus on a post so they can see the whole comment section do not add this on pc".
+
+- **On a phone** (the 560px width where Social takes its phone layout), tapping a post, or its comments button, opens it as a screen of its own: "Post" and a close button at the top, the post with every comment under it, and the comment box pinned at the bottom, above the keyboard (`PostSheet` in PostCard.tsx, the full-screen `Modal`). Reply works there as in the feed.
+- Taps on what already does something are left alone: names and pictures of people, kudos, the ⋯ menu, the video, a carousel, links in comments.
+- A link from the bell to a post's comments opens its screen straight away.
+- **The computer is unchanged**: the comments open under the post, and tapping a post does nothing.
