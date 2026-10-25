@@ -168,6 +168,8 @@ export const trimSessionSchema = z.object({
   removeFocusMinutes: z.number().int().min(1).max(100_000),
 });
 
+export const countSessionSchema = z.object({ counted: z.boolean() });
+
 /** A sleep the portal noticed: the last tick before it and the first after. */
 export const sleepSchema = z.object({ from: isoDateTime, to: isoDateTime });
 

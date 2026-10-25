@@ -103,6 +103,7 @@ export async function loadJam(
             rows.map((m) => m.userId),
           ),
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           gte(sessions.startedAt, row.startsAt),
           lte(sessions.startedAt, until),
         ),

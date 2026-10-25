@@ -16,6 +16,7 @@ import {
   normalizeTimer,
   pickPhrase,
   startTimer,
+  streakDay,
   viewTimer,
   weekStreakNumbers,
   type AdvanceOptions,
@@ -55,7 +56,7 @@ import { loadCompletedSessions, paceContext, paceSnapshot } from './pace';
 import { logSessionBlock, overlapsPlannedBlock } from './planned-blocks';
 import { pushBlockCreated, pushBlockUpdated, type CalendarDeps } from './calendar-sync';
 import { dt, dtn, toNode, toSession } from './sessions-mapper';
-import { addXp, settingsOf, syncStreak } from './users';
+import { addXp, rewindStreak, settingsOf, syncStreak } from './users';
 import { revokeLapsedBadges, unlockNewBadges } from './achievements';
 
 export interface SessionView {
@@ -431,7 +432,8 @@ export async function trimSession(
     .where(eq(sessions.id, row.id))
     .returning();
 
-  if (t.xpRemoved > 0) {
+  // A session that doesn't count has no XP on the total to take back.
+  if (t.xpRemoved > 0 && row.counted) {
     const before = user.xp;
     const saved = await addXp(db, user.id, -t.xpRemoved, { withLevel: true });
     await db.insert(xpTransactions).values({
@@ -484,6 +486,96 @@ export async function trimSession(
     xpRemoved: t.xpRemoved,
     xpTotal: user.xp,
     level: user.level,
+    badgesRevoked,
+  };
+}
+
+export interface CountSummary {
+  session: Session;
+  xpTotal: number;
+  level: number;
+  streak: { current: number; longest: number; weeks: { current: number; longest: number } };
+  /** Badges the session earned that no longer hold now it doesn't count, and were taken back. */
+  badgesRevoked: string[];
+}
+
+/**
+ * Stop counting a finished session, or count it again. One that doesn't count stays in the
+ * history, but every total of focused time leaves it out, so it gives no hours anywhere, no
+ * streak day and no XP: its XP comes off the total, badges it earned that no longer hold
+ * are taken back, and the streaks are wound back to before its day and judged again.
+ * Counting it again puts all of that back.
+ */
+export async function setSessionCounted(
+  db: Db,
+  user: UserRow,
+  id: string,
+  counted: boolean,
+  now: string,
+): Promise<CountSummary> {
+  const row = await db.query.sessions.findFirst({
+    where: and(eq(sessions.id, id), eq(sessions.userId, user.id)),
+  });
+  if (!row) throw notFound('Session not found');
+  if (!row.endedAt) throw conflict('Stop the session first');
+  const changed = row.counted !== counted;
+  let saved = row;
+  let badgesRevoked: string[] = [];
+
+  if (changed) {
+    await db.update(sessions).set({ counted }).where(eq(sessions.id, row.id));
+    if (row.xpAwarded > 0) {
+      const before = user.xp;
+      const totals = await addXp(db, user.id, counted ? row.xpAwarded : -row.xpAwarded, {
+        withLevel: true,
+      });
+      await db.insert(xpTransactions).values({
+        userId: user.id,
+        at: dt(now),
+        delta: counted ? row.xpAwarded : -Math.min(row.xpAwarded, before),
+        kind: 'session',
+        ref: row.id,
+      });
+      user.xp = totals.xp;
+      user.level = totals.level;
+    }
+    const { dayStartHour } = settingsOf(user).streak;
+    await rewindStreak(
+      db,
+      user,
+      streakDay(row.startedAt.toISOString(), user.timezone, dayStartHour),
+    );
+  }
+
+  const streakSync = await syncStreak(db, user, now);
+
+  if (changed) {
+    let badgesAwarded: string[];
+    if (counted) {
+      const fresh = await unlockNewBadges(db, user, now);
+      badgesAwarded = [...new Set([...row.badgesAwarded, ...fresh])];
+    } else {
+      badgesRevoked = await revokeLapsedBadges(db, user, row.badgesAwarded, now);
+      badgesAwarded = row.badgesAwarded.filter((k) => !badgesRevoked.includes(k));
+    }
+    const [updated] = await db
+      .update(sessions)
+      .set({ badgesAwarded, streak: streakSync.streak.current })
+      .where(eq(sessions.id, row.id))
+      .returning();
+    saved = updated ?? saved;
+  }
+
+  return {
+    session: toSession(saved),
+    // After any badges taken back or paid again.
+    xpTotal: user.xp,
+    level: user.level,
+    streak: {
+      current: streakSync.streak.current,
+      longest: streakSync.streak.longest,
+      weeks: weekStreakNumbers(streakSync.streak),
+    },
     badgesRevoked,
   };
 }
@@ -722,7 +814,9 @@ async function finalize(
     ? await finishTask(db, user, row, row.nodeId, review, input.markComplete ?? false, now)
     : NO_TASK;
 
-  // Streak (lazy; also picks up today's session).
+  // Streak (lazy; also picks up today's session). What it was before is kept on the
+  // session, so not counting the session can wind it back.
+  const streakBefore = user.streak;
   const streakSync = await syncStreak(db, user, now);
 
   // XP.
@@ -836,6 +930,7 @@ async function finalize(
       xpAwarded: xp.total,
       phraseId: phrase?.id ?? null,
       streak: streakSync.streak.current,
+      streakBefore,
     })
     .where(eq(sessions.id, row.id))
     .returning();

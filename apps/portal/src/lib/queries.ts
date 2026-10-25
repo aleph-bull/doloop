@@ -1173,6 +1173,27 @@ export function useTrimSession() {
   });
 }
 
+/** Stop counting a finished session, or count it again: every total it was in moves. */
+export function useCountSession() {
+  const invalidate = useInvalidate();
+  return useMutation({
+    mutationFn: ({ id, counted }: { id: string; counted: boolean }) =>
+      api.countSession(id, counted),
+    onSuccess: () =>
+      invalidate(
+        ['sessions'],
+        keys.me,
+        keys.pace,
+        keys.shop,
+        keys.plans,
+        ['analytics'],
+        ['profiles'],
+        ['leaderboard'],
+        ['social'],
+      ),
+  });
+}
+
 /* ---------- study plans ---------- */
 
 export function usePlans() {

@@ -200,7 +200,11 @@ export async function planView(db: Db, user: PlanUser, id: string, now: string):
   const nodeIds = [id, ...topicIds];
 
   const sessionRows = await db.query.sessions.findMany({
-    where: and(inArray(sessions.nodeId, nodeIds), isNotNull(sessions.endedAt)),
+    where: and(
+      inArray(sessions.nodeId, nodeIds),
+      isNotNull(sessions.endedAt),
+      eq(sessions.counted, true),
+    ),
     columns: { nodeId: true, startedAt: true, workSeconds: true },
   });
   const loggedByTopic = new Map<string, number>();

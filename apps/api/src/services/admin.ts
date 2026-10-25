@@ -52,7 +52,7 @@ export async function listAccounts(db: Db): Promise<AdminAccount[]> {
         focus: sql<number>`coalesce(sum(${sessions.workSeconds}), 0)::int`,
       })
       .from(sessions)
-      .where(sql`${sessions.endedAt} is not null`)
+      .where(sql`${sessions.endedAt} is not null and ${sessions.counted}`)
       .groupBy(sessions.userId),
   ]);
   const withPassword = new Set(passwords.map((p) => p.userId));
@@ -195,7 +195,8 @@ export async function deleteSession(db: Db, user: UserRow, sessionId: string, no
   if (!row) throw notFound('Session not found');
   if (!row.endedAt) throw conflict('That session is still running.');
   await db.delete(sessions).where(eq(sessions.id, row.id));
-  if (row.xpAwarded > 0) {
+  // One that didn't count already gave its XP back.
+  if (row.xpAwarded > 0 && row.counted) {
     const before = user.xp;
     const saved = await addXp(db, user.id, -row.xpAwarded, { withLevel: true });
     await db.insert(xpTransactions).values({

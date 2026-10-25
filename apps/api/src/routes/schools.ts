@@ -100,6 +100,7 @@ export function schoolRoutes(app: FastifyInstance, db: Db, clock: () => string) 
         and(
           isNotNull(universityVerifications.verifiedAt),
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           eq(users.isTestAccount, false),
           isNull(users.bannedAt),
           isNotNull(users.onboardedAt),

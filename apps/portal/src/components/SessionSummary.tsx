@@ -1,9 +1,10 @@
 import { badgeByKey, formatClock, levelProgress, type SessionXpBreakdown } from '@komogon/core';
 import { Award, CalendarCheck, Flame, Sparkles, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
-import { CountUp, ProgressBar } from '@komogon/ui';
-import type { EndSummary } from '../lib/api';
+import { CountUp, ProgressBar, useToast } from '@komogon/ui';
+import type { CountSummary, EndSummary } from '../lib/api';
 import { fmtMinutes } from '../lib/format';
+import { useCountSession } from '../lib/queries';
 import { TrimSessionDialog } from './TrimSessionDialog';
 
 export interface SessionSummaryProps {
@@ -35,14 +36,29 @@ const BONUS_LINES: Array<{ key: keyof SessionXpBreakdown; label: string }> = [
  */
 export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSummaryProps) {
   const [trimming, setTrimming] = useState(false);
-  const lp = levelProgress(summary.xpTotal);
+  const countSession = useCountSession();
+  const { toast } = useToast();
+  /** The figures after "Don't count this session" (or its undo), once either was used. */
+  const [recount, setRecount] = useState<CountSummary | null>(null);
+  const counted = recount ? recount.session.counted !== false : true;
+  const setCounted = async (next: boolean) => {
+    try {
+      setRecount(await countSession.mutateAsync({ id: summary.session.id, counted: next }));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not change that');
+    }
+  };
+  const streak = recount?.streak ?? summary.streak;
+  const lp = levelProgress(recount?.xpTotal ?? summary.xpTotal);
   const { workSeconds, breakSeconds, idleSeconds } = summary.session;
   const xp = summary.xp;
   const effortScore = summary.session.review?.effort ?? null;
   const effort = effortScore ? EFFORT_WORD[effortScore - 1] : null;
   const bonuses = BONUS_LINES.filter((b) => (xp[b.key] as number) > 0);
-  const weeks = summary.streak.weeks;
+  const weeks = streak.weeks;
+  // Badges this session earned that went when it stopped counting aren't shown.
   const badges = summary.badges
+    .filter((k) => !recount || recount.session.badgesAwarded.includes(k))
     .map((k) => badgeByKey(k))
     .filter((b): b is NonNullable<typeof b> => !!b);
   let step = 0;
@@ -61,9 +77,11 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         <span className="summary-hero-figure tabular">
           <CountUp value={workSeconds} format={(v) => formatClock(v)} duration={900} />
         </span>
-        <span className={`summary-xp${xp.withheld ? ' is-withheld' : ''}`}>
+        <span className={`summary-xp${xp.withheld || !counted ? ' is-withheld' : ''}`}>
           <Sparkles size={15} aria-hidden />
-          {xp.withheld ? (
+          {!counted ? (
+            'Not counted'
+          ) : xp.withheld ? (
             'Ended early, so no XP this time'
           ) : (
             <>
@@ -74,7 +92,7 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         </span>
       </div>
 
-      {bonuses.length > 0 && !xp.withheld && (
+      {bonuses.length > 0 && !xp.withheld && counted && (
         <ul
           className="summary-bonuses summary-reveal"
           style={stagger()}
@@ -119,9 +137,9 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
             <Flame size={12} aria-hidden /> Daily streak
           </dt>
           <dd className="tabular">
-            {summary.streak.current} day{summary.streak.current === 1 ? '' : 's'}
-            {summary.streak.longest > summary.streak.current && (
-              <span className="summary-stat-aside">Best {summary.streak.longest}</span>
+            {streak.current} day{streak.current === 1 ? '' : 's'}
+            {streak.longest > streak.current && (
+              <span className="summary-stat-aside">Best {streak.longest}</span>
             )}
           </dd>
         </div>
@@ -180,11 +198,11 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
       )}
 
       {(summary.streak.message ||
-        summary.streak.milestonesReached.length > 0 ||
+        (summary.streak.milestonesReached.length > 0 && counted) ||
         summary.nodeCompleted ||
         summary.routineTicked) && (
         <div className="text-sm muted flex flex-col gap-1 summary-reveal" style={stagger()}>
-          {summary.streak.milestonesReached.length > 0 && (
+          {summary.streak.milestonesReached.length > 0 && counted && (
             <span>{Math.max(...summary.streak.milestonesReached)}-day streak. Keep it up!</span>
           )}
           {summary.streak.message && <span>{summary.streak.message}</span>}
@@ -193,14 +211,26 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
         </div>
       )}
 
-      {summary.session.workSeconds > 60 && (
-        <p className="text-sm muted summary-reveal" style={stagger()}>
-          Didn&rsquo;t study all of that?{' '}
-          <button type="button" className="link-button" onClick={() => setTrimming(true)}>
-            Delete time
+      <div className="text-sm muted flex flex-col gap-1 summary-reveal" style={stagger()}>
+        {summary.session.workSeconds > 60 && counted && (
+          <p>
+            Didn&rsquo;t study all of that?{' '}
+            <button type="button" className="link-button" onClick={() => setTrimming(true)}>
+              Delete time
+            </button>
+          </p>
+        )}
+        <p>
+          <button
+            type="button"
+            className="link-button"
+            onClick={() => void setCounted(!counted)}
+            disabled={countSession.isPending}
+          >
+            {counted ? <>Don&rsquo;t count this session</> : 'Count this session'}
           </button>
         </p>
-      )}
+      </div>
       <TrimSessionDialog
         session={trimming ? { ...summary.session, title: 'this session' } : null}
         onClose={() => setTrimming(false)}

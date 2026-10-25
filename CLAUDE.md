@@ -439,6 +439,13 @@ days**. All the logic is in `packages/core/src/streak.ts`; the API only loads an
   `weeks` is optional in the type: read it with `weekStreakNumbers()` in the API, and with
   `?.` / `?? 0` in the portal, whose offline query cache (IndexedDB, `lib/persist.ts`) can
   hand back a response from before.
+- **A session that doesn't count** (2026-10-25, "Don't count this session" at the end of
+  the summary): `sessions.counted` false. It adds no streak day, hours or XP; everything that
+  totals time must read counted sessions only (`loadCompletedSessions`, or
+  `eq(sessions.counted, true)` beside `isNotNull(sessions.endedAt)` in a new query). The
+  streak is wound back from the copy each session keeps of it from just before it ended
+  (`streak_before`, `rewindStreak` in services/users.ts) and judged again, so keep writing
+  `streakBefore` in `finalize`.
 - **Settings changes** (minimum minutes, days per week) apply to days and weeks not yet
   judged. What already counted stays counted.
 - **Events.** Only the daily streak's freeze uses and resets are logged (`streak_events`),

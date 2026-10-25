@@ -34,6 +34,7 @@ export function toSession(row: SessionRow): Session {
           lostSeconds: row.timer.jack.lostSeconds,
         }
       : null,
+    counted: row.counted,
   };
 }
 

@@ -214,6 +214,15 @@ export interface EndSummary {
 /** A finished session with what it was for, as the history lists it. */
 export type HistorySession = Session & { title: string };
 
+/** After a session stopped counting, or counts again: the figures it changed. */
+export interface CountSummary {
+  session: Session;
+  xpTotal: number;
+  level: number;
+  streak: { current: number; longest: number; weeks: WeekStreak };
+  badgesRevoked: string[];
+}
+
 export interface TrimSummary {
   session: HistorySession;
   removedFocusSeconds: number;
@@ -720,6 +729,8 @@ export const api = {
   ) => request<{ summary: EndSummary }>('POST', `/api/sessions/${id}/end`, body),
   trimSession: (id: string, removeFocusMinutes: number) =>
     request<TrimSummary>('POST', `/api/sessions/${id}/trim`, { removeFocusMinutes }),
+  countSession: (id: string, counted: boolean) =>
+    request<CountSummary>('PUT', `/api/sessions/${id}/counted`, { counted }),
   sessionSleep: (id: string, gap: { from: string; to: string }) =>
     request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/sleep`, gap),
   keptStudying: (id: string, from: string) =>

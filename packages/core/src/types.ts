@@ -534,6 +534,11 @@ export interface Session {
   sleeps: SleepGap[];
   /** Jack mode's dice over the session, when it ran with Jack mode on. */
   jack?: SessionJack | null;
+  /**
+   * False when the person chose not to count it: no hours, streak days or XP. Absent on
+   * responses from before it existed, which all counted.
+   */
+  counted?: boolean;
 }
 
 /** What Jack mode's dice did over one session. */

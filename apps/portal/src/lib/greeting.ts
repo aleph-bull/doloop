@@ -43,7 +43,7 @@ export function buildGreeting(input: GreetingInput): PickedGreeting {
   let ever = 0;
 
   for (const s of input.sessions) {
-    if (!s.endedAt) continue;
+    if (!s.endedAt || s.counted === false) continue;
     ever++;
     const day = toLocalDate(s.startedAt, zone);
     if (!lastDate || day > lastDate) lastDate = day;

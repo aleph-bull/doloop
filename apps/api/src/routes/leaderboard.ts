@@ -111,6 +111,7 @@ export function leaderboardRoutes(
       .where(
         and(
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           eq(users.isTestAccount, false),
           inWorldOf(req.user),
           isNull(users.bannedAt),
@@ -211,6 +212,7 @@ export function leaderboardRoutes(
         and(
           inArray(sessions.userId, ids),
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           gte(sessions.startedAt, since),
         ),
       );
@@ -299,7 +301,9 @@ export function leaderboardRoutes(
     const totals = await db
       .select({ userId: sessions.userId, seconds: sql<number>`sum(${sessions.workSeconds})::int` })
       .from(sessions)
-      .where(and(inArray(sessions.userId, ids), isNotNull(sessions.endedAt)))
+      .where(
+        and(inArray(sessions.userId, ids), isNotNull(sessions.endedAt), eq(sessions.counted, true)),
+      )
       .groupBy(sessions.userId)
       .having(sql`sum(${sessions.workSeconds}) > 0`);
     const yourTotal = totals.find((t) => t.userId === me.id);

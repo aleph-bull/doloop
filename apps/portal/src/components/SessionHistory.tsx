@@ -82,7 +82,9 @@ export function SessionHistory() {
                   </div>
                   <div className="history-figures tabular">
                     <span>{fmtMinutes(s.workSeconds / 60)} focus</span>
-                    <span className="muted">{s.xpAwarded} XP</span>
+                    <span className="muted">
+                      {s.counted === false ? 'Not counted' : `${s.xpAwarded} XP`}
+                    </span>
                     {badges.length > 0 && (
                       <span className="history-badges" title={badges.join(', ')}>
                         {badges.length === 1 ? badges[0] : `${badges.length} badges`}
@@ -94,7 +96,7 @@ export function SessionHistory() {
                     size="sm"
                     onClick={() => setTrimming(s)}
                     aria-label={`Delete time from ${s.title}, ${dayWords(s.startedAt)} ${fmtTime(s.startedAt)}`}
-                    disabled={s.workSeconds <= 60}
+                    disabled={s.workSeconds <= 60 || s.counted === false}
                   >
                     <Scissors size={14} aria-hidden /> Delete time
                   </Button>

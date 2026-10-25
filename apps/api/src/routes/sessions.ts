@@ -11,10 +11,12 @@ import {
   listSessions,
   recordSleep,
   sessionHistory,
+  setSessionCounted,
   startSession,
   trimSession,
 } from '../services/sessions';
 import {
+  countSessionSchema,
   endSessionSchema,
   isoDateTime,
   keptStudyingSchema,
@@ -63,6 +65,13 @@ export function sessionRoutes(
     const { id } = idParams.parse(req.params);
     const { removeFocusMinutes } = trimSessionSchema.parse(req.body);
     return trimSession(db, req.user, id, removeFocusMinutes, clock(), calendar);
+  });
+
+  /** Stop counting a finished session toward hours, streaks and XP, or count it again. */
+  app.put('/api/sessions/:id/counted', async (req) => {
+    const { id } = idParams.parse(req.params);
+    const { counted } = countSessionSchema.parse(req.body);
+    return setSessionCounted(db, req.user, id, counted, clock());
   });
 
   /** The portal noticed the computer slept while this session ran. */

@@ -159,6 +159,7 @@ export async function loadGroup(db: Db, row: GroupRow, viewerId: string, now: Da
         where: and(
           inArray(sessions.userId, ids),
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           gte(sessions.startedAt, new Date(Date.parse(from) - 2 * 86_400_000)),
           lte(sessions.startedAt, now),
         ),

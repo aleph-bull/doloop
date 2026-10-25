@@ -216,6 +216,16 @@ export const sessions = pgTable(
     badgesAwarded: jsonb('badges_awarded').$type<string[]>().notNull().default([]),
     /** The daily streak as it stood when the session ended, for its post. Null before 0034. */
     streak: integer('streak'),
+    /**
+     * False once the person chose not to count it: it stays in their history, but adds no
+     * hours, streak days or XP anywhere.
+     */
+    counted: boolean('counted').notNull().default(true),
+    /**
+     * The streak as it stood just before this session ended, so it can be wound back when a
+     * session stops counting (see rewindStreak). Null before 0036.
+     */
+    streakBefore: jsonb('streak_before').$type<StreakState>(),
     /** When the computer slept during the session, and whether the user kept studying. */
     sleeps: jsonb('sleeps').$type<SleepGap[]>().notNull().default([]),
     /** Full timer state machine; derived columns above are synced from it. */

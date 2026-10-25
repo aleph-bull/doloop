@@ -11,6 +11,7 @@ import {
   randomUsername,
   resolveAccent,
   resolveBackgroundId,
+  startOfWeekMonday,
   streakDay,
   usernameError,
   usernameUnlocksAt,
@@ -22,7 +23,7 @@ import {
   type UserSettings,
 } from '@komogon/core';
 import { randomBytes } from 'node:crypto';
-import { and, eq, gte, isNotNull, isNull, ne, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, gte, isNotNull, isNull, ne, sql, type SQL } from 'drizzle-orm';
 import type { AuthUser } from '../auth/verify';
 import type { Db } from '../db/client';
 import {
@@ -179,9 +180,10 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
       ? and(
           eq(sessions.userId, row.id),
           isNotNull(sessions.endedAt),
+          eq(sessions.counted, true),
           gte(sessions.startedAt, new Date(Date.parse(since) - 2 * 86_400_000)),
         )
-      : and(eq(sessions.userId, row.id), isNotNull(sessions.endedAt)),
+      : and(eq(sessions.userId, row.id), isNotNull(sessions.endedAt), eq(sessions.counted, true)),
   });
   const sess: Session[] = rows.map(toSession);
 
@@ -225,6 +227,50 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
     message: describeStreakEvents(result.events),
     milestonesReached: result.milestonesReached,
   };
+}
+
+/**
+ * Undo the streak's judging from `day` on, so the next sync judges those days again: for
+ * when a session on that day stops counting, or counts again. Each finished session keeps
+ * the streak as it stood before it ended (`streak_before`); the daily streak goes back to
+ * the newest copy that hadn't judged `day` yet, the weekly one to the newest that hadn't
+ * judged its week. Freezes spent on days since are handed back and their events dropped,
+ * as the sync spends them again where they are still needed. Freezes and break days bought
+ * since are kept. With no such copy (sessions from before 0036) that streak stays as it is.
+ */
+export async function rewindStreak(db: Db, row: UserRow, day: string): Promise<void> {
+  const week = startOfWeekMonday(day);
+  const newestBefore = async (judged: SQL) => {
+    const [found] = await db
+      .select({ streak: sessions.streakBefore })
+      .from(sessions)
+      .where(and(eq(sessions.userId, row.id), isNotNull(sessions.streakBefore), judged))
+      .orderBy(desc(sessions.endedAt))
+      .limit(1);
+    return found?.streak ?? null;
+  };
+  const [daily, weekly] = await Promise.all([
+    newestBefore(sql`coalesce(${sessions.streakBefore} ->> 'lastCountedDate', '') < ${day}`),
+    newestBefore(
+      sql`coalesce(${sessions.streakBefore} -> 'weeks' ->> 'lastCountedWeek', '') < ${week}`,
+    ),
+  ]);
+  if (!daily && !weekly) return;
+  const next: StreakState = { ...row.streak };
+  if (daily) {
+    const since = daily.lastCountedDate ?? '';
+    const spent = await db
+      .delete(streakEvents)
+      .where(and(eq(streakEvents.userId, row.id), gt(streakEvents.date, since)))
+      .returning({ type: streakEvents.type });
+    next.current = daily.current;
+    next.longest = daily.longest;
+    next.lastCountedDate = daily.lastCountedDate;
+    next.freezesHeld += spent.filter((e) => e.type === 'freeze-used').length;
+  }
+  if (weekly) next.weeks = weekly.weeks;
+  await db.update(users).set({ streak: next }).where(eq(users.id, row.id));
+  row.streak = next;
 }
 
 export async function updateSettings(db: Db, row: UserRow, patch: SettingsPatch): Promise<UserRow> {

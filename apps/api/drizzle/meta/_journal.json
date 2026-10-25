@@ -253,6 +253,13 @@
       "when": 1792766596030,
       "tag": "0035_theme_mode_from_setup",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1792906513930,
+      "tag": "0036_session_counted",
+      "breakpoints": true
     }
   ]
 }

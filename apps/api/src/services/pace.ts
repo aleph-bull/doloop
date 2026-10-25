@@ -21,9 +21,14 @@ export interface PaceSnapshot {
   pace: Map<string, NodePace>;
 }
 
+/** Finished sessions that count, oldest first: everything hours, pace and badges are worked from. */
 export async function loadCompletedSessions(db: Db, userId: string): Promise<Session[]> {
   const rows = await db.query.sessions.findMany({
-    where: and(eq(sessions.userId, userId), isNotNull(sessions.endedAt)),
+    where: and(
+      eq(sessions.userId, userId),
+      isNotNull(sessions.endedAt),
+      eq(sessions.counted, true),
+    ),
     orderBy: (s, { asc }) => [asc(s.startedAt)],
   });
   return rows.map(toSession);
