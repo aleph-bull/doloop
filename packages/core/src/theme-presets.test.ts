@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from './defaults';
-import { isAccentUnlocked, isBackgroundAvailable } from './economy';
+import { isAccentUnlocked, isBackgroundAvailable, solidColorOf } from './economy';
 import {
   isPlainBackground,
   matchingThemePreset,
+  SOLID_TEXT,
   THEME_PRESETS,
   THEME_TAGS,
   themePresetPatch,
@@ -31,12 +32,31 @@ describe('theme presets', () => {
     for (const p of THEME_PRESETS) expect(tags.has(p.tag), p.id).toBe(true);
   });
 
-  it('the three minimalist colours are matte solids', () => {
-    for (const id of ['off-white', 'night-shift', 'inkwell']) {
+  it('the minimalist colours are matte solids', () => {
+    for (const id of [
+      'linen',
+      'deep-sea',
+      'off-white',
+      'night-shift',
+      'inkwell',
+      'dusk-rose',
+      'salt-air',
+      'wisteria',
+      'tidepool',
+      'gold-leaf',
+    ]) {
       const p = THEME_PRESETS.find((x) => x.id === id)!;
       expect(p.tag).toBe('minimalist');
       expect(p.look.panel).toBe('matte');
       expect(p.look.backgroundId).toMatch(/^solid:#[0-9a-f]{6}$/);
+    }
+  });
+
+  it('gives text colours only to the flat colours of themes, in lowercase', () => {
+    const solids = new Set(THEME_PRESETS.map((p) => solidColorOf(p.look.backgroundId)));
+    for (const [hex, text] of Object.entries(SOLID_TEXT)) {
+      expect(solids.has(hex), hex).toBe(true);
+      expect(text).toMatch(/^#[0-9a-f]{6}$/);
     }
   });
 

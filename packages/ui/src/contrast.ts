@@ -1,3 +1,5 @@
+import { SOLID_TEXT } from '@komogon/core';
+
 export type RGB = [number, number, number];
 
 function channel(c: number): number {
@@ -291,6 +293,13 @@ export interface TonalSurfaces {
 
 const clampPct = (v: number) => Math.max(0, Math.min(100, v));
 
+/** The text colour a palette colour came with (`SOLID_TEXT` in core), or null. */
+function ownText(bg: RGB): RGB | null {
+  const hex = `#${bg.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+  const text = SOLID_TEXT[hex];
+  return text ? hexToRgb(text) : null;
+}
+
 /** hsl(h, s, l), moving l by `step` until `against` reads on it (or it on `against`) at `ratio`. */
 function shadeUntil(
   h: number,
@@ -328,14 +337,17 @@ export function tonalSurfaces(bg: RGB, theme: 'light' | 'dark'): TonalSurfaces {
   const raised = hslToRgb(h, cs, clampPct(card.l + (lightText ? 4 : 2)));
   const sunken = hslToRgb(h, cs, clampPct(card.l - 3));
   const away = lightText ? 1 : -1;
-  const ink = shadeUntil(h, inkS, lightText ? 95 : 11, away, card.rgb, 7).rgb;
+  // A colour from a palette keeps the palette's text, where it reads as well as ours would.
+  const own = ownText(bg);
+  const reads = (on: RGB) => (own && contrastRatio(own, on) >= 7 ? own : null);
+  const ink = reads(card.rgb) ?? shadeUntil(h, inkS, lightText ? 95 : 11, away, card.rgb, 7).rgb;
   const inkMuted = shadeUntil(h, quietS, lightText ? 74 : 33, away, card.rgb, 6).rgb;
   const inkSubtle = shadeUntil(h, quietS, lightText ? 62 : 42, away, card.rgb, 4.6).rgb;
   // The page's own text follows the colour, whatever the theme: dark on a light colour.
   const pageLight = readsLight(bg);
   const pageAway = pageLight ? 1 : -1;
   const pageS = Math.min(s, pageLight ? 12 : 25);
-  const page = shadeUntil(h, pageS, pageLight ? 96 : 11, pageAway, bg, 7).rgb;
+  const page = reads(bg) ?? shadeUntil(h, pageS, pageLight ? 96 : 11, pageAway, bg, 7).rgb;
   const pageMuted = shadeUntil(h, pageS, pageLight ? 80 : 30, pageAway, bg, 5).rgb;
   const pageSubtle = shadeUntil(h, pageS, pageLight ? 70 : 40, pageAway, bg, 4.6).rgb;
   return {

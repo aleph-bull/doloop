@@ -278,7 +278,8 @@ and never explain the difference on screen.
   shaded from it** (`tonalSurfaces` in contrast.ts, set by `applyUserTheme` as `--tone-*`
   and `data-tonal`, mapped onto the theme tokens in styles.css): new surfaces should use
   the usual tokens (`--ink`, `--matte-fill`, `--glass-solid`, `--accent-text`), which
-  follow it, not fixed colours. `--tone-*` has one writer, `applyUserTheme`. Theme names
+  follow it, not fixed colours. A flat colour from one of the owner's palettes brings its own
+  main text colour (`SOLID_TEXT` in theme-presets.ts, used where it reads). `--tone-*` has one writer, `applyUserTheme`. Theme names
   never use another company's name (owner).
 - **The background never picks light or dark** (owner, 2026-10-23). There is no Recommended
   mode any more (0035 gave stored rows the light or dark picked in setup); photo themes keep the mode already chosen,
