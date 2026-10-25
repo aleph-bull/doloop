@@ -78,7 +78,11 @@ export interface UserSettings {
     bio: string | null;
   };
   pomodoro: PomodoroConfig;
-  review: { mode: ReviewMode };
+  review: {
+    mode: ReviewMode;
+    /** Closing the end-of-session summary opens Social with the session ready to post. */
+    openSocial: boolean;
+  };
   streak: {
     minMinutes: number;
     /**

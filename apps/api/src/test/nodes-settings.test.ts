@@ -218,6 +218,29 @@ describe('settings and profile', () => {
     expect(bad.statusCode).toBe(400);
   });
 
+  it('goes to Social after a session unless turned off', async () => {
+    const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.review;
+    expect(before.openSocial).toBe(true);
+    const off = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { review: { openSocial: false } },
+    });
+    expect(off.statusCode).toBe(200);
+    expect(off.json().settings.review).toMatchObject({ mode: before.mode, openSocial: false });
+    const bad = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { review: { openSocial: 'yes' } },
+    });
+    expect(bad.statusCode).toBe(400);
+    await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { review: { openSocial: true } },
+    });
+  });
+
   it('keeps the glass settings, starting at the light frost', async () => {
     const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme;
     expect(before).toMatchObject({

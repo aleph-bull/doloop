@@ -36,7 +36,7 @@ import {
 } from '@komogon/ui';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
-import { FOCUS_PATH, openFocusTab } from '../lib/focus-tab';
+import { FOCUS_PATH, openFocusTab, useOpenerRequests } from '../lib/focus-tab';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
@@ -447,6 +447,8 @@ export function AppShell() {
   const running = Boolean(active.data?.active);
   const [starting, setStarting] = useState(false);
   const here = phonePlace(target);
+  // The focus screen this tab opened sends it to Social after a session, to post it.
+  useOpenerRequests(navigate);
   const has = (to: string) => shown.some((l) => l.to === to);
   const phoneTabs: Array<{
     place: PhonePlace;

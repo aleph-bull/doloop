@@ -738,6 +738,13 @@ export function Settings() {
                   The assessment after a session. Gives more data for analytics and planning.
                 </span>
               </div>
+              {s.features.social && (
+                <Toggle
+                  checked={s.review.openSocial}
+                  onChange={(v) => patch({ review: { openSocial: v } })}
+                  label="Go to Social to post it"
+                />
+              )}
               <Toggle
                 checked={s.effects.phrases}
                 onChange={(v) => patch({ effects: { phrases: v } })}

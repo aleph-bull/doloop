@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     showTimerByDefault: true,
     jackMode: false,
   },
-  review: { mode: 'quick' },
+  review: { mode: 'quick', openSocial: true },
   streak: { minMinutes: 15, dayStartHour: 4, dayStartChangedAt: null, daysPerWeek: 1 },
   goals: { weeklyMinutes: 300 },
   rewards: { minCostXp: 150, minCostChangedAt: null },

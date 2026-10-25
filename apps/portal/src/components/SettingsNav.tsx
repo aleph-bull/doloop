@@ -181,6 +181,8 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'focus',
       'effort',
       'notes',
+      'post',
+      'social',
       'phrases',
       'confetti',
     ],

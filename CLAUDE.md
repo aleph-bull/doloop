@@ -518,6 +518,14 @@ the first version "massive"; don't let it grow back. Padding is not where densit
 every card has the standard 20px (`--card-pad`, see the Look rules), since 12-16px crowded
 the rounded corners. The small leaderboard also has more room between its rows.
 
+**After a session** (2026-10-25): closing the summary goes to Social with that session
+picked in the post box (`/social?post=<id>`, read and dropped by `Composer.tsx`), on by
+default (`settings.review.openSocial`, Settings › Timer › After each session), only while the
+session is still postable (`useSocialAfterSession` in `lib/after-session.ts`). A focus screen
+in its own tab sends the tab that opened it there and closes (`sendOpenerTo` /
+`useOpenerRequests` in `lib/focus-tab.ts`). The button that posts from the timelapse's Share
+to Social preview says "Social" (owner); the feed's composer still says Post.
+
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and what it was on,
 "Course · Task" (root course and the task itself, never the units between; `focusLabel`),

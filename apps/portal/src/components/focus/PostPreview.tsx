@@ -98,7 +98,7 @@ export function PostPreview({
               Cancel
             </Button>
             <Button variant="primary" onClick={() => void share()} loading={busy}>
-              Post
+              Social
             </Button>
           </>
         )

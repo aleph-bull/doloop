@@ -41,7 +41,8 @@ import {
 } from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
-import { useFocusTabBeacon } from '../lib/focus-tab';
+import { useSocialAfterSession } from '../lib/after-session';
+import { sendOpenerTo, useFocusTabBeacon } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import {
   keys,
@@ -570,11 +571,21 @@ export function Focus() {
   const tuning = useMemo(() => (vis ? visualizerTuning(vis) : null), [vis]);
 
   /* ---------- leaving ---------- */
+  const toSocial = useSocialAfterSession(summary?.session ?? null);
   const leave = useCallback(() => {
-    // A tab the app opened closes; one the user opened by hand goes home instead.
-    window.close();
-    window.setTimeout(() => navigate('/'), 150);
-  }, [navigate]);
+    void toSocial().then((path) => {
+      // After a session, off to Social to post it (the setting): the tab that opened this one
+      // goes there as this one closes, or, with no such tab, this one goes.
+      if (path) {
+        if (sendOpenerTo(path)) window.setTimeout(() => navigate('/'), 150);
+        else navigate(path);
+        return;
+      }
+      // A tab the app opened closes; one the user opened by hand goes home instead.
+      window.close();
+      window.setTimeout(() => navigate('/'), 150);
+    });
+  }, [navigate, toSocial]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image as ImageIcon, Timer, Video, X } from 'lucide-react';
+import { useSearchParams } from 'react-router';
 import { Button, Panel, useToast } from '@komogon/ui';
 import { fmtDate, fmtMinutes } from '../../lib/format';
 import {
@@ -54,8 +55,10 @@ export function Composer() {
   const fileRef = useRef<HTMLInputElement>(null);
   const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
 
-  const sessions = useSessions(undefined, 15).data?.sessions;
-  const postable = usePostableSessions().data?.sessionIds;
+  const sessionsQuery = useSessions(undefined, 15);
+  const postableQuery = usePostableSessions();
+  const sessions = sessionsQuery.data?.sessions;
+  const postable = postableQuery.data?.sessionIds;
   const nodes = useNodes().data?.nodes;
   const recent = useMemo(() => {
     const titles = new Map((nodes ?? []).map((n) => [n.id, n.title]));
@@ -74,6 +77,42 @@ export function Composer() {
         }`,
       }));
   }, [sessions, nodes, postable]);
+
+  // Sent here from a session's summary (`?post=`, lib/after-session.ts): that session picked
+  // and the box open, then the address forgets it.
+  const [params, setParams] = useSearchParams();
+  const asked = params.get('post');
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const { refetch: refetchSessions } = sessionsQuery;
+  const { refetch: refetchPostable } = postableQuery;
+  const settling = sessionsQuery.isFetching || postableQuery.isFetching;
+  const refreshedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!asked) return;
+    // Both lists asked again first: ones from before the session ended don't have it.
+    if (refreshedFor.current !== asked) {
+      refreshedFor.current = asked;
+      void refetchSessions();
+      void refetchPostable();
+      return;
+    }
+    if (settling || !sessions || !postable) return;
+    if (recent.some((s) => s.id === asked)) {
+      setSessionId(asked);
+      setOpened(true);
+      const box = textRef.current;
+      box?.scrollIntoView({ block: 'center' });
+      // No keyboard before a tap on a touch screen.
+      if (!window.matchMedia('(pointer: coarse)').matches) box?.focus({ preventScroll: true });
+    }
+    setParams(
+      (p) => {
+        p.delete('post');
+        return p;
+      },
+      { replace: true },
+    );
+  }, [asked, sessions, postable, recent, settling, refetchSessions, refetchPostable, setParams]);
 
   // The pending compress counts too, so it can't push a post past its limits.
   const held = oversize ? [...files, oversize.file] : files;
@@ -169,6 +208,7 @@ export function Composer() {
       <div className="composer-row">
         <Avatar name={me?.settings.profile.name ?? ''} url={avatar} size="sm" />
         <textarea
+          ref={textRef}
           className="textarea composer-text"
           value={text}
           onFocus={() => setOpened(true)}

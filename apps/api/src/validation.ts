@@ -279,7 +279,7 @@ export const settingsSchema = z
       .partial()
       .strict(),
     pomodoro: pomodoro.partial(),
-    review: z.object({ mode: z.enum(['quick', 'full', 'off']) }).partial(),
+    review: z.object({ mode: z.enum(['quick', 'full', 'off']), openSocial: z.boolean() }).partial(),
     // dayStartChangedAt is the server's to set; a client can only ask for a new hour.
     streak: z
       .object({

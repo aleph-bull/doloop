@@ -2636,3 +2636,14 @@ The owner: "theres a blur that stays in the middle of the screen after the card 
 - The owner, on the halved versions: "looks shit, make them all very unsaturated or dark, it hurts to look at them". Every palette theme except Linen (already muted) now has a page colour at 14% saturation or less, dark ones near black, and an accent at 26% or less. The dark themes' accents are dark enough for white labels (lightness about 40) rather than bright pills with dark labels.
 - **Deep Sea** #1d1e26, `custom:165,18,40`, white text. **Dusk Rose** #1a1c23, `custom:320,12,46`, text #e3dee0. **Tidepool** #191f1f, `custom:183,18,38`. **Gold Leaf** #0d0f11, `custom:42,26,40`. **Salt Air** #e2e6e9, `custom:195,20,32`. **Wisteria** #f2f1f4, `custom:266,10,42`, text #2f2d39.
 - Don't bring the palettes' bright colours back: the owner found them painful.
+
+## Off to Social after a session, 2026-10-25 (owner request)
+
+The owner: "at the end of session rename post to social", "add automatic go to post social screen", "turn it on by default and it activates when someone ends the session". Asked which Post and when, they picked the Post button in the timelapse's Share to Social preview, and going after the summary rather than instead of it (going earlier would throw away a timelapse not yet saved).
+
+- **The Share to Social preview's button says "Social"** instead of "Post". The composer on the feed still says Post.
+- **Closing the summary goes to Social** with that session picked in the post box: Done (or the x, or a click outside) on the dashboard's summary, Close, the x or Escape on the focus screen's. The box opens (on a phone too) and, on a computer, takes the cursor; `?post=<session id>` carries it there and is dropped from the address once read (`Composer.tsx`). It asks for the sessions again first, since the lists in the cache are from before the session ended.
+- **Only when there is something to post**: a session of a minute of focus or more (what the post box lists) that `GET /api/social/postable` still offers, so one already shared from the timelapse closes as before. Asked as the summary opens (`useSocialAfterSession` in `lib/after-session.ts`), so closing doesn't wait.
+- **The focus screen in its own tab** posts the address to the tab that opened it, which goes to Social while the focus tab closes (`sendOpenerTo` / `useOpenerRequests` in `lib/focus-tab.ts`, listened for in AppShell, Social addresses only). With no such tab (a phone, the extension, a tab opened by hand), the focus screen goes to Social itself.
+- **On by default** (`settings.review.openSocial`, true for every account, API-validated): Settings › Timer › After each session › "Go to Social to post it", shown only while Social is on. With Social hidden it never goes.
+- "Start another" on the focus screen doesn't go, nor does the summary closing itself after Delete time.
