@@ -861,6 +861,28 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+.post-mention {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.post-mention:hover {
+  text-decoration: underline;
+}
+/* Reply: small, after the time, like the time itself until pointed at. */
+.post-comment-reply {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--fg-subtle);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+.post-comment-reply:hover {
+  color: var(--fg);
+}
 .post-comment-x {
   display: grid;
   place-items: center;

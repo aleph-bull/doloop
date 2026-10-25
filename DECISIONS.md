@@ -2577,3 +2577,14 @@ The owner, with a ~900px window (the browser on half the screen): "fix main cont
 - **Centred beside the slim sidebar.** On a window too narrow to centre the page and clear the sidebar, the page used to leave room for the open sidebar (236px on the left) even while it was slim, so everything sat far right with 24px on the other side. Now it clears the slim sidebar (72px) and its own 28px padding puts the same gap on both sides. Only a pinned sidebar keeps the open one's room (224px). The slim one still opens over the page on hover. Wide windows are unchanged: the page stays in the middle of the window.
 - **The Tasks columns fold by the table's width, not the window's.** They folded under 760px of window, so a 780px table beside the sidebar kept the columns and left names a few letters (at 616px, none). Now they fold under 840px of table (`@container tasks`), into the line under each title that phones use. Phones held upright are unchanged; a big phone held sideways now folds too.
 - **No ring round the whole page.** "Skip to content" focuses `#main`, and the focus ring drew round all of it (the pink line down the left of the Tasks screenshot). `#main:focus-visible` has no ring now.
+
+## Replies to comments, 2026-10-25 (owner request)
+
+The owner: "Add replies to comments. format: @ the username, and then having that in your comment notifies them. add a button that does that. do not add threads".
+
+- **No threads.** A reply is an ordinary comment at the bottom of the list; what makes it a reply is the @username in it.
+- **Reply** sits after the time on every comment but your own. It puts "@username " at the start of the box (left as is if that name is already in it) and puts the cursor after it, so you just type.
+- **@username anywhere in a comment tells that person**: the bell lists "<name> mentioned you: <comment>", and it opens the post on its author's profile with the comments open. Usernames are matched without caring about case; a full stop or "!" right after the name ("@quiet.otter.") counts as part of it only when that longer name is someone's.
+- Kept when the comment is written (`comment_mentions`, migration **0037_comment_mentions**; next is 0038), so changing a username later doesn't lose it, and deleting the comment takes it away. Only people who can see the post are kept (friends-only posts, Settings › Social, dev worlds), at most 10 a comment, never the writer; the bell checks again when it is opened, so someone who can no longer see the post stops seeing the line. A mention on your own post is already its comment, so it shows once, as the comment.
+- In the comment, each @username that names someone is the accent colour and links to their profile.
+- Not built: suggestions while typing after @ (not asked).

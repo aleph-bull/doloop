@@ -1,10 +1,17 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { focusLabel, withDefaults, type UserSettings } from '@komogon/core';
+import {
+  findMentions,
+  focusLabel,
+  mentionCandidates,
+  withDefaults,
+  type UserSettings,
+} from '@komogon/core';
 import { and, desc, eq, gte, inArray, isNotNull, lt, notInArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import {
+  commentMentions,
   friendships,
   nodes,
   nudges,
@@ -29,6 +36,8 @@ import { NUDGE_EVERY_MS } from './groups';
 
 export const POST_MAX_LENGTH = 500;
 export const COMMENT_MAX_LENGTH = 500;
+/** The most people one comment can @mention; any after that are left plain. */
+export const COMMENT_MAX_MENTIONS = 10;
 /** The largest video a post may carry when it goes to R2. */
 export const POST_VIDEO_MAX_BYTES = 40 * 1024 * 1024;
 /** Without R2 the bytes sit in Postgres as base64, so videos stay small there. */
@@ -135,6 +144,8 @@ export interface FeedComment {
   body: string;
   createdAt: string;
   you: boolean;
+  /** The people its @usernames name; they are in `people` too. */
+  mentions: string[];
 }
 
 export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
@@ -221,6 +232,27 @@ export async function friendshipWith(db: Db, me: string, other: string): Promise
     requestId: row.id,
     since: null,
   };
+}
+
+/**
+ * Whether the viewer may see a post: the same rules as the feed (a post kept to friends
+ * shows only to the author's friends; a suspended account's posts to nobody; a dev
+ * account's only inside its own world).
+ */
+export async function canSeePost(db: Db, viewer: UserRow, postId: string): Promise<boolean> {
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, postId),
+    columns: { userId: true, friendsOnly: true },
+  });
+  if (!post) return false;
+  if (post.userId === viewer.id) return true;
+  const author = await db.query.users.findFirst({
+    where: eq(users.id, post.userId),
+    columns: { settings: true, bannedAt: true, devWorld: true },
+  });
+  if (!author || author.bannedAt || !sameWorld(viewer, author)) return false;
+  if (socialOf(author.settings).posts !== 'friends' && !post.friendsOnly) return true;
+  return (await friendshipWith(db, viewer.id, post.userId)).status === 'friends';
 }
 
 /**
@@ -354,27 +386,6 @@ export function socialRoutes(
   const uploadLimiter = new RateLimiter({ max: 30, windowMs: 60 * 60 * 1000 });
   // And 250 MB a day each, with everything stopping once the bucket holds 10 GB.
   const quota = store ? uploadQuota(db, store) : null;
-
-  /**
-   * Whether the viewer may see a post's file: the same rules as the feed (a post kept to
-   * friends shows only to the author's friends; a suspended account's posts to nobody; a
-   * dev account's only inside its own world).
-   */
-  const canSeePost = async (viewer: UserRow, postId: string): Promise<boolean> => {
-    const post = await db.query.posts.findFirst({
-      where: eq(posts.id, postId),
-      columns: { userId: true, friendsOnly: true },
-    });
-    if (!post) return false;
-    if (post.userId === viewer.id) return true;
-    const author = await db.query.users.findFirst({
-      where: eq(users.id, post.userId),
-      columns: { settings: true, bannedAt: true, devWorld: true },
-    });
-    if (!author || author.bannedAt || !sameWorld(viewer, author)) return false;
-    if (socialOf(author.settings).posts !== 'friends' && !post.friendsOnly) return true;
-    return (await friendshipWith(db, viewer.id, post.userId)).status === 'friends';
-  };
 
   /* ---------- the feed ---------- */
 
@@ -751,7 +762,7 @@ export function socialRoutes(
     const row = await db.query.postMedia.findFirst({
       where: and(eq(postMedia.postId, postId), eq(postMedia.position, n)),
     });
-    if (!row || !(await canSeePost(viewer, postId))) throw notFound('No video on this post');
+    if (!row || !(await canSeePost(db, viewer, postId))) throw notFound('No video on this post');
     return row;
   };
 
@@ -829,14 +840,39 @@ export function socialRoutes(
     return likeCounts(id, req.user.id);
   });
 
-  const toComment = (r: typeof postComments.$inferSelect, me: string): FeedComment => ({
+  const toComment = (
+    r: typeof postComments.$inferSelect,
+    me: string,
+    mentions: string[],
+  ): FeedComment => ({
     id: r.id,
     postId: r.postId,
     userId: r.userId,
     body: r.body,
     createdAt: r.createdAt.toISOString(),
     you: r.userId === me,
+    mentions,
   });
+
+  /**
+   * The people a comment's @usernames name, other than its writer: only those who can see
+   * the post, so nobody hears about a post that isn't theirs to see.
+   */
+  const mentionedIn = async (body: string, writer: UserRow, postId: string) => {
+    const names = mentionCandidates(body);
+    if (names.length === 0) return [];
+    const rows = await db
+      .select()
+      .from(users)
+      .where(and(inArray(users.username, names), inWorldOf(writer)));
+    const byName = new Map(rows.flatMap((r) => (r.username ? [[r.username, r] as const] : [])));
+    const named = [...new Set(findMentions(body, (u) => byName.has(u)).map((m) => m.username))]
+      .map((u) => byName.get(u)!)
+      .filter((u) => u.id !== writer.id && !u.bannedAt)
+      .slice(0, COMMENT_MAX_MENTIONS);
+    const seen = await Promise.all(named.map((u) => canSeePost(db, u, postId)));
+    return named.filter((_, i) => seen[i]).map((u) => u.id);
+  };
 
   app.get('/api/posts/:id/comments', async (req) => {
     const { id } = idParam.parse(req.params);
@@ -846,11 +882,25 @@ export function socialRoutes(
       orderBy: [postComments.createdAt],
       limit: 200,
     });
-    const people = await loadPeople(
-      db,
-      rows.map((r) => r.userId),
-    );
-    return { comments: rows.map((r) => toComment(r, req.user.id)), people };
+    const mentionRows = rows.length
+      ? await db.query.commentMentions.findMany({
+          where: inArray(
+            commentMentions.commentId,
+            rows.map((r) => r.id),
+          ),
+        })
+      : [];
+    const mentions = new Map<string, string[]>();
+    for (const m of mentionRows)
+      mentions.set(m.commentId, [...(mentions.get(m.commentId) ?? []), m.userId]);
+    const people = await loadPeople(db, [
+      ...rows.map((r) => r.userId),
+      ...mentionRows.map((m) => m.userId),
+    ]);
+    return {
+      comments: rows.map((r) => toComment(r, req.user.id, mentions.get(r.id) ?? [])),
+      people,
+    };
   });
 
   app.post('/api/posts/:id/comments', async (req, reply) => {
@@ -859,12 +909,17 @@ export function socialRoutes(
       .object({ body: z.string().trim().min(1).max(COMMENT_MAX_LENGTH) })
       .parse(req.body);
     await postExists(id, req.user);
+    const named = await mentionedIn(body, req.user, id);
     const [row] = await db
       .insert(postComments)
       .values({ postId: id, userId: req.user.id, body, createdAt: dt(clock()) })
       .returning();
-    const people = await loadPeople(db, [req.user.id]);
-    return reply.code(201).send({ comment: toComment(row!, req.user.id), people });
+    if (named.length)
+      await db
+        .insert(commentMentions)
+        .values(named.map((userId) => ({ commentId: row!.id, userId })));
+    const people = await loadPeople(db, [req.user.id, ...named]);
+    return reply.code(201).send({ comment: toComment(row!, req.user.id, named), people });
   });
 
   /** Your own comment, or any comment on your own post. */

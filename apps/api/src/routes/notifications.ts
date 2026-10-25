@@ -1,28 +1,40 @@
 import type { FastifyInstance } from 'fastify';
 import { and, desc, eq, gte, inArray, isNull, ne } from 'drizzle-orm';
 import type { Db } from '../db/client';
-import { groups, nudges, postComments, postLikes, posts, users } from '../db/schema';
+import {
+  commentMentions,
+  groups,
+  nudges,
+  postComments,
+  postLikes,
+  posts,
+  users,
+} from '../db/schema';
 import { loadPeople, type Person } from '../services/people';
 import { dt } from '../services/sessions-mapper';
+import { canSeePost } from './social';
 
 /** How far back the bell looks. */
 export const NOTIFICATIONS_DAYS = 30;
 /** The most it lists, newest first. */
 export const NOTIFICATIONS_MAX = 60;
 
-export type NotificationKind = 'kudos' | 'comment' | 'nudge';
+export type NotificationKind = 'kudos' | 'comment' | 'mention' | 'nudge';
 
 export interface SocialNotification {
-  /** Unique across kinds (`kudos:<post>:<person>`, `comment:<id>`, `nudge:<id>`). */
+  /**
+   * Unique across kinds (`kudos:<post>:<person>`, `comment:<id>`, `mention:<comment>`,
+   * `nudge:<id>`).
+   */
   id: string;
   kind: NotificationKind;
   fromId: string;
   at: string;
   /** Later than the last time the bell was opened. */
   unread: boolean;
-  /** The post it is about (kudos and comments); its details are in `posts`. */
+  /** The post it is about (kudos, comments, mentions); its details are in `posts`. */
   postId: string | null;
-  /** What the comment said. */
+  /** What the comment said (comments and mentions). */
   comment: string | null;
   /** The group a nudge came from, when it did. */
   groupName: string | null;
@@ -31,6 +43,8 @@ export interface SocialNotification {
 /** Just enough of your post to tell which one it was. */
 export interface NotificationPost {
   id: string;
+  /** Whose post it is: a mention can be on anyone's. */
+  userId: string;
   body: string;
   subject: string | null;
   minutes: number | null;
@@ -39,18 +53,19 @@ export interface NotificationPost {
 }
 
 /**
- * The bell on Social: who gave kudos to your posts, who commented on them and who nudged
- * you, newest first, over the last 30 days. It reads the rows Social already keeps
- * (`post_likes`, `post_comments`, `nudges`); what is new is anything after
+ * The bell on Social: who gave kudos to your posts, who commented on them, who @mentioned
+ * you in a comment on someone else's post and who nudged you, newest first, over the last
+ * 30 days. It reads the rows Social already keeps (`post_likes`, `post_comments`,
+ * `comment_mentions`, `nudges`); what is new is anything after
  * `users.notifications_seen_at`, which opening the bell moves on. Your own kudos and
  * comments on your own posts aren't news, and a suspended account's are left out, as on
- * the feed.
+ * the feed. A mention on your own post is already its comment, so it shows once.
  */
 export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => string) {
   app.get('/api/social/notifications', async (req) => {
     const me = req.user.id;
     const since = new Date(dt(clock()).getTime() - NOTIFICATIONS_DAYS * 24 * 60 * 60_000);
-    const [kudos, comments, nudged] = await Promise.all([
+    const [kudos, comments, mentioned, nudged] = await Promise.all([
       db
         .select({ postId: postLikes.postId, fromId: postLikes.userId, at: postLikes.createdAt })
         .from(postLikes)
@@ -88,6 +103,29 @@ export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => st
         .orderBy(desc(postComments.createdAt))
         .limit(NOTIFICATIONS_MAX),
       db
+        .select({
+          id: postComments.id,
+          postId: postComments.postId,
+          fromId: postComments.userId,
+          body: postComments.body,
+          at: postComments.createdAt,
+        })
+        .from(commentMentions)
+        .innerJoin(postComments, eq(postComments.id, commentMentions.commentId))
+        .innerJoin(posts, eq(posts.id, postComments.postId))
+        .innerJoin(users, eq(users.id, postComments.userId))
+        .where(
+          and(
+            eq(commentMentions.userId, me),
+            ne(posts.userId, me),
+            ne(postComments.userId, me),
+            gte(postComments.createdAt, since),
+            isNull(users.bannedAt),
+          ),
+        )
+        .orderBy(desc(postComments.createdAt))
+        .limit(NOTIFICATIONS_MAX),
+      db
         .select({ id: nudges.id, fromId: nudges.fromId, groupName: groups.name, at: nudges.at })
         .from(nudges)
         .innerJoin(users, eq(users.id, nudges.fromId))
@@ -96,6 +134,11 @@ export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => st
         .orderBy(desc(nudges.at))
         .limit(NOTIFICATIONS_MAX),
     ]);
+
+    // Someone else's post can stop being yours to see (unfriended, kept to friends).
+    const postIds = [...new Set(mentioned.map((m) => m.postId))];
+    const visible = await Promise.all(postIds.map((id) => canSeePost(db, req.user, id)));
+    const hidden = new Set(postIds.filter((_, i) => !visible[i]));
 
     const seenAt = req.user.notificationsSeenAt;
     const unread = (at: Date) => !seenAt || at > seenAt;
@@ -122,6 +165,19 @@ export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => st
         comment: c.body,
         groupName: null,
       })),
+      ...mentioned
+        .filter((m) => !hidden.has(m.postId))
+        .map((m) => ({
+          id: `mention:${m.id}`,
+          kind: 'mention' as const,
+          fromId: m.fromId,
+          at: m.at.toISOString(),
+          time: m.at.getTime(),
+          unread: unread(m.at),
+          postId: m.postId,
+          comment: m.body,
+          groupName: null,
+        })),
       ...nudged.map((n) => ({
         id: `nudge:${n.id}`,
         kind: 'nudge' as const,
@@ -137,12 +193,13 @@ export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => st
     all.sort((a, b) => b.time - a.time);
     const notifications = all.slice(0, NOTIFICATIONS_MAX).map(({ time: _, ...n }) => n);
 
-    const postIds = [...new Set(notifications.flatMap((n) => (n.postId ? [n.postId] : [])))];
-    const postRows = postIds.length
+    const shown = [...new Set(notifications.flatMap((n) => (n.postId ? [n.postId] : [])))];
+    const postRows = shown.length
       ? await db.query.posts.findMany({
-          where: inArray(posts.id, postIds),
+          where: inArray(posts.id, shown),
           columns: {
             id: true,
+            userId: true,
             body: true,
             subject: true,
             minutes: true,
@@ -162,6 +219,7 @@ export function notificationRoutes(app: FastifyInstance, db: Db, clock: () => st
           p.id,
           {
             id: p.id,
+            userId: p.userId,
             body: p.body,
             subject: p.subject,
             minutes: p.minutes,

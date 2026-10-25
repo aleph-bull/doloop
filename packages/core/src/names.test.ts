@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   USERNAME_WORDS,
   displayNameError,
+  findMentions,
+  mentionCandidates,
   normalizeDisplayName,
   normalizeUsername,
   personName,
@@ -125,5 +127,39 @@ describe('randomUsername', () => {
 
   it('adds a third word on request', () => {
     expect(randomUsername(() => 0, true)).toBe('amber.acorn.acorn');
+  });
+});
+
+describe('mentions', () => {
+  const people = new Set(['quiet.otter', 'jerry', 'jerry!', 'ada.l']);
+  const found = (text: string) =>
+    findMentions(text, (u) => people.has(u)).map((m) => [text.slice(m.start, m.end), m.username]);
+
+  it('finds an @username anywhere in the text', () => {
+    expect(found('@jerry thanks')).toEqual([['@jerry', 'jerry']]);
+    expect(found('thanks @Quiet.Otter, see you (@ada.l)')).toEqual([
+      ['@Quiet.Otter', 'quiet.otter'],
+      ['@ada.l', 'ada.l'],
+    ]);
+  });
+
+  it('leaves a symbol at the end off unless that name is someone', () => {
+    expect(found('see you @quiet.otter.')).toEqual([['@quiet.otter', 'quiet.otter']]);
+    expect(found('@jerry!')).toEqual([['@jerry!', 'jerry!']]);
+    expect(found('@jerry!!')).toEqual([['@jerry!', 'jerry!']]);
+  });
+
+  it('skips emails and names nobody has', () => {
+    expect(found('mail me at me@jerry.com')).toEqual([]);
+    expect(found('@nobody here, @@jerry')).toEqual([]);
+  });
+
+  it('lists every name to look up', () => {
+    expect(mentionCandidates('@jerry! and @quiet.otter. and @ab')).toEqual([
+      'jerry!',
+      'jerry',
+      'quiet.otter.',
+      'quiet.otter',
+    ]);
   });
 });

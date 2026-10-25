@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
-import { Bell, BellRing, MessageCircle, ThumbsUp } from 'lucide-react';
+import { AtSign, Bell, BellRing, MessageCircle, ThumbsUp } from 'lucide-react';
 import { Modal, Spinner } from '@komogon/ui';
 import type { NotificationPost, Person, SocialNotification } from '../../lib/api';
 import { fmtAgo, fmtMinutes } from '../../lib/format';
@@ -29,15 +29,27 @@ function sectionOf(iso: string, now: Date): string {
 }
 
 /** Which post it was, in a few words: what it was on, else what it said. */
-function postLabel(post: NotificationPost | undefined): string {
-  if (!post) return 'Your post';
+function postLabel(post: NotificationPost | undefined, fallback: string): string {
+  if (!post) return fallback;
   if (post.subject) return post.subject;
   const body = post.body.trim();
   if (body) return body.length > 40 ? `${body.slice(0, 40).trimEnd()}…` : body;
-  return post.minutes !== null ? `${fmtMinutes(post.minutes)} of focus` : 'Your post';
+  return post.minutes !== null ? `${fmtMinutes(post.minutes)} of focus` : fallback;
 }
 
-const KIND_ICON = { kudos: ThumbsUp, comment: MessageCircle, nudge: BellRing } as const;
+const KIND_ICON = {
+  kudos: ThumbsUp,
+  comment: MessageCircle,
+  mention: AtSign,
+  nudge: BellRing,
+} as const;
+
+/** Where a line goes: the person who nudged, else the post, on whoever's profile it is. */
+function linkOf(n: SocialNotification, post: NotificationPost | undefined): string {
+  if (n.kind === 'nudge') return `/profile/${n.fromId}`;
+  const profile = n.kind === 'mention' && post?.userId ? `/profile/${post.userId}` : '/profile';
+  return `${profile}#post-${n.postId}${n.kind === 'kudos' ? '' : '-comments'}`;
+}
 
 /** One line: who, what they did, which post and when, with the post's picture at the end. */
 function Row({
@@ -51,11 +63,8 @@ function Row({
   post: NotificationPost | undefined;
   onGo: () => void;
 }) {
-  const Icon = KIND_ICON[n.kind];
-  const to =
-    n.kind === 'nudge'
-      ? `/profile/${n.fromId}`
-      : `/profile#post-${n.postId}${n.kind === 'comment' ? '-comments' : ''}`;
+  const Icon = KIND_ICON[n.kind] ?? MessageCircle;
+  const to = linkOf(n, post);
   return (
     <li>
       <Link to={to} className={`notif-row${n.unread ? ' is-new' : ''}`} onClick={onGo}>
@@ -72,10 +81,14 @@ function Row({
               ? 'gave you kudos'
               : n.kind === 'comment'
                 ? `commented: ${n.comment ?? ''}`
-                : 'nudged you'}
+                : n.kind === 'mention'
+                  ? `mentioned you: ${n.comment ?? ''}`
+                  : 'nudged you'}
           </span>
           <span className="notif-meta">
-            {n.kind === 'nudge' ? n.groupName : postLabel(post)}
+            {n.kind === 'nudge'
+              ? n.groupName
+              : postLabel(post, n.kind === 'mention' ? 'A post' : 'Your post')}
             {(n.kind !== 'nudge' || n.groupName) && ' · '}
             {fmtAgo(n.at)}
             {n.unread && <span className="notif-dot" aria-label="New" />}

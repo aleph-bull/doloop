@@ -525,6 +525,27 @@ export const postComments = pgTable(
 );
 
 /**
+ * Who a comment names with an @username (2026-10-25): each one hears about it under the
+ * bell. Kept when the comment is written, for people who could see the post then, so a
+ * later change of username doesn't lose it.
+ */
+export const commentMentions = pgTable(
+  'comment_mentions',
+  {
+    commentId: uuid('comment_id')
+      .notNull()
+      .references(() => postComments.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.commentId, t.userId] }),
+    index('comment_mentions_user_idx').on(t.userId),
+  ],
+);
+
+/**
  * A friend request and, once accepted, the friendship. One row per pair, whichever way
  * it was asked; declining deletes the row, so the same person can be asked again later.
  */
@@ -1010,6 +1031,7 @@ export const schema = {
   mediaUploads,
   postLikes,
   postComments,
+  commentMentions,
   friendships,
   jams,
   jamMembers,

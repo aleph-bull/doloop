@@ -232,3 +232,50 @@ export function randomUsername(rand: () => number = Math.random, third = false):
   const base = `${pick(adjectives, rand)}.${pick(nouns, rand)}`;
   return third ? `${base}.${pick(nouns, rand)}` : base;
 }
+
+/** An @ at the start or after anything but a letter or number, then username letters. */
+const MENTION = /(^|[^a-z0-9@])@([a-z0-9_\-!.]+)/gi;
+
+/** The usernames an @word could be, longest first: "quiet.otter." may be "quiet.otter". */
+function mentionWords(word: string): string[] {
+  const out: string[] = [];
+  let w = word.toLowerCase().slice(0, USERNAME.MAX + 1);
+  for (;;) {
+    if (w.length >= USERNAME.MIN && w.length <= USERNAME.MAX) out.push(w);
+    if (!/[_\-!.]$/.test(w)) return out;
+    w = w.slice(0, -1);
+  }
+}
+
+/** Every username `text` might @mention, to look up in one go. */
+export function mentionCandidates(text: string): string[] {
+  const out = new Set<string>();
+  for (const m of text.matchAll(MENTION)) for (const w of mentionWords(m[2]!)) out.add(w);
+  return [...out];
+}
+
+/** One @mention in a piece of text: where its @ starts and ends, and the username. */
+export interface MentionMatch {
+  start: number;
+  end: number;
+  username: string;
+}
+
+/**
+ * Where `text` names someone with an @username (2026-10-25, replies to comments), given
+ * which usernames are someone. A symbol at the end ("@quiet.otter.") is only part of the
+ * name when that longer name is someone's.
+ */
+export function findMentions(
+  text: string,
+  isSomeone: (username: string) => boolean,
+): MentionMatch[] {
+  const out: MentionMatch[] = [];
+  for (const m of text.matchAll(MENTION)) {
+    const username = mentionWords(m[2]!).find(isSomeone);
+    if (!username) continue;
+    const start = m.index + m[1]!.length;
+    out.push({ start, end: start + 1 + username.length, username });
+  }
+  return out;
+}

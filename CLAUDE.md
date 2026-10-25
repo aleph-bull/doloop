@@ -490,7 +490,7 @@ day from the owner's instructions and reshaped several times; this is the state 
   imported from `index.css`.
 - **The bell** (2026-10-22): the third figure on your card beside the feed (`NotificationsBell`
   in `components/social/Notifications.tsx`) opens kudos, comments and nudges in BeReal's
-  layout (`GET /api/social/notifications`, `routes/notifications.ts`); new means after
+  layout (`GET /api/social/notifications`, `routes/notifications.ts`), and @mentions in comments on other people's posts; new means after
   `users.notifications_seen_at`, set on opening. Its dialog is portalled to the body: a
   dialog rendered inside a card's text inherits that text's styles. Rows link to
   `/profile#post-<id>` (`-comments` opens them), which `PostCard`'s `focus` scrolls to.
@@ -536,7 +536,7 @@ the limit is not refused: the composer and "Share to Social" offer to compress i
 browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule, and go
 when their post or account does. The focus screen's timelapse export has "Share to Social",
 which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
-`post_comments` (500 characters, deletable by their author or the post's author). Only the
+`post_comments` (500 characters, deletable by their author or the post's author). There are no threads: Reply on a comment puts "@username " in the box, and an @username in a comment tells that person under the bell (2026-10-25, `comment_mentions`, matched by `findMentions` in core `names.ts`, only people who can see the post). Only the
 author edits a post (the words only, `PATCH /api/posts/:id`), trims its video (2026-10-23: Trim video, `TrimVideo.tsx`; the browser cuts it with mediabunny, `lib/video-cut.ts`, and `PUT /api/posts/:id/video` swaps the file and poster) or deletes it, from the ⋯ under it.
 A post also shows what its session earned: one award naming the session's badges on hover
 (`sessions.badges_awarded`) and the daily streak when it ended (`sessions.streak`, kept since

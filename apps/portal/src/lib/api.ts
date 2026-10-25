@@ -374,6 +374,8 @@ export interface FeedComment {
   body: string;
   createdAt: string;
   you: boolean;
+  /** Who its @usernames name (in `people`); missing from an older API. */
+  mentions?: string[];
 }
 
 export interface FeedPage {
@@ -528,7 +530,7 @@ export interface NudgesResponse {
 /** One line under the bell on Social; see the API's routes/notifications.ts. */
 export interface SocialNotification {
   id: string;
-  kind: 'kudos' | 'comment' | 'nudge';
+  kind: 'kudos' | 'comment' | 'mention' | 'nudge';
   fromId: string;
   at: string;
   unread: boolean;
@@ -538,6 +540,8 @@ export interface SocialNotification {
 }
 export interface NotificationPost {
   id: string;
+  /** Whose post it is; missing from an older API. */
+  userId?: string;
   body: string;
   subject: string | null;
   minutes: number | null;

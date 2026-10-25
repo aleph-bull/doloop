@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -19,11 +19,12 @@ import {
   Users,
   X,
 } from 'lucide-react';
-import { badgeByKey, showsUsername } from '@komogon/core';
+import { badgeByKey, findMentions, showsUsername } from '@komogon/core';
 import { Button, Panel, Spinner, useToast } from '@komogon/ui';
 import {
   api,
   postFiles,
+  type FeedComment,
   type FeedPost,
   type Person,
   type PostFile,
@@ -531,13 +532,54 @@ function Carousel({ post, files }: { post: FeedPost; files: PostFile[] }) {
   );
 }
 
+/** A comment's words, with each @username it names linked to that person. */
+function CommentBody({
+  comment,
+  people,
+}: {
+  comment: FeedComment;
+  people: Record<string, Person>;
+}) {
+  const named = new Map(
+    (comment.mentions ?? []).flatMap((id) => {
+      const p = people[id];
+      return p?.username ? [[p.username, p] as const] : [];
+    }),
+  );
+  const parts: ReactNode[] = [];
+  let at = 0;
+  for (const m of findMentions(comment.body, (u) => named.has(u))) {
+    parts.push(comment.body.slice(at, m.start));
+    parts.push(
+      <Link key={m.start} to={`/profile/${named.get(m.username)!.id}`} className="post-mention">
+        {comment.body.slice(m.start, m.end)}
+      </Link>,
+    );
+    at = m.end;
+  }
+  parts.push(comment.body.slice(at));
+  return <span className="post-comment-body">{parts}</span>;
+}
+
 function Comments({ post, people }: { post: FeedPost; people: Record<string, Person> }) {
   const q = useComments(post.id, true);
   const add = useAddComment(post.id);
   const remove = useDeleteComment(post.id);
   const [text, setText] = useState('');
+  const field = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const who = { ...people, ...(q.data?.people ?? {}) };
+
+  /** Reply: their @username at the start of the box (no threads), then type after it. */
+  const reply = (username: string) => {
+    const there = findMentions(text, (u) => u === username).length > 0;
+    const next = there ? text : `@${username} ${text.trimStart()}`;
+    setText(next);
+    const input = field.current;
+    if (!input) return;
+    input.focus();
+    requestAnimationFrame(() => input.setSelectionRange(next.length, next.length));
+  };
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -567,8 +609,17 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
                     {p.name}
                   </Link>
                   <span className="post-when">{fmtAgo(c.createdAt)}</span>
+                  {!c.you && p.username && (
+                    <button
+                      type="button"
+                      className="post-comment-reply"
+                      onClick={() => reply(p.username!)}
+                    >
+                      Reply
+                    </button>
+                  )}
                 </span>
-                <span className="post-comment-body">{c.body}</span>
+                <CommentBody comment={c} people={who} />
               </div>
               {(c.you || post.you) && (
                 <button
@@ -587,6 +638,7 @@ function Comments({ post, people }: { post: FeedPost; people: Record<string, Per
       )}
       <form className="post-comment-form" onSubmit={submit}>
         <input
+          ref={field}
           className="input"
           value={text}
           onChange={(e) => setText(e.target.value)}
