@@ -2636,6 +2636,7 @@ The owner: "theres a blur that stays in the middle of the screen after the card 
 - The owner, on the halved versions: "looks shit, make them all very unsaturated or dark, it hurts to look at them". Every palette theme except Linen (already muted) now has a page colour at 14% saturation or less, dark ones near black, and an accent at 26% or less. The dark themes' accents are dark enough for white labels (lightness about 40) rather than bright pills with dark labels.
 - **Deep Sea** #1d1e26, `custom:165,18,40`, white text. **Dusk Rose** #1a1c23, `custom:320,12,46`, text #e3dee0. **Tidepool** #191f1f, `custom:183,18,38`. **Gold Leaf** #0d0f11, `custom:42,26,40`. **Salt Air** #e2e6e9, `custom:195,20,32`. **Wisteria** #f2f1f4, `custom:266,10,42`, text #2f2d39.
 - Don't bring the palettes' bright colours back: the owner found them painful.
+- Then (same day): "make deep sea default dark mode". Setup's Minimalist look in dark is Deep Sea again (`lib/onboarding-looks.ts`); light stays Salt Air.
 
 ## Off to Social after a session, 2026-10-25 (owner request)
 

@@ -12,8 +12,8 @@ type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]>
 /**
  * The theme behind each look the setup offers first, light and dark (the owner's picks,
  * 2026-10-22). Dawn Skies keeps its photo and changes only its mode; Minimalist is two
- * themes of its own: Salt Air and Gold Leaf since 2026-10-25 (Off White and Inkwell, then
- * Linen and Deep Sea, before).
+ * themes of its own: Salt Air and Deep Sea since 2026-10-25 (Off White and Inkwell, then
+ * Linen and Deep Sea, then Salt Air and Gold Leaf, before).
  */
 const LOOKS: Record<
   OnboardingLookId,
@@ -25,7 +25,7 @@ const LOOKS: Record<
   },
   minimalist: {
     light: { preset: 'salt-air' },
-    dark: { preset: 'gold-leaf' },
+    dark: { preset: 'deep-sea' },
   },
 };
 
