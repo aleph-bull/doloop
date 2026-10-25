@@ -1,4 +1,4 @@
-import { levelProgress } from '@komogon/core';
+import { levelProgress, rollOdds, rollTierInfo } from '@komogon/core';
 import { Award, ChevronDown, Lock } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,10 +16,13 @@ import {
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RewardShelf } from '../components/RewardShelf';
-import { api } from '../lib/api';
+import { RollLadder } from '../components/slot/RollLadder';
+import { RollSlot } from '../components/slot/RollSlot';
+import { api, type RollRecord, type RollResult } from '../lib/api';
 import { useResolvedTheme } from '../lib/appearance';
 import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop } from '../lib/queries';
+import { tierStyle } from '../lib/rolls';
 
 export function Achievements() {
   const shop = useShop();
@@ -61,9 +64,12 @@ export function Achievements() {
   const lp = levelProgress(s.xp);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
-  // Jack mode's badges show once it is on, or once one is earned.
+  // Jack mode's badges show once it is on, or once one is earned; the rolls' once you roll.
   const jackOn = me.data?.user.settings.pomodoro.jackMode ?? false;
-  const badges = s.badges.filter((b) => !b.jack || jackOn || unlocked.has(b.key));
+  const rolled = (s.rolls?.count ?? 0) > 0;
+  const badges = s.badges.filter(
+    (b) => (!b.jack || jackOn || unlocked.has(b.key)) && (!b.roll || rolled || unlocked.has(b.key)),
+  );
 
   const run = async (key: string, fn: () => Promise<unknown>, ok: string) => {
     setBusy(key);
@@ -104,6 +110,15 @@ export function Achievements() {
       </Glass>
 
       <RewardShelf />
+
+      {s.rolls && (
+        <Rolls
+          record={s.rolls}
+          xp={s.xp}
+          volume={me.data.user.settings.sounds.enabled ? me.data.user.settings.sounds.volume : 0}
+          confetti={me.data.user.settings.effects.confetti !== false}
+        />
+      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="shop-h">
         <h2 id="shop-h" className="section-title">
@@ -249,6 +264,85 @@ export function Achievements() {
         </BadgeFold>
       </section>
     </div>
+  );
+}
+
+/**
+ * Rolls: your rarest roll, every rarity with how often it came up, and the button that opens
+ * the slot machine. Each pull is written straight into the shop's cached copy; the rest of
+ * the page (badges, level) catches up when the machine closes.
+ */
+function Rolls({
+  record,
+  xp,
+  volume,
+  confetti,
+}: {
+  record: RollRecord;
+  xp: number;
+  volume: number;
+  confetti: boolean;
+}) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const best = rollTierInfo(record.best);
+
+  const rolled = (r: RollResult) =>
+    qc.setQueryData<Awaited<ReturnType<typeof api.shop>>>(keys.shop, (shop) => {
+      if (!shop?.rolls) return shop;
+      const counts = [...shop.rolls.counts];
+      counts[r.tier - 1] = (counts[r.tier - 1] ?? 0) + 1;
+      return { ...shop, xp: r.xp, rolls: { ...shop.rolls, best: r.best, count: r.count, counts } };
+    });
+  const close = () => {
+    setOpen(false);
+    void qc.invalidateQueries({ queryKey: keys.shop });
+    void qc.invalidateQueries({ queryKey: keys.me });
+  };
+
+  return (
+    <section className="flex flex-col gap-3" aria-labelledby="rolls-h">
+      <h2 id="rolls-h" className="section-title">
+        Rolls
+      </h2>
+      <Panel className="roll-panel">
+        <div className="roll-panel-head">
+          <div className="roll-panel-best">
+            <span className="roll-panel-label">Best</span>
+            <span className="roll-panel-odds tabular" style={tierStyle(record.best)}>
+              {best ? rollOdds(best.tier) : '–'}
+            </span>
+            {best && <span className="roll-panel-title">{best.title}</span>}
+          </div>
+          <span className="flex-1" />
+          {record.count > 0 && (
+            <span className="muted text-sm tabular">
+              {record.count.toLocaleString()} {record.count === 1 ? 'roll' : 'rolls'}
+            </span>
+          )}
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={xp < record.cost}
+            onClick={() => setOpen(true)}
+          >
+            Roll for {record.cost} XP
+          </Button>
+        </div>
+        <RollLadder counts={record.counts} best={record.best} titles />
+      </Panel>
+      {open && (
+        <RollSlot
+          cost={record.cost}
+          xp={xp}
+          best={record.best}
+          volume={volume}
+          confetti={confetti}
+          onRolled={rolled}
+          onClose={close}
+        />
+      )}
+    </section>
   );
 }
 

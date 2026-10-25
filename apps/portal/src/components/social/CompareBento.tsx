@@ -6,6 +6,7 @@ import type { CompareRow, Person } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
 import { useCompare } from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -96,7 +97,7 @@ function BarList({
           <li key={r.userId} className={`cmp-bar-row${you ? ' is-you' : ''}`}>
             <Link to={you ? '/profile' : `/profile/${r.userId}`} className="cmp-bar-who">
               <Avatar name={p.name} url={p.avatarUrl} size="xs" />
-              <span className="cmp-bar-name">{you ? 'You' : p.name}</span>
+              <span className={named('cmp-bar-name', p.nameTier)}>{you ? 'You' : p.name}</span>
             </Link>
             <span className="cmp-bar-track" aria-hidden>
               <span className="cmp-bar-fill" style={{ width: `${(v / top) * 100}%` }} />
@@ -177,7 +178,7 @@ export function CompareBento() {
               return (
                 <li key={r.userId} className={`cmp-streak-row${you_ ? ' is-you' : ''}`}>
                   <Avatar name={p.name} url={p.avatarUrl} size="xs" />
-                  <span className="cmp-bar-name">{you_ ? 'You' : p.name}</span>
+                  <span className={named('cmp-bar-name', p.nameTier)}>{you_ ? 'You' : p.name}</span>
                   <span className="cmp-streak-days tabular">
                     <Flame size={14} aria-hidden />
                     {r.streak}
@@ -200,7 +201,9 @@ export function CompareBento() {
                 <div key={r.userId} className={`cmp-multiple${you_ ? ' is-you' : ''}`}>
                   <div className="cmp-multiple-head">
                     <Avatar name={p.name} url={p.avatarUrl} size="xs" />
-                    <span className="cmp-bar-name">{you_ ? 'You' : p.name}</span>
+                    <span className={named('cmp-bar-name', p.nameTier)}>
+                      {you_ ? 'You' : p.name}
+                    </span>
                     <span className="cmp-multiple-total tabular">{fmtHours(total)}</span>
                   </div>
                   <Sparkline

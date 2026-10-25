@@ -274,6 +274,13 @@
       "when": 1792946837368,
       "tag": "0038_custom_backgrounds",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1792967990570,
+      "tag": "0039_roll_best",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import type { NotificationPost, Person, SocialNotification } from '../../lib/api
 import { fmtAgo, fmtMinutes } from '../../lib/format';
 import { useNotifications, useNotificationsSeen } from '../../lib/queries';
 import { Avatar } from './Avatar';
+import { nameClass } from '../../lib/rolls';
 
 const someone = (id: string): Person => ({
   id,
@@ -76,7 +77,7 @@ function Row({
         </span>
         <span className="notif-text">
           <span className="notif-line">
-            <strong>{person.name}</strong>{' '}
+            <strong className={nameClass(person.nameTier)}>{person.name}</strong>{' '}
             {n.kind === 'kudos'
               ? 'gave you kudos'
               : n.kind === 'comment'

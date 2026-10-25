@@ -53,6 +53,7 @@ export function meRoutes(
       streakMilestones: streak.milestonesReached,
       restDays: policy,
       purchasedBackgrounds: req.user.purchasedBackgrounds,
+      rollBest: req.user.rollBest,
       icsToken: req.user.icsToken,
       backgroundUpdatedAt: bg?.updatedAt.toISOString() ?? null,
     };

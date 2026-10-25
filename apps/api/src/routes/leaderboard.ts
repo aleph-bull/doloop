@@ -6,6 +6,7 @@ import type { Db } from '../db/client';
 import { sessions, universityVerifications, userAssets, users } from '../db/schema';
 import { forbidden } from '../errors';
 import { inWorldOf } from '../services/dev-accounts';
+import { nameTierOf } from '../services/rolls';
 import { compareRow } from './compare';
 import { loadCompletedSessions } from '../services/pace';
 import { friendIds } from './social';
@@ -52,6 +53,8 @@ export interface LeaderboardEntry {
   name: string;
   /** Their picture, for the board; null for the initial. */
   avatarUrl: string | null;
+  /** The rarity their name is coloured by (core rolls.ts), or null. */
+  nameTier: number | null;
   focusMinutes: number;
   /** This row is the person asking. */
   you: boolean;
@@ -141,12 +144,13 @@ export function leaderboardRoutes(
             users.id,
             rows.map((r) => r.userId),
           ),
-          columns: { id: true, streak: true, username: true },
+          columns: { id: true, streak: true, username: true, rollBest: true, settings: true },
         })
       ).map((u) => [u.id, u]),
     );
     const entries: LeaderboardEntry[] = await Promise.all(
       rows.map(async (r, i) => {
+        const account = accounts.get(r.userId);
         const week = compareRow(
           r.userId,
           await loadCompletedSessions(db, r.userId),
@@ -158,6 +162,7 @@ export function leaderboardRoutes(
           rank: i + 1,
           userId: r.userId,
           name: personName(r.name, accounts.get(r.userId)?.username),
+          nameTier: account ? nameTierOf(account) : null,
           avatarUrl: r.mime && r.data ? `data:${r.mime};base64,${r.data}` : null,
           focusMinutes: Math.round(Number(r.focusSeconds) / 60),
           you: r.userId === req.user.id,

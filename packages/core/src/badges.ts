@@ -1,5 +1,6 @@
 import { addDays, dayOfWeek, localHour, startOfWeekMonday, toLocalDate } from './dates';
 import { jackTotals, GAMBLER_FOCUS_SECONDS } from './jack';
+import { ROLL_BADGE_FROM, ROLL_TIERS, rollBadgeKey, rollOdds } from './rolls';
 import type { ISODate, PlannedBlock, Session, StreakState, StudyNode } from './types';
 
 /** Badge catalogue (spec §7). Keys are stable; conditions are evaluated in `evaluateBadges`. */
@@ -14,6 +15,8 @@ export interface BadgeDef {
    * the mode stays something people turn on, not something the badges advertise.
    */
   jack?: true;
+  /** Rolls' badges, one per rarity past 1 in 256: listed once someone has rolled. */
+  roll?: true;
 }
 
 /**
@@ -74,6 +77,12 @@ export const BADGE_XP: Record<string, number> = {
   'gamble-25': 75,
   'gamble-50': 100,
   'gamble-100': 150,
+  // Rolls: one for each rarity past 1 in 256
+  'roll-512': 150,
+  'roll-1024': 300,
+  'roll-2048': 600,
+  'roll-4096': 1000,
+  'roll-8192': 2000,
 };
 
 /** What a badge pays when it unlocks. */
@@ -259,6 +268,13 @@ const CATALOGUE: Array<Omit<BadgeDef, 'xp'>> = [
     description: 'Spin one hundred times.',
     jack: true,
   },
+  // --- Rolls (2026-10-25): named after the rarity's title ---
+  ...ROLL_TIERS.filter((t) => t.tier >= ROLL_BADGE_FROM).map((t) => ({
+    key: rollBadgeKey(t.tier)!,
+    name: t.title,
+    description: `Roll ${rollOdds(t.tier)}.`,
+    roll: true as const,
+  })),
 ];
 
 export const BADGES: BadgeDef[] = CATALOGUE.map((b) => ({ ...b, xp: badgeXp(b.key) }));
@@ -284,6 +300,8 @@ export interface BadgeInput {
   rewardsRedeemed?: number;
   /** How many weekly reviews carry a written note. */
   weeklyNotes?: number;
+  /** The rarest roll, as its tier (0 before the first). */
+  rollBest?: number;
 }
 
 export interface RoutineTick {
@@ -425,6 +443,12 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (rolls >= 25) done.add('gamble-25');
   if (rolls >= 50) done.add('gamble-50');
   if (rolls >= 100) done.add('gamble-100');
+
+  /* --- Rolls --- */
+  for (let tier = ROLL_BADGE_FROM; tier <= (input.rollBest ?? 0); tier++) {
+    const key = rollBadgeKey(tier);
+    if (key) done.add(key);
+  }
   if (input.streak.current >= 30) {
     // Freeze used within the current 30-day run disqualifies.
     const start = new Date(Date.parse(`${input.today}T00:00:00Z`) - 29 * 86_400_000)

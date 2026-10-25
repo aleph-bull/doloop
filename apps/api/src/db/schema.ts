@@ -70,6 +70,10 @@ export const users = pgTable('users', {
   username: text('username').unique(),
   /** When the person last chose their username; null while it is still the one we picked. */
   usernameChangedAt: ts('username_changed_at'),
+  /** The rarest roll on Achievements, as its tier (core rolls.ts); 0 before the first. */
+  rollBest: integer('roll_best').notNull().default(0),
+  /** How many times they have rolled. Each roll is also a line in xp_transactions. */
+  rollCount: integer('roll_count').notNull().default(0),
 });
 
 /**
@@ -328,7 +332,7 @@ export const xpTransactions = pgTable(
     at: ts('at').notNull().defaultNow(),
     delta: integer('delta').notNull(),
     kind: text('kind', {
-      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine', 'badge'],
+      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine', 'badge', 'roll'],
     }).notNull(),
     ref: text('ref'),
   },

@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router';
-import { personName, showsUsername, universityById } from '@komogon/core';
+import { nameTier, personName, showsUsername, universityById } from '@komogon/core';
 import {
   BellOff,
   BellRing,
@@ -33,6 +33,7 @@ import {
 import { Avatar } from './Avatar';
 import { LiveDot, liveStateLabel, StudyingFor } from './LiveNow';
 import { NotificationsBell } from './Notifications';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -89,14 +90,14 @@ function PersonRow({
         </span>
         {live ? (
           <span className="side-person-text">
-            <span className="side-person-name">{person.name}</span>
+            <span className={named('side-person-name', person.nameTier)}>{person.name}</span>
             <span className="side-person-live">
               {liveStateLabel(live) ?? 'Studying'} · <StudyingFor since={live.startedAt} />
             </span>
           </span>
         ) : (
           <>
-            <span className="side-person-name">{person.name}</span>
+            <span className={named('side-person-name', person.nameTier)}>{person.name}</span>
             {showsUsername(person) && (
               <span className="side-person-handle">@{person.username}</span>
             )}
@@ -384,16 +385,18 @@ const MINI_ROWS = 5;
 
 /** You, beside the feed: picture, name, university, and the few numbers people glance at. */
 export function ProfileCard() {
-  const user = useMe().data?.user;
+  const me = useMe().data;
+  const user = me?.user;
   const avatar = useAvatar().data?.dataUrl ?? null;
   if (!user) return null;
   const name = personName(user.settings.profile.name, user.username);
+  const tier = nameTier(me?.rollBest ?? 0, user.settings.social.rollColour !== false);
   const uni = universityById(user.settings.profile.university);
   return (
     <Panel as="aside" className="side-card" aria-label="You">
       <Link to="/profile" className="side-me">
         <Avatar name={name} url={avatar} size="sm" />
-        <span className="side-name">{name}</span>
+        <span className={named('side-name', tier)}>{name}</span>
         {showsUsername({ name, username: user.username }) && (
           <span className="side-uni">@{user.username}</span>
         )}
@@ -458,7 +461,9 @@ export function MiniLeaderboard() {
               <span className="side-board-rank tabular">{e.rank}</span>
               <Link to={e.you ? '/profile' : `/profile/${e.userId}`} className="side-board-who">
                 <Avatar name={e.name} url={e.avatarUrl} size="xs" />
-                <span className="side-board-name">{e.you ? 'You' : e.name}</span>
+                <span className={named('side-board-name', e.nameTier)}>
+                  {e.you ? 'You' : e.name}
+                </span>
               </Link>
               <span className="side-board-hours tabular">{fmtHours(e.focusMinutes)}</span>
             </li>

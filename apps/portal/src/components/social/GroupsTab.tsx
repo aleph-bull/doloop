@@ -17,6 +17,7 @@ import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { DayLines, hm } from './DayLines';
 import { LiveNow } from './LiveNow';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -144,7 +145,10 @@ function GroupCard({ group, people }: { group: Group; people: Record<string, Per
                 </Link>
                 <span className="group-who">
                   <span className="group-name-line">
-                    <Link to={you ? '/profile' : `/profile/${m.userId}`} className="jam-name">
+                    <Link
+                      to={you ? '/profile' : `/profile/${m.userId}`}
+                      className={named('jam-name', p.nameTier)}
+                    >
                       {you ? 'You' : p.name}
                     </Link>
                     {quiet && (

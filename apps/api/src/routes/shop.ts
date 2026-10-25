@@ -4,6 +4,7 @@ import {
   applyBreakDay,
   BACKGROUNDS,
   BADGES,
+  ROLL_COST,
   breakDayCost,
   purchaseBackground,
   purchaseBreakDay,
@@ -18,6 +19,7 @@ import type { Db } from '../db/client';
 import { users, xpTransactions } from '../db/schema';
 import { badRequest } from '../errors';
 import { listAchievements, unlockNewBadges } from '../services/achievements';
+import { rollCounts } from '../services/rolls';
 import { dt } from '../services/sessions-mapper';
 import { getPolicy, savePolicy, syncStreak } from '../services/users';
 import { isoDate } from '../validation';
@@ -74,6 +76,12 @@ export function shopRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       })),
       badges: BADGES,
       achievements: await listAchievements(db, req.user.id),
+      rolls: {
+        cost: ROLL_COST,
+        count: req.user.rollCount,
+        best: req.user.rollBest,
+        counts: await rollCounts(db, req.user.id),
+      },
     };
   });
 

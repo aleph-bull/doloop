@@ -9,6 +9,7 @@ import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { CompareBento } from './CompareBento';
 import { SchoolRankings } from './SchoolTab';
+import { named } from '../../lib/rolls';
 
 const to = (e: LeaderboardEntry) => (e.you ? '/profile' : `/profile/${e.userId}`);
 
@@ -45,7 +46,7 @@ function TopTile({ e }: { e: LeaderboardEntry }) {
         <Link to={to(e)} className="lb-who">
           <Avatar name={e.name} url={e.avatarUrl} size="sm" />
           <span className="lb-name-wrap">
-            <span className="lb-name">{e.you ? 'You' : e.name}</span>
+            <span className={named('lb-name', e.nameTier)}>{e.you ? 'You' : e.name}</span>
             <span className="lb-sub">
               {e.rank === 1 && <Crown size={12} aria-hidden className="jam-crown" />}
               {e.friend && !e.you ? 'Friend' : e.you ? 'Your place' : ordinal(e.rank)}
@@ -297,7 +298,9 @@ export function LeaderboardTab() {
                     <span className="board-rank tabular">{e.rank}</span>
                     <Link to={to(e)} className="board-who">
                       <Avatar name={e.name} url={e.avatarUrl} size="xs" />
-                      <span className="board-name">{e.you ? 'You' : e.name}</span>
+                      <span className={named('board-name', e.nameTier)}>
+                        {e.you ? 'You' : e.name}
+                      </span>
                       {e.friend && scope === 'global' && (
                         <span className="chip chip-neutral">Friend</span>
                       )}

@@ -2,6 +2,7 @@ import { personName, universityById } from '@komogon/core';
 import { and, eq, inArray } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { userAssets, users, type UserRow } from '../db/schema';
+import { nameTierOf } from './rolls';
 import { settingsOf } from './users';
 
 /** What anyone signed in may see of a person: the names, picture and university. */
@@ -13,6 +14,8 @@ export interface Person {
   username: string | null;
   avatarUrl: string | null;
   university: { id: string; name: string; short?: string } | null;
+  /** A roll of 1 in 256 or rarer colours the name (core rolls.ts); null keeps it plain. */
+  nameTier: number | null;
 }
 
 export function personOf(row: UserRow, avatar?: { mime: string; data: string } | null): Person {
@@ -24,6 +27,7 @@ export function personOf(row: UserRow, avatar?: { mime: string; data: string } |
     username: row.username,
     avatarUrl: avatar ? `data:${avatar.mime};base64,${avatar.data}` : null,
     university: uni ? { id: uni.id, name: uni.name, short: uni.short } : null,
+    nameTier: nameTierOf(row),
   };
 }
 

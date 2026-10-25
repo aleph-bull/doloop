@@ -17,6 +17,7 @@ import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { DayLines, hm } from './DayLines';
 import { Subjects } from './GroupsTab';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -199,7 +200,7 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
               <span className="jam-rank tabular">{i + 1}</span>
               <Link to={you ? '/profile' : `/profile/${m.userId}`} className="jam-who">
                 <Avatar name={p.name} url={p.avatarUrl} size="xs" />
-                <span className="jam-name">{you ? 'You' : p.name}</span>
+                <span className={named('jam-name', p.nameTier)}>{you ? 'You' : p.name}</span>
                 {leading && <Crown size={13} aria-hidden className="jam-crown" />}
               </Link>
               <span className="cmp-bar-track" aria-hidden>
@@ -228,7 +229,7 @@ function JamCard({ jam, people }: { jam: Jam; people: Record<string, Person> }) 
                 <li key={m.userId} className="jam-person">
                   <span className="group-name-line">
                     <Avatar name={p.name} url={p.avatarUrl} size="xs" />
-                    <span className="jam-name">{you ? 'You' : p.name}</span>
+                    <span className={named('jam-name', p.nameTier)}>{you ? 'You' : p.name}</span>
                     <span className="jam-person-meta">
                       {m.sessions} {m.sessions === 1 ? 'session' : 'sessions'} · {hm(m.minutes)}
                       {' · joined '}

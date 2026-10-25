@@ -56,6 +56,9 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'live',
       'online',
       'status',
+      'name colour',
+      'name color',
+      'rolls',
       // Data and privacy lives here too.
       'privacy',
       'data',

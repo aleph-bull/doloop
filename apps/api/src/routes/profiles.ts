@@ -23,6 +23,7 @@ import { notFound } from '../errors';
 import { listAchievements } from '../services/achievements';
 import { loadCompletedSessions } from '../services/pace';
 import type { Person } from '../services/people';
+import { nameTierOf, rollCounts } from '../services/rolls';
 import { settingsOf } from '../services/users';
 import { sameWorld } from '../services/dev-accounts';
 import { dt } from '../services/sessions-mapper';
@@ -61,6 +62,10 @@ export interface PublicProfile {
   friendship: FriendshipStatus;
   /** Over 45 minutes of focus with Jack mode on: a die by the name. */
   gambler: boolean;
+  /** The rarest roll on Achievements, as its tier (core rolls.ts): its title shows; 0 for none. */
+  rollBest: number;
+  /** The rarity the name is coloured by, or null. */
+  nameTier: number | null;
   /** They take friend requests (Settings › Social). */
   acceptsRequests: boolean;
 }
@@ -80,6 +85,8 @@ export interface ProfileStats {
   levelRatio: number;
   /** Break Jack mode's slot machine gave and took, all time; null before the first spin. */
   jack: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
+  /** Rolls on Achievements: how many, and per rarity (index i is tier i + 1); null before the first. */
+  rolls: { count: number; counts: number[] } | null;
 }
 
 export interface ProfileBadge {
@@ -131,7 +138,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const friendship = await friendshipWith(db, req.user.id, row.id);
     // A post kept to friends shows only to the author and their friends.
     const ownCircle = you || friendship.status === 'friends';
-    const [sessions, avatar, page, friends, held] = await Promise.all([
+    const [sessions, avatar, page, friends, held, rolled] = await Promise.all([
       loadCompletedSessions(db, row.id),
       db.query.userAssets.findFirst({
         where: and(eq(userAssets.userId, row.id), eq(userAssets.kind, 'avatar')),
@@ -146,6 +153,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
       ),
       friendIds(db, row.id),
       showStats ? listAchievements(db, row.id) : Promise.resolve([]),
+      showStats && row.rollCount > 0 ? rollCounts(db, row.id) : Promise.resolve(null),
     ]);
     const tz = row.timezone;
     const lifetime = lifetimeStats({
@@ -174,6 +182,8 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         friendship,
         acceptsRequests: settings.social.requests,
         gambler: jack.focusSeconds > GAMBLER_FOCUS_SECONDS,
+        rollBest: row.rollBest,
+        nameTier: nameTierOf(row),
       },
       stats: showStats
         ? {
@@ -195,6 +205,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
               jack.rolls > 0
                 ? { rolls: jack.rolls, wonSeconds: jack.wonSeconds, lostSeconds: jack.lostSeconds }
                 : null,
+            rolls: rolled ? { count: row.rollCount, counts: rolled } : null,
           }
         : null,
       heatmap: showStats

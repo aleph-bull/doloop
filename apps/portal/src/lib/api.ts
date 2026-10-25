@@ -182,6 +182,8 @@ export interface MeResponse {
   streakMilestones: number[];
   restDays: { policy: RestDayPolicy; editsRemaining: number };
   purchasedBackgrounds: string[];
+  /** The rarest roll on Achievements, as its tier (core rolls.ts); 0 before the first. */
+  rollBest?: number;
   icsToken: string;
   /** Set while the API still keeps a background uploaded before they lived in the browser. */
   backgroundUpdatedAt: string | null;
@@ -311,6 +313,10 @@ export interface PublicProfile {
   acceptsRequests: boolean;
   /** Over 45 minutes of focus with Jack mode on. Optional for older cached copies. */
   gambler?: boolean;
+  /** The rarest roll, as its tier: its title shows by the name; 0 for none. */
+  rollBest?: number;
+  /** The rarity the name is coloured by, or null. */
+  nameTier?: number | null;
 }
 
 /** Someone as the feed, comments and friend lists name them. */
@@ -321,6 +327,8 @@ export interface Person {
   username: string | null;
   avatarUrl: string | null;
   university: { id: string; name: string; short?: string } | null;
+  /** The rarity the name is coloured by (a roll of 1/256 or rarer), or null. */
+  nameTier?: number | null;
 }
 
 export type FriendshipState = 'none' | 'friends' | 'requested' | 'incoming';
@@ -587,6 +595,8 @@ export interface LeaderboardEntry {
   userId: string;
   name: string;
   avatarUrl: string | null;
+  /** The rarity the name is coloured by, or null. */
+  nameTier?: number | null;
   focusMinutes: number;
   you: boolean;
   friend: boolean;
@@ -611,6 +621,29 @@ export interface ProfileStats {
   levelRatio?: number;
   /** Break Jack mode's slot machine gave and took; null before the first spin. */
   jack?: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
+  /** Rolls on Achievements: how many, and per rarity (index i is tier i + 1); null before the first. */
+  rolls?: { count: number; counts: number[] } | null;
+}
+
+/** Someone's rolls on Achievements (core rolls.ts). */
+export interface RollRecord {
+  cost: number;
+  count: number;
+  /** The rarest, as its tier; 0 before the first. */
+  best: number;
+  /** Rolls per rarity: index i is tier i + 1. */
+  counts: number[];
+}
+
+/** One pull: the rarity it landed on, and where that leaves you. */
+export interface RollResult {
+  tier: number;
+  newBest: boolean;
+  best: number;
+  count: number;
+  xp: number;
+  /** Badges it unlocked (a rarity past 1/256 for the first time). */
+  fresh: string[];
 }
 
 /** One of the badges a profile shows: the ones that paid the most XP. */
@@ -855,9 +888,19 @@ export const api = {
         owned: boolean;
       }>;
       accents: Array<{ id: string; name: string; minLevel: number; unlocked: boolean }>;
-      badges: Array<{ key: string; name: string; description: string; xp: number; jack?: true }>;
+      badges: Array<{
+        key: string;
+        name: string;
+        description: string;
+        xp: number;
+        jack?: true;
+        roll?: true;
+      }>;
       achievements: Array<{ key: string; unlockedAt: string }>;
+      /** Optional for older cached copies. */
+      rolls?: RollRecord;
     }>('GET', '/api/shop'),
+  roll: () => request<RollResult>('POST', '/api/rolls'),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>

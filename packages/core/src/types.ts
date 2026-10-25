@@ -305,6 +305,8 @@ export interface UserSettings {
     live: boolean;
     /** Share current study activity with other verified members of your school. */
     schoolActivity: boolean;
+    /** A roll of 1 in 256 or rarer colours your name (rolls.ts); off keeps it plain. */
+    rollColour: boolean;
   };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };

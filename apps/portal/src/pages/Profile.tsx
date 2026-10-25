@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link, useLocation, useParams } from 'react-router';
-import { showsUsername, type HeatmapCell } from '@komogon/core';
+import { rollOdds, rollTierInfo, showsUsername, type HeatmapCell } from '@komogon/core';
 import {
   ArrowLeft,
   Award,
@@ -8,6 +8,7 @@ import {
   CalendarCheck,
   CalendarDays,
   ChevronRight,
+  Dices,
   Settings as SettingsIcon,
   Trophy,
   Users,
@@ -22,6 +23,8 @@ import { SchoolMark } from '../components/social/SchoolMark';
 import { FriendButton } from '../components/social/FriendButton';
 import { LiveDot, LiveLine } from '../components/social/LiveNow';
 import { PostCard } from '../components/social/PostCard';
+import { RollLadder } from '../components/slot/RollLadder';
+import { nameClass, tierStyle } from '../lib/rolls';
 import {
   ApiError,
   type LiveMember,
@@ -68,6 +71,7 @@ function Head({
   streak: ProfileStats['streak'] | null;
   onSettings: () => void;
 }) {
+  const roll = rollTierInfo(profile.rollBest ?? 0);
   return (
     <Panel as="header" className="profile-head">
       {streak && streak.current > 0 ? (
@@ -93,7 +97,7 @@ function Head({
       )}
       <div className="profile-id">
         <div className="profile-names">
-          <h1 className="page-title profile-name">
+          <h1 className={cn('page-title profile-name', nameClass(profile.nameTier))}>
             {profile.name}
             {profile.gambler && (
               <span className="profile-gambler" role="img" aria-label="Gambler" title="Gambler">
@@ -108,6 +112,19 @@ function Head({
             <span className="chip chip-neutral profile-chip profile-live">
               <LiveDot live={live} small />
               Studying now · <LiveLine live={live} />
+            </span>
+          )}
+          {roll && (
+            <span
+              className={cn(
+                'chip chip-neutral profile-chip profile-roll',
+                !!profile.nameTier && 'is-coloured',
+              )}
+              style={profile.nameTier ? tierStyle(roll.tier) : undefined}
+              title={`Rarest roll ${rollOdds(roll.tier)}`}
+            >
+              <Dices size={13} aria-hidden />
+              {roll.title}
             </span>
           )}
           {profile.university && (
@@ -251,6 +268,50 @@ function TopBadges({ badges, you }: { badges: ProfileBadge[]; you: boolean }) {
   );
 }
 
+/** How much of a gambler they are: the rolls, the rarest, and every rarity they have hit. */
+function Rolls({
+  rolls,
+  best,
+  you,
+}: {
+  rolls: NonNullable<ProfileStats['rolls']>;
+  best: number;
+  you: boolean;
+}) {
+  const rarest = rollTierInfo(best);
+  return (
+    <Panel as="section" className="rc-tile profile-rolls" aria-labelledby="profile-rolls-h">
+      <div className="profile-side-head">
+        <h2 id="profile-rolls-h" className="rc-tile-title">
+          Rolls
+        </h2>
+        {you && (
+          <Link to="/achievements" className="side-link">
+            Roll
+            <ChevronRight size={14} aria-hidden />
+          </Link>
+        )}
+      </div>
+      <dl className="days-panel-stats profile-stats profile-rolls-stats">
+        <div>
+          <dt>Rolls</dt>
+          <dd className="tabular">{rolls.count.toLocaleString()}</dd>
+        </div>
+        {rarest && (
+          <div>
+            <dt>Rarest</dt>
+            <dd className="tabular profile-rolls-odds" style={tierStyle(rarest.tier)}>
+              {rollOdds(rarest.tier)}
+            </dd>
+            <dd className="profile-rolls-title">{rarest.title}</dd>
+          </div>
+        )}
+      </dl>
+      <RollLadder counts={rolls.counts} best={best} />
+    </Panel>
+  );
+}
+
 /**
  * Someone's page on Komodon: who they are, the days they studied, their totals, and what
  * they have shared on Social with their top badges and hours of the day beside it. Your own
@@ -321,6 +382,8 @@ export function Profile() {
       </Panel>,
     );
   if (badges.length > 0) side.push(<TopBadges key="badges" badges={badges} you={you} />);
+  if (stats?.rolls && stats.rolls.count > 0)
+    side.push(<Rolls key="rolls" rolls={stats.rolls} best={profile.rollBest ?? 0} you={you} />);
   if (clock && clock.totalMinutes > 0) {
     const title = 'Peak study hours';
     const note = clockLabel(clock, you);

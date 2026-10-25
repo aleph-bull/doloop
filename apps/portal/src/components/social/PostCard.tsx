@@ -44,6 +44,7 @@ import {
 } from '../../lib/queries';
 import { Avatar } from './Avatar';
 import { TrimVideoDialog } from './TrimVideo';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -655,7 +656,7 @@ function CommentList({
               </Link>
               <div className="post-comment-main">
                 <span className="post-comment-head">
-                  <Link to={`/profile/${c.userId}`} className="post-name">
+                  <Link to={`/profile/${c.userId}`} className={named('post-name', p.nameTier)}>
                     {p.name}
                   </Link>
                   <span className="post-when">{fmtAgo(c.createdAt)}</span>
@@ -799,7 +800,7 @@ export function PostCard({
         </Link>
         <div className="post-who">
           <span className="post-who-line">
-            <Link to={`/profile/${post.userId}`} className="post-name">
+            <Link to={`/profile/${post.userId}`} className={named('post-name', author.nameTier)}>
               {author.name}
             </Link>
             {author.university && (

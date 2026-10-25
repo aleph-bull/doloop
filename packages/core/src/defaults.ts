@@ -145,6 +145,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     requests: true,
     live: true,
     schoolActivity: false,
+    rollColour: true,
   },
   dashboard: { focusOnly: false },
   nav: { style: 'sidebar' },

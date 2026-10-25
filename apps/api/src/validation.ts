@@ -442,6 +442,7 @@ export const settingsSchema = z
         requests: z.boolean(),
         live: z.boolean(),
         schoolActivity: z.boolean(),
+        rollColour: z.boolean(),
       })
       .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),

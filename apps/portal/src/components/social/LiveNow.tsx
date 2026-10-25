@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { Panel } from '@komogon/ui';
 import type { LiveMember, Person } from '../../lib/api';
 import { Avatar } from './Avatar';
+import { named } from '../../lib/rolls';
 
 const unknown = (id: string): Person => ({
   id,
@@ -91,7 +92,7 @@ export function LiveNow({ live, people }: { live: LiveMember[]; people: Record<s
                 <LiveDot live={l} small />
               </Link>
               <span className="live-text">
-                <Link to={`/profile/${l.userId}`} className="post-name">
+                <Link to={`/profile/${l.userId}`} className={named('post-name', p.nameTier)}>
                   {p.name}
                 </Link>
                 <LiveLine live={l} />

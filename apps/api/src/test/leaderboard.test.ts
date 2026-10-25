@@ -46,6 +46,7 @@ describe('leaderboard', () => {
         // No name of their own: their username, without its @.
         name: expect.stringMatching(/^[a-z]+.[a-z]+$/),
         avatarUrl: null,
+        nameTier: null,
         focusMinutes: 120,
         you: false,
         friend: false,
@@ -55,6 +56,7 @@ describe('leaderboard', () => {
         userId: USER_A.id,
         name: 'Ada',
         avatarUrl: null,
+        nameTier: null,
         focusMinutes: 60,
         you: true,
         friend: false,

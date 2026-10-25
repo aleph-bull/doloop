@@ -5649,6 +5649,245 @@ button.start-subject:hover {
   }
 }
 
+/* ---------- Rolls on Achievements (2026-10-25): Jack mode's machine with one long reel ---------- */
+/* From 1/256 a rarity colours the name (Settings › Social can turn it off). Light enough to
+   read on dark glass; darker under the light theme. */
+:root {
+  --name-tier-8: #e4c46a;
+  --name-tier-9: #ee9cb0;
+  --name-tier-10: #8ec5ff;
+  --name-tier-11: #8edba4;
+  --name-tier-12: #c0aefc;
+  --name-tier-13: #ff8a7a;
+}
+:root[data-theme='light'] {
+  --name-tier-8: #8c6a0f;
+  --name-tier-9: #a8355a;
+  --name-tier-10: #1f62b8;
+  --name-tier-11: #1f7a3d;
+  --name-tier-12: #5d3fc4;
+  --name-tier-13: #b42318;
+}
+.name-tier.name-tier-8 {
+  color: var(--name-tier-8);
+}
+.name-tier.name-tier-9 {
+  color: var(--name-tier-9);
+}
+.name-tier.name-tier-10 {
+  color: var(--name-tier-10);
+}
+.name-tier.name-tier-11 {
+  color: var(--name-tier-11);
+}
+.name-tier.name-tier-12 {
+  color: var(--name-tier-12);
+}
+.name-tier.name-tier-13 {
+  color: var(--name-tier-13);
+}
+.profile-roll.is-coloured {
+  color: var(--roll-colour);
+}
+
+/* The Rolls tile on a profile: the rarest in its colour, its title under it. */
+.days-panel-stats .profile-rolls-odds {
+  color: var(--roll-colour, currentColor);
+}
+.days-panel-stats .profile-rolls-title {
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--fg-muted);
+}
+
+/* The machine: Best and your XP across the top, the reel and lever, the title under them. */
+.roll-slot-card {
+  gap: 16px;
+  padding-top: var(--card-pad);
+  cursor: default;
+}
+.roll-slot-card:focus-visible {
+  outline: none;
+}
+.roll-slot-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.roll-slot-best {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.roll-slot-label,
+.roll-slot-xp,
+.roll-slot-best-title {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.roll-slot-best-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roll-slot-best-odds {
+  display: inline-block;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--roll-colour, currentColor);
+}
+.roll-slot-close {
+  margin: -6px -10px -6px 0;
+}
+.roll-slot-window {
+  font-size: 3rem;
+}
+.roll-reel {
+  width: 3.7em;
+  height: 100%;
+  overflow: hidden;
+}
+.roll-reel .jack-reel-strip span {
+  white-space: nowrap;
+}
+.roll-slot-card.is-rare .jack-slot-window {
+  --jack-flash: var(--roll-colour);
+}
+.jack-slot-layer:not(.is-spin) .roll-slot-card.is-rare .jack-slot-reels {
+  color: var(--roll-colour);
+}
+.jack-slot-layer:not(.is-spin) .roll-slot-card.is-rare .roll-slot-line {
+  color: var(--roll-colour);
+  font-weight: 600;
+}
+/* The lever waits for the next pull after a result too, and rests when there is no XP for one. */
+.jack-slot-layer.roll-slot-layer.is-result.can-pull:not(.is-holding) .jack-lever-knob {
+  animation: jack-knob-bob 1.5s var(--ease-in-out) infinite;
+}
+.jack-slot-layer.roll-slot-layer.is-result.can-pull:not(.is-holding) .jack-lever-stick {
+  animation: jack-stick-bob 1.5s var(--ease-in-out) infinite;
+}
+.jack-slot-layer.roll-slot-layer:not(.can-pull) .jack-lever-knob,
+.jack-slot-layer.roll-slot-layer:not(.can-pull) .jack-lever-stick {
+  animation: none;
+}
+
+/* On the page: the best roll, the button, and every rarity with how often it came up. */
+.roll-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: var(--card-pad);
+}
+.roll-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.roll-panel-best {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.roll-panel-label {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.roll-panel-odds {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--roll-colour, currentColor);
+}
+.roll-panel-title {
+  font-weight: 600;
+}
+/* Twelve rarities in 2, 3, 4 or 6 columns, and 1/8192 across the last row on its own. */
+.roll-ladder-box {
+  container-type: inline-size;
+}
+.roll-ladder {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roll-ladder-step:last-child {
+  grid-column: 1 / -1;
+}
+@container (min-width: 300px) {
+  .roll-ladder {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@container (min-width: 440px) {
+  .roll-ladder {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+.roll-ladder-box.has-titles .roll-ladder {
+  grid-template-columns: repeat(2, 1fr);
+}
+@container (min-width: 400px) {
+  .roll-ladder-box.has-titles .roll-ladder {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@container (min-width: 540px) {
+  .roll-ladder-box.has-titles .roll-ladder {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+@container (min-width: 760px) {
+  .roll-ladder-box.has-titles .roll-ladder {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+.roll-ladder-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: var(--fg-muted);
+}
+.roll-ladder-step.is-hit {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+.roll-ladder-step.is-best {
+  box-shadow: inset 0 0 0 1.5px var(--roll-colour, var(--accent));
+}
+.roll-ladder-odds {
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+.roll-ladder-step.is-hit .roll-ladder-odds {
+  color: var(--roll-colour, currentColor);
+}
+.roll-ladder-title {
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roll-ladder-count {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
 /* ---------- end-of-session score sheet ---------- */
 .summary {
   display: flex;
