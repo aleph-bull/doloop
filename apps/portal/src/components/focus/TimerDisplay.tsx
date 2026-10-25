@@ -11,7 +11,12 @@ export interface TimerDisplayProps {
  */
 export function TimerDisplay({ digits, meaning }: TimerDisplayProps) {
   return (
-    <div className="focus-time tabular" aria-live="off" aria-label={`${digits} ${meaning}`}>
+    <div
+      className="focus-time tabular"
+      aria-live="off"
+      aria-label={`${digits} ${meaning}`}
+      data-jack-target
+    >
       {digits}
     </div>
   );

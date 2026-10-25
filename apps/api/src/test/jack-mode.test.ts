@@ -44,7 +44,7 @@ describe('Jack mode', () => {
     expect(after.timer.jack.rolls).toBe(1);
     expect(after.timer.jack.last).toMatchObject({ cycle: 1, baseMs: 5 * 60_000 });
 
-    // A die never gives a break longer than 20 minutes, so 75 minutes holds 50 of focus.
+    // A spin never gives a break longer than 15 minutes, so 75 minutes holds 50 of focus.
     advanceClock(t, 49);
     const id = active.session.id;
     const end = await t.api({ method: 'POST', url: `/api/sessions/${id}/end`, payload: {} });

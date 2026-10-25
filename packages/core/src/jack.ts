@@ -3,36 +3,52 @@ import type { ISODateTime, Session } from './types';
 
 /**
  * Jack mode (asked for by the owner, 2026-10-22, named after the friend it is for): after
- * each work interval of a pomodoro a die is rolled, and the break that follows grows or
- * shrinks by what it lands on, from losing the whole break (-1x) to three breaks more
- * (+3x). The odds are weighted so the average roll costs a fifth of a break (-0.2x).
+ * each work interval of a pomodoro a slot machine sets the break that follows. It lands on a
+ * multiplier of the usual break from 0x (no break) to 3x, in steps of 0.1x: 0.5x is half the
+ * break. Re-rated by the owner on 2026-10-25 (it was a die from -1x to +3x): 1x comes up 30%
+ * of the time and the average spin is 0.9x.
  *
- * The roll is a pure function of the session's seed and the cycle, so the server, the
- * portal and the extension all land on the same face without asking each other.
+ * The spin is a pure function of the session's seed and the cycle, so the server, the
+ * portal and the extension all land on the same result without asking each other.
  */
 
 export interface JackFace {
-  /** Break added (positive) or taken away (negative), in breaks. */
+  /** The break it gives, in usual breaks: 0 is none, 0.5 half, 3 three times as long. */
   multiplier: number;
-  /** Chances in 100. */
+  /** Chances in 1000. */
   weight: number;
-  /** What the die shows. */
+  /** What the machine shows. */
   label: string;
 }
 
-/** The six faces, worst first. Weights add to 100 and average -0.2x. */
-export const JACK_FACES: readonly JackFace[] = [
-  { multiplier: -1, weight: 46, label: '−1×' },
-  { multiplier: -0.5, weight: 20, label: '−½×' },
-  { multiplier: 0, weight: 12, label: '0×' },
-  { multiplier: 1, weight: 12, label: '+1×' },
-  { multiplier: 2, weight: 6, label: '+2×' },
-  { multiplier: 3, weight: 4, label: '+3×' },
+/**
+ * Chances in 1000 of each result, 0.0x up to 3.0x: index i is i / 10. They add to 1000 and
+ * average exactly 0.9x. Under 1x 45% of the time (0x 8.4%), 1x 30%, more 25% (2x or more
+ * 6.8%, 3x 1.5%).
+ */
+const WEIGHTS = [
+  // 0.0x to 0.9x
+  84, 40, 42, 42, 44, 44, 40, 40, 38, 36,
+  // 1.0x
+  300,
+  // 1.1x to 1.9x
+  36, 31, 26, 20, 24, 14, 12, 11, 8,
+  // 2.0x to 2.9x
+  14, 6, 5, 5, 4, 7, 3, 3, 3, 3,
+  // 3.0x
+  15,
 ];
+
+/** Every result, lowest first: index i is i / 10 of a break. */
+export const JACK_FACES: readonly JackFace[] = WEIGHTS.map((weight, i) => ({
+  multiplier: i / 10,
+  weight,
+  label: `${(i / 10).toFixed(1)}×`,
+}));
 
 const TOTAL_WEIGHT = JACK_FACES.reduce((a, f) => a + f.weight, 0);
 
-/** The average roll, in breaks (-0.2). */
+/** The average spin, in breaks (0.9). */
 export const JACK_EXPECTED_MULTIPLIER =
   JACK_FACES.reduce((a, f) => a + f.multiplier * f.weight, 0) / TOTAL_WEIGHT;
 
@@ -40,19 +56,19 @@ export const JACK_EXPECTED_MULTIPLIER =
 export interface JackState {
   /** Fixed when the session starts; every roll is drawn from it. */
   seed: string;
-  /** Dice rolled so far, one after each work interval. */
+  /** Spins so far, one after each work interval. */
   rolls: number;
-  /** Break seconds the dice added, and took away, this session. */
+  /** Break seconds the spins added, and took away, this session. */
   wonSeconds: number;
   lostSeconds: number;
-  /** The latest roll, for the dice on screen. */
+  /** The latest spin, for the machine on screen. */
   last: JackRoll | null;
 }
 
 export interface JackRoll {
   /** The work interval it followed (the timer's cycle once that interval was done). */
   cycle: number;
-  /** When that interval ended and the die was rolled. */
+  /** When that interval ended and the machine spun. */
   at: ISODateTime;
   /** Index into `JACK_FACES`. */
   face: number;
@@ -75,7 +91,7 @@ function mix(h: number): number {
   return h >>> 0;
 }
 
-/** Which face the die lands on after the given work interval. */
+/** Which result the machine lands on after the given work interval. */
 export function jackFace(seed: string, cycle: number): number {
   let ticket = mix(fnv1a(`${seed}:${cycle}`)) % TOTAL_WEIGHT;
   for (let i = 0; i < JACK_FACES.length; i++) {
@@ -85,7 +101,7 @@ export function jackFace(seed: string, cycle: number): number {
   return JACK_FACES.length - 1;
 }
 
-/** Roll at `at` for the break after `cycle`, whose usual length is `baseMs`, and tally it. */
+/** Spin at `at` for the break after `cycle`, whose usual length is `baseMs`, and tally it. */
 export function rollJack(
   jack: JackState,
   cycle: number,
@@ -93,8 +109,8 @@ export function rollJack(
   at: ISODateTime,
 ): { jack: JackState; roll: JackRoll } {
   const face = jackFace(jack.seed, cycle);
-  const delta = Math.round(baseMs * JACK_FACES[face]!.multiplier);
-  const breakMs = Math.max(0, baseMs + delta);
+  const breakMs = Math.round(baseMs * JACK_FACES[face]!.multiplier);
+  const delta = breakMs - baseMs;
   const roll: JackRoll = { cycle, at, face, baseMs, breakMs };
   const seconds = Math.round(Math.abs(delta) / 1000);
   return {
@@ -120,7 +136,7 @@ export interface JackTotals {
   focusSeconds: number;
 }
 
-/** What Jack mode's dice did across some sessions. */
+/** What Jack mode's spins did across some sessions. */
 export function jackTotals(sessions: Session[]): JackTotals {
   const totals: JackTotals = { rolls: 0, wonSeconds: 0, lostSeconds: 0, focusSeconds: 0 };
   for (const s of sessions) {

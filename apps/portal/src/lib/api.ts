@@ -600,7 +600,7 @@ export interface ProfileStats {
   level: number;
   /** How far into the level, 0 to 1. Optional for older cached copies. */
   levelRatio?: number;
-  /** Break Jack mode's dice gave and took; null before the first roll. */
+  /** Break Jack mode's slot machine gave and took; null before the first spin. */
   jack?: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
 

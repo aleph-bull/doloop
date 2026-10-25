@@ -78,7 +78,7 @@ export interface ProfileStats {
   level: number;
   /** How far into the level they are, 0 to 1. The XP itself stays on Achievements. */
   levelRatio: number;
-  /** Break Jack mode's dice gave and took, all time; null before the first roll. */
+  /** Break Jack mode's slot machine gave and took, all time; null before the first spin. */
   jack: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
 

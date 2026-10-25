@@ -27,22 +27,28 @@ function seedFor(face: number): string {
   throw new Error(`no seed for face ${face}`);
 }
 
-describe('the die', () => {
-  it('runs from -1x to +3x and averages -0.2x', () => {
-    expect(JACK_FACES.map((f) => f.multiplier)).toEqual([-1, -0.5, 0, 1, 2, 3]);
-    expect(JACK_FACES.reduce((a, f) => a + f.weight, 0)).toBe(100);
-    expect(JACK_EXPECTED_MULTIPLIER).toBeCloseTo(-0.2, 10);
+describe('the slot machine', () => {
+  it('runs from 0x to 3x in tenths, lands on 1x 30% of the time and averages 0.9x', () => {
+    expect(JACK_FACES).toHaveLength(31);
+    JACK_FACES.forEach((f, i) => expect(f.multiplier).toBeCloseTo(i / 10, 10));
+    expect(JACK_FACES.map((f) => f.label).slice(0, 3)).toEqual(['0.0×', '0.1×', '0.2×']);
+    expect(JACK_FACES[30]!.label).toBe('3.0×');
+    expect(JACK_FACES.reduce((a, f) => a + f.weight, 0)).toBe(1000);
+    expect(JACK_FACES[10]!.weight).toBe(300);
+    expect(JACK_EXPECTED_MULTIPLIER).toBeCloseTo(0.9, 10);
   });
 
-  it('lands on each face about as often as its weight says', () => {
+  it('lands on each result about as often as its weight says', () => {
     const counts = JACK_FACES.map(() => 0);
-    const n = 60_000;
+    const n = 200_000;
     for (let i = 0; i < n; i++) counts[jackFace(`s${Math.floor(i / 12)}`, i % 12)]! += 1;
-    JACK_FACES.forEach((f, i) => expect(counts[i]! / n).toBeCloseTo(f.weight / 100, 2));
-    // And over many rolls the break comes out a fifth short on average.
+    JACK_FACES.forEach((f, i) =>
+      expect(Math.abs(counts[i]! / n - f.weight / 1000)).toBeLessThan(0.004),
+    );
+    // And over many spins the break comes out a tenth short on average.
     const mean = counts.reduce((a, c, i) => a + c * JACK_FACES[i]!.multiplier, 0) / n;
-    expect(mean).toBeGreaterThan(-0.23);
-    expect(mean).toBeLessThan(-0.17);
+    expect(mean).toBeGreaterThan(0.88);
+    expect(mean).toBeLessThan(0.92);
   });
 
   it('gives the same face for the same seed and cycle', () => {
@@ -50,14 +56,21 @@ describe('the die', () => {
   });
 
   it('tallies the break won and lost', () => {
-    let jack = startJack(seedFor(5));
+    let jack = startJack(seedFor(30));
     jack = rollJack(jack, 1, 5 * 60_000, at(25)).jack;
-    expect(jack).toMatchObject({ rolls: 1, wonSeconds: 15 * 60, lostSeconds: 0 });
-    expect(jack.last).toMatchObject({ cycle: 1, face: 5, baseMs: 300_000, breakMs: 1_200_000 });
-    let lose = startJack(seedFor(1));
+    expect(jack).toMatchObject({ rolls: 1, wonSeconds: 10 * 60, lostSeconds: 0 });
+    expect(jack.last).toMatchObject({ cycle: 1, face: 30, baseMs: 300_000, breakMs: 900_000 });
+    let lose = startJack(seedFor(5));
     lose = rollJack(lose, 1, 5 * 60_000, at(25)).jack;
     expect(lose).toMatchObject({ rolls: 1, wonSeconds: 0, lostSeconds: 150 });
     expect(lose.last?.breakMs).toBe(150_000);
+    // 1x leaves the break as it was.
+    let even = startJack(seedFor(10));
+    even = rollJack(even, 1, 5 * 60_000, at(25)).jack;
+    expect(even).toMatchObject({ rolls: 1, wonSeconds: 0, lostSeconds: 0 });
+    expect(even.last?.breakMs).toBe(300_000);
+    // Tenths that don't sit exactly in floating point still come out whole.
+    expect(rollJack(startJack(seedFor(3)), 1, 5 * 60_000, at(25)).roll.breakMs).toBe(90_000);
   });
 });
 
@@ -73,13 +86,13 @@ describe('the timer in Jack mode', () => {
   });
 
   it('stretches the break by the roll', () => {
-    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(4) });
+    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(20) });
     const b = advance(s, at(26), opts());
     expect(b.phase).toBe('short-break');
-    // +2x: three breaks' worth, 15 minutes, from the end of work.
-    expect(b.phaseEndsAt).toBe(at(40));
-    expect(b.jack?.last).toMatchObject({ cycle: 1, at: at(25), face: 4 });
-    expect(b.jack?.wonSeconds).toBe(10 * 60);
+    // 2x: two breaks' worth, 10 minutes, from the end of work.
+    expect(b.phaseEndsAt).toBe(at(35));
+    expect(b.jack?.last).toMatchObject({ cycle: 1, at: at(25), face: 20 });
+    expect(b.jack?.wonSeconds).toBe(5 * 60);
   });
 
   it('goes straight back to work when the whole break is lost', () => {
@@ -100,12 +113,12 @@ describe('the timer in Jack mode', () => {
   });
 
   it('keeps the rolled break while waiting to start it', () => {
-    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(5) });
+    const s = startTimer({ mode: 'pomodoro', now: T0, pomodoro: cfg, jackSeed: seedFor(30) });
     const p = advance(s, at(26), opts({ autoStartBreaks: false }));
     expect(p).toMatchObject({ phase: 'paused', resumePhase: 'short-break' });
-    expect(p.resumeRemainingMs).toBe(20 * 60_000);
+    expect(p.resumeRemainingMs).toBe(15 * 60_000);
     const r = applyEvent(p, { type: 'resume' }, at(30), opts({ autoStartBreaks: false }));
-    expect(r.phaseEndsAt).toBe(at(50));
+    expect(r.phaseEndsAt).toBe(at(45));
   });
 
   it('rolls once per work block, however often it is advanced', () => {

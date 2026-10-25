@@ -5252,106 +5252,312 @@ button.start-subject:hover {
   }
 }
 
-/* ---------- Jack mode's die (after a work interval) ---------- */
-.jack-dice-layer {
+/* ---------- Jack mode's slot machine (after a work interval) ---------- */
+.jack-slot-layer {
   position: fixed;
   inset: 0;
   z-index: 80;
   display: grid;
   place-items: center;
   padding: 16px;
-  background: rgb(0 0 0 / 0.28);
+  background: rgb(0 0 0 / 0.4);
   cursor: pointer;
+  transition: background-color 360ms var(--ease-out);
 }
-/* Rises without fading: the card is glass (see "That includes a fade" in CLAUDE.md). */
-.jack-dice-card {
+/* Once it bursts the coins fly over the page to the clock: nothing in the way. */
+.jack-slot-layer.is-burst:not(.is-own-clock) {
+  background: transparent;
+  pointer-events: none;
+}
+/* Rises and leaves without fading: the card is glass (see "That includes a fade" in CLAUDE.md). */
+.jack-slot-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 22px;
-  width: min(300px, 100%);
-  padding: 34px var(--card-pad) 24px;
+  gap: 18px;
+  width: min(400px, 100%);
+  padding: 32px var(--card-pad) 24px;
   border-radius: var(--radius-lg);
-  animation: jack-card-in 420ms var(--ease-spring) both;
+  animation: jack-card-in 420ms var(--ease-spring) backwards;
 }
 @keyframes jack-card-in {
   from {
-    transform: translateY(26px) scale(0.94);
+    transform: translateY(26px) scale(0.9);
   }
-  to {
+}
+.jack-slot-layer.is-result .jack-slot-card.is-big {
+  animation: jack-slot-shake 560ms var(--ease-out);
+}
+@keyframes jack-slot-shake {
+  0%,
+  100% {
     transform: none;
   }
+  15% {
+    transform: translateX(-7px) rotate(-1.4deg) scale(1.04);
+  }
+  32% {
+    transform: translateX(6px) rotate(1.2deg) scale(1.04);
+  }
+  50% {
+    transform: translateX(-4px) rotate(-0.6deg) scale(1.02);
+  }
+  70% {
+    transform: translateX(2px);
+  }
 }
-.jack-dice-scene {
-  --jack-size: 84px;
-  --jack-half: 42px;
-  width: var(--jack-size);
-  height: var(--jack-size);
-  perspective: 600px;
+.jack-slot-layer.is-burst:not(.is-own-clock) .jack-slot-card {
+  animation: jack-slot-out 280ms cubic-bezier(0.5, 0, 0.75, 0) forwards;
 }
-.jack-die {
+@keyframes jack-slot-out {
+  to {
+    transform: scale(0.3);
+    visibility: hidden;
+  }
+}
+
+.jack-slot-machine {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  --jack-row: 1.2em;
+}
+/* Two rows high: the number on the line in the middle, a half of each neighbour. */
+.jack-slot-window {
   position: relative;
-  width: 100%;
-  height: 100%;
-  transform-style: preserve-3d;
+  height: calc(var(--jack-row) * 2);
+  padding: 0 0.28em;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  overflow: hidden;
+  font-size: 4.25rem;
+  font-weight: 700;
+  line-height: var(--jack-row);
+  font-variant-numeric: tabular-nums;
+  transition:
+    transform 900ms var(--ease-out),
+    border-color 300ms var(--ease-out);
 }
-.jack-die-face {
+/* The last reel crawling to a stop: the machine leans in. */
+.jack-slot-layer.is-tense .jack-slot-window {
+  transform: scale(1.07);
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+/* A flat flash as it lands. */
+.jack-slot-layer.is-result .jack-slot-window {
+  animation: jack-flash 700ms var(--ease-out);
+}
+.jack-slot-card.is-bust .jack-slot-window {
+  --jack-flash: var(--status-bad);
+}
+@keyframes jack-flash {
+  from {
+    background: color-mix(in srgb, var(--jack-flash, var(--accent)) 42%, transparent);
+  }
+}
+.jack-slot-window::before {
+  content: '';
+  position: absolute;
+  inset: calc(var(--jack-row) / 2) 0;
+  border-block: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  pointer-events: none;
+}
+.jack-slot-reels {
+  display: flex;
+  height: 100%;
+  mask-image: linear-gradient(transparent, #000 34%, #000 66%, transparent);
+}
+.jack-reel {
+  width: 0.64em;
+  height: 100%;
+  overflow: hidden;
+}
+.jack-reel-strip {
+  transform: translateY(calc(var(--jack-row) * -0.5));
+  will-change: transform;
+}
+.jack-reel-strip span {
+  display: block;
+  height: var(--jack-row);
+  text-align: center;
+}
+.jack-slot-dot,
+.jack-slot-x {
+  align-self: center;
+}
+.jack-slot-x {
+  margin-left: 0.06em;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.jack-slot-layer.is-result .jack-slot-reels {
+  animation: jack-land 420ms var(--ease-spring);
+}
+@keyframes jack-land {
+  from {
+    transform: scale(1.22);
+  }
+}
+.jack-slot-layer:not(.is-spin) .jack-slot-card.is-won .jack-slot-reels {
+  color: var(--accent-text);
+}
+.jack-slot-layer:not(.is-spin) .jack-slot-card.is-bust .jack-slot-reels {
+  color: color-mix(in srgb, var(--status-bad) 70%, var(--fg));
+}
+/* The result turned into the break it gives. */
+.jack-slot-time {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
-  /* Square corners on purpose (owner, 2026-10-22). Solid, so the faces behind don't show
-     through; tinted like the glass buttons, with the screen's own text colour (an accent
-     fill can be pale enough to want a black label). */
-  background: color-mix(in srgb, var(--accent) 24%, var(--bg-elevated));
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--fg-on-glass);
-  font-size: 1.5rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  backface-visibility: hidden;
-}
-.jack-dice-result {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  text-align: center;
-}
-.jack-dice-roll {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  min-height: 1.4em;
-}
-.jack-dice-result.is-won .jack-dice-roll {
+  font-size: 0.74em;
   color: var(--accent-text);
+  visibility: hidden;
 }
-.jack-dice-line {
+.jack-slot-window.is-time .jack-slot-reels {
+  visibility: hidden;
+}
+.jack-slot-time.is-long {
+  font-size: 0.54em;
+}
+/* In with a pop, then it swells and shakes until it bursts. */
+.jack-slot-window.is-time .jack-slot-time {
+  visibility: visible;
+  animation:
+    jack-time-in 460ms var(--ease-spring) backwards,
+    jack-charge 320ms ease-in 530ms;
+}
+.jack-slot-layer.is-burst .jack-slot-time {
+  animation: none;
+}
+@keyframes jack-time-in {
+  from {
+    transform: scale(0.4);
+  }
+}
+@keyframes jack-charge {
+  20% {
+    transform: scale(1.08) translateX(-2px);
+  }
+  40% {
+    transform: scale(1.14) translateX(2px);
+  }
+  60% {
+    transform: scale(1.2) translateX(-3px);
+  }
+  80% {
+    transform: scale(1.26) translateX(3px);
+  }
+  to {
+    transform: scale(1.32);
+  }
+}
+.jack-slot-card.is-bust .jack-slot-time {
+  color: var(--fg-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 3px;
+}
+
+/* The lever: pulled toward you, so the stick shortens past its base and comes back. */
+.jack-lever {
+  position: relative;
+  width: 26px;
+  height: 164px;
+}
+.jack-lever::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 13px;
+  width: 6px;
+  height: 69px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--fg) 30%, transparent);
+  transform-origin: 50% 100%;
+}
+.jack-lever::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 76px;
+  width: 16px;
+  height: 13px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg) 22%, transparent);
+}
+.jack-lever-knob {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent-fill);
+  z-index: 1;
+}
+.jack-slot-layer.is-spin .jack-lever::before {
+  animation: jack-pull-stick 640ms var(--ease-in-out);
+}
+.jack-slot-layer.is-spin .jack-lever-knob {
+  animation: jack-pull-knob 640ms var(--ease-in-out);
+}
+@keyframes jack-pull-stick {
+  40% {
+    transform: scaleY(-1);
+  }
+}
+@keyframes jack-pull-knob {
+  40% {
+    transform: translateY(138px);
+  }
+}
+
+.jack-slot-line {
+  min-height: 1.4em;
   font-size: var(--text-sm);
   color: var(--fg-muted);
+  text-align: center;
 }
-.jack-dice-result.is-shown .jack-dice-roll,
-.jack-dice-result.is-shown .jack-dice-line {
-  animation: jack-result-in 360ms var(--ease-out) both;
+.jack-slot-layer:not(.is-spin) .jack-slot-line {
+  animation: jack-result-in 360ms var(--ease-out) backwards;
 }
 @keyframes jack-result-in {
   from {
     opacity: 0;
     transform: translateY(6px);
   }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
-:root[data-motion='off'] .jack-dice-card,
-:root[data-motion='off'] .jack-dice-result.is-shown span {
-  animation: none;
+
+/* The coins the break bursts into. Solid, with the primary button's label colour, so they
+   read on any photo. */
+.jack-coin {
+  position: fixed;
+  left: 0;
+  top: 0;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  will-change: transform;
+}
+.jack-coin.is-lost {
+  background: color-mix(in srgb, var(--status-bad) 62%, #222);
+}
+
+:root[data-motion='off'] .jack-slot-layer *,
+:root[data-motion='off'] .jack-slot-layer *::before {
+  animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='on']) .jack-dice-card,
-  :root:not([data-motion='on']) .jack-dice-result.is-shown span {
-    animation: none;
+  :root:not([data-motion='on']) .jack-slot-layer *,
+  :root:not([data-motion='on']) .jack-slot-layer *::before {
+    animation: none !important;
   }
 }
 

@@ -139,3 +139,56 @@ export function playSound(id: string, volume: number): void {
     };
   });
 }
+
+/** Decode sound files that aren't presets (Jack mode's coins), so they start on time. */
+export function preloadEffects(files: string[]): void {
+  for (const file of files) void load(file);
+}
+
+/**
+ * Play a sound file at `volume` (0..1), like a preset, at `rate` (1 is as recorded; higher
+ * is quicker and higher pitched) and scaled by `level`, for sounds that play many at once.
+ */
+export function playEffect(file: string, volume: number, rate = 1, level = 1): void {
+  if (volume <= 0) return;
+  const ac = audio();
+  if (!ac) return;
+  void load(file).then((buffer) => {
+    if (!buffer || !ctx) return;
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    const v = Math.min(1, Math.max(0, volume));
+    gain.gain.value = v * v * (levels.get(file) ?? 1) * BOOST * level;
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    source.connect(gain).connect(output(ctx));
+    source.start();
+    source.onended = () => {
+      source.disconnect();
+      gain.disconnect();
+    };
+  });
+}
+
+/** A short click, made on the spot: a slot machine's reel going past a number. */
+export function playTick(volume: number, pitch = 1, level = 1): void {
+  if (volume <= 0) return;
+  const ac = audio();
+  if (!ac || ac.state !== 'running') return;
+  const t = ac.currentTime;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  const v = Math.min(1, Math.max(0, volume));
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(1500 * pitch, t);
+  osc.frequency.exponentialRampToValueAtTime(500 * pitch, t + 0.03);
+  gain.gain.setValueAtTime(0.5 * v * v * level, t);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  osc.connect(gain).connect(output(ac));
+  osc.start(t);
+  osc.stop(t + 0.05);
+  osc.onended = () => {
+    osc.disconnect();
+    gain.disconnect();
+  };
+}

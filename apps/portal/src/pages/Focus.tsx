@@ -1065,8 +1065,9 @@ function FocusSession({
     progress.priorSeconds === 0
   );
 
-  const phase =
-    view.graceRemainingSeconds !== null
+  const phase = ctl.spinning
+    ? 'Break'
+    : view.graceRemainingSeconds !== null
       ? `Ends in ${view.graceRemainingSeconds} s`
       : timer.mode === 'pomodoro' && timer.phase === 'work'
         ? `${PHASE_LABEL.work} · cycle ${timer.cycle + 1}`

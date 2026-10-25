@@ -169,6 +169,7 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'show timer',
       'jack mode',
       'dice',
+      'slot machine',
       'gambling',
       // After each session.
       'after each session',

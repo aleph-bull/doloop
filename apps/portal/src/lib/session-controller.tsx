@@ -20,17 +20,17 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, Modal, useToast } from '@komogon/ui';
-import { JackDice } from '../components/focus/JackDice';
+import { JackSlot, preloadJackSounds } from '../components/focus/JackSlot';
 import { ReviewDialog, type ReviewSubject } from '../components/ReviewDialog';
 import { api, type ActiveSession, type EndSummary, type ReviewInput } from './api';
 import { keys } from './queries';
 import { playSound, preloadSounds } from './sounds';
 
-/** A roll this recent still gets its die when the timer comes into view. */
+/** A spin this recent still gets its slot machine when the timer comes into view. */
 const DICE_FRESH_MS = 3 * 60_000;
 const DICE_SEEN_KEY = 'komogon.jack.seen';
 
-/** The latest roll this tab has shown, so the die plays once per roll. */
+/** The latest spin this tab has shown, so the machine plays once per spin. */
 function diceSeen(key: string): boolean {
   try {
     return sessionStorage.getItem(DICE_SEEN_KEY) === key;
@@ -42,7 +42,7 @@ function markDiceSeen(key: string) {
   try {
     sessionStorage.setItem(DICE_SEEN_KEY, key);
   } catch {
-    // Storage blocked: the die may play again after a reload, which is harmless.
+    // Storage blocked: the machine may play again after a reload, which is harmless.
   }
 }
 
@@ -86,6 +86,8 @@ export interface SessionController {
   stop: () => Promise<void>;
   extend: (minutes: number) => Promise<unknown>;
   toggleTimerVisibility: () => Promise<unknown>;
+  /** Jack mode's slot machine is playing: the phase says "Break" until it lands, never early. */
+  spinning: boolean;
   /** The dialogs the flow needs (end early, still studying, tick, review). Render once. */
   dialogs: ReactNode;
 }
@@ -215,18 +217,25 @@ export function useSessionController({
     else if (to === 'ended') alert('sessionEnd');
   }, [timer.phase, alert]);
 
-  // Jack mode: the die for each roll, once, on the surface that owns the alerts. A roll
-  // made while the timer was out of view still plays if it is only a few minutes old.
+  // Jack mode: the slot machine for each spin, once, on the surface that owns the alerts. A
+  // spin made while the timer was out of view still plays if it is only a few minutes old.
+  // While it plays, the break clock shows what its coins have counted in so far (`held`).
   const [dice, setDice] = useState<JackRoll | null>(null);
+  const [held, setHeld] = useState<number | null>(null);
   const lastRoll = timer.jack?.last ?? null;
+  const jackOn = !!timer.jack;
+  useEffect(() => {
+    if (jackOn) preloadJackSounds();
+  }, [jackOn]);
   useEffect(() => {
     if (!lastRoll || muteAlerts) return;
     const key = `${sessionId}:${lastRoll.cycle}`;
     if (diceSeen(key)) return;
     markDiceSeen(key);
     if (Date.now() - Date.parse(lastRoll.at) > DICE_FRESH_MS) return;
+    setHeld(0);
     setDice(lastRoll);
-    // A roll is identified by its cycle; the object is rebuilt on every refresh.
+    // A spin is identified by its cycle; the object is rebuilt on every refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastRoll?.cycle, lastRoll?.at, muteAlerts, sessionId]);
 
@@ -364,12 +373,30 @@ export function useSessionController({
   // Another tab may have ended the session; the query then comes back empty and the card
   // unmounts. Nothing to do here beyond not treating that as an error.
 
+  const breakLeft =
+    timer.phase === 'short-break' ||
+    timer.phase === 'long-break' ||
+    (timer.phase === 'paused' && timer.resumePhase !== null && timer.resumePhase !== 'work')
+      ? view.phaseRemainingSeconds
+      : null;
+  const breakLeftRef = useRef(breakLeft);
+  useEffect(() => {
+    breakLeftRef.current = breakLeft;
+  }, [breakLeft]);
+  const remainingBreak = useCallback(() => breakLeftRef.current, []);
+  const closeSlot = () => {
+    setDice(null);
+    setHeld(null);
+  };
+
   const digits =
-    timer.mode === 'unlimited'
-      ? formatClock(view.workSeconds)
-      : view.phaseRemainingSeconds !== null
-        ? formatClock(view.phaseRemainingSeconds)
-        : formatClock(view.phaseElapsedSeconds);
+    held !== null
+      ? formatClock(held)
+      : timer.mode === 'unlimited'
+        ? formatClock(view.workSeconds)
+        : view.phaseRemainingSeconds !== null
+          ? formatClock(view.phaseRemainingSeconds)
+          : formatClock(view.phaseElapsedSeconds);
 
   const inBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
   const canPause = timer.phase === 'work' || inBreak;
@@ -391,7 +418,15 @@ export function useSessionController({
 
   const dialogs = (
     <>
-      {dice && <JackDice roll={dice} onDone={() => setDice(null)} />}
+      {dice && (
+        <JackSlot
+          roll={dice}
+          volume={settings.sounds.enabled ? settings.sounds.volume : 0}
+          remaining={remainingBreak}
+          onCount={setHeld}
+          onDone={closeSlot}
+        />
+      )}
       <Modal
         open={!!slept && !reviewOpen && !stopping}
         onClose={() => {}}
@@ -492,6 +527,7 @@ export function useSessionController({
     stop: () => stop(),
     extend,
     toggleTimerVisibility,
+    spinning: dice !== null,
     dialogs,
   };
 }

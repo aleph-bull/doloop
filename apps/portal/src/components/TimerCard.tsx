@@ -43,9 +43,9 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
       <Glass as="section" className="timer-card" aria-label="Current session">
         <div className="flex items-start gap-3">
           <div className="flex-1 min-w-0">
-            <div className="timer-live" data-phase={timer.phase}>
+            <div className="timer-live" data-phase={ctl.spinning ? 'short-break' : timer.phase}>
               <span className="timer-live-dot" aria-hidden />
-              {PHASE_LABEL[timer.phase]}
+              {ctl.spinning ? 'Break' : PHASE_LABEL[timer.phase]}
             </div>
             {ctl.nodePath && <div className="timer-path">{ctl.nodePath}</div>}
             <h2 className="timer-title">{active.nodeTitle}</h2>
@@ -88,6 +88,7 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
             <div
               className="timer-digits"
               aria-live="off"
+              data-jack-target
               aria-label={`${ctl.digits} ${timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}`}
             >
               {ctl.digits}

@@ -186,7 +186,7 @@ export function advance(state: TimerState, now: ISODateTime, opts: AdvanceOption
     const cycle = wasWork ? s.cycle + 1 : s.cycle;
     let next: IntervalPhase = wasWork ? nextBreak(cycle, opts.pomodoro) : 'work';
     let length = intervalMs(next, opts.pomodoro);
-    // Jack mode: the die decides the break. Losing all of it goes straight on to work.
+    // Jack mode: the slot machine decides the break. 0x goes straight on to work.
     if (wasWork && s.jack) {
       const rolled = rollJack(s.jack, cycle, length, boundary);
       s = { ...s, jack: rolled.jack };

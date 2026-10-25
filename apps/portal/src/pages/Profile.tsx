@@ -300,7 +300,7 @@ export function Profile() {
     totals.push({ label: 'Longest session', ...figure(stats.longestSessionMinutes) });
   if (stats && stats.last28Minutes > 0)
     totals.push({ label: 'Last 28 days', ...figure(stats.last28Minutes) });
-  // Jack mode's dice, for anyone who has rolled them.
+  // Jack mode's slot machine, for anyone who has spun it.
   if (stats?.jack && stats.jack.wonSeconds > 0)
     totals.push({ label: 'Break won', ...figure(stats.jack.wonSeconds / 60) });
   if (stats?.jack && stats.jack.lostSeconds > 0)
