@@ -1330,6 +1330,107 @@ html.has-motion .devices.rise.is-in {
     width: 100%;
   }
 }
+/* On a phone everything is centred, and a pinned scene is only as tall as what's in it: it
+   pins in the middle of the screen (main.js gives it --half, half its height), so it sits
+   close to the sections either side instead of in a screen of empty page. */
+@media (max-width: 640px) {
+  .tour-grid {
+    padding-block: 56px;
+  }
+  .tour-copy,
+  .feature-head,
+  .cell figcaption,
+  .site-footer-inner {
+    text-align: center;
+  }
+  .tour-copy .lede-sm {
+    margin-inline: auto;
+  }
+  .lede-sm,
+  .tour-text,
+  .cell figcaption {
+    text-wrap: balance;
+  }
+  .feature-head {
+    justify-items: center;
+  }
+  .feature-head .lede-sm {
+    justify-self: center;
+  }
+  .tour-list {
+    margin-top: 32px;
+    gap: 28px;
+  }
+  .tour-item {
+    padding: 0;
+  }
+  .tour-text {
+    padding: 0;
+    border-left: 0;
+  }
+  .rail-pad {
+    padding-top: 56px;
+    padding-bottom: 28px;
+  }
+  .fall-band {
+    margin-block: 18vh;
+  }
+  .fall-edge {
+    height: 26vh;
+  }
+  html.has-scrub .looks-stage,
+  html.has-scrub .zoom-stage,
+  html.has-scrub .plan-stage {
+    top: max(0px, calc(50svh - var(--half, 50svh)));
+    height: auto;
+  }
+  html.has-scrub .looks-stage {
+    grid-template-rows: none;
+    gap: 24px;
+    padding: 40px 0;
+  }
+  html.has-scrub .ring-view {
+    height: calc(var(--cw, 234px) * 0.85);
+  }
+  html.has-scrub .zoom-stage {
+    padding: 24px 0;
+    overflow: visible;
+  }
+  /* The page still goes dark from edge to edge. */
+  html.has-scrub .zoom-dark {
+    position: fixed;
+  }
+  html.has-scrub .zoom-dots {
+    bottom: 9px;
+  }
+  /* The phone comes up under the screen, in the middle. */
+  html.has-scrub .zoom-phone {
+    top: calc(100% + 8px);
+    bottom: auto;
+    left: 50%;
+    translate: -50% 0;
+    width: 26vw;
+    opacity: var(--ph, 0);
+  }
+  /* The calendar's side lines run the whole scene, not just the stage. */
+  .plan {
+    background:
+      linear-gradient(var(--site-line), var(--site-line)) 20px 0 / 1px 100% no-repeat,
+      linear-gradient(var(--site-line), var(--site-line)) calc(100% - 20px) 0 / 1px 100% no-repeat;
+  }
+  .plan-grid {
+    border-inline-color: transparent;
+  }
+  html.has-scrub .plan-grid {
+    padding-block: 40px 64px;
+  }
+  .closing-inner {
+    padding: 72px 20px 88px;
+  }
+  .site-footer-inner {
+    justify-content: center;
+  }
+}
 /* On a phone the Discord button is just the mark. */
 @media (max-width: 480px) {
   .cta-discord {

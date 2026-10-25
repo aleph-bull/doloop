@@ -355,6 +355,15 @@ if (!still) {
   frame();
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', measure);
+
+  // On a phone a pinned stage is only as tall as what's in it and pins in the middle of the
+  // screen; the CSS takes half its height for that.
+  const half = new ResizeObserver((entries) => {
+    for (const e of entries) e.target.style.setProperty('--half', `${e.target.offsetHeight / 2}px`);
+  });
+  for (const el of document.querySelectorAll('.looks-stage, .zoom-stage, .plan-stage')) {
+    half.observe(el);
+  }
 }
 
 // ---------- Timelapses ----------
