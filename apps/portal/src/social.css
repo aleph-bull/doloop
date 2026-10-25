@@ -498,23 +498,21 @@
   font-size: var(--text-xs);
   color: var(--fg-muted);
 }
-/* On a computer the picture is as tall as the times and focus cards beside it, so they keep
-   to the first row and the title gets a line of its own under them. */
-@media (min-width: 601px) {
-  .post .profile-avatar.is-sm {
-    width: 54px;
-    height: 54px;
-    font-size: 1.3rem;
-  }
-  .post-side {
-    grid-row: 1;
-  }
-  .post-head > .post-title {
-    grid-column: 1 / -1;
-  }
-  .post-stat {
-    padding: 5px 12px;
-  }
+/* The picture is as tall as the times and focus cards beside it, so they keep to the first
+   row and the title gets a line of its own under them. */
+.post .profile-avatar.is-sm {
+  width: 54px;
+  height: 54px;
+  font-size: 1.3rem;
+}
+.post-side {
+  grid-row: 1;
+}
+.post-head > .post-title {
+  grid-column: 1 / -1;
+}
+.post-stat {
+  padding: 5px 12px;
 }
 
 /* A picture on a post, at its own shape, no taller than the screen's half. */
@@ -3137,10 +3135,11 @@
   .post > .post-carousel {
     order: -1;
   }
-  .post .profile-avatar.is-sm {
-    width: 36px;
-    height: 36px;
-    font-size: 0.95rem;
+  /* Focus and elapsed side by side leave no room for the name, so they stack. */
+  .post-stats {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
   }
   .post-name {
     font-size: 0.9375rem;
