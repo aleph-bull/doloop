@@ -43,6 +43,10 @@
     padding: 40px max(28px, env(safe-area-inset-right)) 112px max(28px, env(safe-area-inset-left));
   }
 }
+/* "Skip to content" focuses the page itself; a ring round the whole page helps no one. */
+#main:focus-visible {
+  box-shadow: none;
+}
 
 /* Each page rises in as it arrives: quick, so a tab change never feels like it waits.
    It rises without fading. Opacity on anything that holds glass cards makes Chrome treat it
@@ -672,12 +676,17 @@
   /*
    * The page sits in the middle of the window, as with the top bar, and never moves when
    * the rail is pinned or collapsed. Only when the window is too narrow for both does it
-   * step right, just far enough to clear the open rail, so the rail never covers it.
+   * step right, just far enough to clear the rail, and sit in the middle of the room beside
+   * it. The slim rail opens over the page, so only a pinned one keeps the open rail's room.
    */
   :root[data-nav^='sidebar'] .page {
+    --rail-room: calc(12px + var(--rail-slim));
     width: auto;
-    margin-left: max(calc(var(--rail-open) + 24px), calc((100% - 1120px) / 2));
+    margin-left: max(var(--rail-room), calc((100% - 1120px) / 2));
     margin-right: max(0px, calc((100% - 1120px) / 2));
+  }
+  :root[data-nav='sidebar-pinned'] .page {
+    --rail-room: calc(12px + var(--rail-open));
   }
   :root[data-nav^='sidebar'] .nav {
     display: none;
@@ -1951,9 +1960,10 @@
 }
 /*
  * Narrower than the columns fit: the columns fold into one quiet line under the title, and
- * the actions stay at the right.
+ * the actions stay at the right. Measured on the table, not the window: beside the sidebar
+ * a window wide enough for the columns can still leave the names a few letters.
  */
-@media (max-width: 760px) {
+@container tasks (max-width: 840px) {
   .tt-head {
     display: none;
   }

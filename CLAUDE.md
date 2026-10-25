@@ -332,8 +332,9 @@ and never explain the difference on screen.
   zero width in that measurement, or the bottom bar never goes away. The bar's sliding pill
   eases out with no spring. There is no "More" menu on purpose.
 - The sidebar (same day, owner's requests): the page stays centred in the window and never
-  moves when the sidebar is pinned or collapsed (`.page` margins in sidebar mode, clearing
-  the open sidebar on narrow windows). After Collapse is clicked with the pointer on it, the
+  moves when the sidebar is pinned or collapsed (`.page` margins in sidebar mode). On narrow
+  windows it clears the slim sidebar and sits centred beside it; only a pinned sidebar keeps
+  the open one's room (2026-10-25). After Collapse is clicked with the pointer on it, the
   sidebar rests shut (`is-resting`) until the pointer leaves. Its streak and level pills
   are sized in `RailStats` from the measured icon and text, so both get the same padding
   on every side (`--stat-streak`, `--stat-shift-a`, `--stat-shift-b`). The owner checks
