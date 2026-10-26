@@ -85,6 +85,8 @@ export function Achievements() {
   // The level is lifetime XP's, so spending never lowers it; the balance stands in for an
   // older cached copy.
   const lp = levelProgress(s.xpEarned ?? wallet);
+  // What has been spent, counting up while a purchase's coins count the balance down.
+  const spent = s.xpEarned === undefined ? null : Math.max(0, s.xpEarned - wallet);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
   // Locked ones, and the ones bought on this visit (they stay, lit up, with Use it).
@@ -135,13 +137,30 @@ export function Achievements() {
             <span className="ach-hero-label">Level</span>
             <span className="ach-hero-level tabular">{lp.level}</span>
           </div>
-          <div className="ach-hero-xp">
-            <CountingNumber ref={walletRef} value={wallet} className="ach-hero-xp-n tabular" /> XP
+          <div className="ach-hero-wallet">
+            <span className="ach-hero-label">Lifetime</span>
+            <div className="ach-hero-xp">
+              <CountingNumber value={s.xpEarned ?? wallet} className="tabular" /> XP
+            </div>
+            {/* The purchase coins burst out of this number. */}
+            <div className="ach-hero-spend tabular">
+              <CountingNumber ref={walletRef} value={wallet} className="ach-hero-xp-n" /> XP to
+              spend
+            </div>
           </div>
         </div>
         <ProgressBar value={lp.ratio} label="Progress to next level" className="ach-hero-bar" />
         <div className="ach-hero-row tabular">
-          <span>Level {lp.level}</span>
+          {spent === null ? (
+            <span>Level {lp.level}</span>
+          ) : (
+            <span>
+              <strong>
+                <CountingNumber value={spent} /> XP
+              </strong>{' '}
+              spent
+            </span>
+          )}
           <span>
             <strong>{lp.toNext} XP</strong> to level {lp.level + 1}
           </span>

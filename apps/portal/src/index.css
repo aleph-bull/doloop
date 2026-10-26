@@ -8424,6 +8424,19 @@ button.start-subject:hover {
 .ach-hero-xp-n {
   display: inline-block;
 }
+/* Lifetime XP big, set right like the level is set left, with what's left to spend under it. */
+.ach-hero-wallet {
+  text-align: right;
+}
+.ach-hero-spend {
+  margin-top: 2px;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.ach-hero-spend .ach-hero-xp-n {
+  font-weight: 600;
+  color: var(--fg);
+}
 
 /*
  * Buying on Achievements (components/slot/spend.ts): XP coins burst out of the total and fly
@@ -8589,8 +8602,9 @@ button.start-subject:hover {
 }
 .ach-hero-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 12px;
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }
