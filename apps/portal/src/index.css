@@ -8266,6 +8266,170 @@ button.start-subject:hover {
   font-weight: 600;
   color: var(--fg);
 }
+/* Squeezed as coins leave it (components/slot/spend.ts), so it can't stay inline. */
+.ach-hero-xp-n {
+  display: inline-block;
+}
+
+/*
+ * Buying on Achievements (components/slot/spend.ts): XP coins burst out of the total and fly
+ * into what was bought. The layer and everything in it are over the page, never glass, so
+ * they may fade; the card itself only ever moves (see "That includes a fade" in CLAUDE.md).
+ */
+.buy-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+}
+.jack-coin.is-buy {
+  padding: 2px 7px;
+  font-size: var(--text-xs);
+}
+/* The XP total when it's scrolled out of sight: it drops in at the top to pay. */
+.buy-wallet {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+  translate: -50% 0;
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+  font-size: var(--text-base);
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.22);
+  animation: buy-wallet-in 240ms var(--ease-spring) backwards;
+}
+.buy-wallet.is-leaving {
+  animation: buy-wallet-out 260ms var(--ease-out) forwards;
+}
+@keyframes buy-wallet-in {
+  from {
+    transform: translateY(-28px) scale(0.9);
+    opacity: 0;
+  }
+}
+@keyframes buy-wallet-out {
+  to {
+    transform: translateY(-28px) scale(0.9);
+    opacity: 0;
+  }
+}
+/* As the last coin lands: a ring out from the card, which pops. */
+.buy-ring {
+  position: fixed;
+  border: 2px solid var(--accent);
+  animation: buy-ring 640ms var(--ease-out) forwards;
+}
+@keyframes buy-ring {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    opacity: 1;
+  }
+  to {
+    box-shadow: 0 0 0 18px transparent;
+    opacity: 0;
+  }
+}
+.buy-pop {
+  animation: buy-pop 460ms var(--ease-out);
+}
+@keyframes buy-pop {
+  30% {
+    transform: scale(1.03);
+  }
+}
+.buy-float {
+  position: fixed;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  translate: -50% -100%;
+  animation: buy-float 800ms var(--ease-out) forwards;
+}
+@keyframes buy-float {
+  from {
+    transform: translateY(6px) scale(0.6);
+  }
+  25% {
+    transform: translateY(-10px) scale(1.08);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-34px) scale(1);
+    opacity: 0;
+  }
+}
+/* The held count, the moment it goes up. */
+.buy-count {
+  animation: buy-count 420ms var(--ease-spring);
+}
+@keyframes buy-count {
+  from {
+    transform: translateY(6px) scale(0.75);
+  }
+}
+/* Its price and Added share one cell, so the button keeps its width. */
+.btn.buy-btn {
+  display: inline-grid;
+  place-items: center;
+}
+.buy-btn-face {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  visibility: hidden;
+}
+.buy-btn-face[data-shown] {
+  visibility: visible;
+}
+.buy-btn-face.is-added[data-shown] {
+  animation: buy-added 380ms var(--ease-spring);
+}
+@keyframes buy-added {
+  from {
+    transform: translateY(5px) scale(0.6);
+  }
+}
+/* A background just bought comes to life where it was, with a shine across it. */
+.bg-thumb.is-unlocked {
+  animation: bg-unlock 700ms var(--ease-out);
+}
+.bg-thumb.is-unlocked::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / 0.5) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: bg-shine 900ms 120ms var(--ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes bg-unlock {
+  from {
+    filter: grayscale(1) brightness(0.7);
+  }
+}
+@keyframes bg-shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+:root[data-motion='off'] :is(.buy-pop, .buy-count, .buy-btn-face, .bg-thumb.is-unlocked),
+:root[data-motion='off'] .bg-thumb.is-unlocked::after {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) :is(.buy-pop, .buy-count, .buy-btn-face, .bg-thumb.is-unlocked),
+  :root:not([data-motion='on']) .bg-thumb.is-unlocked::after {
+    animation: none;
+  }
+}
 .ach-hero-bar.progress {
   height: 10px;
 }

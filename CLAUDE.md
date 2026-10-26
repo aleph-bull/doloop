@@ -311,6 +311,12 @@ and never explain the difference on screen.
   (`data-jack-target`), which waits at 0:00 and counts up as they land (`JackSlot.tsx`). Its badges show only to people
   using it, and its die emoji on the profile is the one emoji in the UI, at the owner's
   request. See DECISIONS.md.
+- Buying on Achievements (2026-10-25): every purchase there (streak freeze, break day,
+  backgrounds, your own rewards) goes through `usePurchase` in `components/Purchase.tsx`,
+  which runs the coin show in `components/slot/spend.ts`: XP coins burst out of the total and
+  fly into what was bought, and the caches are patched as the last one lands. A new thing to
+  buy on that page should use it too (a card selector, a goal inside it, the call, the patch).
+  See DECISIONS.md.
 - RNG Rolls (2026-10-25): on Achievements below the Shop, 10 XP a roll (×1, ×10 or ×100) spins a
   slot machine for a rarity, 1/2 to 1/32768 (core `rolls.ts`, drawn by `POST /api/rolls`). Each
   rarity has a title and a look that gets louder the rarer (`.roll-fx-*`, `fxLevel`): plain,

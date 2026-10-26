@@ -1,13 +1,17 @@
 import type { CustomReward, RewardView } from '@komogon/core';
+import { useQueryClient } from '@tanstack/react-query';
 import { Gift, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
 import { Button, Chip, Panel, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from './ErrorState';
+import type { Buy } from './Purchase';
 import { RewardDialog } from './RewardDialog';
 import { RewardRedeemed } from './RewardRedeemed';
+import { api } from '../lib/api';
 import { fmtDate } from '../lib/format';
 import {
+  keys,
   useCreateReward,
   useDeleteReward,
   useRedeemReward,
@@ -33,7 +37,7 @@ function RewardCard({
 }) {
   const short = Math.max(0, reward.costXp - xp);
   return (
-    <Panel className="reward-card">
+    <Panel className="reward-card" data-reward={reward.id}>
       <div className="reward-card-head">
         <span className="reward-card-glyph" aria-hidden>
           {reward.emoji ?? <Gift size={20} />}
@@ -115,14 +119,16 @@ function RewardCard({
 
 /**
  * The user's own shop. Komodon supplies the currency and the price floor; everything on the
- * shelf is something the user decided was worth working for.
+ * shelf is something the user decided was worth working for. With `buy` (Achievements), a
+ * reward paid in XP is paid in coins that fly into it before it opens.
  */
-export function RewardShelf() {
+export function RewardShelf({ buy }: { buy?: Buy }) {
   const q = useRewards();
   const create = useCreateReward();
   const update = useUpdateReward();
   const remove = useDeleteReward();
   const redeemMutation = useRedeemReward();
+  const qc = useQueryClient();
   const { toast } = useToast();
 
   const [dialog, setDialog] = useState<{ open: boolean; reward: RewardView | null }>({
@@ -153,6 +159,25 @@ export function RewardShelf() {
   const { rewards, xp, limits, history } = q.data;
 
   const redeem = async (reward: RewardView) => {
+    if (buy && reward.unlock === 'xp') {
+      const res = await buy({
+        key: `reward-${reward.id}`,
+        cost: reward.costXp,
+        card: `[data-reward="${reward.id}"]`,
+        goal: '.reward-card-glyph',
+        // Straight to the API: the shelf refreshes once the coins are in, not under them.
+        call: () => api.redeemReward(reward.id),
+      });
+      for (const key of [keys.rewards, keys.me, keys.shop])
+        void qc.invalidateQueries({ queryKey: key });
+      // A beat for the card's pop before the celebration covers it.
+      if (res)
+        window.setTimeout(
+          () => setCelebrating({ reward: res.reward, xpLeft: res.xp, spent: res.spent }),
+          260,
+        );
+      return;
+    }
     setBusyId(reward.id);
     try {
       const res = await redeemMutation.mutateAsync(reward.id);

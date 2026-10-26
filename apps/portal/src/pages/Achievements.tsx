@@ -7,7 +7,7 @@ import {
   type RollNameChoice,
   type UserSettings,
 } from '@komogon/core';
-import { Award, ChevronDown, Lock } from 'lucide-react';
+import { Award, Check, ChevronDown, Lock } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
@@ -23,6 +23,7 @@ import {
   useToast,
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
+import { CountingNumber, usePurchase } from '../components/Purchase';
 import { RewardShelf } from '../components/RewardShelf';
 import { RollIndex } from '../components/slot/RollIndex';
 import { RollSlot } from '../components/slot/RollSlot';
@@ -32,13 +33,23 @@ import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop, useUpdateSettings } from '../lib/queries';
 import { rollClass } from '../lib/rolls';
 
+type ShopData = Awaited<ReturnType<typeof api.shop>>;
+
 export function Achievements() {
   const shop = useShop();
   const me = useMe();
   const qc = useQueryClient();
+  const update = useUpdateSettings();
   const { toast } = useToast();
   const [breakDate, setBreakDate] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const sounds = me.data?.user.settings.sounds;
+  const { wallet, walletRef, fresh, said, buy } = usePurchase(
+    shop.data?.xp ?? 0,
+    sounds?.enabled ? sounds.volume : 0,
+  );
+  /** Backgrounds bought on this visit stay where they were, lit up, with Use it. */
+  const [kept, setKept] = useState<string[]>([]);
 
   // Arriving from a locked background in Settings (#bg-<id>): scroll to it and light it up.
   const ready = !!shop.data && !!me.data;
@@ -69,7 +80,7 @@ export function Achievements() {
       </div>
     );
   const s = shop.data;
-  const lp = levelProgress(s.xp);
+  const lp = levelProgress(wallet);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
   // Jack mode's badges show once it is on, or once one is earned; the rolls' once you roll.
@@ -94,6 +105,20 @@ export function Achievements() {
     }
   };
 
+  /** What a purchase changed, written in as its last coin lands. */
+  const patchShop = (fn: (d: ShopData) => ShopData) =>
+    qc.setQueryData<ShopData>(keys.shop, (d) => (d ? fn(d) : d));
+  const settle = () => {
+    void qc.invalidateQueries({ queryKey: keys.shop });
+    void qc.invalidateQueries({ queryKey: keys.me });
+    void qc.invalidateQueries({ queryKey: keys.restDays });
+  };
+  const chosen = me.data.user.settings.theme;
+  const pickBackground = (id: string) =>
+    update
+      .mutateAsync({ theme: { backgroundId: id, customBackgroundUrl: null } })
+      .catch((err) => toast(err instanceof Error ? err.message : 'Could not save'));
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="page-title">Achievements</h1>
@@ -105,7 +130,7 @@ export function Achievements() {
             <span className="ach-hero-level tabular">{lp.level}</span>
           </div>
           <div className="ach-hero-xp">
-            <span className="tabular">{s.xp.toLocaleString()}</span> XP
+            <CountingNumber ref={walletRef} value={wallet} className="ach-hero-xp-n tabular" /> XP
           </div>
         </div>
         <ProgressBar value={lp.ratio} label="Progress to next level" className="ach-hero-bar" />
@@ -117,14 +142,17 @@ export function Achievements() {
         </div>
       </Glass>
 
-      <RewardShelf />
+      <RewardShelf buy={buy} />
 
       <section className="flex flex-col gap-3" aria-labelledby="shop-h">
         <h2 id="shop-h" className="section-title">
           Shop
         </h2>
+        <p className="sr-only" aria-live="polite">
+          {said}
+        </p>
         <div className="card-grid">
-          <Panel className="p-5 flex flex-col gap-3">
+          <Panel id="shop-freeze" className="p-5 flex flex-col gap-3">
             <div>
               <div className="font-medium">Streak freeze</div>
               <div className="muted text-sm">
@@ -132,21 +160,41 @@ export function Achievements() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Chip tone="neutral">{s.freeze.held} held</Chip>
+              <Chip
+                key={s.freeze.held}
+                tone="neutral"
+                className={fresh === 'freeze' ? 'buy-count' : undefined}
+              >
+                {s.freeze.held} held
+              </Chip>
               <span className="flex-1" />
-              <Button
-                variant="primary"
-                size="sm"
+              <BuyButton
+                added={fresh === 'freeze'}
                 disabled={s.freeze.held >= s.freeze.max || s.xp < s.freeze.cost}
-                loading={busy === 'freeze'}
-                onClick={() => run('freeze', api.buyFreeze, 'Freeze added')}
+                onClick={() =>
+                  void buy({
+                    key: 'freeze',
+                    cost: s.freeze.cost,
+                    card: '#shop-freeze',
+                    goal: '.chip',
+                    float: '+1',
+                    said: 'Freeze added',
+                    call: api.buyFreeze,
+                    apply: (r) =>
+                      patchShop((d) => ({
+                        ...d,
+                        xp: r.xp,
+                        freeze: { ...d.freeze, held: d.freeze.held + 1 },
+                      })),
+                  }).then(settle)
+                }
               >
                 Buy for {s.freeze.cost} XP
-              </Button>
+              </BuyButton>
             </div>
           </Panel>
 
-          <Panel className="p-5 flex flex-col gap-3">
+          <Panel id="shop-break" className="p-5 flex flex-col gap-3">
             <div>
               <div className="font-medium">Break day</div>
               <div className="muted text-sm">
@@ -158,17 +206,42 @@ export function Achievements() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Chip tone="neutral">{s.breakDay.held} held</Chip>
+              <Chip
+                key={s.breakDay.held}
+                tone="neutral"
+                className={fresh === 'break' ? 'buy-count' : undefined}
+              >
+                {s.breakDay.held} held
+              </Chip>
               <span className="flex-1" />
-              <Button
-                variant="primary"
-                size="sm"
+              <BuyButton
+                added={fresh === 'break'}
                 disabled={s.breakDay.held >= s.breakDay.max || s.xp < s.breakDay.cost}
-                loading={busy === 'break'}
-                onClick={() => run('break', api.buyBreakDay, 'Break day added')}
+                onClick={() =>
+                  void buy({
+                    key: 'break',
+                    cost: s.breakDay.cost,
+                    card: '#shop-break',
+                    goal: '.chip',
+                    float: '+1',
+                    said: 'Break day added',
+                    call: api.buyBreakDay,
+                    apply: (r) =>
+                      patchShop((d) => ({
+                        ...d,
+                        xp: r.xp,
+                        breakDay: {
+                          ...d.breakDay,
+                          held: d.breakDay.held + 1,
+                          boughtThisMonth: d.breakDay.boughtThisMonth + 1,
+                          cost: r.nextCost,
+                        },
+                      })),
+                  }).then(settle)
+                }
               >
                 Buy for {s.breakDay.cost} XP
-              </Button>
+              </BuyButton>
             </div>
             {s.breakDay.held > 0 && (
               <div className="flex items-end gap-2">
@@ -204,26 +277,65 @@ export function Achievements() {
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {s.backgrounds
-            .filter((b) => !b.owned)
-            .map((b) => (
-              <div key={b.id} id={`bg-${b.id}`} className="shop-bg flex flex-col gap-1">
-                <BackgroundThumb id={b.id} theme={theme} label={b.name} disabled />
-                {b.costXp !== null ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={s.xp < b.costXp}
-                    loading={busy === b.id}
-                    onClick={() => run(b.id, () => api.buyBackground(b.id), `${b.name} unlocked`)}
-                  >
-                    {b.costXp} XP
-                  </Button>
-                ) : (
-                  <span className="text-xs muted">Level {b.minLevel}</span>
-                )}
-              </div>
-            ))}
-          {s.backgrounds.every((b) => b.owned) && (
+            .filter((b) => !b.owned || kept.includes(b.id))
+            .map((b) => {
+              const using = b.owned && chosen.backgroundId === b.id && !chosen.customBackgroundUrl;
+              const cost = b.costXp;
+              return (
+                <div key={b.id} id={`bg-${b.id}`} className="shop-bg flex flex-col gap-1">
+                  <BackgroundThumb
+                    id={b.id}
+                    theme={theme}
+                    label={b.name}
+                    disabled={!b.owned}
+                    selected={using}
+                    className={b.owned ? 'is-unlocked' : undefined}
+                    onClick={b.owned ? () => void pickBackground(b.id) : undefined}
+                  />
+                  {b.owned ? (
+                    <Button
+                      size="sm"
+                      variant={using ? 'secondary' : 'primary'}
+                      disabled={using}
+                      onClick={() => void pickBackground(b.id)}
+                    >
+                      {using ? 'In use' : 'Use it'}
+                    </Button>
+                  ) : cost !== null ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled={s.xp < cost}
+                      onClick={() =>
+                        void buy({
+                          key: b.id,
+                          cost,
+                          card: `#bg-${b.id}`,
+                          goal: '.bg-thumb',
+                          said: `${b.name} unlocked`,
+                          call: () => api.buyBackground(b.id),
+                          apply: (r) => {
+                            setKept((k) => [...k, b.id]);
+                            patchShop((d) => ({
+                              ...d,
+                              xp: r.xp,
+                              backgrounds: d.backgrounds.map((x) =>
+                                x.id === b.id ? { ...x, owned: true } : x,
+                              ),
+                            }));
+                          },
+                        }).then(settle)
+                      }
+                    >
+                      {cost} XP
+                    </Button>
+                  ) : (
+                    <span className="text-xs muted">Level {b.minLevel}</span>
+                  )}
+                </div>
+              );
+            })}
+          {s.backgrounds.every((b) => b.owned && !kept.includes(b.id)) && (
             <p className="muted text-sm">Every background is unlocked.</p>
           )}
         </div>
@@ -273,6 +385,39 @@ export function Achievements() {
         </BadgeFold>
       </section>
     </div>
+  );
+}
+
+/**
+ * A shop item's Buy button. For a moment after its coins land it says Added, at the same
+ * width (both labels sit in one cell, one hidden).
+ */
+function BuyButton({
+  added,
+  disabled,
+  onClick,
+  children,
+}: {
+  added: boolean;
+  disabled: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      variant="primary"
+      size="sm"
+      className="buy-btn"
+      disabled={disabled && !added}
+      onClick={added ? undefined : onClick}
+    >
+      <span className="buy-btn-face" data-shown={!added || undefined} aria-hidden={added}>
+        {children}
+      </span>
+      <span className="buy-btn-face is-added" data-shown={added || undefined} aria-hidden={!added}>
+        <Check size={15} aria-hidden /> Added
+      </span>
+    </Button>
   );
 }
 

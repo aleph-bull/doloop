@@ -2713,3 +2713,14 @@ The owner: "ask to enable chrome notifications so users can get notified by nudg
 - **Subscriptions** are `push_subscriptions` (migration **0041_push_subscriptions**; next is 0042), one row per browser keyed by its endpoint: signing in as someone else there moves the row. The API only takes endpoints on the browsers' push services (Google, Mozilla, Apple, Microsoft), or anyone could point the API at any server. Ten browsers an account at most. A browser the push service says is gone (404/410) is deleted.
 - **Sign-out** tells the API to forget this browser, so the next person on it gets nothing of yours; the browser keeps the subscription, and signing back in as you turns it on again. Someone else signing in there drops it (`komogon.push.user`).
 - The bell still lists everything; the switches decide only what pops up.
+
+## Buying on Achievements feels like getting paid in reverse, 2026-10-25 (owner request)
+
+The owner: "make buying anything in the achievements and shop feel really good and satitisfying". Before, every purchase was a spinner in the button and a toast, and a bought background vanished from the grid.
+
+- **The show** (`components/slot/spend.ts`, the slot machine's coins the other way round): on Buy, XP coins burst out of the XP total at the top of the page, which counts down at once, then are drawn one by one into what was bought, a rising coin note each (the slot's coin sounds). The last lands with the rolls' pop, sparks, a ring out from the card and a small pop of the card itself. Coins: 5 for a small price up to 18 for a big one (`coinsFor`). The request goes out on the click and the coins hang until it answers, so a slow server only means they wait in the air; refused, they turn red and fall, and the total counts back up (the error still comes as a toast).
+- **When the XP total is scrolled away** (buying a background lower down), a pill with it drops in at the top of the window to pay from, counts down, and leaves.
+- **Where they land**: the streak freeze and break day "N held" count, which ticks up with a "+1" as the last coin lands, while the button says Added (same width) for a moment; a background's picture, which comes out of grey with a shine and stays where it was with **Use it** (puts it on as the background, then "In use") instead of vanishing; your own reward's icon, then its celebration opens as before.
+- What a purchase changes is written into the caches as the last coin lands (`usePurchase` in `components/Purchase.tsx`), so the count, the button and the picture change with it, not before; the shown XP holds its new value until the refetch agrees, so it never jumps back.
+- Sounds follow the Sounds setting and volume; with motion off there are no coins, and everything just changes, with the pop.
+- The success toasts for buying are gone (a polite live region says "Freeze added" and so on); applying a break day keeps its toast. RNG Rolls was left as it is: it already has the machine.
