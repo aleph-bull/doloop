@@ -5,6 +5,7 @@ import {
   ROLL_BATCHES,
   ROLL_COST,
   ROLL_TICKETS,
+  ROLL_TIERS_COUNT,
   rollBadges,
   rollPayout,
   rollTier,
@@ -15,6 +16,7 @@ import type { Db } from '../db/client';
 import { users, xpTransactions } from '../db/schema';
 import { badRequest } from '../errors';
 import { unlockNewBadges } from '../services/achievements';
+import { holdRolls, prestige } from '../services/rolls';
 import { addXp } from '../services/users';
 import { dt } from '../services/sessions-mapper';
 
@@ -76,6 +78,7 @@ export function rollRoutes(
         ref: String(tier),
       })),
     );
+    await holdRolls(db, userId, tiers);
     const newBest = top > req.user.rollBest && row!.rollBest === top;
     req.user.xp = paid.xp;
     if (won > 0) {
@@ -104,6 +107,67 @@ export function rollRoutes(
       count: row!.rollCount,
       /** What the rolls paid back, all together. */
       won,
+      xp: req.user.xp,
+      fresh,
+    };
+  });
+
+  /**
+   * Prestige: five of a rarity held into one of the next (`tier`), or everything that can
+   * be (`all`). A rarity made this way counts like a rolled one: rarest, name look, badges.
+   */
+  app.post('/api/rolls/prestige', async (req) => {
+    const body = z
+      .object({
+        tier: z
+          .number()
+          .int()
+          .min(1)
+          .max(ROLL_TIERS_COUNT - 1)
+          .optional(),
+        all: z.literal(true).optional(),
+      })
+      .refine((b) => (b.tier === undefined) !== (b.all === undefined), 'Pick a rarity, or all')
+      .parse(req.body);
+    const now = clock();
+    const userId = req.user.id;
+    const result = await prestige(db, userId, body.all ? null : body.tier!);
+    if (!result) throw badRequest('Not enough to prestige.');
+    let top = 0;
+    let hit = req.user.rollStats.hit ?? 0;
+    result.made.forEach((n, i) => {
+      if (n > 0) {
+        top = i + 1;
+        hit |= 1 << (i + 1);
+      }
+    });
+    const before = {
+      count: req.user.rollCount,
+      best: req.user.rollBest,
+      stats: req.user.rollStats,
+    };
+    const stats = { ...req.user.rollStats, hit };
+    const [row] = await db
+      .update(users)
+      .set({ rollBest: sql`greatest(${users.rollBest}, ${top})`, rollStats: stats })
+      .where(eq(users.id, userId))
+      .returning({ rollBest: users.rollBest });
+    const newBest = top > req.user.rollBest && row!.rollBest === top;
+    req.user.rollBest = row!.rollBest;
+    req.user.rollStats = stats;
+    const had = rollBadges(before);
+    const earned = [...rollBadges({ count: req.user.rollCount, best: row!.rollBest, stats })].some(
+      (k) => !had.has(k),
+    );
+    const fresh = earned ? await unlockNewBadges(db, req.user, now) : [];
+    return {
+      /** Held per rarity afterwards, and how many of each this made (index i is tier i + 1). */
+      held: result.held,
+      made: result.made,
+      /** The rarest it made. */
+      tier: top,
+      newBest,
+      best: row!.rollBest,
       xp: req.user.xp,
       fresh,
     };

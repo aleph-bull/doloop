@@ -5,6 +5,16 @@
 
 export const COIN_DROP = 'sounds/coin-drop.mp3';
 export const COIN_COLLECT = 'sounds/coin-collect.mp3';
+/**
+ * The owner's sounds for RNG Rolls (2026-10-25): a pop for the smaller wins, a fanfare for
+ * the rare ones.
+ */
+export const ROLL_POP = 'sounds/roll-pop.mp3';
+export const ROLL_SUCCESS = 'sounds/roll-success.mp3';
+/** From this rarity (1/256) a win gets the fanfare instead of the pop. */
+export const SUCCESS_FROM = 8;
+/** The first rarity rarer than the owner's 1/100 (1/128, Ember) throws confetti. */
+export const CONFETTI_FROM = 7;
 
 /** How far past the number a reel runs before it settles back, in numbers. */
 export const OVERSHOOT = 0.22;

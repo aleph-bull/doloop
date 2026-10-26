@@ -19,26 +19,25 @@ import {
   burstCoins,
   COIN_COLLECT,
   COIN_DROP,
+  CONFETTI_FROM,
   easeOutCubic,
   easeOutQuart,
   OVERSHOOT,
+  ROLL_POP,
+  ROLL_SUCCESS,
   SETTLE_MS,
   stepCoins,
   stillMotion,
+  SUCCESS_FROM,
   textCentre,
   type Coin,
 } from './slot-kit';
 import { SlotLever, type SlotLeverHandle } from './SlotLever';
 
-/** The owner's sounds (2026-10-25): a pop for the smaller wins, a fanfare for the rare ones. */
-const POP = 'sounds/roll-pop.mp3';
-const SUCCESS = 'sounds/roll-success.mp3';
+const POP = ROLL_POP;
+const SUCCESS = ROLL_SUCCESS;
 /** The owner's playing card laid down, trimmed to its snap: the click of each row going by. */
 const REEL_CLICK = 'sounds/reel-card.wav';
-/** From this rarity (1/256) a win gets the fanfare instead of the pop. */
-const SUCCESS_FROM = 8;
-/** The first rarity rarer than the owner's 1/100 (1/128, Ember) throws confetti. */
-const CONFETTI_FROM = 7;
 
 /**
  * Each row of the reel is a roll of its own at the real odds (owner, 2026-10-25: "i shouldnt
@@ -93,21 +92,22 @@ function spunBy(ms: number): number {
 const COIN_STEPS = [1, 2, 3, 5, 10, 20, 25, 50, 100, 200, 250, 500];
 
 /**
- * How many coins the winnings break into, and what each carries: one each up to 12, then a
- * round amount that adds up exactly, as near 14 coins as one allows (the last coin always
- * brings the XP to the exact total).
+ * How many coins the winnings break into, and what each carries. Plenty of them (owner: "spit
+ * more coins ... minimum 2 even if it doesnt quite make sense"): a small win throws two coins
+ * for each XP, at least two; a bigger one a round amount that adds up, as near 20 coins as
+ * one allows. The XP counts up as they land and the last always brings it to the exact total.
  */
 function coinsFor(won: number): { count: number; each: number } {
-  if (won <= 12) return { count: won, each: 1 };
+  if (won <= 8) return { count: Math.max(2, won * 2), each: 1 };
   let best: { count: number; each: number } | null = null;
   for (const each of COIN_STEPS) {
     if (won % each !== 0) continue;
     const count = won / each;
-    if (count < 6 || count > 28) continue;
-    if (!best || Math.abs(count - 14) < Math.abs(best.count - 14)) best = { count, each };
+    if (count < 12 || count > 32) continue;
+    if (!best || Math.abs(count - 20) < Math.abs(best.count - 20)) best = { count, each };
   }
   if (best) return best;
-  const each = Math.ceil(won / 20);
+  const each = Math.ceil(won / 24);
   return { count: Math.ceil(won / each), each };
 }
 

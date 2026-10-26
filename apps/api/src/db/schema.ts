@@ -348,6 +348,24 @@ export const xpTransactions = pgTable(
   (t) => [index('xp_tx_user_at_idx').on(t.userId, t.at)],
 );
 
+/**
+ * RNG Rolls held, per rarity (core rolls.ts): each roll adds one of its rarity, and prestige
+ * takes five of one to add one of the next. Kept apart from the ledger (which records every
+ * roll) so a prestige can take and give in one transaction.
+ */
+export const rollHoldings = pgTable(
+  'roll_holdings',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** 1 is 1/2, 15 is 1/32768. */
+    tier: integer('tier').notNull(),
+    held: integer('held').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.tier] })],
+);
+
 /** Every change to a node's estimate, for estimate-accuracy analytics. */
 export const estimateChanges = pgTable(
   'estimate_changes',
@@ -1088,6 +1106,7 @@ export const schema = {
   streakEvents,
   userAssets,
   customBackgrounds,
+  rollHoldings,
   posts,
   postMedia,
   mediaUploads,

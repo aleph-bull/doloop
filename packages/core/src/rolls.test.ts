@@ -4,6 +4,9 @@ import { withDefaults } from './defaults';
 import {
   advanceRollStats,
   nameTier,
+  PRESTIGE_RATE,
+  prestigeAll,
+  prestigeOnce,
   rollBadges,
   ROLL_TICKETS,
   ROLL_TIERS,
@@ -130,5 +133,31 @@ describe('rolls', () => {
     for (const k of ['roll-512', 'roll-double', 'roll-beginner', 'roll-rare'])
       expect(done.has(k)).toBe(true);
     expect(done.has('roll-1024')).toBe(false);
+  });
+});
+
+describe('prestige', () => {
+  it('makes one of the next rarity from five', () => {
+    expect(prestigeOnce([12, 1], 1)).toEqual({
+      held: [7, 2, ...Array(13).fill(0)],
+      made: [0, 1, ...Array(13).fill(0)],
+    });
+    expect(prestigeOnce([12], 1, 2)?.held.slice(0, 2)).toEqual([2, 2]);
+    expect(prestigeOnce([4], 1)).toBeNull();
+    // Nothing past the rarest.
+    expect(prestigeOnce(Array(15).fill(9), 15)).toBeNull();
+  });
+
+  it('prestiges everything it can, carrying up as it goes', () => {
+    // 27 commons make 5 uncommons (2 left); with 1 held that is 6, making 1 good (1 left).
+    const r = prestigeAll([27, 1]);
+    expect(r?.held.slice(0, 3)).toEqual([2, 1, 1]);
+    expect(r?.made.slice(0, 3)).toEqual([0, 5, 1]);
+    expect(prestigeAll([4, 4, 4])).toBeNull();
+  });
+
+  it('is two and a half times dearer than rolling for it', () => {
+    // A rarity is worth two of the one below; five go for one.
+    expect(PRESTIGE_RATE / 2).toBe(2.5);
   });
 });

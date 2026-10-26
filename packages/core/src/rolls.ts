@@ -184,3 +184,59 @@ export function rollBadges(rolls: RollRecordInput): Set<string> {
   if (((s.hit ?? 0) & all) === all) done.add('roll-full-house');
   return done;
 }
+
+/**
+ * Prestige (owner, 2026-10-26: "combine ... to make 1 of the next level", at 5 to 1): five of
+ * a rarity held make one of the next. Exactly fair would be 2 to 1 (each rarity is half as
+ * likely as the one below), so 5 to 1 costs about two and a half times what rolling for it
+ * would: a use for spare commons that doesn't make the rare titles cheap. A rarity made this
+ * way counts like a rolled one: rarest, title, name look and badges.
+ */
+export const PRESTIGE_RATE = 5;
+
+/** What prestiging leaves: the rolls held per rarity, and how many of each it made. */
+export interface PrestigeResult {
+  /** Index i is tier i + 1. */
+  held: number[];
+  made: number[];
+}
+
+/** `held` as one count per rarity, missing ones as 0. */
+function heldOf(held: readonly number[]): number[] {
+  return Array.from({ length: ROLL_TIERS_COUNT }, (_, i) => Math.max(0, held[i] ?? 0));
+}
+
+/** Prestige five of `tier` into one of the next, `times` over; null when there aren't enough. */
+export function prestigeOnce(
+  held: readonly number[],
+  tier: number,
+  times = 1,
+): PrestigeResult | null {
+  if (tier < 1 || tier >= ROLL_TIERS_COUNT || times < 1) return null;
+  const next = heldOf(held);
+  if (next[tier - 1]! < PRESTIGE_RATE * times) return null;
+  const made = heldOf([]);
+  next[tier - 1]! -= PRESTIGE_RATE * times;
+  next[tier]! += times;
+  made[tier]! += times;
+  return { held: next, made };
+}
+
+/**
+ * Prestige everything it can, commonest first, so what one rarity makes can go on into the
+ * next; null when nothing can be.
+ */
+export function prestigeAll(held: readonly number[]): PrestigeResult | null {
+  const next = heldOf(held);
+  const made = heldOf([]);
+  let any = false;
+  for (let i = 0; i < ROLL_TIERS_COUNT - 1; i++) {
+    const times = Math.floor(next[i]! / PRESTIGE_RATE);
+    if (times === 0) continue;
+    any = true;
+    next[i]! -= PRESTIGE_RATE * times;
+    next[i + 1]! += times;
+    made[i + 1]! += times;
+  }
+  return any ? { held: next, made } : null;
+}

@@ -334,7 +334,8 @@ and never explain the difference on screen.
   then from 1/32 a flowing gradient, a shine, a glow and a colour cycle. A name wears one by
   choice, from Sapphire up (`settings.rolls.name`, `nameTier` on every person; render names with `named()` from
   `lib/rolls.ts`). Gambling feats and rarities past 1/256 are badges (`rollBadges`,
-  `users.roll_stats`). The machine shares its lever, motion and coins with Jack mode's
+  `users.roll_stats`). Rolls are held per rarity (`roll_holdings`) and prestige turns five of
+  one into one of the next (`POST /api/rolls/prestige`). The machine shares its lever, motion and coins with Jack mode's
   (`components/slot/`): change them there for both. See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
   `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table

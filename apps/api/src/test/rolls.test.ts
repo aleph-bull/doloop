@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { users, xpTransactions } from '../db/schema';
+import { rollHoldings, users, xpTransactions } from '../db/schema';
 import { createTestApp, USER_A, USER_B, type TestApp } from './helpers';
 
 let t: TestApp;
@@ -165,5 +165,49 @@ describe('rolls', () => {
     const profile = (await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` })).json();
     expect(profile.profile).toMatchObject({ rollBest: 0, nameTier: null });
     expect(profile.rolls).toBeNull();
+  });
+});
+
+describe('prestige', () => {
+  const heldOfB = async () =>
+    (await t.api({ method: 'GET', url: '/api/shop', token: t.tokenB })).json().rolls.counts;
+  const prestigeB = (payload: Record<string, unknown>) =>
+    t.api({ method: 'POST', url: '/api/rolls/prestige', token: t.tokenB, payload });
+
+  it('turns five of a rarity into one of the next', async () => {
+    await t.db.update(users).set({ xp: 1000 }).where(eq(users.id, USER_B.id));
+    queue = Array(12).fill(1);
+    await t.api({ method: 'POST', url: '/api/rolls', token: t.tokenB, payload: { count: 10 } });
+    expect((await heldOfB()).slice(0, 2)).toEqual([10, 0]);
+    const res = await prestigeB({ tier: 1 });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ tier: 2, newBest: true, best: 2 });
+    expect(res.json().held.slice(0, 2)).toEqual([5, 1]);
+    expect((await heldOfB()).slice(0, 2)).toEqual([5, 1]);
+    // Rolls held are not rolls rolled: the count stays ten.
+    expect(
+      (await t.api({ method: 'GET', url: '/api/shop', token: t.tokenB })).json().rolls.count,
+    ).toBe(10);
+  });
+
+  it('refuses without five, past the rarest, or with nothing to say', async () => {
+    expect((await prestigeB({ tier: 2 })).statusCode).toBe(400);
+    expect((await prestigeB({ tier: 15 })).statusCode).toBe(400);
+    expect((await prestigeB({})).statusCode).toBe(400);
+  });
+
+  it('prestiges everything it can, and a made rarity counts as the rarest', async () => {
+    await t.db
+      .insert(rollHoldings)
+      .values({ userId: USER_B.id, tier: 4, held: 25 })
+      .onConflictDoUpdate({ target: [rollHoldings.userId, rollHoldings.tier], set: { held: 25 } });
+    const res = await prestigeB({ all: true });
+    // 5 commons make 1 more uncommon (2); 25 of 1/16 make 5 of 1/32, which make 1 of 1/64.
+    expect(res.json().held.slice(0, 6)).toEqual([0, 2, 0, 0, 0, 1]);
+    expect(res.json().made.slice(0, 6)).toEqual([0, 1, 0, 0, 5, 1]);
+    expect(res.json()).toMatchObject({ tier: 6, newBest: true, best: 6, fresh: ['roll-rare'] });
+    const profile = (await t.api({ method: 'GET', url: `/api/profiles/${USER_B.id}` })).json();
+    expect(profile.profile.rollBest).toBe(6);
+    expect(profile.rolls.counts.slice(0, 6)).toEqual([0, 2, 0, 0, 0, 1]);
   });
 });

@@ -1,5 +1,6 @@
 import {
   levelProgress,
+  PRESTIGE_RATE,
   ROLL_NAME_TIER,
   ROLL_TIERS,
   rollOdds,
@@ -15,6 +16,7 @@ import {
   BackgroundThumb,
   Button,
   Chip,
+  fireConfetti,
   Glass,
   Input,
   Panel,
@@ -27,11 +29,14 @@ import { CountingNumber, usePurchase } from '../components/Purchase';
 import { RewardShelf } from '../components/RewardShelf';
 import { RollIndex } from '../components/slot/RollIndex';
 import { RollSlot } from '../components/slot/RollSlot';
+import { CONFETTI_FROM, ROLL_POP, ROLL_SUCCESS, SUCCESS_FROM } from '../components/slot/slot-kit';
+import { announceAchievements } from '../lib/achievements';
 import { api, type RollRecord, type RollResult } from '../lib/api';
 import { useResolvedTheme } from '../lib/appearance';
 import { fmtDate } from '../lib/format';
 import { keys, useMe, useShop, useUpdateSettings } from '../lib/queries';
 import { rollClass } from '../lib/rolls';
+import { playEffect } from '../lib/sounds';
 
 type ShopData = Awaited<ReturnType<typeof api.shop>>;
 
@@ -472,7 +477,14 @@ function Rolls({
   const update = useUpdateSettings();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [prestiging, setPrestiging] = useState(false);
+  /** What the last prestige made, to flash those cards. */
+  const [made, setMade] = useState<{ tiers: number[]; key: number }>({ tiers: [], key: 0 });
   const best = rollTierInfo(record.best);
+  // Any rarity, short of the rarest, held five times or more.
+  const canPrestige = record.counts.some(
+    (n, i) => i < record.counts.length - 1 && n >= PRESTIGE_RATE,
+  );
   const save = (rolls: Partial<UserSettings['rolls']>) =>
     update
       .mutateAsync({ rolls })
@@ -487,6 +499,31 @@ function Rolls({
       for (const t of r.tiers ?? [r.tier]) counts[t - 1] = (counts[t - 1] ?? 0) + 1;
       return { ...shop, xp: r.xp, rolls: { ...shop.rolls, best: r.best, count: r.count, counts } };
     });
+  /** Prestige one rarity, or everything (`null`): the cards change, flash and sound. */
+  const prestigeNow = async (tier: number | null) => {
+    setPrestiging(true);
+    try {
+      const r = await api.prestige(tier === null ? { all: true } : { tier });
+      qc.setQueryData<Awaited<ReturnType<typeof api.shop>>>(keys.shop, (shop) =>
+        shop?.rolls
+          ? { ...shop, xp: r.xp, rolls: { ...shop.rolls, best: r.best, counts: r.held } }
+          : shop,
+      );
+      setMade((m) => ({ tiers: r.made.flatMap((n, i) => (n > 0 ? [i + 1] : [])), key: m.key + 1 }));
+      if (r.tier >= SUCCESS_FROM) playEffect(ROLL_SUCCESS, volume);
+      else playEffect(ROLL_POP, volume, 0.85 + 0.05 * r.tier);
+      if (confetti && r.tier >= CONFETTI_FROM)
+        fireConfetti({ count: r.tier >= 8 ? 140 : 60, durationMs: 1800 });
+      const top = rollTierInfo(r.tier);
+      if (r.newBest && top) toast(`New record · ${top.title}`, { tone: 'ok' });
+      if (r.fresh.length) announceAchievements(r.fresh);
+      void qc.invalidateQueries({ queryKey: keys.me });
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not prestige');
+    } finally {
+      setPrestiging(false);
+    }
+  };
   const close = () => {
     setOpen(false);
     void qc.invalidateQueries({ queryKey: keys.shop });
@@ -512,11 +549,29 @@ function Rolls({
               </span>
             )}
           </div>
-          <Button variant="primary" disabled={xp < record.cost} onClick={() => setOpen(true)}>
-            Roll for {record.cost} XP
-          </Button>
+          <div className="rng-actions">
+            {canPrestige && (
+              <Button
+                variant="secondary"
+                loading={prestiging}
+                onClick={() => void prestigeNow(null)}
+              >
+                Prestige all
+              </Button>
+            )}
+            <Button variant="primary" disabled={xp < record.cost} onClick={() => setOpen(true)}>
+              Roll for {record.cost} XP
+            </Button>
+          </div>
         </div>
-        <RollIndex counts={record.counts} best={record.best} />
+        <RollIndex
+          counts={record.counts}
+          best={record.best}
+          onPrestige={(tier) => void prestigeNow(tier)}
+          busy={prestiging}
+          made={made.tiers}
+          madeKey={made.key}
+        />
         <div className="rng-options">
           <label className="rng-option">
             <input

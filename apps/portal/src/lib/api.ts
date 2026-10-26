@@ -655,6 +655,19 @@ export interface RollResult {
   fresh: string[];
 }
 
+/** A prestige: five of a rarity into one of the next, or everything that can be. */
+export interface PrestigeResponse {
+  /** Held per rarity afterwards, and how many of each it made (index i is tier i + 1). */
+  held: number[];
+  made: number[];
+  /** The rarest it made. */
+  tier: number;
+  newBest: boolean;
+  best: number;
+  xp: number;
+  fresh: string[];
+}
+
 /** Someone's RNG Rolls on their profile, when they show them. */
 export interface ProfileRolls {
   best: number;
@@ -924,6 +937,8 @@ export const api = {
       rolls?: RollRecord;
     }>('GET', '/api/shop'),
   roll: (count = 1) => request<RollResult>('POST', '/api/rolls', { count }),
+  prestige: (body: { tier: number } | { all: true }) =>
+    request<PrestigeResponse>('POST', '/api/rolls/prestige', body),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>
