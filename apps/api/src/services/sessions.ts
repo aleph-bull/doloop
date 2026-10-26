@@ -290,6 +290,8 @@ export interface EndSummary {
   session: Session;
   xp: SessionXpBreakdown;
   xpTotal: number;
+  /** Lifetime XP, for the level and its bar. */
+  xpEarned: number;
   levelBefore: number;
   levelAfter: number;
   leveledUp: boolean;
@@ -444,6 +446,7 @@ export async function trimSession(
       ref: row.id,
     });
     user.xp = saved.xp;
+    user.xpEarned = saved.xpEarned;
     user.level = saved.level;
   }
 
@@ -493,6 +496,8 @@ export async function trimSession(
 export interface CountSummary {
   session: Session;
   xpTotal: number;
+  /** Lifetime XP, for the level and its bar. */
+  xpEarned: number;
   level: number;
   streak: { current: number; longest: number; weeks: { current: number; longest: number } };
   /** Badges the session earned that no longer hold now it doesn't count, and were taken back. */
@@ -537,6 +542,7 @@ export async function setSessionCounted(
         ref: row.id,
       });
       user.xp = totals.xp;
+      user.xpEarned = totals.xpEarned;
       user.level = totals.level;
     }
     const { dayStartHour } = settingsOf(user).streak;
@@ -570,6 +576,7 @@ export async function setSessionCounted(
     session: toSession(saved),
     // After any badges taken back or paid again.
     xpTotal: user.xp,
+    xpEarned: user.xpEarned,
     level: user.level,
     streak: {
       current: streakSync.streak.current,
@@ -876,6 +883,7 @@ async function finalize(
     .insert(xpTransactions)
     .values({ userId: user.id, at: dt(now), delta: xp.total, kind: 'session', ref: row.id });
   user.xp = xpTotal;
+  user.xpEarned = totals.xpEarned;
   user.level = levelAfter;
 
   const settings = settingsOf(user);
@@ -950,6 +958,7 @@ async function finalize(
     xp,
     // After any badges this session unlocked were paid.
     xpTotal: user.xp,
+    xpEarned: user.xpEarned,
     levelBefore,
     levelAfter,
     leveledUp: levelAfter > levelBefore,

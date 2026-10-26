@@ -201,6 +201,8 @@ export interface EndSummary {
   session: Session;
   xp: SessionXpBreakdown;
   xpTotal: number;
+  /** Lifetime XP, for the level and its bar. Optional for older APIs. */
+  xpEarned?: number;
   levelBefore: number;
   levelAfter: number;
   leveledUp: boolean;
@@ -229,6 +231,8 @@ export type HistorySession = Session & { title: string };
 export interface CountSummary {
   session: Session;
   xpTotal: number;
+  /** Lifetime XP, for the level and its bar. Optional for older APIs. */
+  xpEarned?: number;
   level: number;
   streak: { current: number; longest: number; weeks: WeekStreak };
   badgesRevoked: string[];
@@ -619,6 +623,8 @@ export interface ProfileStats {
   level: number;
   /** How far into the level, 0 to 1. Optional for older cached copies. */
   levelRatio?: number;
+  /** Every XP they have earned, spent or not. Optional for older cached copies. */
+  xpEarned?: number;
   /** Break Jack mode's slot machine gave and took; null before the first spin. */
   jack?: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
@@ -885,6 +891,8 @@ export const api = {
   shop: () =>
     request<{
       xp: number;
+      /** Every XP earned, spent or not: the level comes from it. Optional for older copies. */
+      xpEarned?: number;
       level: number;
       streak: User['streak'];
       freeze: { cost: number; held: number; max: number };

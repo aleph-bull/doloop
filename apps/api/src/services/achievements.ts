@@ -76,6 +76,7 @@ async function payBadges(db: Db, user: UserRow, keys: string[], now: string, sig
   const total = keys.reduce((sum, k) => sum + badgeXp(k), 0);
   const after = await addXp(db, userId, sign * total, { withLevel: true });
   user.xp = after.xp;
+  user.xpEarned = after.xpEarned;
   user.level = after.level;
   await db.insert(xpTransactions).values(
     keys.map((key) => ({

@@ -79,8 +79,10 @@ export function rollRoutes(
     const newBest = top > req.user.rollBest && row!.rollBest === top;
     req.user.xp = paid.xp;
     if (won > 0) {
+      // Winnings are XP gained, so they count toward lifetime XP as well.
       const after = await addXp(db, userId, won, { withLevel: true });
       req.user.xp = after.xp;
+      req.user.xpEarned = after.xpEarned;
       req.user.level = after.level;
     }
     req.user.rollBest = row!.rollBest;

@@ -53,6 +53,7 @@ export function shopRoutes(app: FastifyInstance, db: Db, clock: () => string) {
     const bought = await breakDaysBoughtThisMonth(db, req.user.id, now, req.user.timezone);
     return {
       xp: req.user.xp,
+      xpEarned: req.user.xpEarned,
       level: req.user.level,
       streak: streak.streak,
       freeze: { cost: SHOP.FREEZE_COST, held: streak.streak.freezesHeld, max: SHOP.MAX_FREEZES },

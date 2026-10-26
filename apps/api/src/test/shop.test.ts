@@ -139,4 +139,57 @@ describe('shop', () => {
     const session = await t.api({ method: 'GET', url: `/api/sessions/${s}` });
     expect(session.json().session.badgesAwarded).toEqual(['first-session', 'first-review']);
   });
+
+  it('never lowers the level by spending, and levels from lifetime XP after', async () => {
+    await t.db
+      .update(users)
+      .set({ xp: 3700, xpEarned: 3700, level: 6 })
+      .where(eq(users.id, USER_A.id));
+    // The dearest background left, so what is left is well inside level 5 (2,500 to 3,600).
+    const listed = (await t.api({ method: 'GET', url: '/api/shop' })).json().backgrounds as Array<{
+      id: string;
+      costXp: number | null;
+      owned: boolean;
+    }>;
+    const bg = listed
+      .filter((b) => b.costXp !== null && !b.owned)
+      .sort((a, b) => b.costXp! - a.costXp!)[0]!;
+    const left = 3700 - bg.costXp!;
+    expect(left).toBeLessThan(3400);
+    const bought = await t.api({
+      method: 'POST',
+      url: '/api/shop/background',
+      payload: { id: bg.id },
+    });
+    expect(bought.statusCode).toBe(200);
+    let me = (await t.api({ method: 'GET', url: '/api/me' })).json().user;
+    // Any badge the purchase unlocked pays into both.
+    expect(me.xpEarned - 3700).toBe(me.xp - left);
+    expect(me.level).toBe(6);
+
+    // The balance alone would be level 5: a session's XP goes on both, the level stays lifetime's.
+    const node = (
+      await t.api({ method: 'POST', url: '/api/nodes', payload: { title: 'After spending' } })
+    ).json().node;
+    const s = (
+      await t.api({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: { nodeId: node.id, mode: 'unlimited' },
+      })
+    ).json().active.session.id;
+    advanceClock(t, 20);
+    const end = await t.api({
+      method: 'POST',
+      url: `/api/sessions/${s}/end`,
+      payload: { review: { skipped: true } },
+    });
+    const summary = end.json().summary;
+    expect(summary.levelAfter).toBe(6);
+    expect(summary.xpEarned - 3700).toBe(summary.xpTotal - left);
+    me = (await t.api({ method: 'GET', url: '/api/me' })).json().user;
+    expect(me).toMatchObject({ level: 6, xp: summary.xpTotal, xpEarned: summary.xpEarned });
+    const shop = (await t.api({ method: 'GET', url: '/api/shop' })).json();
+    expect(shop.xpEarned).toBe(me.xpEarned);
+  });
 });

@@ -309,7 +309,7 @@ export async function buildJerryWorld(
     const xp = rows.reduce((sum, r) => sum + r.row.xpAwarded, 0);
     await db
       .update(users)
-      .set({ xp, level: levelForXp(xp) })
+      .set({ xp, xpEarned: xp, level: levelForXp(xp) })
       .where(eqId(userId));
     return byDay;
   };

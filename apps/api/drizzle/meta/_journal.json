@@ -295,6 +295,13 @@
       "when": 1792979017206,
       "tag": "0041_push_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1792986321594,
+      "tag": "0042_lifetime_xp",
+      "breakpoints": true
     }
   ]
 }

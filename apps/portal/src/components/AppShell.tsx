@@ -700,7 +700,7 @@ export function AppShell() {
   }, [measureCrowd, measureIndicator, revealActive]);
 
   const user = me.data?.user;
-  const lp = user ? levelProgress(user.xp) : null;
+  const lp = user ? levelProgress(user.xpEarned ?? user.xp) : null;
 
   return (
     <>
@@ -924,7 +924,7 @@ export function AppShell() {
                   day streak, {user.streak.weeks?.current ?? 0} week streak
                 </span>
               </NavLink>
-              <LevelPill xp={user.xp} level={user.level} />
+              <LevelPill xp={user.xpEarned ?? user.xp} level={user.level} />
             </div>
           )}
           {isAdmin && (

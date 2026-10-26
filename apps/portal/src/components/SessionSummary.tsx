@@ -49,7 +49,10 @@ export function SessionSummary({ summary, phrasesEnabled, onTrimmed }: SessionSu
     }
   };
   const streak = recount?.streak ?? summary.streak;
-  const lp = levelProgress(recount?.xpTotal ?? summary.xpTotal);
+  // The level comes from lifetime XP; the balance stands in for an older API.
+  const lp = levelProgress(
+    recount ? (recount.xpEarned ?? recount.xpTotal) : (summary.xpEarned ?? summary.xpTotal),
+  );
   const { workSeconds, breakSeconds, idleSeconds } = summary.session;
   const xp = summary.xp;
   const effortScore = summary.session.review?.effort ?? null;

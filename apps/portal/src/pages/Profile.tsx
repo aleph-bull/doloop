@@ -483,7 +483,9 @@ export function Profile() {
           <Panel as="section" className="rc-tile profile-totals" aria-label="Totals">
             <div className="rc-tile-head">
               <h2 className="rc-tile-title">Totals</h2>
-              {stats.level > 0 && <Level level={stats.level} ratio={stats.levelRatio} />}
+              {stats.level > 0 && (
+                <Level level={stats.level} ratio={stats.levelRatio} xp={stats.xpEarned} />
+              )}
             </div>
             {totals.length === 0 && !weekly ? (
               <p className="muted text-sm">
@@ -540,8 +542,19 @@ export function Profile() {
   );
 }
 
-/** The level with a slim bar of how far into it they are. No XP figures: those stay on Achievements. */
-function Level({ level, ratio }: { level: number; ratio: number | undefined }) {
+/**
+ * The level, the XP earned in all (never the balance: spending doesn't show here, owner
+ * 2026-10-25) and a slim bar of how far into the level they are.
+ */
+function Level({
+  level,
+  ratio,
+  xp,
+}: {
+  level: number;
+  ratio: number | undefined;
+  xp: number | undefined;
+}) {
   const pct = ratio === undefined ? null : Math.round(Math.max(0, Math.min(1, ratio)) * 100);
   return (
     <div
@@ -550,6 +563,9 @@ function Level({ level, ratio }: { level: number; ratio: number | undefined }) {
     >
       <Trophy size={13} aria-hidden />
       Level {level}
+      {xp !== undefined && (
+        <span className="profile-level-xp tabular">{xp.toLocaleString()} XP</span>
+      )}
       {pct !== null && (
         <ProgressBar
           value={pct / 100}

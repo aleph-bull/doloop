@@ -140,6 +140,7 @@ export function toUser(row: UserRow): User {
     createdAt: row.createdAt.toISOString(),
     settings: settingsOf(row),
     xp: row.xp,
+    xpEarned: row.xpEarned,
     level: row.level,
     streak: row.streak,
     devAccount: row.devAccount,
@@ -409,36 +410,31 @@ export async function setUsername(
 }
 
 /**
- * Add `delta` XP (negative to take some away, never below zero) in one statement, so two
- * requests landing together both count. `withLevel` also moves the stored level to match.
- * Returns the totals as saved.
+ * Earn `delta` XP, or take some back when it is negative (never below zero), in one
+ * statement, so two requests landing together both count. It goes on the balance and on
+ * the lifetime total alike; spending is never done through here. `withLevel` also moves the
+ * stored level to match the lifetime total. Returns the totals as saved.
  */
 export async function addXp(
   db: Db,
   userId: string,
   delta: number,
   opts: { withLevel?: boolean } = {},
-): Promise<{ xp: number; level: number }> {
+): Promise<{ xp: number; xpEarned: number; level: number }> {
+  const d = Math.round(delta);
   const [row] = await db
     .update(users)
-    .set({ xp: sql`greatest(0, ${users.xp} + ${Math.round(delta)})` })
+    .set({
+      xp: sql`greatest(0, ${users.xp} + ${d})`,
+      xpEarned: sql`greatest(0, ${users.xpEarned} + ${d})`,
+    })
     .where(eq(users.id, userId))
-    .returning({ xp: users.xp, level: users.level });
-  if (!row) return { xp: 0, level: 0 };
+    .returning({ xp: users.xp, xpEarned: users.xpEarned, level: users.level });
+  if (!row) return { xp: 0, xpEarned: 0, level: 0 };
   if (!opts.withLevel) return row;
-  const level = levelForXp(row.xp);
+  const level = levelForXp(row.xpEarned);
   if (level !== row.level) await db.update(users).set({ level }).where(eq(users.id, userId));
-  return { xp: row.xp, level };
-}
-
-export async function setXp(
-  db: Db,
-  userId: string,
-  xp: number,
-): Promise<{ xp: number; level: number }> {
-  const level = levelForXp(xp);
-  await db.update(users).set({ xp, level }).where(eq(users.id, userId));
-  return { xp, level };
+  return { ...row, level };
 }
 
 export async function regenerateIcsToken(db: Db, userId: string): Promise<string> {

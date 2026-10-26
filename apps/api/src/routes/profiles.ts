@@ -81,8 +81,10 @@ export interface ProfileStats {
   last28Minutes: number;
   streak: { current: number; longest: number; weeks: { current: number; longest: number } };
   level: number;
-  /** How far into the level they are, 0 to 1. The XP itself stays on Achievements. */
+  /** How far into the level they are, 0 to 1, by lifetime XP. */
   levelRatio: number;
+  /** Every XP they have earned, spent or not (the balance stays on Achievements). */
+  xpEarned: number;
   /** Break Jack mode's slot machine gave and took, all time; null before the first spin. */
   jack: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
 }
@@ -212,7 +214,8 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
               weeks: weekStreakNumbers(row.streak),
             },
             level: row.level,
-            levelRatio: levelProgress(row.xp).ratio,
+            levelRatio: levelProgress(row.xpEarned).ratio,
+            xpEarned: row.xpEarned,
             jack:
               jack.rolls > 0
                 ? { rolls: jack.rolls, wonSeconds: jack.wonSeconds, lostSeconds: jack.lostSeconds }

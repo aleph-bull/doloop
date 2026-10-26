@@ -207,6 +207,7 @@ export async function deleteSession(db: Db, user: UserRow, sessionId: string, no
       ref: row.id,
     });
     user.xp = saved.xp;
+    user.xpEarned = saved.xpEarned;
     user.level = saved.level;
   }
   const badgesRevoked = await revokeLapsedBadges(db, user, row.badgesAwarded, now);

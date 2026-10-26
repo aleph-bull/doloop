@@ -37,7 +37,13 @@ export const users = pgTable('users', {
   timezone: text('timezone').notNull().default('UTC'),
   createdAt: ts('created_at').notNull().defaultNow(),
   settings: jsonb('settings').$type<Partial<UserSettings>>().notNull().default({}),
+  /** The XP to spend: what was earned, less what the shop, rewards and rolls took. */
   xp: integer('xp').notNull().default(0),
+  /**
+   * Every XP ever earned, less any taken back (a session that stops counting, an unticked
+   * routine). Spending never touches it; the level is worked out from it.
+   */
+  xpEarned: integer('xp_earned').notNull().default(0),
   level: integer('level').notNull().default(0),
   streak: jsonb('streak')
     .$type<StreakState>()

@@ -191,6 +191,11 @@ and never explain the difference on screen.
 - XP amounts appear only on Achievements (and the "+N XP" on ticking a routine, and the
   50 XP asked before another uploaded background is added). Not on Today, Routines,
   Settings, Analytics or the session overlay.
+- **The level is lifetime XP's** (`users.xp_earned`, 2026-10-25): earning and taking XP back go
+  through `addXp`, which moves the balance and the lifetime total together (a roll's winnings
+  count as gained); spending writes the balance only. Every level and level bar reads `xpEarned`, never `xp`, so buying never
+  lowers a level. Profiles show the lifetime total beside the level (owner); the balance
+  stays on Achievements.
 - Analytics shows wins only: never a discouraging or zero-value card.
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
 - People are compared in two places, both asked for by the owner: the leaderboard (Social ›

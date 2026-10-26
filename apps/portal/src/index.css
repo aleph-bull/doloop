@@ -9353,6 +9353,11 @@ button.start-subject:hover {
   align-items: center;
   gap: 5px;
 }
+/* The XP earned in all, after the level: "Level 6 · 3,915 XP". */
+.profile-level-xp::before {
+  content: '·';
+  margin-right: 5px;
+}
 /* The grid is wider than a phone; it scrolls sideways rather than squashing. */
 .profile-grid {
   overflow-x: auto;

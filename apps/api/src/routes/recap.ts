@@ -245,7 +245,7 @@ export function recapRoutes(
       }),
       studyVsGrades: studyVsGrades(gradedCourses),
       insights: highlights.slice(0, 3),
-      level: { xp: req.user.xp, ...levelProgress(req.user.xp) },
+      level: { xp: req.user.xp, ...levelProgress(req.user.xpEarned) },
       totals: {
         minutes: cumulative.totalMinutes,
         sessions: sessions.length,

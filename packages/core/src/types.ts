@@ -451,7 +451,13 @@ export interface User {
   timezone: string; // IANA, e.g. "America/Toronto"
   createdAt: ISODateTime;
   settings: UserSettings;
+  /** XP to spend. */
   xp: number;
+  /**
+   * Every XP ever earned; the level and its bar come from this, so spending never lowers
+   * them. Optional because the portal's offline cache can hold a user from before it existed.
+   */
+  xpEarned?: number;
   level: number;
   streak: StreakState;
   /**

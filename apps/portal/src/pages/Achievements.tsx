@@ -82,7 +82,9 @@ export function Achievements() {
       </div>
     );
   const s = shop.data;
-  const lp = levelProgress(wallet);
+  // The level is lifetime XP's, so spending never lowers it; the balance stands in for an
+  // older cached copy.
+  const lp = levelProgress(s.xpEarned ?? wallet);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
   // Locked ones, and the ones bought on this visit (they stay, lit up, with Use it).
