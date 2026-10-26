@@ -37,6 +37,8 @@ const SUCCESS = 'sounds/roll-success.mp3';
 const REEL_CLICK = 'sounds/reel-card.wav';
 /** From this rarity (1/256) a win gets the fanfare instead of the pop. */
 const SUCCESS_FROM = 8;
+/** The first rarity rarer than the owner's 1/100 (1/128, Ember) throws confetti. */
+const CONFETTI_FROM = 7;
 
 /**
  * Each row of the reel is a roll of its own at the real odds (owner, 2026-10-25: "i shouldnt
@@ -370,12 +372,13 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       const level = fxLevel(r.tier);
       if (r.tier >= SUCCESS_FROM) playEffect(SUCCESS, sound());
       else if (r.tier >= 3 || r.newBest) playEffect(POP, sound(), 0.85 + 0.05 * r.tier);
-      if (latest.current.confetti && level >= 3) {
-        const waves = level - 2;
+      // Confetti from 1/128 (owner: "start at 1/100"): one small burst there, then from 1/256
+      // a wave more, and more of it, the rarer it is.
+      if (latest.current.confetti && r.tier >= CONFETTI_FROM) {
+        const waves = Math.max(1, level - 2);
+        const count = level >= 3 ? 50 + 30 * level : 60;
         for (let w = 0; w < waves; w++)
-          later(w * 450, () =>
-            fireConfetti({ count: 50 + 30 * level, durationMs: 1600 + level * 200 }),
-          );
+          later(w * 450, () => fireConfetti({ count, durationMs: 1600 + level * 200 }));
       }
       // A batch lays out what it drew, a tick for each rarity, rising.
       const haul = haulOf(r.tiers ?? [r.tier]);
