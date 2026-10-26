@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { withDefaults } from './defaults';
-import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
+import {
+  defaultTimelapseLayout,
+  normalizeTimelapseLayout,
+  pieceStyle,
+  restyleBox,
+} from './timelapse-layout';
+import { defaultStoryLayout, STORY_ASPECT, STORY_RATIO, timelapseLook } from './timelapse-presets';
 import {
   applyTimelapseStyle,
   cleanNoteText,
@@ -114,5 +120,79 @@ describe('your text on the video', () => {
     // Text of its own wins, even emptied.
     const own = withDefaults({ timelapse: { endText: 'old', noteText: '' } as Old });
     expect(own.timelapse.noteText).toBe('');
+  });
+});
+
+describe('how each piece is drawn', () => {
+  it('keeps a pill, a font and a colour, and only what differs from the plain look', () => {
+    const d = defaultTimelapseLayout(16 / 9);
+    const styled = restyleBox('title', d.title, { pill: 'solid', font: 'serif', color: 'gold' });
+    expect(styled).toMatchObject({ pill: 'solid', font: 'serif', color: 'gold' });
+    expect(pieceStyle(styled)).toEqual({ pill: 'solid', font: 'serif', color: 'gold' });
+    // Back to the plain look: nothing is stored for it.
+    const back = restyleBox('title', styled, { pill: 'dark', font: 'sans', color: 'white' });
+    expect(back).toEqual(d.title);
+  });
+
+  it('gives the progress bar a colour only, and the mark nothing', () => {
+    const d = defaultTimelapseLayout(1);
+    const bar = restyleBox('progress', d.progress, { color: 'mint', pill: 'none', font: 'mono' });
+    expect(bar).toEqual({ ...d.progress, color: 'mint' });
+    const mark = restyleBox('watermark', d.watermark, { color: 'rose', font: 'serif' });
+    expect(mark).toEqual(d.watermark);
+  });
+
+  it('reads styles back from storage, dropping ones it does not know', () => {
+    const d = defaultTimelapseLayout(16 / 9);
+    const read = normalizeTimelapseLayout({
+      ...d,
+      clock: { ...d.clock, pill: 'outline', font: 'mono', color: 'sky' },
+      title: { ...d.title, pill: 'glow', font: 'comic', color: '#f0f' },
+    });
+    expect(pieceStyle(read.clock)).toEqual({ pill: 'outline', font: 'mono', color: 'sky' });
+    expect(read.title).toEqual(d.title);
+  });
+
+  it('draws the pieces a look leaves in place its way too', () => {
+    const r = 16 / 9;
+    const mono = applyTimelapseStyle('mono', r, defaultTimelapseLayout(r));
+    for (const id of ['total', 'start', 'end'] as const)
+      expect(pieceStyle(mono[id])).toMatchObject({ pill: 'outline', font: 'mono' });
+    // Back to Classic, they are plain again.
+    const classic = applyTimelapseStyle('classic', r, mono);
+    expect(classic.total).toEqual(defaultTimelapseLayout(r).total);
+  });
+
+  it('no longer reads as its look once a piece is restyled', () => {
+    const r = 9 / 16;
+    const story = applyTimelapseStyle('story', r, defaultTimelapseLayout(r));
+    expect(matchTimelapseStyle(story, r)).toBe('story');
+    const gold = { ...story, title: restyleBox('title', story.title, { color: 'gold' }) };
+    expect(matchTimelapseStyle(gold, r)).toBeNull();
+  });
+});
+
+describe('a story or a reel from a computer', () => {
+  it('starts in the Story look, 9:16, with the screen waiting to be added', () => {
+    const s = withDefaults({});
+    expect(s.timelapse.format).toBe('normal');
+    expect(matchTimelapseStyle(s.timelapse.storyLayout, STORY_RATIO)).toBe('story');
+    expect(s.timelapse.storyLayout.screen.visible).toBe(false);
+    expect(s.timelapse.storyLayout).toEqual(defaultStoryLayout());
+  });
+
+  it('records with the story layout when asked, and its own otherwise', () => {
+    const s = withDefaults({ timelapse: { format: 'story' } });
+    const story = timelapseLook(s, 'computer', 'upright', 'story');
+    expect(story.aspect).toBe(STORY_ASPECT);
+    expect(story.layout).toEqual(s.timelapse.storyLayout);
+    const normal = timelapseLook(s, 'computer');
+    expect(normal.layout).toEqual(s.timelapse.layout);
+    expect(normal.aspect).toBe(s.timelapse.aspect);
+  });
+
+  it('reads an unknown format as normal', () => {
+    const s = withDefaults({ timelapse: { format: 'square' as 'normal' } });
+    expect(s.timelapse.format).toBe('normal');
   });
 });

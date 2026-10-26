@@ -34,6 +34,7 @@ import {
   useToast,
   watchGlassPanes,
 } from '@komogon/ui';
+import { handTimelapse, postPathSession } from '../lib/after-session';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FOCUS_PATH, openFocusTab, useOpenerRequests } from '../lib/focus-tab';
@@ -447,8 +448,16 @@ export function AppShell() {
   const running = Boolean(active.data?.active);
   const [starting, setStarting] = useState(false);
   const here = phonePlace(target);
-  // The focus screen this tab opened sends it to Social after a session, to post it.
-  useOpenerRequests(navigate);
+  // The focus screen this tab opened sends it to Social after a session, to post it, with
+  // the timelapse made for it.
+  const goPost = useCallback(
+    (path: string, file: File | null) => {
+      handTimelapse(postPathSession(path), file);
+      navigate(path);
+    },
+    [navigate],
+  );
+  useOpenerRequests(goPost);
   const has = (to: string) => shown.some((l) => l.to === to);
   const phoneTabs: Array<{
     place: PhonePlace;

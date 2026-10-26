@@ -225,6 +225,10 @@ const timelapseBox = z
     h: z.number().min(0).max(1),
     visible: z.boolean(),
     align: z.enum(['left', 'center', 'right']).optional(),
+    // TIMELAPSE_PILLS, TIMELAPSE_FONTS and TIMELAPSE_COLORS in core.
+    pill: z.enum(['dark', 'solid', 'outline', 'none']).optional(),
+    font: z.enum(['sans', 'geometric', 'mono', 'serif']).optional(),
+    color: z.enum(['white', 'gold', 'mint', 'sky', 'rose', 'lilac']).optional(),
   })
   .strict();
 
@@ -459,6 +463,9 @@ export const settingsSchema = z
         showTimer: z.boolean(),
         showClockTime: z.boolean(),
         aspect: z.enum(['camera', 'screen', '16:9', '9:16', '1:1', '4:5', '4:3']),
+        // A story or a reel: always 9:16, with a layout of its own.
+        format: z.enum(['normal', 'story']),
+        storyLayout: timelapseLayout,
       })
       .partial(),
     // The phone's preset: no screen, and shapes that suit how the phone is held.

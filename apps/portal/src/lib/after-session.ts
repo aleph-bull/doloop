@@ -6,6 +6,29 @@ import { keys, useMe } from './queries';
 /** Social with this session picked in the post box (the Composer reads `post`). */
 export const postPath = (sessionId: string) => `/social?post=${encodeURIComponent(sessionId)}`;
 
+/** The session a `postPath` is for. */
+export const postPathSession = (path: string): string | null =>
+  new URLSearchParams(path.split('?')[1] ?? '').get('post');
+
+/**
+ * The timelapse made after a session, on its way to the post box with it: kept in memory
+ * only, for this tab, until the Composer takes it.
+ */
+let handed: { sessionId: string; file: File } | null = null;
+
+/** Send the made video along to the post box `postPath(sessionId)` opens. */
+export function handTimelapse(sessionId: string | null, file: File | null): void {
+  handed = sessionId && file ? { sessionId, file } : null;
+}
+
+/** The video sent along for this session, once: the post box attaches it. */
+export function takeTimelapse(sessionId: string): File | null {
+  if (!handed || handed.sessionId !== sessionId) return null;
+  const { file } = handed;
+  handed = null;
+  return file;
+}
+
 /**
  * Where closing a session's summary goes: Social, to post it, when Settings › Timer › After
  * each session says so, Social is shown and the session can still be posted. Asked as the

@@ -19,11 +19,13 @@ function presetSummary(settings: UserSettings, device: TimelapseDevice): string 
   const shape =
     device === 'phone'
       ? 'Upright and sideways'
-      : p.aspect === 'camera'
-        ? 'Camera’s shape'
-        : p.aspect === 'screen'
-          ? 'Screen’s shape'
-          : p.aspect;
+      : settings.timelapse.format === 'story'
+        ? 'Story / Reel'
+        : p.aspect === 'camera'
+          ? 'Camera’s shape'
+          : p.aspect === 'screen'
+            ? 'Screen’s shape'
+            : p.aspect;
   const length =
     p.lengthMode === 'auto'
       ? 'Auto length'

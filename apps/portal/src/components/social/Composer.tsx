@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Image as ImageIcon, Timer, Video, X } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { Button, Panel, useToast } from '@komogon/ui';
+import { takeTimelapse } from '../../lib/after-session';
 import { fmtDate, fmtMinutes } from '../../lib/format';
 import {
   FALLBACK_LIMITS,
@@ -79,7 +80,7 @@ export function Composer() {
   }, [sessions, nodes, postable]);
 
   // Sent here from a session's summary (`?post=`, lib/after-session.ts): that session picked
-  // and the box open, then the address forgets it.
+  // and the box open, with the timelapse made for it attached, then the address forgets it.
   const [params, setParams] = useSearchParams();
   const asked = params.get('post');
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -100,6 +101,12 @@ export function Composer() {
     if (recent.some((s) => s.id === asked)) {
       setSessionId(asked);
       setOpened(true);
+      // The box is empty here, so the video fits; one too big waits on "Compress it".
+      const video = takeTimelapse(asked);
+      const problem = video ? mediaProblem(video, limits) : null;
+      if (video && problem?.kind === 'size')
+        setOversize({ file: video, maxBytes: problem.maxBytes });
+      else if (video && !problem) setFiles((f) => (f.some(isVideo) ? f : [...f, video]));
       const box = textRef.current;
       box?.scrollIntoView({ block: 'center' });
       // No keyboard before a tap on a touch screen.
@@ -112,7 +119,17 @@ export function Composer() {
       },
       { replace: true },
     );
-  }, [asked, sessions, postable, recent, settling, refetchSessions, refetchPostable, setParams]);
+  }, [
+    asked,
+    sessions,
+    postable,
+    recent,
+    settling,
+    refetchSessions,
+    refetchPostable,
+    setParams,
+    limits,
+  ]);
 
   // The pending compress counts too, so it can't push a post past its limits.
   const held = oversize ? [...files, oversize.file] : files;

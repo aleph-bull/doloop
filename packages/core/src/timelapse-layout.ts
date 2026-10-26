@@ -53,6 +53,15 @@ export const TIMELAPSE_TEXT_ELEMENTS: readonly TimelapseElementId[] = [
   'watermark',
 ];
 
+/** Text pieces that can be restyled: all but the mark, which stays as it is. */
+export const TIMELAPSE_STYLED_TEXT: readonly TimelapseElementId[] = TIMELAPSE_TEXT_ELEMENTS.filter(
+  (id) => id !== 'watermark',
+);
+
+/** Whether a piece takes a pill and a font (the texts), or only a colour (the progress bar). */
+export const takesPill = (id: TimelapseElementId) => TIMELAPSE_STYLED_TEXT.includes(id);
+export const takesColor = (id: TimelapseElementId) => takesPill(id) || id === 'progress';
+
 /** What each piece is called where people see it. */
 export const TIMELAPSE_ELEMENT_LABELS: Record<TimelapseElementId, string> = {
   camera: 'Camera',
@@ -86,9 +95,85 @@ export interface TimelapseBox {
    * right edge. Left when absent.
    */
   align?: TimelapseAlign;
+  /** What a text piece sits on; a dark pill when absent. Not the mark. */
+  pill?: TimelapsePill;
+  /** A text piece's typeface; the app's own sans when absent. Not the mark. */
+  font?: TimelapseFont;
+  /** A text piece's or the progress bar's colour; white when absent. */
+  color?: TimelapseColor;
 }
 
 export type TimelapseAlign = 'left' | 'center' | 'right';
+
+/** What a text piece sits on: a dark pill, a pill of its colour, an outline, or nothing. */
+export type TimelapsePill = 'dark' | 'solid' | 'outline' | 'none';
+export type TimelapseFont = 'sans' | 'geometric' | 'mono' | 'serif';
+export type TimelapseColor = 'white' | 'gold' | 'mint' | 'sky' | 'rose' | 'lilac';
+
+export const TIMELAPSE_PILLS: readonly TimelapsePill[] = ['dark', 'solid', 'outline', 'none'];
+export const TIMELAPSE_FONTS: readonly TimelapseFont[] = ['sans', 'geometric', 'mono', 'serif'];
+export const TIMELAPSE_COLORS: readonly TimelapseColor[] = [
+  'white',
+  'gold',
+  'mint',
+  'sky',
+  'rose',
+  'lilac',
+];
+
+export const TIMELAPSE_PILL_LABELS: Record<TimelapsePill, string> = {
+  dark: 'Dark',
+  solid: 'Colour',
+  outline: 'Outline',
+  none: 'None',
+};
+export const TIMELAPSE_FONT_LABELS: Record<TimelapseFont, string> = {
+  sans: 'Sans',
+  geometric: 'Geometric',
+  mono: 'Mono',
+  serif: 'Serif',
+};
+export const TIMELAPSE_COLOR_LABELS: Record<TimelapseColor, string> = {
+  white: 'White',
+  gold: 'Gold',
+  mint: 'Mint',
+  sky: 'Sky',
+  rose: 'Rose',
+  lilac: 'Lilac',
+};
+
+/** How a piece is drawn, with the defaults filled in. */
+export interface TimelapsePieceStyle {
+  pill: TimelapsePill;
+  font: TimelapseFont;
+  color: TimelapseColor;
+}
+
+export const TIMELAPSE_PLAIN_STYLE: TimelapsePieceStyle = {
+  pill: 'dark',
+  font: 'sans',
+  color: 'white',
+};
+
+export function pieceStyle(b: Pick<TimelapseBox, 'pill' | 'font' | 'color'>): TimelapsePieceStyle {
+  return {
+    pill: b.pill ?? 'dark',
+    font: b.font ?? 'sans',
+    color: b.color ?? 'white',
+  };
+}
+
+/** Whether two pieces are drawn alike: the same side, pill, font and colour. */
+export function sameLook(a: TimelapseBox, b: TimelapseBox): boolean {
+  const x = pieceStyle(a);
+  const y = pieceStyle(b);
+  return (
+    (a.align ?? 'left') === (b.align ?? 'left') &&
+    x.pill === y.pill &&
+    x.font === y.font &&
+    x.color === y.color
+  );
+}
 
 /** The gap kept from the frame's sides when a piece is lined up against one. */
 export const TIMELAPSE_ALIGN_MARGIN = 0.04;
@@ -279,7 +364,23 @@ export function clampBox(id: TimelapseElementId, b: TimelapseBox): TimelapseBox 
     visible: b.visible,
   };
   if (b.align && b.align !== 'left' && TIMELAPSE_TEXT_ELEMENTS.includes(id)) out.align = b.align;
+  // Only what differs from the plain look is kept, like the side.
+  if (takesPill(id)) {
+    if (b.pill && b.pill !== 'dark' && TIMELAPSE_PILLS.includes(b.pill)) out.pill = b.pill;
+    if (b.font && b.font !== 'sans' && TIMELAPSE_FONTS.includes(b.font)) out.font = b.font;
+  }
+  if (takesColor(id) && b.color && b.color !== 'white' && TIMELAPSE_COLORS.includes(b.color))
+    out.color = b.color;
   return out;
+}
+
+/** A piece with its pill, font and colour changed; the rest of it as it was. */
+export function restyleBox(
+  id: TimelapseElementId,
+  b: TimelapseBox,
+  style: Partial<TimelapsePieceStyle>,
+): TimelapseBox {
+  return clampBox(id, { ...b, ...pieceStyle({ ...pieceStyle(b), ...style }) });
 }
 
 /**
@@ -296,18 +397,20 @@ export function normalizeTimelapseLayout(
   for (const id of TIMELAPSE_ELEMENTS) {
     const r = src[id] && typeof src[id] === 'object' ? (src[id] as Record<string, unknown>) : {};
     const d = fallback[id];
+    // A piece that was saved keeps what it says; one that wasn't takes the fallback's.
+    const saved = r.x !== undefined;
+    const pick = <T extends string>(v: unknown, list: readonly T[], from: T | undefined) =>
+      list.includes(v as T) ? (v as T) : saved ? undefined : from;
     out[id] = clampBox(id, {
       x: num(r.x) ?? d.x,
       y: num(r.y) ?? d.y,
       w: num(r.w) ?? d.w,
       h: num(r.h) ?? d.h,
       visible: typeof r.visible === 'boolean' ? r.visible : d.visible,
-      align:
-        r.align === 'left' || r.align === 'center' || r.align === 'right'
-          ? r.align
-          : r.x === undefined
-            ? d.align
-            : undefined,
+      align: pick(r.align, ['left', 'center', 'right'] as const, d.align),
+      pill: pick(r.pill, TIMELAPSE_PILLS, d.pill),
+      font: pick(r.font, TIMELAPSE_FONTS, d.font),
+      color: pick(r.color, TIMELAPSE_COLORS, d.color),
     });
   }
   out.watermark.visible = true;

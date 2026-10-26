@@ -12,6 +12,7 @@ import {
   POST_PLATFORM_INFO,
   POST_PLATFORMS,
   postElsewhereNote,
+  STORY_RATIO,
   TIMELAPSE_DEFAULT_STILL_BYTES,
   timelapseLook,
   timelapseOutputSize,
@@ -21,6 +22,7 @@ import {
   type PostPlatform,
   type TimelapseAspect,
   type TimelapseDevice,
+  type TimelapseFormat,
   type TimelapseLengthMode,
   type TimelapseOptions,
   type TimelapseOrientation,
@@ -430,6 +432,33 @@ export function TimelapseRecordChoice({
 }
 
 /**
+ * A computer's video in its own shape, or tall for a story or a reel: on the "Your
+ * timelapse" card, remembered for the next one.
+ */
+function FormatChoice({
+  value,
+  onChange,
+}: {
+  value: TimelapseFormat;
+  onChange: (v: TimelapseFormat) => void;
+}) {
+  return (
+    <div className="field">
+      <span className="field-label">Video</span>
+      <Segmented
+        ariaLabel="Video"
+        value={value}
+        onChange={onChange}
+        options={[
+          { value: 'normal', label: 'Normal' },
+          { value: 'story', label: 'Story / Reel' },
+        ]}
+      />
+    </div>
+  );
+}
+
+/**
  * How far the focus screen darkens while it records. The slider answers at once, with a
  * small clock beside it dimming the same amount; the setting is saved once it settles.
  */
@@ -505,6 +534,7 @@ export function TimelapseSettings({
 }: TimelapseSettingsProps) {
   const value = presetOf(settings, device);
   const set = (p: Partial<TimelapsePreset>) => onChange(presetPatch(device, p));
+  const format = settings.timelapse.format;
   // A phone's video has two layouts; the break clock matters if either shows the time.
   const elapsedShown =
     value.layout.elapsed.visible ||
@@ -526,7 +556,11 @@ export function TimelapseSettings({
       <LengthFields
         value={value}
         onChange={set}
-        ratio={videoRatio(value.aspect, device)}
+        ratio={
+          device === 'computer' && format === 'story'
+            ? STORY_RATIO
+            : videoRatio(value.aspect, device)
+        }
         camera={knownCameraSize()}
       />
       <SizeNote options={value} screen={device === 'computer' && value.layout.screen.visible} />
@@ -606,8 +640,9 @@ function TimelapseTips({
 }
 
 /**
- * The looks, on the focus screen: picked, they save at once to this device's preset. A
- * phone's goes on both its layouts, upright and sideways, each at its own shape.
+ * The looks, on the focus screen: picked, they save at once to this device's preset, on
+ * both its layouts at their own shapes: a phone's upright and sideways, a computer's own
+ * and its story.
  */
 function QuickLooks({
   settings,
@@ -623,13 +658,21 @@ function QuickLooks({
   if (device === 'computer') {
     const c = settings.timelapse;
     const ratio = aspectRatio(c.aspect, camera, screenRatio);
+    const story = c.format === 'story';
     return (
       <TimelapseStylePicker
         compact
-        ratio={ratio}
-        layout={c.layout}
+        ratio={story ? STORY_RATIO : ratio}
+        layout={story ? c.storyLayout : c.layout}
         screenRatio={screenRatio}
-        onPick={(_, layout) => onChange({ timelapse: { layout } })}
+        onPick={(id) =>
+          onChange({
+            timelapse: {
+              layout: applyTimelapseStyle(id, ratio, c.layout, screenRatio),
+              storyLayout: applyTimelapseStyle(id, STORY_RATIO, c.storyLayout, screenRatio),
+            },
+          })
+        }
       />
     );
   }
@@ -904,6 +947,8 @@ export interface TimelapseExportProps {
   sessionSpan?: { startedAt: string; endedAt: string | null } | null;
   /** Which way a phone's video goes, picked before the camera opened. */
   orientation?: TimelapseOrientation | null;
+  /** The made video as a file, or null once there is none: it can go along to the post box. */
+  onVideo?: (file: File | null) => void;
 }
 
 /** The stills so far, how the video will come out, and the button that makes it. */
@@ -918,8 +963,14 @@ export function TimelapseExport({
   postSession,
   sessionSpan,
   orientation,
+  onVideo,
 }: TimelapseExportProps) {
   const value = presetOf(settings, device);
+  // A computer's video in its own shape or as a story. Held here as well, so the choice
+  // shows at once while the setting saves.
+  const [format, setFormatHere] = useState<TimelapseFormat>(settings.timelapse.format);
+  useEffect(() => setFormatHere(settings.timelapse.format), [settings.timelapse.format]);
+  const asStory = device === 'computer' && format === 'story';
   const { toast } = useToast();
   const share = useCreatePost();
   const limits = useMediaLimits().data ?? FALLBACK_LIMITS;
@@ -986,14 +1037,19 @@ export function TimelapseExport({
     : (all[all.length - 1]?.takenAt ?? null);
   const look: TimelapseLook = useMemo(
     () => ({
-      ...timelapseLook(settings, device, upright ? 'upright' : 'sideways'),
+      ...timelapseLook(
+        settings,
+        device,
+        upright ? 'upright' : 'sideways',
+        asStory ? 'story' : 'normal',
+      ),
       timeZone,
       noteText: cleanNoteText(noteText),
       startAt: startMs,
       endAt: endMs,
       orientation: device === 'phone' ? (orientation ?? undefined) : undefined,
     }),
-    [settings, device, upright, timeZone, noteText, startMs, endMs, orientation],
+    [settings, device, upright, asStory, timeZone, noteText, startMs, endMs, orientation],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
@@ -1021,6 +1077,10 @@ export function TimelapseExport({
     const making = abort;
     return () => making.current?.abort();
   }, []);
+  // The made video, for the post box Social opens after the session.
+  useEffect(() => {
+    onVideo?.(video ? videoFile(video) : null);
+  }, [video, onVideo]);
 
   // On a phone or tablet the share sheet takes the video to the apps (on an iPhone, Apple's
   // share sheet), when this browser can share files.
@@ -1033,10 +1093,16 @@ export function TimelapseExport({
 
   if (count === 0) return null;
 
-  /** Make the video; `changes` stands in for the saved look while a save catches up. */
-  const make = async (changes?: Partial<TimelapseLook>) => {
+  /**
+   * Make the video; `changes` stands in for the saved look while a save catches up. With
+   * `share`, the post's preview opens once it is made.
+   */
+  const make = async (changes?: Partial<TimelapseLook>, share = false) => {
     if (!videoSupported()) return toast('This browser cannot make videos. Try Chrome or Edge.');
-    abort.current = new AbortController();
+    // One at a time: a newer ask (another format) takes over from one still going.
+    abort.current?.abort();
+    const mine = new AbortController();
+    abort.current = mine;
     setProgress(0);
     const using = { ...look, ...changes };
     try {
@@ -1045,7 +1111,7 @@ export function TimelapseExport({
         plan,
         using,
         setProgress,
-        abort.current.signal,
+        mine.signal,
       );
       setVideo({
         url: URL.createObjectURL(blob),
@@ -1055,11 +1121,12 @@ export function TimelapseExport({
         w,
         h,
       });
+      if (share) setPreviewOpen(true);
     } catch (err) {
       if (!(err instanceof DOMException && err.name === 'AbortError'))
         toast(err instanceof Error ? err.message : 'Could not make the video');
     } finally {
-      setProgress(null);
+      if (abort.current === mine) setProgress(null);
     }
   };
 
@@ -1171,6 +1238,16 @@ export function TimelapseExport({
     void make(changes);
   };
 
+  /** Normal or a story: saved for next time, and a video made or being made is made again. */
+  const pickFormat = (next: TimelapseFormat) => {
+    if (next === format) return;
+    setFormatHere(next);
+    onChange({ timelapse: { format: next } });
+    if (!video && progress === null) return;
+    const l = timelapseLook(settings, device, 'upright', next);
+    remake({ aspect: l.aspect, layout: l.layout });
+  };
+
   // What the post says about the session: the finished session's, else the stills' own time.
   const lastStill = all[Math.max(0, endAt - 1)];
   const session: PostSession | null = postSession
@@ -1214,14 +1291,19 @@ export function TimelapseExport({
       <p className="field-hint">
         It follows your{' '}
         <TimelapseSettingsLink newTab device={device}>
-          {device === 'phone' ? 'phone’s timelapse layout' : 'timelapse layout'}
+          {device === 'phone'
+            ? 'phone’s timelapse layout'
+            : asStory
+              ? 'story layout'
+              : 'timelapse layout'}
         </TimelapseSettingsLink>
         : the shape, and where the clocks, the task name and the progress bar sit.
       </p>
+      {device === 'computer' && <FormatChoice value={format} onChange={pickFormat} />}
       {video ? (
         <>
           <video
-            className="timelapse-video"
+            className={`timelapse-video${video.h > video.w ? ' is-tall' : ''}`}
             src={video.url}
             controls
             playsInline
@@ -1332,6 +1414,16 @@ export function TimelapseExport({
             <Button variant="primary" onClick={() => void make()} disabled={kept < 2}>
               Make the video
             </Button>
+            {/* Straight to the post: made, then previewed. Only a finished session posts. */}
+            {postSession && !recording && (
+              <Button
+                variant="secondary"
+                onClick={() => void make(undefined, true)}
+                disabled={kept < 2}
+              >
+                <Share2 size={14} aria-hidden /> Share to Social
+              </Button>
+            )}
             <Button variant="ghost" onClick={discard}>
               Throw the stills away
             </Button>
@@ -1348,6 +1440,7 @@ export function TimelapseExport({
         settings={settings}
         device={device}
         orientation={device === 'phone' ? (upright ? 'upright' : 'sideways') : null}
+        format={asStory ? 'story' : 'normal'}
         onChange={onChange}
         still={middle}
         sample={middleSample}

@@ -2,6 +2,7 @@ import {
   cleanNoteText,
   type TimelapseAspect,
   type TimelapseDevice,
+  type TimelapseFormat,
   type TimelapseLayout,
   type TimelapseOrientation,
   type UserSettings,
@@ -29,6 +30,8 @@ export interface RelayoutDialogProps {
   device: TimelapseDevice;
   /** A phone video's way up, which picks the layout it uses; null on a computer. */
   orientation: TimelapseOrientation | null;
+  /** A computer's video in its own shape or as a story, which picks the layout it uses. */
+  format: TimelapseFormat;
   onChange: (patch: DeepPartial<UserSettings>) => unknown;
   /** The moment of the video the pieces are arranged over. */
   still: Still | undefined;
@@ -52,15 +55,19 @@ export function RelayoutDialog({
   settings,
   device,
   orientation,
+  format,
   onChange,
   still,
   sample,
   noteText: videoNote,
   onRedraw,
 }: RelayoutDialogProps) {
-  // Only the layout this video uses: a phone's upright or sideways one.
-  const targets = targetsFor(settings, device).filter(
-    (t) => device === 'computer' || t.id === (orientation ?? 'upright'),
+  // Only the layout this video uses: a phone's upright or sideways one, a computer's own or
+  // its story one.
+  const targets = targetsFor(settings, device).filter((t) =>
+    device === 'computer'
+      ? t.id === (format === 'story' ? 'story' : 'computer')
+      : t.id === (orientation ?? 'upright'),
   );
   const backdrop = useStillPictures(open ? still : undefined);
   const [noteText, setNoteText] = useState(videoNote);
@@ -74,7 +81,12 @@ export function RelayoutDialog({
     <Modal open={open} onClose={onClose} title="Change the layout" className="relayout-dialog">
       <p className="muted text-sm">
         Arranged over a moment of your video. Saving changes your{' '}
-        {device === 'phone' ? 'phone’s ' : ''}timelapse layout too, and makes this video again.
+        {device === 'phone'
+          ? 'phone’s timelapse layout'
+          : format === 'story'
+            ? 'story layout'
+            : 'timelapse layout'}{' '}
+        too, and makes this video again.
       </p>
       {/* Drawn once the moment is decoded, so the editor starts at its shape. */}
       {open && (backdrop || !still) && (

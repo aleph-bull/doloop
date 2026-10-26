@@ -184,6 +184,40 @@ describe('settings: timelapse', () => {
     expect(offFrame.statusCode).toBe(400);
   });
 
+  it('keeps a story layout for a computer, and how each piece is drawn', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    const tl = me.json().user.settings.timelapse;
+    expect(tl.format).toBe('normal');
+    expect(tl.storyLayout.camera.visible).toBe(true);
+    // The story starts in the Story look: the bar along the top.
+    expect(tl.storyLayout.progress.y).toBeLessThan(0.1);
+    const story = {
+      ...tl.storyLayout,
+      title: { x: 0.05, y: 0.7, w: 0.9, h: 0.05, visible: true, pill: 'solid', color: 'gold' },
+      clock: { ...tl.storyLayout.clock, font: 'mono' },
+    };
+    const ok = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { timelapse: { format: 'story', storyLayout: story } },
+    });
+    expect(ok.statusCode).toBe(200);
+    const saved = ok.json().settings.timelapse;
+    expect(saved.format).toBe('story');
+    expect(saved.storyLayout.title).toMatchObject({ pill: 'solid', color: 'gold' });
+    expect(saved.storyLayout.clock.font).toBe('mono');
+    // The computer's own layout is left as it was.
+    expect(saved.layout).toEqual(tl.layout);
+    for (const payload of [
+      { timelapse: { format: 'square' } },
+      { timelapse: { layout: { title: { ...story.title, pill: 'glow' } } } },
+      { timelapse: { layout: { title: { ...story.title, color: '#ff00ff' } } } },
+    ]) {
+      const bad = await api({ method: 'PATCH', url: '/api/me/settings', payload });
+      expect(bad.statusCode).toBe(400);
+    }
+  });
+
   it('keeps a line of text for the video on each preset, trimmed, and empty by default', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });
     expect(me.json().user.settings.timelapse.noteText).toBe('');

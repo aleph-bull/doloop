@@ -12,7 +12,7 @@ import {
   type TimelapseAspect,
   type TimelapseLayout,
 } from './timelapse-layout';
-import { cleanNoteText } from './timelapse-styles';
+import { applyTimelapseStyle, cleanNoteText } from './timelapse-styles';
 import type { TimelapsePreset, UserSettings } from './types';
 
 export type TimelapseDevice = 'phone' | 'computer';
@@ -113,15 +113,39 @@ export function noteTextOf(
 }
 
 /**
- * What a recording follows: the computer's preset, or the phone's with the shape and layout
- * for the way its video goes.
+ * A computer's video comes out in its own shape, or tall for a story or a reel. Each has its
+ * own layout, so the tall one can be arranged for a phone screen.
+ */
+export type TimelapseFormat = 'normal' | 'story';
+export const TIMELAPSE_FORMATS: readonly TimelapseFormat[] = ['normal', 'story'];
+/** A story or a reel is always this shape. */
+export const STORY_ASPECT: TimelapseAspect = '9:16';
+export const STORY_RATIO = 9 / 16;
+
+/** The computer's story layout before anything is changed: the Story look, screen at the top. */
+export function defaultStoryLayout(screenRatio?: number): TimelapseLayout {
+  return applyTimelapseStyle(
+    'story',
+    STORY_RATIO,
+    defaultTimelapseLayout(STORY_RATIO, screenRatio),
+    screenRatio,
+  );
+}
+
+/**
+ * What a recording follows: the computer's preset (its story layout for a story or a reel),
+ * or the phone's with the shape and layout for the way its video goes.
  */
 export function timelapseLook(
   settings: Pick<UserSettings, 'timelapse' | 'timelapsePhone'>,
   device: TimelapseDevice,
   o: TimelapseOrientation = 'upright',
+  format: TimelapseFormat = 'normal',
 ): TimelapsePreset {
-  if (device === 'computer') return settings.timelapse;
+  if (device === 'computer') {
+    const c = settings.timelapse;
+    return format === 'story' ? { ...c, aspect: STORY_ASPECT, layout: c.storyLayout } : c;
+  }
   const p = settings.timelapsePhone;
   return o === 'upright' ? p : { ...p, aspect: p.sidewaysAspect, layout: p.sidewaysLayout };
 }

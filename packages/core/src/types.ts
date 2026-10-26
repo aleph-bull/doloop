@@ -331,6 +331,10 @@ export interface UserSettings {
     showTimer: boolean;
     /** Draw the time of day each moment was filmed, in the account's timezone ("2:14 PM EST"). */
     showClockTime: boolean;
+    /** The video's own shape and layout ('normal'), or tall for a story or a reel ('story'). */
+    format: 'normal' | 'story';
+    /** Where each piece sits in a story or a reel (9:16), arranged on its own. */
+    storyLayout: TimelapseLayout;
   };
   /**
    * The phone's preset, used when the timelapse records on a phone (the camera screen).

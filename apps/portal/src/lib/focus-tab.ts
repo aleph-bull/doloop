@@ -124,14 +124,15 @@ const OPENER_GO = 'komogon-go';
 
 /**
  * Run in the focus screen: sends the tab that opened it to `path` and closes this one, as
- * after a session when it is off to Social to post it. False when there is no such tab (a
- * phone, the extension, a tab opened by hand); then the caller goes there itself.
+ * after a session when it is off to Social to post it, with the timelapse made for it when
+ * there is one (a file goes across tabs whole). False when there is no such tab (a phone,
+ * the extension, a tab opened by hand); then the caller goes there itself.
  */
-export function sendOpenerTo(path: string): boolean {
+export function sendOpenerTo(path: string, file: File | null = null): boolean {
   try {
     const opener = window.opener as Window | null;
     if (!opener || opener.closed) return false;
-    opener.postMessage({ type: OPENER_GO, path }, window.location.origin);
+    opener.postMessage({ type: OPENER_GO, path, file }, window.location.origin);
     opener.focus();
   } catch {
     return false;
@@ -140,8 +141,11 @@ export function sendOpenerTo(path: string): boolean {
   return true;
 }
 
-/** Run in the app's own pages: goes where the focus screen this tab opened asks. */
-export function useOpenerRequests(go: (path: string) => void): void {
+/**
+ * Run in the app's own pages: goes where the focus screen this tab opened asks, with the
+ * video it sent along, if any.
+ */
+export function useOpenerRequests(go: (path: string, file: File | null) => void): void {
   const goRef = useRef(go);
   useEffect(() => {
     goRef.current = go;
@@ -149,10 +153,10 @@ export function useOpenerRequests(go: (path: string) => void): void {
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.origin !== window.location.origin) return;
-      const m = e.data as { type?: unknown; path?: unknown } | null;
+      const m = e.data as { type?: unknown; path?: unknown; file?: unknown } | null;
       // Only ever Social: nothing else asks.
       if (m?.type === OPENER_GO && typeof m.path === 'string' && m.path.startsWith('/social?'))
-        goRef.current(m.path);
+        goRef.current(m.path, m.file instanceof File ? m.file : null);
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);

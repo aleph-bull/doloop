@@ -3,12 +3,25 @@ import {
   aspectRatio,
   canHideElement,
   clampBox,
+  defaultStoryLayout,
   defaultTimelapseLayout,
   fitBoxToRatio,
   minBoxSide,
   PHONE_SIDEWAYS_ASPECTS,
   PHONE_UPRIGHT_ASPECTS,
   phoneAspectRatio,
+  pieceStyle,
+  restyleBox,
+  sameLook,
+  STORY_ASPECT,
+  takesColor,
+  takesPill,
+  TIMELAPSE_COLOR_LABELS,
+  TIMELAPSE_COLORS,
+  TIMELAPSE_FONT_LABELS,
+  TIMELAPSE_FONTS,
+  TIMELAPSE_PILL_LABELS,
+  TIMELAPSE_PILLS,
   TIMELAPSE_TEXT_ELEMENTS,
   TIMELAPSE_ELEMENT_LABELS,
   TIMELAPSE_ELEMENTS,
@@ -21,6 +34,7 @@ import {
   type TimelapseElementId,
   type TimelapseLayout,
   type TimelapseOrientation,
+  type TimelapsePieceStyle,
   type UserSettings,
 } from '@komogon/core';
 import {
@@ -36,7 +50,15 @@ import {
   Undo2,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { Button, Segmented } from '@komogon/ui';
 import { useMe } from '../../lib/queries';
@@ -51,6 +73,8 @@ import {
 import {
   composeFrame,
   sourceSize,
+  TIMELAPSE_COLOR_HEX,
+  TIMELAPSE_FONT_FAMILY,
   type ComposeFrame,
   type DrawnRects,
 } from '../../lib/timelapse-compose';
@@ -80,8 +104,8 @@ export const COMPUTER_SHAPES: readonly TimelapseAspect[] = [
 ];
 
 /**
- * One layout the editor arranges: the computer's, or a phone's upright or sideways one.
- * `save` turns a shape and layout into the settings patch that stores them.
+ * One layout the editor arranges: the computer's own or its story one, or a phone's upright
+ * or sideways one. `save` turns a shape and layout into the settings patch that stores them.
  */
 export interface LayoutTarget {
   id: string;
@@ -91,22 +115,37 @@ export interface LayoutTarget {
   shapes: readonly TimelapseAspect[];
   /** How the phone is held for this layout; null for a computer, whose camera is as it comes. */
   orientation: TimelapseOrientation | null;
+  /** Where "Reset the layout" goes, when not the shape's usual start. */
+  fresh?: (screenRatio: number) => TimelapseLayout;
   save: (aspect: TimelapseAspect, layout: TimelapseLayout) => DeepPartial<UserSettings>;
 }
 
-/** The layouts a preset's editor arranges: the computer's one, or the phone's two. */
+/**
+ * The layouts a preset's editor arranges: the computer's two (its own, and the story's), or
+ * the phone's two.
+ */
 export function targetsFor(settings: UserSettings, device: TimelapseDevice): LayoutTarget[] {
   if (device === 'computer') {
     const c = settings.timelapse;
     return [
       {
         id: 'computer',
-        label: 'Computer',
+        label: 'Normal',
         aspect: c.aspect,
         layout: c.layout,
         shapes: COMPUTER_SHAPES,
         orientation: null,
         save: (aspect, layout) => ({ timelapse: { aspect, layout } }),
+      },
+      {
+        id: 'story',
+        label: 'Story / Reel',
+        aspect: STORY_ASPECT,
+        layout: c.storyLayout,
+        shapes: [STORY_ASPECT],
+        orientation: null,
+        fresh: defaultStoryLayout,
+        save: (_, layout) => ({ timelapse: { storyLayout: layout } }),
       },
     ];
   }
@@ -182,7 +221,8 @@ const sameBoxes = (a: TimelapseLayout, b: TimelapseLayout) =>
   );
 
 const sameLayout = (a: TimelapseLayout, b: TimelapseLayout) =>
-  sameBoxes(a, b) && TIMELAPSE_ELEMENTS.every((id) => a[id].visible === b[id].visible);
+  sameBoxes(a, b) &&
+  TIMELAPSE_ELEMENTS.every((id) => a[id].visible === b[id].visible && sameLook(a[id], b[id]));
 
 /** Pieces that keep their own shape when resized: the screen, the texts and the mark. */
 const keepsShape = (id: TimelapseElementId) => id !== 'progress';
@@ -367,7 +407,7 @@ export function TimelapseLayoutEditor({
 
   /** A default layout for a shape, keeping which pieces are shown. */
   const freshLayout = (r: number, keep: TimelapseLayout): TimelapseLayout => {
-    const d = defaultTimelapseLayout(r, screenRatio);
+    const d = target.fresh ? target.fresh(screenRatio) : defaultTimelapseLayout(r, screenRatio);
     for (const id of TIMELAPSE_ELEMENTS) d[id].visible = keep[id].visible;
     return d;
   };
@@ -525,11 +565,22 @@ export function TimelapseLayoutEditor({
     drag.current = { id, mode, start: pointFrac(e), rect: rectOf(id), pointer: e.pointerId };
   };
 
-  /** A piece placed at a rect: its layout box becomes exactly that rect. */
+  /** A piece placed at a rect: its layout box becomes exactly that rect, drawn as it was. */
   const placed = (id: TimelapseElementId, r: TimelapseBox): TimelapseLayout => ({
     ...layout,
-    [id]: clampBox(id, { ...r, visible: layout[id].visible, align: r.align ?? layout[id].align }),
+    [id]: clampBox(id, {
+      ...layout[id],
+      x: r.x,
+      y: r.y,
+      w: r.w,
+      h: r.h,
+      align: r.align ?? layout[id].align,
+    }),
   });
+
+  /** The chosen piece drawn another way: its pill, its font or its colour. */
+  const restyle = (id: TimelapseElementId, style: Partial<TimelapsePieceStyle>) =>
+    saveLayout({ ...layout, [id]: restyleBox(id, layout[id], style) });
 
   const move = (e: React.PointerEvent) => {
     const d = drag.current;
@@ -707,34 +758,39 @@ export function TimelapseLayoutEditor({
     <div className="tl-editor">
       {targets.length > 1 && (
         <div className="field">
-          <span className="field-label">Held</span>
+          <span className="field-label">{target.orientation ? 'Held' : 'Video'}</span>
           <Segmented
             ariaLabel="Which layout to arrange"
             value={target.id}
             onChange={switchTo}
             options={targets.map((t) => ({ value: t.id, label: t.label }))}
           />
-          <span className="field-hint">
-            Upright is for a vertical video, sideways for a horizontal one.
-          </span>
+          {target.orientation && (
+            <span className="field-hint">
+              Upright is for a vertical video, sideways for a horizontal one.
+            </span>
+          )}
         </div>
       )}
-      <div className="field">
-        <span className="field-label">Shape</span>
-        <Segmented
-          ariaLabel="Shape of the video"
-          value={aspect}
-          onChange={(v) => (v === 'camera' ? void matchCamera() : pickShape(v))}
-          options={target.shapes.map((value) => ({ value, label: SHAPE_LABELS[value] }))}
-        />
-        <span className="field-hint">{shapeHint[aspect]}</span>
-        {cameraState === 'denied' && (
-          <span className="field-hint timelapse-size-warn" role="status">
-            The camera was blocked, so its shape is not known yet. Allow it in the address bar and
-            try again.
-          </span>
-        )}
-      </div>
+      {/* A story is always 9:16: there is no shape to pick. */}
+      {target.shapes.length > 1 && (
+        <div className="field">
+          <span className="field-label">Shape</span>
+          <Segmented
+            ariaLabel="Shape of the video"
+            value={aspect}
+            onChange={(v) => (v === 'camera' ? void matchCamera() : pickShape(v))}
+            options={target.shapes.map((value) => ({ value, label: SHAPE_LABELS[value] }))}
+          />
+          <span className="field-hint">{shapeHint[aspect]}</span>
+          {cameraState === 'denied' && (
+            <span className="field-hint timelapse-size-warn" role="status">
+              The camera was blocked, so its shape is not known yet. Allow it in the address bar and
+              try again.
+            </span>
+          )}
+        </div>
+      )}
 
       <TimelapseStylePicker
         ratio={ratio}
@@ -843,6 +899,13 @@ export function TimelapseLayoutEditor({
           ))}
         </div>
       )}
+      {selected && layout[selected].visible && takesColor(selected) && (
+        <PieceLook
+          id={selected}
+          box={layout[selected]}
+          onChange={(style) => restyle(selected, style)}
+        />
+      )}
 
       {hidden.length > 0 && (
         <div className="tl-hidden">
@@ -905,6 +968,68 @@ export function TimelapseLayoutEditor({
           </div>,
           document.body,
         )}
+    </div>
+  );
+}
+
+/** How the chosen piece is drawn: a text's pill and font, and a text's or the bar's colour. */
+function PieceLook({
+  id,
+  box,
+  onChange,
+}: {
+  id: TimelapseElementId;
+  box: TimelapseBox;
+  onChange: (style: Partial<TimelapsePieceStyle>) => void;
+}) {
+  const s = pieceStyle(box);
+  return (
+    <div className="tl-piece-look">
+      {takesPill(id) && (
+        <>
+          <div className="tl-piece-row">
+            <span className="field-hint">Pill</span>
+            <Segmented
+              ariaLabel="Pill"
+              value={s.pill}
+              onChange={(pill) => onChange({ pill })}
+              options={TIMELAPSE_PILLS.map((v) => ({ value: v, label: TIMELAPSE_PILL_LABELS[v] }))}
+            />
+          </div>
+          <div className="tl-piece-row">
+            <span className="field-hint">Font</span>
+            <Segmented
+              ariaLabel="Font"
+              value={s.font}
+              onChange={(font) => onChange({ font })}
+              options={TIMELAPSE_FONTS.map((v) => ({
+                value: v,
+                label: (
+                  <span style={{ fontFamily: TIMELAPSE_FONT_FAMILY[v] }}>
+                    {TIMELAPSE_FONT_LABELS[v]}
+                  </span>
+                ),
+              }))}
+            />
+          </div>
+        </>
+      )}
+      <div className="tl-piece-row" role="radiogroup" aria-label="Colour">
+        <span className="field-hint">Colour</span>
+        {TIMELAPSE_COLORS.map((c) => (
+          <button
+            key={c}
+            type="button"
+            role="radio"
+            aria-checked={s.color === c}
+            aria-label={TIMELAPSE_COLOR_LABELS[c]}
+            title={TIMELAPSE_COLOR_LABELS[c]}
+            className={`tl-swatch${s.color === c ? ' is-on' : ''}`}
+            style={{ '--swatch': TIMELAPSE_COLOR_HEX[c].text } as CSSProperties}
+            onClick={() => onChange({ color: c })}
+          />
+        ))}
+      </div>
     </div>
   );
 }

@@ -758,6 +758,22 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   with changes asks first. On Save each text piece is stored exactly where it was drawn. The
   recording settings below the editor (length, fps, breaks, smooth, deflicker) still save
   on change.
+- **How each piece is drawn** (2026-10-25): every text piece has a `pill` (dark, solid
+  "Colour", outline, none), a `font` (sans, geometric = Satoshi, mono, serif) and a
+  `color` (white, gold, mint, sky, rose, lilac); the progress bar has a colour only and the
+  mark none. They sit on the layout box, absent meaning dark / sans / white, and only what
+  differs is stored (`clampBox`, `restyleBox`, `pieceStyle` in core). The editor shows
+  them under the chosen piece's line-up buttons (`PieceLook`). `composeFrame` draws a
+  clock's label and time-of-day ending smaller than its number, on one baseline, and
+  measures a clock's digits as zeros so its pill keeps one width as the time runs. Set per
+  piece: the owner said not to make things global.
+- **Story / Reel on a computer** (2026-10-25): `settings.timelapse.storyLayout` is a second,
+  9:16 layout (starts as `defaultStoryLayout()`, the Story look) and `timelapse.format`
+  ('normal' | 'story') which one a video is made with. The editor's computer targets are
+  Normal and Story / Reel (a "Video" switch above it; a story has no Shape field). The
+  "Your timelapse" card's Video switch (`FormatChoice`) saves the format and remakes a made
+  video; `timelapseLook(settings, 'computer', o, format)` gives the story's aspect and
+  layout. Phones are unchanged: they already have upright and sideways.
 - `showTimer` / `showClockTime` are old switches kept in the type only so a row saved
   before the layout existed seeds the two clock pieces.
 
@@ -792,6 +808,12 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   Nothing is posted through the sites' APIs. The why and the checks (WebM, X's 2 min 20 s)
   are in DECISIONS.md, "Posting the timelapse on Instagram, TikTok and X" and "One
   download, and the apps on a phone".
+- **Posting it in few steps** (2026-10-25): after a finished session the card has "Share to
+  Social" before the video is made too (makes it, then opens the preview). Closing the
+  summary for Social takes the made video along into the post box with the session picked:
+  `onVideo` on `TimelapseExport` keeps the file in Focus.tsx, `handTimelapse` /
+  `takeTimelapse` (`lib/after-session.ts`) carry it within a tab, and `sendOpenerTo(path,
+  file)` posts it to the tab that opened the focus screen (AppShell hands it over).
 - **Share to Social is previewed first** (`PostPreview.tsx`): the post as the feed shows it,
   with a line to say, a "Show time" switch (`showTime: false` posts no minutes, task or
   times) and a "Time elapsed" switch (`showElapsed`).
@@ -803,8 +825,10 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   the session, on the card and in "Change layout?", and belongs to that one video (owner,
   2026-10-22): the presets' `noteText` is kept but no longer used. There is no end card
   (built, then removed the same day). **Looks**
-  (`timelapse-styles.ts`: Classic, Big timer, Headline, Corner, Clean) place the pieces for
-  any shape; `matchTimelapseStyle` reads a saved layout back as its look. **"Change
+  (`timelapse-styles.ts`: Classic, Minimal, Big timer, Headline, Story, Mono, Corner, Clean)
+  place the pieces for any shape and say how the texts are drawn (their pill and font, also
+  for the time elapsed, start and end they leave in place); `matchTimelapseStyle` reads a
+  saved layout back as its look, pills and fonts included. **"Change
   layout?"** beside a made video opens the layout editor in a dialog over a moment of that
   video (`RelayoutDialog.tsx`; not the Settings page, which would drop the stills) and
   remakes the video with what was saved. DECISIONS.md has both 2026-10-22 timelapse

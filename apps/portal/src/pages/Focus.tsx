@@ -41,7 +41,7 @@ import {
 } from '@komogon/ui';
 import type { ActiveSession, EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
-import { useSocialAfterSession } from '../lib/after-session';
+import { handTimelapse, useSocialAfterSession } from '../lib/after-session';
 import { sendOpenerTo, useFocusTabBeacon } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import {
@@ -287,6 +287,13 @@ export function Focus() {
   const tlAskedFor = useRef<string | null>(null);
   /** How many stills there were when the video was last saved. */
   const [tlSavedAt, setTlSavedAt] = useState(0);
+  /** The video made after the session, to go along to Social's post box. */
+  const tlVideo = useRef<File | null>(null);
+  const keepTlVideo = useCallback((file: File | null) => {
+    tlVideo.current = file;
+  }, []);
+  /** Off to Social with the video: the stills behind it are safe to leave. */
+  const tlHandedOff = useRef(false);
 
   // Where the session stands right now, from the server's timer and the wall clock: the
   // recorder takes stills only in focus, and stamps each with the time studied.
@@ -442,9 +449,13 @@ export function Focus() {
     setScreenAskOpen(false);
     setScreenOn(true);
     recorder.requestScreen();
-    if (tl && !tl.layout.screen.visible)
+    // The story layout too, so a video made as a story shows it as well.
+    if (tl && (!tl.layout.screen.visible || !tl.storyLayout.screen.visible))
       void patch({
-        timelapse: { layout: { ...tl.layout, screen: { ...tl.layout.screen, visible: true } } },
+        timelapse: {
+          layout: { ...tl.layout, screen: { ...tl.layout.screen, visible: true } },
+          storyLayout: { ...tl.storyLayout, screen: { ...tl.storyLayout.screen, visible: true } },
+        },
       });
   };
 
@@ -507,6 +518,7 @@ export function Focus() {
   useEffect(() => {
     if (!tlPending) return;
     const warn = (e: BeforeUnloadEvent) => {
+      if (tlHandedOff.current) return;
       e.preventDefault();
       e.returnValue = '';
     };
@@ -572,20 +584,27 @@ export function Focus() {
 
   /* ---------- leaving ---------- */
   const toSocial = useSocialAfterSession(summary?.session ?? null);
+  const summarySessionId = summary?.session.id ?? null;
   const leave = useCallback(() => {
     void toSocial().then((path) => {
       // After a session, off to Social to post it (the setting): the tab that opened this one
-      // goes there as this one closes, or, with no such tab, this one goes.
+      // goes there as this one closes, or, with no such tab, this one goes. A video made
+      // for the session goes along into the post box.
       if (path) {
-        if (sendOpenerTo(path)) window.setTimeout(() => navigate('/'), 150);
-        else navigate(path);
+        const file = tlVideo.current;
+        tlHandedOff.current = !!file;
+        if (sendOpenerTo(path, file)) window.setTimeout(() => navigate('/'), 150);
+        else {
+          handTimelapse(summarySessionId, file);
+          navigate(path);
+        }
         return;
       }
       // A tab the app opened closes; one the user opened by hand goes home instead.
       window.close();
       window.setTimeout(() => navigate('/'), 150);
     });
-  }, [navigate, toSocial]);
+  }, [navigate, toSocial, summarySessionId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -785,6 +804,7 @@ export function Focus() {
               onChange={patch}
               recording={recording}
               onSaved={() => setTlSavedAt(recorder.count)}
+              onVideo={keepTlVideo}
               sessionId={summary.session.id}
               sessionSpan={{
                 startedAt: summary.session.startedAt,
