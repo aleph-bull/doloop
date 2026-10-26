@@ -6088,6 +6088,16 @@ button.start-subject:hover {
 .roll-slot-line-odds {
   color: var(--fg-muted);
 }
+/* What the roll paid back, popping in after the title. */
+.roll-slot-won {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  animation: roll-chip-in 380ms var(--ease-spring) 180ms backwards;
+}
 
 /* The louder rarities: from 1/256 the card shakes harder and is ringed in the colour; from
    1/2048 it shakes harder still and the ring glows; at 1/16384 and up the ring cycles colour. */
@@ -8618,6 +8628,14 @@ button.start-subject:hover {
 }
 .badge-fold.is-folded {
   --fold: 1;
+}
+/* Once fully open nothing is clipped: the last row's shadows show, and the second row loses
+   the fade's mask (a mask would also keep those cards' glass from blurring). */
+.badge-fold.is-open {
+  overflow: visible;
+}
+.badge-fold.is-open [data-fold-edge] {
+  mask-image: none;
 }
 .badge-fold-toggle {
   align-self: center;

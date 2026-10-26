@@ -1,4 +1,4 @@
-import { ROLL_TIERS, rollOdds } from '@komogon/core';
+import { ROLL_TIERS, rollOdds, rollPayout } from '@komogon/core';
 import { cn } from '@komogon/ui';
 import { rollClass, tierStyle } from '../../lib/rolls';
 
@@ -29,7 +29,10 @@ export function RollIndex({ counts, best }: { counts: number[]; best: number }) 
                 style={tierStyle(t.tier)}
               >
                 <span className={cn('rng-cell-title', rollClass(t.tier))}>{t.title}</span>
-                <span className="rng-cell-odds tabular">{rollOdds(t.tier)}</span>
+                <span className="rng-cell-odds tabular">
+                  {rollOdds(t.tier)}
+                  {rollPayout(t.tier) > 0 && ` · ${rollPayout(t.tier).toLocaleString()} XP`}
+                </span>
                 <span className="rng-cell-n tabular">{n > 0 ? `×${n.toLocaleString()}` : '–'}</span>
               </li>
             );

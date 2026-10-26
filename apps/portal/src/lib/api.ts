@@ -643,6 +643,8 @@ export interface RollResult {
   best: number;
   count: number;
   xp: number;
+  /** What the rolls paid back, all together. Optional for an API from before payouts. */
+  won?: number;
   /** Badges it unlocked. */
   fresh: string[];
 }

@@ -6,6 +6,7 @@ import {
   ROLL_COST,
   ROLL_TICKETS,
   rollBadges,
+  rollPayout,
   rollTier,
 } from '@komogon/core';
 import { and, eq, gte, sql } from 'drizzle-orm';
@@ -14,6 +15,7 @@ import type { Db } from '../db/client';
 import { users, xpTransactions } from '../db/schema';
 import { badRequest } from '../errors';
 import { unlockNewBadges } from '../services/achievements';
+import { addXp } from '../services/users';
 import { dt } from '../services/sessions-mapper';
 
 const rollBody = z
@@ -28,7 +30,8 @@ const rollBody = z
 
 /**
  * RNG Rolls on Achievements (core rolls.ts): 10 XP a roll, one or a batch at once, drawn
- * here. `ticket` is injectable so tests can pick the rarity.
+ * here, each paying back a tenth of its denominator. `ticket` is injectable so tests can
+ * pick the rarity.
  */
 export function rollRoutes(
   app: FastifyInstance,
@@ -53,6 +56,8 @@ export function rollRoutes(
     let stats = paid.rollStats;
     tiers.forEach((tier, i) => (stats = advanceRollStats(stats, tier, paid.rollCount + i)));
     const top = Math.max(...tiers);
+    // Each roll pays back a tenth of its denominator (core rollPayout).
+    const won = tiers.reduce((sum, tier) => sum + rollPayout(tier), 0);
     const [row] = await db
       .update(users)
       .set({
@@ -66,13 +71,18 @@ export function rollRoutes(
       tiers.map((tier) => ({
         userId,
         at: dt(now),
-        delta: -ROLL_COST,
+        delta: rollPayout(tier) - ROLL_COST,
         kind: 'roll' as const,
         ref: String(tier),
       })),
     );
     const newBest = top > req.user.rollBest && row!.rollBest === top;
     req.user.xp = paid.xp;
+    if (won > 0) {
+      const after = await addXp(db, userId, won, { withLevel: true });
+      req.user.xp = after.xp;
+      req.user.level = after.level;
+    }
     req.user.rollBest = row!.rollBest;
     req.user.rollCount = row!.rollCount;
     req.user.rollStats = stats;
@@ -90,6 +100,8 @@ export function rollRoutes(
       newBest,
       best: row!.rollBest,
       count: row!.rollCount,
+      /** What the rolls paid back, all together. */
+      won,
       xp: req.user.xp,
       fresh,
     };

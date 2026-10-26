@@ -72,6 +72,15 @@ export function rollTierInfo(tier: number): RollTier | null {
   return ROLL_TIERS[tier - 1] ?? null;
 }
 
+/**
+ * What a roll pays back (owner, 2026-10-25: "1/10 of the denominator rounded to the nearest
+ * whole xp"): 1/2 and 1/4 nothing, 1/8 1 XP, 1/256 26, 1/32768 3,277. About 1.5 XP a roll
+ * on average, against the 10 it costs.
+ */
+export function rollPayout(tier: number): number {
+  return Math.round(2 ** tier / 10);
+}
+
 /** "1/256". */
 export function rollOdds(tier: number): string {
   return `1/${2 ** tier}`;

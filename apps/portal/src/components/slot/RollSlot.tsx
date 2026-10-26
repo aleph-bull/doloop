@@ -634,6 +634,9 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
             <>
               <span className={`roll-slot-title ${rollClass(result.tier)}`}>{result.title}</span>
               <span className="roll-slot-line-odds tabular">{rollOdds(result.tier)}</span>
+              {!!last?.won && (
+                <span className="roll-slot-won tabular">+{last.won.toLocaleString()} XP</span>
+              )}
             </>
           ) : money < price ? (
             'Not enough XP'

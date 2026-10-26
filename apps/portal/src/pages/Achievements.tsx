@@ -545,6 +545,10 @@ function Rolls({
   );
 }
 
+/** The fold's padding, top and bottom (index.css, .badge-fold), and how long it takes to grow. */
+const FOLD_PAD = 4;
+const FOLD_MS = 720;
+
 /**
  * A grid folded: the first row in full and the second fading out, so the page isn't a wall
  * of forty cards. "Show all" (`label`) grows it to its full height. The badges and the shop's
@@ -563,7 +567,11 @@ function Fold({
 }) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(startOpen);
+  /** Fully open, the grow done: nothing is clipped any more, card shadows included. */
+  const [settled, setSettled] = useState(startOpen);
+  const settleTimer = useRef(0);
   const [heights, setHeights] = useState<{ folded: number; full: number } | null>(null);
+  useEffect(() => () => window.clearTimeout(settleTimer.current), []);
 
   useEffect(() => {
     const grid = gridRef.current;
@@ -609,13 +617,17 @@ function Fold({
         card.classList.add('is-revealing');
       }
     }
+    window.clearTimeout(settleTimer.current);
+    setSettled(false);
+    if (!open) settleTimer.current = window.setTimeout(() => setSettled(true), FOLD_MS);
     setOpen((o) => !o);
   };
   return (
     <>
       <div
-        className={`badge-fold${folds && !open ? ' is-folded' : ''}`}
-        style={folds ? { height: open ? heights.full : heights.folded } : undefined}
+        className={`badge-fold${folds && !open ? ' is-folded' : ''}${open && settled ? ' is-open' : ''}`}
+        // Open, the fold's own padding counts too, or the last row's bottom edge is cut off.
+        style={folds ? { height: open ? heights.full + FOLD_PAD : heights.folded } : undefined}
       >
         <div ref={gridRef} className={gridClassName} inert={folds && !open ? true : undefined}>
           {children}

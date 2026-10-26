@@ -2700,6 +2700,8 @@ The owner: "i shouldnt statistically see genesis every roll", "make the roll lon
 - **Name looks from Sapphire (1/256) up only**: the Name list shows only from Sapphire to your rarest, and the API refuses anything below (`ROLL_NAME_TIER`).
 - **The Name list is readable**: its options take the elevated surface and the ink colour, like the app's other selects (it was white on white in dark mode).
 - **Backgrounds fold on entry** on Achievements, like the badges (`Fold`, the badge fold made general): one row and "Show all N backgrounds". Arriving from a locked background in Settings (`#bg-<id>`) opens it so the link still lands.
+- **Each roll pays back a tenth of its denominator, rounded** (owner: "give some xp 1/10 of the denominator rounded to the nearest whole xp"; `rollPayout` in core): 1/2 and 1/4 nothing, 1/8 1 XP, 1/16 2, 1/32 3, 1/64 6, 1/128 13, 1/256 26, up to 3,277 for 1/32768. About 1.5 XP back on each 10 XP roll on average. Each roll's ledger line is the net (payout minus 10); `POST /api/rolls` answers `won`; the machine shows "+N XP" after the title, and each rarity card on Achievements says what it pays.
+- **The badges cut off at the bottom** (owner, with a screenshot): the fold opened to the grid's height without its own 2px padding top and bottom, and clipped the cards' shadows even fully open. The fold now counts its padding, and once it has finished growing (`is-open`) nothing is clipped and the second row loses the fade's mask. The badges and the backgrounds share it.
 
 ## Prettier timelapse looks, a style for each piece, Story / Reel on a computer, and posting in fewer steps, 2026-10-25 (owner request)
 

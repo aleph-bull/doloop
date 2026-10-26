@@ -36,7 +36,7 @@ describe('rolls', () => {
     expect(res.json().error).toMatch(/XP/);
   });
 
-  it('spends 10 XP a roll and keeps the rarest', async () => {
+  it('spends 10 XP a roll, pays back a tenth of the denominator, and keeps the rarest', async () => {
     await t.db.update(users).set({ xp: 100 }).where(eq(users.id, USER_A.id));
     let res = await roll(3);
     expect(res.statusCode).toBe(200);
@@ -46,16 +46,25 @@ describe('rolls', () => {
       newBest: true,
       best: 3,
       count: 1,
-      xp: 90,
+      // 1/8 pays back 1 XP.
+      won: 1,
+      xp: 91,
     });
     res = await roll(1);
-    expect(res.json()).toMatchObject({ tier: 1, newBest: false, best: 3, count: 2, xp: 80 });
+    expect(res.json()).toMatchObject({
+      tier: 1,
+      newBest: false,
+      best: 3,
+      count: 2,
+      won: 0,
+      xp: 81,
+    });
     const ledger = await t.db.query.xpTransactions.findMany({
       where: and(eq(xpTransactions.userId, USER_A.id), eq(xpTransactions.kind, 'roll')),
     });
     expect(ledger.map((l) => [l.delta, l.ref]).sort()).toEqual([
       [-10, '1'],
-      [-10, '3'],
+      [-9, '3'],
     ]);
   });
 
@@ -113,7 +122,8 @@ describe('rolls', () => {
       newBest: true,
       fresh: ['roll-double', 'roll-512'],
     });
-    expect(res.json().xp).toBe(before - 10 + 75 + 150);
+    // 10 for the roll, 51 back for 1/512, 75 and 150 for the badges.
+    expect(res.json().xp).toBe(before - 10 + 51 + 75 + 150);
     res = await roll(9);
     expect(res.json()).toMatchObject({ tier: 9, newBest: false, fresh: [] });
     // RNG Rolls badges stay off Top badges: they have their own card.
@@ -138,7 +148,9 @@ describe('rolls', () => {
       tier: 6,
       newBest: false,
       count: 15,
-      xp: 25,
+      // 1/64 pays 6 and 1/8 pays 1; Pocket change 25.
+      won: 7,
+      xp: 7 + 25,
       fresh: ['rolls-10'],
     });
     const shop = (await t.api({ method: 'GET', url: '/api/shop' })).json();

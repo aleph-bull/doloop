@@ -9,6 +9,7 @@ import {
   ROLL_TIERS,
   rollBadgeKey,
   rollOdds,
+  rollPayout,
   rollTier,
   type RollStats,
 } from './rolls';
@@ -22,6 +23,14 @@ describe('rolls', () => {
     expect(hits.get(1)).toBe(ROLL_TICKETS / 2 + 1);
     for (const { tier } of ROLL_TIERS.slice(1))
       expect(hits.get(tier)).toBe(ROLL_TICKETS / 2 ** tier);
+  });
+
+  it('pays back a tenth of the denominator, rounded', () => {
+    expect([1, 2, 3, 4, 5, 8, 15].map(rollPayout)).toEqual([0, 0, 1, 2, 3, 26, 3277]);
+    // On average about 1.5 XP back on each 10 XP roll.
+    const average = ROLL_TIERS.reduce((a, t) => a + rollPayout(t.tier) / 2 ** t.tier, 0);
+    expect(average).toBeGreaterThan(1.3);
+    expect(average).toBeLessThan(1.6);
   });
 
   it('has a title for every rarity, 1/2 to 1/32768', () => {
