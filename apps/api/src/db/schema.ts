@@ -674,6 +674,29 @@ export const nudges = pgTable(
   (t) => [index('nudges_to_idx').on(t.toId, t.at), index('nudges_pair_idx').on(t.fromId, t.toId)],
 );
 
+/**
+ * A browser that turned on notifications (services/push.ts). One per browser: the endpoint
+ * is the push service's address for it, so signing in as someone else there moves the row.
+ */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    /** The browser's public key and auth secret, base64url, for encrypting what is sent. */
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('push_subscriptions_endpoint_idx').on(t.endpoint),
+    index('push_subscriptions_user_idx').on(t.userId),
+  ],
+);
+
 export const jamMembers = pgTable(
   'jam_members',
   {
@@ -1071,6 +1094,7 @@ export const schema = {
   groups,
   groupMembers,
   nudges,
+  pushSubscriptions,
   universityVerifications,
   customRewards,
   routines,

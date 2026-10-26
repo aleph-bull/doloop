@@ -518,6 +518,17 @@ day from the owner's instructions and reshaped several times; this is the state 
   `users.notifications_seen_at`, set on opening. Its dialog is portalled to the body: a
   dialog rendered inside a card's text inherits that text's styles. Rows link to
   `/profile#post-<id>` (`-comments` opens them), which `PostCard`'s `focus` scrolls to.
+- **Browser notifications** (2026-10-25): the bell's four kinds also pop up through Web Push,
+  sent by `services/push.ts` (own RFC 8291 encryption and VAPID on Node's crypto, keys from
+  the API's secret: nothing to configure) from the like, comment and nudge routes via
+  `app.push.notify`; a new kind that should pop up goes through it too, with its words in
+  `pushMessages` matching the bell's line. Shown by `public/push-sw.js` (its own worker at
+  scope `/push/`, every host, never caches; silent while an app window is in front).
+  On or off is per browser (`lib/push.ts`, a push subscription in `push_subscriptions`); which
+  kinds is `settings.notifications`. Social asks once (`NotificationsAsk`), Settings ›
+  Notifications switches. Real pushes need a real Chrome profile: Playwright's
+  `browser.newContext()` is incognito, where Chrome has no Push API, so use
+  `launchPersistentContext`; headless Chrome shows notifications but never lists them.
 - Hooks are in `lib/queries.ts` (`useFeed`, `useFriends`, `useGroups`, `useJams`,
   `useLeaderboard`, `useLeaderboardStats`, `useCompare`, `useNudges` and the
   mutations); types and calls in `lib/api.ts`. The leaderboard, groups and jams query keys

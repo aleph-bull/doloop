@@ -35,6 +35,8 @@ import { jamRoutes } from './routes/jams';
 import { compareRoutes } from './routes/compare';
 import { groupRoutes } from './routes/groups';
 import { notificationRoutes } from './routes/notifications';
+import { pushRoutes } from './routes/push';
+import { createPush } from './services/push';
 import { universityRoutes } from './routes/university';
 import { schoolRoutes } from './routes/schools';
 import type { FetchLike, TmdbCredentials } from './services/tmdb';
@@ -84,6 +86,8 @@ export interface BuildOptions {
   mediaStore?: MediaStore | null;
   /** Where rolls draw their ticket from (0 to ROLL_TICKETS); tests pick the rarity. */
   rollTicket?: () => number;
+  /** Injectable fetch for the browser notifications' push services, for tests. */
+  pushFetch?: typeof fetch;
 }
 
 /** Build the Fastify app without listening, so tests can inject requests. */
@@ -178,6 +182,18 @@ export async function buildServer(opts: BuildOptions) {
     localTestAccounts: opts.localTestAccounts ?? false,
     passwordAuth: !!opts.passwordAuth,
   };
+  // Browser notifications, used by Social's routes: keys from the same secret as email codes.
+  app.decorate(
+    'push',
+    createPush({
+      db: opts.db,
+      secret: email.secret,
+      fetch: opts.pushFetch,
+      clock,
+      warn: (msg) => app.log.warn(msg),
+    }),
+  );
+  pushRoutes(app, opts.db);
   emailAuthRoutes(app, opts.db, clock, email);
   meRoutes(app, opts.db, clock, opts.mediaStore ?? null);
   adminRoutes(app, opts.db, admins, clock, opts.mediaStore ?? null);

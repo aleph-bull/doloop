@@ -6,6 +6,7 @@ import { GroupsTab } from '../components/social/GroupsTab';
 import { JamsTab } from '../components/social/JamsTab';
 import { LeaderboardTab } from '../components/social/LeaderboardTab';
 import { NotificationsBell } from '../components/social/Notifications';
+import { NotificationsAsk } from '../components/social/NotificationsAsk';
 import { SchoolTab } from '../components/social/SchoolTab';
 import { NARROW_QUERY, useMediaQuery } from '../lib/media';
 import { useFriends, useJams } from '../lib/queries';
@@ -79,6 +80,7 @@ export function Social() {
           ))}
         </div>
         {content}
+        <NotificationsAsk />
       </div>
     );
 
@@ -116,6 +118,7 @@ export function Social() {
         />
       </div>
       {content}
+      <NotificationsAsk />
     </div>
   );
 }

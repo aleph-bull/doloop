@@ -7,6 +7,7 @@ import { groupMembers, groups, nodes, nudges, routines, sessions, users } from '
 import { sameWorld } from '../services/dev-accounts';
 import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { loadPeople, type Person } from '../services/people';
+import { pushMessages } from '../services/push';
 import { dt } from '../services/sessions-mapper';
 import { uuid } from '../validation';
 import { newJamCode } from './jams';
@@ -419,6 +420,10 @@ export function groupRoutes(app: FastifyInstance, db: Db, clock: () => string) {
       .insert(nudges)
       .values({ fromId: me, toId: userId, groupId: groupId ?? null, at: now })
       .returning();
+    const group = groupId
+      ? await db.query.groups.findFirst({ where: eq(groups.id, groupId), columns: { name: true } })
+      : undefined;
+    app.push.notify(userId, pushMessages.nudge(req.user, row!.id, group?.name ?? null));
     return reply.code(201).send({ nudge: { id: row!.id, toId: userId, at: now.toISOString() } });
   });
 

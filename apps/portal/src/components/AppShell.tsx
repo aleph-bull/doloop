@@ -55,6 +55,7 @@ import { StartSessionDialog } from './StartSessionDialog';
 // The first-time setup's look around, loaded only while one is running.
 const Tour = lazy(() => import('./onboarding/Tour').then((m) => ({ default: m.Tour })));
 import { UsernameNotice } from './UsernameNotice';
+import { PushBridge } from './PushBridge';
 
 /**
  * Every page in the nav, in order. `group` splits the sidebar: 'main' pages on top, 'more'
@@ -1036,6 +1037,7 @@ export function AppShell() {
           <PhoneSwitcher label="Your pages" pages={youPages} target={target} onGo={go} />
         )}
         <UsernameNotice />
+        <PushBridge />
         <ErrorBoundary>
           {/* Keyed by route so each page rises in as it arrives. A page whose code is still
               on its way shows a quiet spinner here, inside the shell, rather than holding the

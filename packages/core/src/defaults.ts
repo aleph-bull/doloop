@@ -153,6 +153,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     schoolActivity: false,
   },
   rolls: { name: 'auto', profile: true },
+  notifications: { nudges: true, kudos: true, comments: true, mentions: true },
   dashboard: { focusOnly: false },
   nav: { style: 'sidebar' },
   focusScreen: { openOnStart: 'ask' },

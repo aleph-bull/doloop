@@ -254,6 +254,25 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     keywords: ['sound', 'volume', 'chime', 'alarm', 'mute', 'audio', 'notification'],
   },
   {
+    id: 'notifications',
+    title: 'Notifications',
+    keywords: [
+      'notifications',
+      'notify',
+      'push',
+      'browser',
+      'chrome',
+      'alerts',
+      'pop up',
+      'nudges',
+      'kudos',
+      'likes',
+      'comments',
+      'mentions',
+      'social',
+    ],
+  },
+  {
     id: 'pace',
     title: 'Pace and streaks',
     keywords: [

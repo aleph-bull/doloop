@@ -313,6 +313,16 @@ export interface UserSettings {
     /** The rarest roll's title by your name and the RNG Rolls card on your profile. */
     profile: boolean;
   };
+  /**
+   * Which of the bell's kinds also pop up as a browser notification. Whether a device gets
+   * them at all is that device's own choice (its push subscription), not a setting.
+   */
+  notifications: {
+    nudges: boolean;
+    kudos: boolean;
+    comments: boolean;
+    mentions: boolean;
+  };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };
   /** The focus screen tab. */

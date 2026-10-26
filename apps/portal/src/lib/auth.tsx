@@ -7,6 +7,7 @@ import {
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api as accountApi, apiBaseUrl, setTokenGetter } from './api';
+import { pausePushForSignOut } from './push';
 
 /**
  * Three auth backends:
@@ -347,6 +348,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // While still signed in, so the API forgets this browser too. Never held up for long.
+    await Promise.race([
+      pausePushForSignOut().catch(() => undefined),
+      new Promise((resolve) => window.setTimeout(resolve, 3000)),
+    ]);
     if (supabase) await supabase.auth.signOut();
     // The blurred background kept between visits may be someone's own uploaded photo.
     void clearBackdropCache();

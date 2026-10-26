@@ -454,6 +454,14 @@ export const settingsSchema = z
         profile: z.boolean(),
       })
       .partial(),
+    notifications: z
+      .object({
+        nudges: z.boolean(),
+        kudos: z.boolean(),
+        comments: z.boolean(),
+        mentions: z.boolean(),
+      })
+      .partial(),
     nav: z.object({ style: z.enum(['top', 'sidebar']) }).partial(),
     focusScreen: z.object({ openOnStart: z.enum(['ask', 'always', 'never']) }).partial(),
     timelapse: z

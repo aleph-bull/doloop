@@ -1070,6 +1070,12 @@ export const api = {
   nudgesSeen: () => request<void>('POST', '/api/social/nudges/seen'),
   notifications: () => request<NotificationsResponse>('GET', '/api/social/notifications'),
   notificationsSeen: () => request<void>('POST', '/api/social/notifications/seen'),
+  /** Browser notifications (lib/push.ts): the key to subscribe with, and this browser on or off. */
+  pushKey: () => request<{ key: string }>('GET', '/api/push/key'),
+  pushSubscribe: (subscription: PushSubscriptionJSON) =>
+    request<void>('PUT', '/api/push/subscription', subscription),
+  pushUnsubscribe: (endpoint: string) =>
+    request<void>('DELETE', '/api/push/subscription', { endpoint }),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

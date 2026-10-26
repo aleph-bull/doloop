@@ -28,6 +28,7 @@ import { badRequest, conflict, forbidden, notFound } from '../errors';
 import { inWorldOf, ownerInWorldOf, sameWorld } from '../services/dev-accounts';
 import { removeAll, type MediaStore } from '../services/media-store';
 import { loadPeople, type Person } from '../services/people';
+import { pushMessages } from '../services/push';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
 import { dt } from '../services/sessions-mapper';
 import { uploadQuota } from '../services/upload-quota';
@@ -824,10 +825,19 @@ export function socialRoutes(
   app.post('/api/posts/:id/like', async (req) => {
     const { id } = idParam.parse(req.params);
     await postExists(id, req.user);
-    await db
+    const added = await db
       .insert(postLikes)
       .values({ postId: id, userId: req.user.id, createdAt: dt(clock()) })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ postId: postLikes.postId });
+    if (added.length) {
+      const post = await db.query.posts.findFirst({
+        where: eq(posts.id, id),
+        columns: { id: true, userId: true, subject: true, body: true, minutes: true },
+      });
+      if (post && post.userId !== req.user.id)
+        app.push.notify(post.userId, pushMessages.kudos(req.user, post));
+    }
     return likeCounts(id, req.user.id);
   });
 
@@ -918,6 +928,18 @@ export function socialRoutes(
       await db
         .insert(commentMentions)
         .values(named.map((userId) => ({ commentId: row!.id, userId })));
+    // The post's owner hears of it as a comment, a mention there included, as on the bell.
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      columns: { userId: true },
+    });
+    if (post) {
+      if (post.userId !== req.user.id)
+        app.push.notify(post.userId, pushMessages.comment(req.user, row!));
+      for (const userId of named)
+        if (userId !== post.userId)
+          app.push.notify(userId, pushMessages.mention(req.user, row!, post.userId));
+    }
     const people = await loadPeople(db, [req.user.id, ...named]);
     return reply.code(201).send({ comment: toComment(row!, req.user.id, named), people });
   });

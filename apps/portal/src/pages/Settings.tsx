@@ -58,6 +58,7 @@ import { TimelapseRecordChoice } from '../components/focus/Timelapse';
 import { TimelapsePresets } from '../components/focus/TimelapsePresets';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
+import { NotificationSettings } from '../components/NotificationSettings';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
 import { keys, useAvatar } from '../lib/queries';
@@ -854,6 +855,10 @@ export function Settings() {
                   ))}
                 </>
               )}
+            </Section>
+
+            <Section id="notifications" title="Notifications">
+              <NotificationSettings value={s.notifications} onChange={patch} />
             </Section>
 
             <Section id="pace" title="Pace and streaks">
