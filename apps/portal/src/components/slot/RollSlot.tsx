@@ -60,33 +60,22 @@ const TENSE_MS = 1300;
 const TENSE_FROM = 6;
 /**
  * From 1/4096 the reel stops a row short, holds with a heartbeat, then tips over (owner: "more
- * tense especially for misses of 4096 or above"). A real one always does; and now and then an
- * ordinary roll stops on a 1/4096 or rarer that isn't, holds, and slips off it.
+ * tense especially for misses of 4096 or above"). A real one always does. A near miss does the
+ * same only when the row just above the result really is a 1/4096 or rarer, drawn at the real
+ * odds like every row (owner: "more near misses than statistically plausible"), so about one
+ * roll in 2,048: nothing is put there for show.
  */
 const TEASE_FROM = 12;
-const TEASE_CHANCE = 1 / 12;
-/** The decoys, 1/4096 most often and 1/32768 least. */
-const TEASE_WEIGHTS = [8, 4, 2, 1];
 const HOLD_MS = 1300;
 const HEARTBEAT_MS = 430;
 const SLIP_MS = 560;
-/** After it lands, before a new record's coins burst out. */
-const BURST_DELAY = 420;
+/** After it lands, before the winnings burst into coins, and before a new record's do. */
+const WON_DELAY = 300;
+const BURST_DELAY = 700;
 
 /** How long the reel takes to slow down onto a rarity: rarer ones crawl longer. */
 function slowingMs(tier: number): number {
   return 1700 + Math.max(0, tier - 3) * 260;
-}
-
-/** A decoy for a near miss: 1/4096 most often, 1/32768 least. */
-function decoyTier(): number {
-  const total = TEASE_WEIGHTS.reduce((a, b) => a + b, 0);
-  let ticket = Math.random() * total;
-  for (let i = 0; i < TEASE_WEIGHTS.length; i++) {
-    ticket -= TEASE_WEIGHTS[i]!;
-    if (ticket < 0) return TEASE_FROM + i;
-  }
-  return TEASE_FROM;
 }
 
 const easeInOutCubic = (u: number) => (u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2);
@@ -96,6 +85,28 @@ function spunBy(ms: number): number {
   if (ms <= 0) return 0;
   if (ms < SPEED_UP) return (SPEED * ms * ms) / (2 * SPEED_UP);
   return SPEED * (ms - SPEED_UP / 2);
+}
+
+/** Round amounts a coin of winnings can carry. */
+const COIN_STEPS = [1, 2, 3, 5, 10, 20, 25, 50, 100, 200, 250, 500];
+
+/**
+ * How many coins the winnings break into, and what each carries: one each up to 12, then a
+ * round amount that adds up exactly, as near 14 coins as one allows (the last coin always
+ * brings the XP to the exact total).
+ */
+function coinsFor(won: number): { count: number; each: number } {
+  if (won <= 12) return { count: won, each: 1 };
+  let best: { count: number; each: number } | null = null;
+  for (const each of COIN_STEPS) {
+    if (won % each !== 0) continue;
+    const count = won / each;
+    if (count < 6 || count > 28) continue;
+    if (!best || Math.abs(count - 14) < Math.abs(best.count - 14)) best = { count, each };
+  }
+  if (best) return best;
+  const each = Math.ceil(won / 20);
+  return { count: Math.ceil(won / each), each };
 }
 
 /** A batch's rolls, rarity by rarity, commonest first. */
@@ -145,10 +156,12 @@ export interface RollSlotProps {
  * pull the lever (drag it down, click, Space or Enter) for one roll, ten or a hundred, and
  * the reel spins until it crawls onto the rarest the server drew. Each row on the reel is
  * drawn at the real odds, so the rare ones almost never go past. Rarer results crawl longer,
- * lean in from 1/64, from 1/4096 stop a row short and hold before tipping over (and now and
- * then a near miss does the same on a decoy and slips off it), and land louder: a pop for the smaller wins and the fanfare from 1/256,
- * a shake, a flash, confetti and a burst of light that grow with the rarity. Beating your
- * best is a New record: sparks fly, and coins carry it into Best at the top. A batch lays
+ * lean in from 1/64, from 1/4096 stop a row short and hold before tipping over (as does a
+ * near miss, when the row above really is that rare), and land louder: a pop for the
+ * smaller wins and the fanfare from 1/256, a shake, a flash, confetti and a burst of light
+ * that grow with the rarity. What a roll pays bursts into coins that fly into your XP, which
+ * counts up as they land. Beating your best is a New record: sparks fly, and coins carry it
+ * into Best at the top. A batch lays
  * out everything it drew under the reel. It stays open for the next pull; Escape, the X or
  * a click outside closes it.
  */
@@ -170,6 +183,7 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
   const stripRef = useRef<HTMLDivElement>(null);
   const windowRef = useRef<HTMLDivElement>(null);
   const bestRef = useRef<HTMLSpanElement>(null);
+  const xpRef = useRef<HTMLSpanElement>(null);
   const leverRef = useRef<SlotLeverHandle>(null);
   const rowEls = useRef<Array<HTMLSpanElement | null>>([]);
   /** The reel's rows by number, drawn as they come into view; row 0 starts on your best. */
@@ -283,21 +297,43 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
     let tipped = false;
     let lastRow = Math.round(from);
     let lastTick = 0;
-    let coins: Coin[] = [];
-    let burstAt = Infinity;
+    /** Coins in the air, each lot flying to its own place: your XP, or Best. */
+    let streams: Array<{
+      coins: Coin[];
+      at: number;
+      goal: () => { x: number; y: number };
+      onLand: () => boolean;
+    }> = [];
+    /** When the winnings, and a new record, burst into coins. */
+    let wonDue = Infinity;
+    let bestDue = Infinity;
     let pendingBest = 0;
-    let landedCoins = 0;
+    /** The XP shown counts from moneyFrom up to moneyTo as the winnings land. */
+    let moneyFrom = 0;
+    let moneyTo: number | null = null;
     let done = false;
 
     const finishCoins = () => {
-      for (const c of coins) c.el.remove();
-      coins = [];
+      for (const st of streams) for (const c of st.coins) c.el.remove();
+      streams = [];
+      wonDue = bestDue = Infinity;
       if (pendingBest) {
         setShownBest(pendingBest);
         setShining((s) => s + 1);
       }
       pendingBest = 0;
+      if (moneyTo !== null) setMoney(moneyTo);
+      moneyTo = null;
     };
+    /** A bump on what a coin landed in, bigger for the last. */
+    const bump = (el: HTMLElement | null, lastOne: boolean) => {
+      if (el && typeof el.animate === 'function')
+        el.animate([{ transform: `scale(${lastOne ? 1.3 : 1.1})` }, { transform: 'scale(1)' }], {
+          duration: lastOne ? 560 : 200,
+          easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
+        });
+    };
+    const centreOf = (el: HTMLElement | null) => (el ? textCentre(el) : { x: 0, y: 0 });
     const refund = () => {
       setStage('ready');
       latest.current.stage = 'ready';
@@ -321,7 +357,12 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       latest.current.onRolled(r);
       setTense(false);
       setLast(r);
-      setMoney(r.xp);
+      // Winnings come in as coins, the XP counting up as they land; anything else at once.
+      if ((r.won ?? 0) > 0 && !stillMotion()) {
+        moneyFrom = latest.current.money;
+        moneyTo = r.xp;
+        wonDue = t + WON_DELAY;
+      } else setMoney(r.xp);
       setStage('result');
       latest.current.stage = 'result';
       setBursts((b) => b + 1);
@@ -345,50 +386,78 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       if (r.fresh.length) later(1200, () => announceAchievements(r.fresh));
       if (r.newBest) {
         pendingBest = r.tier;
-        burstAt = t + BURST_DELAY;
+        bestDue = t + BURST_DELAY;
         const box = windowRef.current?.getBoundingClientRect();
         if (box && layerRef.current && !stillMotion()) throwSparks(layerRef.current, box, r.tier);
       }
     };
 
-    const burst = (r: RollResult) => {
+    /** The winnings, as coins of "+N" flying into your XP, a coin sound a little higher each. */
+    const wonBurst = (r: RollResult) => {
+      const box = windowRef.current?.getBoundingClientRect();
+      const layer = layerRef.current;
+      const won = r.won ?? 0;
+      if (!box || !layer || won <= 0 || moneyTo === null) return finishCoins();
+      const { count, each } = coinsFor(won);
+      const gap = Math.min(90, Math.max(30, 900 / count));
+      const at = t;
+      const start = moneyFrom;
+      const end = moneyTo;
+      let n = 0;
+      streams.push({
+        coins: burstCoins(layer, box, count, `+${each}`, false, (i) => at + BURST_MS + i * gap),
+        at,
+        goal: () => centreOf(xpRef.current),
+        onLand: () => {
+          n += 1;
+          const lastOne = n === count;
+          setMoney(lastOne ? end : start + Math.round(((end - start) * n) / count));
+          if (lastOne) moneyTo = null;
+          playEffect(COIN_COLLECT, sound(), 0.95 + 0.6 * (n / count), count > 14 ? 0.5 : 0.7);
+          bump(xpRef.current, lastOne);
+          return true;
+        },
+      });
+      playEffect(COIN_DROP, sound());
+    };
+
+    /** A new record: coins of its odds, ringed in its colour, flying into Best. */
+    const bestBurst = (r: RollResult) => {
       const box = windowRef.current?.getBoundingClientRect();
       const layer = layerRef.current;
       if (!box || !layer) return finishCoins();
       const count = Math.min(44, 6 + 3 * r.tier);
       const gap = Math.min(80, Math.max(26, 1000 / count));
-      coins = burstCoins(
+      const at = t;
+      let n = 0;
+      const coins = burstCoins(
         layer,
         box,
         count,
         rollOdds(r.tier),
         false,
-        (i) => burstAt + BURST_MS + i * gap,
+        (i) => at + BURST_MS + i * gap,
       );
       // Ringed in the rarity's colour, which they take from the layer.
       for (const c of coins) c.el.classList.add('is-roll');
+      streams.push({
+        coins,
+        at,
+        goal: () => centreOf(bestRef.current),
+        // The new record shows with the first coin, a bump and a rising note with each.
+        onLand: () => {
+          n += 1;
+          if (pendingBest) {
+            setShownBest(pendingBest);
+            setShining((s) => s + 1);
+            pendingBest = 0;
+          }
+          playEffect(COIN_COLLECT, sound(), 0.95 + 0.6 * (n / count), count > 14 ? 0.5 : 0.7);
+          bump(bestRef.current, n === count);
+          return true;
+        },
+      });
       playEffect(COIN_DROP, sound(), 1.15);
-    };
-
-    /** One coin into Best: the new record shows with the first, a bump and a rising note each. */
-    const coinIn = () => {
-      landedCoins += 1;
-      const total = landedCoins + coins.filter((c) => !c.landed).length;
-      if (pendingBest) {
-        setShownBest(pendingBest);
-        setShining((s) => s + 1);
-        pendingBest = 0;
-      }
-      playEffect(COIN_COLLECT, sound(), 0.95 + 0.6 * (landedCoins / total), total > 14 ? 0.5 : 0.7);
-      const el = bestRef.current;
-      if (el && typeof el.animate === 'function') {
-        const lastOne = landedCoins === total;
-        el.animate([{ transform: `scale(${lastOne ? 1.3 : 1.1})` }, { transform: 'scale(1)' }], {
-          duration: lastOne ? 560 : 200,
-          easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
-        });
-      }
-      return true;
     };
 
     if (stillMotion()) {
@@ -440,18 +509,17 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       }
 
       // The result is in and it has spun long enough: slow down onto it, from the speed it is
-      // going at. A hold stops a row short (on a decoy when it is a near miss) and tips over.
+      // going at. A hold stops a row short and tips over: always for a 1/4096 or rarer, and
+      // for a near miss only when the row it would stop on, drawn at the real odds like any
+      // other, happens to be one.
       if (!plan && result && spun >= Math.max(MIN_SPIN, SPEED_UP)) {
-        const real = result.tier >= TEASE_FROM;
-        const decoy = !real && Math.random() < TEASE_CHANCE ? decoyTier() : 0;
-        const hold = real || decoy > 0;
-        const run = slowingMs(Math.max(result.tier, decoy)) - SETTLE_MS;
+        const run = slowingMs(result.tier) - SETTLE_MS;
         const distance = (SPEED * run) / 4 - OVERSHOOT;
         const here = from + spunBy(spun);
         const stop = Math.ceil(here + distance);
+        const hold = result.tier >= TEASE_FROM || rowAt(stop) >= TEASE_FROM;
         const lands = hold ? stop + 1 : stop;
         rowsRef.current.set(lands, result.tier);
-        if (decoy) rowsRef.current.set(stop, decoy);
         const at = REELS_START + (stop - distance - from) / SPEED + SPEED_UP / 2;
         plan = { at, from: stop - distance, distance, run, tier: result.tier, stop, lands, hold };
       }
@@ -509,19 +577,17 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       lastRow = row;
 
       if (landed && result) {
-        if (t >= burstAt && !coins.length && pendingBest) {
-          burst(result);
-          burstAt = t;
+        if (t >= wonDue) {
+          wonDue = Infinity;
+          wonBurst(result);
         }
-        if (coins.length) {
-          const goal = bestRef.current ? textCentre(bestRef.current) : { x: 0, y: 0 };
-          stepCoins(coins, t, dt, burstAt, goal, false, coinIn);
-          if (coins.every((c) => c.landed)) {
-            coins = [];
-            done = true;
-            return;
-          }
-        } else if (!pendingBest) {
+        if (t >= bestDue) {
+          bestDue = Infinity;
+          bestBurst(result);
+        }
+        for (const st of streams) stepCoins(st.coins, t, dt, st.at, st.goal(), false, st.onLand);
+        streams = streams.filter((st) => st.coins.some((c) => !c.landed));
+        if (!streams.length && wonDue === Infinity && bestDue === Infinity) {
           done = true;
           return;
         }
@@ -583,7 +649,9 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
             </span>
             {shown && <span className="roll-slot-best-odds tabular">{rollOdds(shown.tier)}</span>}
           </span>
-          <span className="roll-slot-xp tabular">{money.toLocaleString()} XP</span>
+          <span ref={xpRef} className="roll-slot-xp tabular">
+            {money.toLocaleString()} XP
+          </span>
           <button
             type="button"
             className="btn btn-ghost btn-sm roll-slot-close"
