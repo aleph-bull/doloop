@@ -84,12 +84,13 @@ describe('rolls', () => {
 
     await setRolls({ name: 'off' });
     expect((await profileOfA()).profile.nameTier).toBeNull();
-    await setRolls({ name: 5 });
-    expect((await profileOfA()).profile.nameTier).toBe(5);
+    await setRolls({ name: 8 });
+    expect((await profileOfA()).profile.nameTier).toBe(8);
     // Rarer than anything rolled yet: back to the rarest.
     await setRolls({ name: 12 });
     expect((await profileOfA()).profile.nameTier).toBe(8);
-    expect((await setRolls({ name: 3 })).statusCode).toBe(400);
+    // Only Sapphire (1/256) and up can be worn.
+    expect((await setRolls({ name: 5 })).statusCode).toBe(400);
     await setRolls({ name: 'auto' });
     profile = await profileOfA();
     expect(profile.profile.nameTier).toBe(8);

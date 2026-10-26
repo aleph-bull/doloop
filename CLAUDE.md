@@ -327,7 +327,7 @@ and never explain the difference on screen.
   slot machine for a rarity, 1/2 to 1/32768 (core `rolls.ts`, drawn by `POST /api/rolls`). Each
   rarity has a title and a look that gets louder the rarer (`.roll-fx-*`, `fxLevel`): plain,
   then from 1/32 a flowing gradient, a shine, a glow and a colour cycle. A name wears one by
-  choice (`settings.rolls.name`, `nameTier` on every person; render names with `named()` from
+  choice, from Sapphire up (`settings.rolls.name`, `nameTier` on every person; render names with `named()` from
   `lib/rolls.ts`). Gambling feats and rarities past 1/256 are badges (`rollBadges`,
   `users.roll_stats`). The machine shares its lever, motion and coins with Jack mode's
   (`components/slot/`): change them there for both. See DECISIONS.md.

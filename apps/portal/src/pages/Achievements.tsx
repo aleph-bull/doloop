@@ -1,6 +1,6 @@
 import {
   levelProgress,
-  ROLL_GRADIENT_FROM,
+  ROLL_NAME_TIER,
   ROLL_TIERS,
   rollOdds,
   rollTierInfo,
@@ -50,6 +50,8 @@ export function Achievements() {
   );
   /** Backgrounds bought on this visit stay where they were, lit up, with Use it. */
   const [kept, setKept] = useState<string[]>([]);
+  // Sent here from a locked background in Settings: its fold starts open.
+  const [fromSettings] = useState(() => window.location.hash.startsWith('#bg-'));
 
   // Arriving from a locked background in Settings (#bg-<id>): scroll to it and light it up.
   const ready = !!shop.data && !!me.data;
@@ -83,6 +85,8 @@ export function Achievements() {
   const lp = levelProgress(wallet);
   const theme = resolvedTheme;
   const unlocked = new Map(s.achievements.map((a) => [a.key, a.unlockedAt]));
+  // Locked ones, and the ones bought on this visit (they stay, lit up, with Use it).
+  const shopBackgrounds = s.backgrounds.filter((b) => !b.owned || kept.includes(b.id));
   // Jack mode's badges show once it is on, or once one is earned; the rolls' once you roll.
   const jackOn = me.data?.user.settings.pomodoro.jackMode ?? false;
   const rolled = (s.rolls?.count ?? 0) > 0;
@@ -275,70 +279,73 @@ export function Achievements() {
         <p className="muted text-sm">
           Pick any of these backgrounds in <Link to="/settings#theme">Appearance</Link> to use them.
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {s.backgrounds
-            .filter((b) => !b.owned || kept.includes(b.id))
-            .map((b) => {
-              const using = b.owned && chosen.backgroundId === b.id && !chosen.customBackgroundUrl;
-              const cost = b.costXp;
-              return (
-                <div key={b.id} id={`bg-${b.id}`} className="shop-bg flex flex-col gap-1">
-                  <BackgroundThumb
-                    id={b.id}
-                    theme={theme}
-                    label={b.name}
-                    disabled={!b.owned}
-                    selected={using}
-                    className={b.owned ? 'is-unlocked' : undefined}
-                    onClick={b.owned ? () => void pickBackground(b.id) : undefined}
-                  />
-                  {b.owned ? (
-                    <Button
-                      size="sm"
-                      variant={using ? 'secondary' : 'primary'}
-                      disabled={using}
-                      onClick={() => void pickBackground(b.id)}
-                    >
-                      {using ? 'In use' : 'Use it'}
-                    </Button>
-                  ) : cost !== null ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={s.xp < cost}
-                      onClick={() =>
-                        void buy({
-                          key: b.id,
-                          cost,
-                          card: `#bg-${b.id}`,
-                          goal: '.bg-thumb',
-                          said: `${b.name} unlocked`,
-                          call: () => api.buyBackground(b.id),
-                          apply: (r) => {
-                            setKept((k) => [...k, b.id]);
-                            patchShop((d) => ({
-                              ...d,
-                              xp: r.xp,
-                              backgrounds: d.backgrounds.map((x) =>
-                                x.id === b.id ? { ...x, owned: true } : x,
-                              ),
-                            }));
-                          },
-                        }).then(settle)
-                      }
-                    >
-                      {cost} XP
-                    </Button>
-                  ) : (
-                    <span className="text-xs muted">Level {b.minLevel}</span>
-                  )}
-                </div>
-              );
-            })}
-          {s.backgrounds.every((b) => b.owned && !kept.includes(b.id)) && (
-            <p className="muted text-sm">Every background is unlocked.</p>
-          )}
-        </div>
+        {/* Folded on entry; open when Settings sent you to one of them (#bg-<id>). */}
+        <Fold
+          label={`Show all ${shopBackgrounds.length} backgrounds`}
+          gridClassName="grid grid-cols-2 sm:grid-cols-5 gap-3"
+          startOpen={fromSettings}
+        >
+          {shopBackgrounds.map((b) => {
+            const using = b.owned && chosen.backgroundId === b.id && !chosen.customBackgroundUrl;
+            const cost = b.costXp;
+            return (
+              <div key={b.id} id={`bg-${b.id}`} className="shop-bg flex flex-col gap-1">
+                <BackgroundThumb
+                  id={b.id}
+                  theme={theme}
+                  label={b.name}
+                  disabled={!b.owned}
+                  selected={using}
+                  className={b.owned ? 'is-unlocked' : undefined}
+                  onClick={b.owned ? () => void pickBackground(b.id) : undefined}
+                />
+                {b.owned ? (
+                  <Button
+                    size="sm"
+                    variant={using ? 'secondary' : 'primary'}
+                    disabled={using}
+                    onClick={() => void pickBackground(b.id)}
+                  >
+                    {using ? 'In use' : 'Use it'}
+                  </Button>
+                ) : cost !== null ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={s.xp < cost}
+                    onClick={() =>
+                      void buy({
+                        key: b.id,
+                        cost,
+                        card: `#bg-${b.id}`,
+                        goal: '.bg-thumb',
+                        said: `${b.name} unlocked`,
+                        call: () => api.buyBackground(b.id),
+                        apply: (r) => {
+                          setKept((k) => [...k, b.id]);
+                          patchShop((d) => ({
+                            ...d,
+                            xp: r.xp,
+                            backgrounds: d.backgrounds.map((x) =>
+                              x.id === b.id ? { ...x, owned: true } : x,
+                            ),
+                          }));
+                        },
+                      }).then(settle)
+                    }
+                  >
+                    {cost} XP
+                  </Button>
+                ) : (
+                  <span className="text-xs muted">Level {b.minLevel}</span>
+                )}
+              </div>
+            );
+          })}
+        </Fold>
+        {shopBackgrounds.length === 0 && (
+          <p className="muted text-sm">Every background is unlocked.</p>
+        )}
       </section>
       {s.rolls && (
         <Rolls
@@ -359,7 +366,7 @@ export function Achievements() {
             <strong>{unlocked.size}</strong> of {badges.length} unlocked
           </span>
         </div>
-        <BadgeFold count={badges.length}>
+        <Fold label={`Show all ${badges.length} badges`} gridClassName="badge-grid">
           {badges.map((b) => {
             const at = unlocked.get(b.key);
             return (
@@ -382,7 +389,7 @@ export function Achievements() {
               </Panel>
             );
           })}
-        </BadgeFold>
+        </Fold>
       </section>
     </div>
   );
@@ -449,8 +456,8 @@ function Rolls({
     update
       .mutateAsync({ rolls })
       .catch((err) => toast(err instanceof Error ? err.message : 'Could not save'));
-  // The styles a name can wear: from 1/32 up to the rarest roll.
-  const styles = ROLL_TIERS.filter((t) => t.tier >= ROLL_GRADIENT_FROM && t.tier <= record.best);
+  // The looks a name can wear: from Sapphire (1/256) up to the rarest roll.
+  const styles = ROLL_TIERS.filter((t) => t.tier >= ROLL_NAME_TIER && t.tier <= record.best);
 
   const rolled = (r: RollResult) =>
     qc.setQueryData<Awaited<ReturnType<typeof api.shop>>>(keys.shop, (shop) => {
@@ -539,12 +546,23 @@ function Rolls({
 }
 
 /**
- * The badge grid, folded: the first row in full and the second fading out, so the page
- * isn't a wall of forty cards. "Show all" grows it to its full height.
+ * A grid folded: the first row in full and the second fading out, so the page isn't a wall
+ * of forty cards. "Show all" (`label`) grows it to its full height. The badges and the shop's
+ * backgrounds both start folded.
  */
-function BadgeFold({ count, children }: { count: number; children: ReactNode }) {
+function Fold({
+  label,
+  gridClassName,
+  startOpen = false,
+  children,
+}: {
+  label: string;
+  gridClassName: string;
+  startOpen?: boolean;
+  children: ReactNode;
+}) {
   const gridRef = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [heights, setHeights] = useState<{ folded: number; full: number } | null>(null);
 
   useEffect(() => {
@@ -599,13 +617,13 @@ function BadgeFold({ count, children }: { count: number; children: ReactNode }) 
         className={`badge-fold${folds && !open ? ' is-folded' : ''}`}
         style={folds ? { height: open ? heights.full : heights.folded } : undefined}
       >
-        <div ref={gridRef} className="badge-grid" inert={folds && !open ? true : undefined}>
+        <div ref={gridRef} className={gridClassName} inert={folds && !open ? true : undefined}>
           {children}
         </div>
       </div>
       {folds && (
         <button type="button" className="badge-fold-toggle" aria-expanded={open} onClick={toggle}>
-          {open ? 'Show fewer' : `Show all ${count} badges`}
+          {open ? 'Show fewer' : label}
           <ChevronDown size={16} aria-hidden className="badge-fold-chevron" />
         </button>
       )}

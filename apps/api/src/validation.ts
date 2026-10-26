@@ -457,7 +457,7 @@ export const settingsSchema = z
       .partial(),
     rolls: z
       .object({
-        name: z.union([z.enum(['auto', 'off']), z.number().int().min(5).max(15)]),
+        name: z.union([z.enum(['auto', 'off']), z.number().int().min(8).max(15)]),
         profile: z.boolean(),
       })
       .partial(),

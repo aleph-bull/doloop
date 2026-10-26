@@ -2,8 +2,8 @@
  * RNG Rolls (asked for by the owner, 2026-10-25): on Achievements, 10 XP pulls the slot
  * machine for a rarity, each one half as likely as the one before: 1 in 2, 1 in 4, 1 in 8,
  * up to 1 in 32768 (owner: "up until like 1/32000"). Everyone keeps their rarest roll. Each rarity has a title, shown on the
- * profile; from 1 in 32 each has its own flowing gradient, wilder the rarer, which a name can
- * take; every
+ * profile; from 1 in 32 each has its own flowing gradient, wilder the rarer, and from
+ * Sapphire (1 in 256) a name can wear one; every
  * rarity past 1 in 256 is a badge, and so are a few gambling feats (`rollBadges`).
  *
  * The server draws the roll (`rollTier` on a random ticket); the portal only shows it.
@@ -22,10 +22,13 @@ export const ROLL_TIERS_COUNT = 15;
 /** Tickets are drawn from 0 to this, exclusive: one for each of the rarest roll's chances. */
 export const ROLL_TICKETS = 2 ** ROLL_TIERS_COUNT;
 
-/** From this rarity (1 in 32) each has a gradient, and a name can wear it. */
+/** From this rarity (1 in 32) each has a gradient. */
 export const ROLL_GRADIENT_FROM = 5;
 
-/** From this rarity (1 in 256) a name takes the rarest roll's style by itself ('auto'). */
+/**
+ * From this rarity (1 in 256, Sapphire) a name can wear a look (owner: "only saphire and above
+ * can change name colour"), and takes the rarest roll's by itself ('auto').
+ */
 export const ROLL_NAME_TIER = 8;
 
 /** Every rarity past 1 in 256 is a badge. */
@@ -98,8 +101,8 @@ export function rollBadgeKey(tier: number): string | null {
 
 /**
  * What a name wears (Achievements › RNG Rolls): 'auto' is the rarest roll's style once it is
- * 1 in 256 or rarer, 'off' is plain, and a tier is that rarity's gradient, any from 1 in 32
- * up to the rarest.
+ * 1 in 256 or rarer, 'off' is plain, and a tier is that rarity's look, any from Sapphire
+ * (1 in 256) up to the rarest.
  */
 export type RollNameChoice = 'auto' | 'off' | number;
 
@@ -109,7 +112,7 @@ export function nameTier(best: number, choice: RollNameChoice = 'auto'): number 
   if (
     typeof choice === 'number' &&
     Number.isInteger(choice) &&
-    choice >= ROLL_GRADIENT_FROM &&
+    choice >= ROLL_NAME_TIER &&
     choice <= Math.min(best, ROLL_TIERS_COUNT)
   )
     return choice;

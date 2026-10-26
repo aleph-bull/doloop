@@ -31,15 +31,16 @@ describe('rolls', () => {
     expect(rollOdds(15)).toBe('1/32768');
   });
 
-  it('styles the name by the rarest from 1/256, or by a pick from 1/32 up to it', () => {
+  it('styles the name by the rarest from 1/256, or by a pick from Sapphire up to it', () => {
     expect(nameTier(7)).toBeNull();
     expect(nameTier(8)).toBe(8);
     expect(nameTier(12, 'off')).toBeNull();
-    expect(nameTier(12, 6)).toBe(6);
-    // Not reached yet, or below where the gradients start: the rarest instead.
+    expect(nameTier(12, 9)).toBe(9);
+    expect(nameTier(12, 8)).toBe(8);
+    // Not reached yet, or below Sapphire: the rarest instead.
     expect(nameTier(9, 12)).toBe(9);
-    expect(nameTier(9, 3)).toBe(9);
-    expect(nameTier(6, 5)).toBe(5);
+    expect(nameTier(12, 6)).toBe(12);
+    expect(nameTier(6, 5)).toBeNull();
   });
 
   it('turns the old name colour switch, when off, into a plain name', () => {
