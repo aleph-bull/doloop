@@ -4,13 +4,34 @@ import {
   isBackgroundAvailable,
   solidBackgroundId,
   solidColorOf,
+  THEME_TAGS,
+  type BackgroundCategory,
   type BackgroundMeta,
+  type ThemeTag,
 } from '@komogon/core';
-import { BackgroundThumb, type ResolvedTheme } from '@komogon/ui';
+import { BackgroundThumb, Segmented, type ResolvedTheme } from '@komogon/ui';
 import { ChevronDown, ChevronUp, ImagePlus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { UploadedTile, UploadTile, type UploadedBackgrounds } from './CustomBackgrounds';
+
+type Tab = ThemeTag | 'all' | 'yours';
+
+/** Each category under one of the themes' tabs, so the two pickers are sorted alike. */
+const TAB_OF: Record<BackgroundCategory, ThemeTag> = {
+  minimal: 'minimalist',
+  abstract: 'abstract',
+  sky: 'nature',
+  mountains: 'nature',
+  lakes: 'nature',
+  coast: 'nature',
+  forest: 'nature',
+  country: 'nature',
+  desert: 'nature',
+  night: 'night',
+  cities: 'cities',
+  lights: 'cities',
+};
 
 /** Where the colour chooser starts before one was ever picked: a quiet dark slate. */
 const DEFAULT_SOLID = '#1f2433';
@@ -88,8 +109,10 @@ function lockHint(b: BackgroundMeta): string {
 }
 
 /**
- * The full catalogue, grouped by category. Locked backgrounds stay visible but dimmed and
- * disabled, labelled with what unlocks them, so the shop is discoverable from here.
+ * The full catalogue, under the same tabs as the themes and grouped by category inside
+ * them. Their own uploads are the Yours tab, which opens first when there is one. Locked
+ * backgrounds stay visible but dimmed and disabled, labelled with what unlocks them, so the
+ * shop is discoverable from here.
  */
 export function BackgroundPicker({
   value,
@@ -104,6 +127,11 @@ export function BackgroundPicker({
   // Opens minimized every time: the full grid is long, and most visits to Settings are for
   // something else. "Show all backgrounds" opens it for this visit.
   const [minimized, setMinimized] = useState(true);
+  const [tab, setTab] = useState<Tab>('all');
+  const open = () => {
+    setTab(uploads && uploads.items.length > 0 ? 'yours' : 'all');
+    setMinimized(false);
+  };
   /** A locked background offers the way to it: Achievements, scrolled to it and lit up. */
   const offerShop = (b: BackgroundMeta) => {
     const how = b.costXp !== null ? 'is in the shop' : `unlocks at level ${b.minLevel}`;
@@ -113,7 +141,7 @@ export function BackgroundPicker({
   const groups = BACKGROUND_CATEGORY_LABELS.map((c) => ({
     ...c,
     items: BACKGROUNDS.filter((b) => b.category === c.id),
-  })).filter((g) => g.items.length > 0);
+  })).filter((g) => g.items.length > 0 && (tab === 'all' || TAB_OF[g.id] === tab));
 
   const preset = BACKGROUNDS.some((b) => b.id === value);
   const chosenUpload = uploads?.items.find((b) => b.id === uploads.chosen);
@@ -122,13 +150,13 @@ export function BackgroundPicker({
       <div className="bg-minimized">
         {uploads?.ui}
         {chosenUpload ? (
-          <UploadedTile item={chosenUpload} selected onPick={() => setMinimized(false)} />
+          <UploadedTile item={chosenUpload} selected onPick={open} />
         ) : preset ? (
           <BackgroundThumb id={value} theme={theme} label={chosenName(value)} selected />
         ) : (
           <span className="bg-minimized-name">{chosenName(value)}</span>
         )}
-        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setMinimized(false)}>
+        <button type="button" className="btn btn-secondary btn-sm" onClick={open}>
           <ChevronDown size={14} aria-hidden /> Show all backgrounds
         </button>
         {uploads && (
@@ -147,58 +175,66 @@ export function BackgroundPicker({
   return (
     <div className="bg-groups">
       {uploads?.ui}
-      <div className="bg-groups-head">
+      <div className="picker-head">
+        <Segmented
+          ariaLabel="Background tags"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: 'all', label: 'All' },
+            ...(uploads ? [{ value: 'yours' as const, label: 'Yours' }] : []),
+            ...THEME_TAGS.map((t) => ({ value: t.id, label: t.label })),
+          ]}
+        />
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMinimized(true)}>
           <ChevronUp size={14} aria-hidden /> Minimize
         </button>
       </div>
-      {uploads && (
-        <div className="bg-group">
-          <h4 className="bg-group-title">Yours</h4>
-          <div className="bg-grid">
-            <UploadTile uploads={uploads} />
-            {uploads.items.map((b) => (
-              <UploadedTile
-                key={b.id}
-                item={b}
-                selected={uploads.chosen === b.id}
-                onPick={() => uploads.pick(b.id)}
-                onRemove={() => uploads.remove(b.id)}
-              />
-            ))}
-          </div>
+      {tab === 'yours' && uploads ? (
+        <div className="bg-grid">
+          <UploadTile uploads={uploads} />
+          {uploads.items.map((b) => (
+            <UploadedTile
+              key={b.id}
+              item={b}
+              selected={uploads.chosen === b.id}
+              onPick={() => uploads.pick(b.id)}
+              onRemove={() => uploads.remove(b.id)}
+            />
+          ))}
         </div>
+      ) : (
+        groups.map((group) => (
+          <div key={group.id} className="bg-group">
+            {groups.length > 1 && <h4 className="bg-group-title">{group.label}</h4>}
+            <div className="bg-grid">
+              {group.id === 'minimal' && (
+                <>
+                  <SolidColourTile value={value} onChange={onChange} />
+                  {leading}
+                </>
+              )}
+              {group.items.map((b) => {
+                const available = isBackgroundAvailable(b.id, level, purchased);
+                return (
+                  <BackgroundThumb
+                    key={b.id}
+                    id={b.id}
+                    theme={theme}
+                    label={b.name}
+                    badge={available ? undefined : lockLabel(b)}
+                    ariaLabel={available ? b.name : `${b.name}, ${lockLabel(b)}`}
+                    title={available ? b.name : `${b.name} — ${lockHint(b)}`}
+                    selected={value === b.id}
+                    className={available ? undefined : 'is-locked'}
+                    onClick={() => (available ? onChange(b.id) : offerShop(b))}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))
       )}
-      {groups.map((group, gi) => (
-        <div key={group.id} className="bg-group">
-          <h4 className="bg-group-title">{group.label}</h4>
-          <div className="bg-grid">
-            {gi === 0 && (
-              <>
-                <SolidColourTile value={value} onChange={onChange} />
-                {leading}
-              </>
-            )}
-            {group.items.map((b) => {
-              const available = isBackgroundAvailable(b.id, level, purchased);
-              return (
-                <BackgroundThumb
-                  key={b.id}
-                  id={b.id}
-                  theme={theme}
-                  label={b.name}
-                  badge={available ? undefined : lockLabel(b)}
-                  ariaLabel={available ? b.name : `${b.name}, ${lockLabel(b)}`}
-                  title={available ? b.name : `${b.name} — ${lockHint(b)}`}
-                  selected={value === b.id}
-                  className={available ? undefined : 'is-locked'}
-                  onClick={() => (available ? onChange(b.id) : offerShop(b))}
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
     </div>
   );
 }

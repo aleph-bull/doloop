@@ -3961,12 +3961,46 @@ button.start-subject:hover {
 .bg-minimized-name {
   font-weight: 500;
 }
-.bg-groups-head {
+/* The themes folded the same way: the theme in use as its card. */
+.theme-minimized {
+  align-items: flex-start;
+}
+.theme-minimized > .preset {
+  width: 132px;
+  flex: none;
+}
+/* Level with the middle of the picture (16:10 at 132px), not of the whole card. */
+.theme-minimized > .btn-sm {
+  margin-top: calc((132px * 10 / 16 - 32px) / 2);
+}
+.theme-minimized .preset-foot {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+/* An open picker (themes, backgrounds): the tabs, and Minimize at the end of the row. The
+   tabs scroll sideways when they don't fit. */
+.picker-head {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+}
+.picker-head > .segmented {
+  min-width: 0;
+}
+.picker-head > .btn {
+  flex: none;
+}
+/* On a phone the tabs keep the whole width: Minimize goes on a line above them. */
+@media (max-width: 560px) {
+  .picker-head {
+    flex-wrap: wrap;
+  }
+  .picker-head > .btn {
+    order: -1;
+    margin-left: auto;
+  }
 }
 .bg-groups {
   display: flex;

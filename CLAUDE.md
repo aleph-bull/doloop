@@ -381,7 +381,9 @@ and never explain the difference on screen.
 - Removed the weekly review page. `/analytics/review` redirects to Analytics; the API route
   and the `weekly_reviews` table are still there, unused by the portal.
 - Background pickers in Settings open minimized every time ("Show all backgrounds" opens
-  them).
+  them), and so does Themes (2026-10-26, "Show all themes"). Backgrounds use the themes'
+  tabs (All, Yours, Minimalist, Nature, Cities, Night, Abstract; `TAB_OF` in
+  BackgroundPicker.tsx puts each category under one): a new category needs a tab there.
 - Leaderboard tab, onboarding can skip the first task, name placeholder "e.g. John".
 - Settings › Pages now has a Dashboard sub-panel with the daily card and "Tips about the app"
   (they used to sit in Pace and streaks).

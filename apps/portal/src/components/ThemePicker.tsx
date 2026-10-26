@@ -36,9 +36,6 @@ export interface ThemePickerProps {
 
 type Tab = ThemeTag | 'all' | 'custom';
 
-/** How many show under All before "Show all themes": about two rows. */
-const FIRST_ROWS = 8;
-
 const TAG_LABEL = Object.fromEntries(THEME_TAGS.map((t) => [t.id, t.label])) as Record<
   ThemeTag,
   string
@@ -149,19 +146,15 @@ function ThemeCard({
 /**
  * Preset themes: a whole look (light or dark, accent, background, panels, glass, texture)
  * in one click, filtered by tag. The one in use is ticked. Custom holds the saved looks,
- * and opens first when there is at least one.
+ * and opens first when there is at least one. Opens minimized every time, like the
+ * background picker: the theme in use and "Show all themes".
  */
 export function ThemePicker({ theme, resolved, patch, onImageApplied }: ThemePickerProps) {
   const { toast } = useToast();
   const current = matchingThemePreset(theme);
+  const [minimized, setMinimized] = useState(true);
   const [tag, setTag] = useState<Tab>(() => (loadPresets().length > 0 ? 'custom' : 'all'));
-  // Opens on the first rows, unless the theme in use is further down.
-  const [showAll, setShowAll] = useState(
-    () => THEME_PRESETS.findIndex((p) => p.id === current?.id) >= FIRST_ROWS,
-  );
-  const tagged = tag === 'all' ? THEME_PRESETS : THEME_PRESETS.filter((p) => p.tag === tag);
-  const folded = tag === 'all' && !showAll && tagged.length > FIRST_ROWS;
-  const shown = folded ? tagged.slice(0, FIRST_ROWS) : tagged;
+  const shown = tag === 'all' ? THEME_PRESETS : THEME_PRESETS.filter((p) => p.tag === tag);
 
   const pick = (p: ThemePreset) => {
     patch({ theme: themePresetPatch(p) }).catch((err: unknown) =>
@@ -169,19 +162,50 @@ export function ThemePicker({ theme, resolved, patch, onImageApplied }: ThemePic
     );
   };
 
+  if (minimized)
+    return (
+      <div className="field">
+        <span className="field-label">Themes</span>
+        <div className="bg-minimized theme-minimized">
+          {current ? (
+            <ThemeCard
+              preset={current}
+              current={resolved}
+              active
+              onPick={() => setMinimized(false)}
+            />
+          ) : (
+            <span className="bg-minimized-name">Custom</span>
+          )}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => setMinimized(false)}
+          >
+            <ChevronDown size={14} aria-hidden /> Show all themes
+          </button>
+        </div>
+      </div>
+    );
+
   return (
     <div className="field">
       <span className="field-label">Themes</span>
-      <Segmented
-        ariaLabel="Theme tags"
-        value={tag}
-        onChange={setTag}
-        options={[
-          { value: 'all', label: 'All' },
-          { value: 'custom', label: 'Custom' },
-          ...THEME_TAGS.map((t) => ({ value: t.id, label: t.label })),
-        ]}
-      />
+      <div className="picker-head">
+        <Segmented
+          ariaLabel="Theme tags"
+          value={tag}
+          onChange={setTag}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'custom', label: 'Custom' },
+            ...THEME_TAGS.map((t) => ({ value: t.id, label: t.label })),
+          ]}
+        />
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setMinimized(true)}>
+          <ChevronUp size={14} aria-hidden /> Minimize
+        </button>
+      </div>
       {tag === 'custom' ? (
         <AppearancePresets
           theme={theme}
@@ -200,25 +224,6 @@ export function ThemePicker({ theme, resolved, patch, onImageApplied }: ThemePic
               onPick={() => pick(p)}
             />
           ))}
-        </div>
-      )}
-      {tag === 'all' && tagged.length > FIRST_ROWS && (
-        <div>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => setShowAll((v) => !v)}
-          >
-            {showAll ? (
-              <>
-                <ChevronUp size={14} aria-hidden /> Fewer
-              </>
-            ) : (
-              <>
-                <ChevronDown size={14} aria-hidden /> Show all themes
-              </>
-            )}
-          </button>
         </div>
       )}
     </div>
