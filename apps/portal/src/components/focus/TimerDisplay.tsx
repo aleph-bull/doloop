@@ -1,3 +1,5 @@
+import { ClockDigits } from '../ClockDigits';
+
 export interface TimerDisplayProps {
   /** The countdown or elapsed clock, already formatted. */
   digits: string;
@@ -17,7 +19,7 @@ export function TimerDisplay({ digits, meaning }: TimerDisplayProps) {
       aria-label={`${digits} ${meaning}`}
       data-jack-target
     >
-      {digits}
+      <ClockDigits digits={digits} />
     </div>
   );
 }

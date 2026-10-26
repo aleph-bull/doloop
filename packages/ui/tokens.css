@@ -32,6 +32,11 @@
     'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
     'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+  /* The clock (dashboard timer card, focus screen): Inter until they pick a timer font. */
+  --font-timer:
+    'Inter Variable', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Segoe UI Variable Display', 'Segoe UI', system-ui, Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
   --font-rounded:
     ui-rounded, 'SF Pro Rounded', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Display',
     'Segoe UI', system-ui, sans-serif;

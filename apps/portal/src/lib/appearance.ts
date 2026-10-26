@@ -6,6 +6,7 @@ import {
 } from '@komogon/core';
 import { applyUserTheme, resolveTheme, type GlassChoice, type ResolvedTheme } from '@komogon/ui';
 import { useEffect } from 'react';
+import { applyFonts } from './fonts';
 import { useCustomBackground } from './queries';
 
 export interface Appearance {
@@ -60,6 +61,23 @@ export function useAppearance(settings: UserSettings | undefined): Appearance {
   useEffect(() => {
     if (settings) applyUserTheme(settings, document.documentElement, backdropId);
   }, [settings, backdropId]);
+
+  // The timer, heading and text fonts, each once it has loaded.
+  const fontText = settings?.theme.fontText;
+  const fontHeading = settings?.theme.fontHeading;
+  const fontTimer = settings?.theme.fontTimer;
+  useEffect(() => {
+    if (!settings) return;
+    applyFonts(
+      {
+        fontText: fontText ?? DEFAULT_SETTINGS.theme.fontText,
+        fontHeading: fontHeading ?? DEFAULT_SETTINGS.theme.fontHeading,
+        fontTimer: fontTimer ?? DEFAULT_SETTINGS.theme.fontTimer,
+      },
+      document.documentElement,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!settings, fontText, fontHeading, fontTimer]);
 
   // Follow OS theme changes while the system decides: only when someone picked System.
   const followsSystem = settings?.theme.mode === 'system';

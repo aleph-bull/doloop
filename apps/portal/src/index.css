@@ -1081,12 +1081,18 @@
   gap: 4px 18px;
 }
 .timer-digits {
-  font-family: var(--font-display);
+  font-family: var(--font-timer);
   font-size: clamp(3.75rem, 11vw, 6.5rem);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   line-height: 0.95;
+}
+/* A timer font of their own: every figure one box wide (ClockDigits), so the clock holds still. */
+[data-timer-font] .clock-digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
 }
 .timer-focused {
   font-size: var(--text-sm);
@@ -2416,6 +2422,104 @@ button.start-subject:hover {
 }
 .start-option.is-link {
   color: var(--fg-muted);
+}
+/* Settings › Appearance › Fonts: a pill each for the timer, headings and text, the list of
+   fonts popping out of it (each name in its own font). */
+.font-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 10px 12px;
+}
+.font-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.font-field-label {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.start-pill.font-pill {
+  justify-content: space-between;
+  width: 100%;
+  min-width: 0;
+}
+.font-pill-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.font-menu {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.font-menu::-webkit-scrollbar {
+  width: 10px;
+}
+.font-menu::-webkit-scrollbar-button {
+  display: none;
+}
+.font-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+.font-menu::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--fg) 22%, transparent) padding-box;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .font-menu {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--fg) 22%, transparent) transparent;
+  }
+}
+.font-pop .start-menu-foot {
+  flex: none;
+}
+.font-option-name {
+  font-size: var(--text-base);
+}
+.font-option-sample {
+  flex: none;
+  font-size: var(--text-base);
+  color: var(--fg-muted);
+}
+.font-menu-head {
+  padding: 10px 10px 4px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.font-option-own {
+  position: relative;
+}
+.font-option-own .start-option {
+  padding-right: 40px;
+}
+.font-option-delete {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.font-option-delete:hover,
+.font-option-delete:focus-visible {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg);
 }
 .start-length-field {
   display: flex;
@@ -4601,6 +4705,7 @@ button.start-subject:hover {
   color: var(--fg-muted);
 }
 .focus-time {
+  font-family: var(--font-timer);
   font-size: clamp(4.5rem, 19vw, 14rem);
   font-weight: 500;
   line-height: 1;

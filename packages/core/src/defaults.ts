@@ -1,3 +1,4 @@
+import { fontChoiceOf } from './fonts';
 import { UOFT_GRADE_SCALE } from './grades';
 import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
 import {
@@ -81,6 +82,9 @@ export const DEFAULT_SETTINGS: UserSettings = {
     backgroundBlur: 0,
     backgroundBrightness: 0,
     texture: 'none',
+    fontText: 'default',
+    fontHeading: 'default',
+    fontTimer: 'default',
     extensionBackground: 'same',
     savedAccents: [],
   },
@@ -226,6 +230,10 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
   settings.dismissed = asList<string>(settings.dismissed, []);
   settings.blocking.domains = asList<string>(settings.blocking.domains, []);
   settings.grading.scale = asList(settings.grading.scale, DEFAULT_SETTINGS.grading.scale);
+  // A free font taken out of the list since: back to the default.
+  settings.theme.fontText = fontChoiceOf(settings.theme.fontText);
+  settings.theme.fontHeading = fontChoiceOf(settings.theme.fontHeading);
+  settings.theme.fontTimer = fontChoiceOf(settings.theme.fontTimer);
   // A row saved before the layout existed: its two clock switches decide those pieces.
   const tl = settings.timelapse;
   const savedLayout = (partial.timelapse as { layout?: unknown } | undefined)?.layout;

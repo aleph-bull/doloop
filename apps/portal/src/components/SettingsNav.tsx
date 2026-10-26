@@ -144,6 +144,12 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'colourful',
       'saturation',
       'advanced',
+      'font',
+      'fonts',
+      'typeface',
+      'heading font',
+      'timer font',
+      'upload font',
       // Where the pages sit on a computer.
       'navigation',
       'nav bar',

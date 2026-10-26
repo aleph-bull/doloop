@@ -7,6 +7,7 @@ import type { ActiveSession, EndSummary } from '../lib/api';
 import { FOCUS_PATH, openFocusTab, useFocusTabPresent } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import { PHASE_LABEL, useSessionController } from '../lib/session-controller';
+import { ClockDigits } from './ClockDigits';
 
 export interface TimerCardProps {
   active: ActiveSession;
@@ -91,7 +92,7 @@ export function TimerCard({ active, settings, nodes, onEnded, footer }: TimerCar
               data-jack-target
               aria-label={`${ctl.digits} ${timer.mode === 'unlimited' ? 'elapsed' : 'remaining'}`}
             >
-              {ctl.digits}
+              <ClockDigits digits={ctl.digits} />
             </div>
           ) : (
             <div className="timer-digits" aria-label="Timer hidden">

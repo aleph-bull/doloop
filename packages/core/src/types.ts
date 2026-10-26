@@ -151,6 +151,10 @@ export interface UserSettings {
     backgroundBrightness: number;
     /** Pattern over a plain background; photos and uploads never show it. */
     texture: BackgroundTexture;
+    /** Fonts (fonts.ts): 'default' (Inter), a free font's id, or `upload:<id>` of their own. */
+    fontText: string;
+    fontHeading: string;
+    fontTimer: string;
     /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
     extensionBackground: string;
     /** The user's own accent colours ('custom:h,s,l'), kept beside the built-in ones. */

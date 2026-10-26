@@ -2,6 +2,7 @@ import {
   BASS_HZ_LIMITS,
   CUSTOM_ACCENT,
   CUSTOM_BACKGROUND_UPLOAD,
+  isFontChoice,
   POMODORO_LIMITS,
   REWARDS,
   SOUND_PRESETS,
@@ -194,6 +195,9 @@ export const vacationSchema = z.object({
 });
 
 /** Only a preset that actually exists; an unknown id would play nothing. */
+/** Default, one of the free fonts, or one of their own ('upload:<id>', kept in their browser). */
+const fontChoice = z.string().max(48).refine(isFontChoice, 'Unknown font');
+
 const soundPresetId = z.enum(SOUND_PRESETS.map((p) => p.id) as [string, ...string[]]);
 
 const minutes = (k: keyof typeof POMODORO_LIMITS) =>
@@ -350,6 +354,9 @@ export const settingsSchema = z
         backgroundBlur: z.number().int().min(0).max(40),
         backgroundBrightness: z.number().int().min(-60).max(60),
         texture: z.enum(['none', 'grain', 'dots', 'grid']),
+        fontText: fontChoice,
+        fontHeading: fontChoice,
+        fontTimer: fontChoice,
         extensionBackground: z.string().max(32),
         // A hard ceiling only; the route refuses growing past MAX_SAVED_ACCENTS, so a list saved
         // under an older, higher limit can still be trimmed or reordered.

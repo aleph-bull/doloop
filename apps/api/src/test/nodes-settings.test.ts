@@ -293,6 +293,40 @@ describe('settings and profile', () => {
     }
   });
 
+  it('keeps the fonts, starting on the default', async () => {
+    const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme;
+    expect(before).toMatchObject({
+      fontText: 'default',
+      fontHeading: 'default',
+      fontTimer: 'default',
+    });
+    const own = 'upload:3f2b8c1e-6a4d-4b7e-9c2a-1d5e8f0a7b36';
+    const res = await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { fontText: 'lora', fontTimer: own } },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().settings.theme).toMatchObject({
+      fontText: 'lora',
+      fontHeading: 'default',
+      fontTimer: own,
+    });
+    for (const theme of [
+      { fontText: 'comic-sans' },
+      { fontHeading: 'upload:nope' },
+      { fontTimer: 'https://example.com/font.woff2' },
+    ]) {
+      const bad = await t.api({ method: 'PATCH', url: '/api/me/settings', payload: { theme } });
+      expect(bad.statusCode).toBe(400);
+    }
+    await t.api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { theme: { fontText: 'default', fontTimer: 'default' } },
+    });
+  });
+
   it('keeps a texture, starting with none', async () => {
     const before = (await t.api({ method: 'GET', url: '/api/me' })).json().user.settings.theme;
     expect(before.texture).toBe('none');

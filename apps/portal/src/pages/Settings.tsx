@@ -50,6 +50,7 @@ import { ThemePicker } from '../components/ThemePicker';
 import { BackgroundAdjust } from '../components/BackgroundAdjust';
 import { BackgroundPicker } from '../components/BackgroundPicker';
 import { PanelSettings } from '../components/PanelSettings';
+import { FontSettings } from '../components/FontSettings';
 import { useUploadedBackgrounds } from '../components/CustomBackgrounds';
 import { GlassSettings } from '../components/GlassSettings';
 import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
@@ -635,6 +636,7 @@ export function Settings() {
                 panelAlpha={s.theme.panelAlpha}
                 onChange={patch}
               />
+              {me.data && <FontSettings theme={s.theme} owner={me.data.user.id} onChange={patch} />}
               <div className="field">
                 <span className="field-label">Navigation</span>
                 <Segmented

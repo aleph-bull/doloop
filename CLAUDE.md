@@ -295,6 +295,12 @@ and never explain the difference on screen.
 
 ## Recent changes (2026-10-20)
 
+- Fonts (2026-10-25): Settings › Appearance › Fonts picks the timer, heading and text fonts
+  (`theme.fontTimer`/`fontHeading`/`fontText`), each Inter by default, one of the free fonts
+  (core `fonts.ts`, files in portal `lib/fonts.ts`) or one they upload. Uploaded fonts stay in
+  the browser (`lib/local-fonts.ts`), never sent to the API. They set `--font-timer`,
+  `--font-display` and `--font-sans` on <html>: new UI keeps using those variables, never a
+  named font, and a big clock uses `--font-timer` with `ClockDigits`. DECISIONS.md has the details.
 - Your own backgrounds (2026-10-25): Settings › Appearance › Background has Upload and a
   "Yours" row; the first is free, each one kept beside it 50 XP (asked first). **The pictures
   stay in the browser** (owner: "make sure custom background storage is local"): IndexedDB
