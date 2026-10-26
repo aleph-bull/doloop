@@ -1,4 +1,12 @@
-import { levelProgress, rollOdds, rollTierInfo } from '@komogon/core';
+import {
+  levelProgress,
+  ROLL_GRADIENT_FROM,
+  ROLL_TIERS,
+  rollOdds,
+  rollTierInfo,
+  type RollNameChoice,
+  type UserSettings,
+} from '@komogon/core';
 import { Award, ChevronDown, Lock } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,13 +24,13 @@ import {
 } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
 import { RewardShelf } from '../components/RewardShelf';
-import { RollLadder } from '../components/slot/RollLadder';
+import { RollIndex } from '../components/slot/RollIndex';
 import { RollSlot } from '../components/slot/RollSlot';
 import { api, type RollRecord, type RollResult } from '../lib/api';
 import { useResolvedTheme } from '../lib/appearance';
 import { fmtDate } from '../lib/format';
-import { keys, useMe, useShop } from '../lib/queries';
-import { tierStyle } from '../lib/rolls';
+import { keys, useMe, useShop, useUpdateSettings } from '../lib/queries';
+import { rollClass } from '../lib/rolls';
 
 export function Achievements() {
   const shop = useShop();
@@ -110,15 +118,6 @@ export function Achievements() {
       </Glass>
 
       <RewardShelf />
-
-      {s.rolls && (
-        <Rolls
-          record={s.rolls}
-          xp={s.xp}
-          volume={me.data.user.settings.sounds.enabled ? me.data.user.settings.sounds.volume : 0}
-          confetti={me.data.user.settings.effects.confetti !== false}
-        />
-      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="shop-h">
         <h2 id="shop-h" className="section-title">
@@ -229,6 +228,16 @@ export function Achievements() {
           )}
         </div>
       </section>
+      {s.rolls && (
+        <Rolls
+          record={s.rolls}
+          xp={s.xp}
+          volume={me.data.user.settings.sounds.enabled ? me.data.user.settings.sounds.volume : 0}
+          confetti={me.data.user.settings.effects.confetti !== false}
+          choice={me.data.user.settings.rolls}
+        />
+      )}
+
       <section className="flex flex-col gap-3" aria-labelledby="badges-h">
         <div className="flex items-baseline gap-3">
           <h2 id="badges-h" className="section-title flex-1">
@@ -268,30 +277,41 @@ export function Achievements() {
 }
 
 /**
- * Rolls: your rarest roll, every rarity with how often it came up, and the button that opens
- * the slot machine. Each pull is written straight into the shop's cached copy; the rest of
- * the page (badges, level) catches up when the machine closes.
+ * RNG Rolls: your rarest roll, every rarity with how often it came up, the button that opens
+ * the slot machine, and in small text what your profile and your name show. Each pull is
+ * written straight into the shop's cached copy; the rest of the page (badges, level) catches
+ * up when the machine closes.
  */
 function Rolls({
   record,
   xp,
   volume,
   confetti,
+  choice,
 }: {
   record: RollRecord;
   xp: number;
   volume: number;
   confetti: boolean;
+  choice: UserSettings['rolls'];
 }) {
   const qc = useQueryClient();
+  const update = useUpdateSettings();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const best = rollTierInfo(record.best);
+  const save = (rolls: Partial<UserSettings['rolls']>) =>
+    update
+      .mutateAsync({ rolls })
+      .catch((err) => toast(err instanceof Error ? err.message : 'Could not save'));
+  // The styles a name can wear: from 1/32 up to the rarest roll.
+  const styles = ROLL_TIERS.filter((t) => t.tier >= ROLL_GRADIENT_FROM && t.tier <= record.best);
 
   const rolled = (r: RollResult) =>
     qc.setQueryData<Awaited<ReturnType<typeof api.shop>>>(keys.shop, (shop) => {
       if (!shop?.rolls) return shop;
       const counts = [...shop.rolls.counts];
-      counts[r.tier - 1] = (counts[r.tier - 1] ?? 0) + 1;
+      for (const t of r.tiers ?? [r.tier]) counts[t - 1] = (counts[t - 1] ?? 0) + 1;
       return { ...shop, xp: r.xp, rolls: { ...shop.rolls, best: r.best, count: r.count, counts } };
     });
   const close = () => {
@@ -303,33 +323,60 @@ function Rolls({
   return (
     <section className="flex flex-col gap-3" aria-labelledby="rolls-h">
       <h2 id="rolls-h" className="section-title">
-        Rolls
+        RNG Rolls
       </h2>
-      <Panel className="roll-panel">
-        <div className="roll-panel-head">
-          <div className="roll-panel-best">
-            <span className="roll-panel-label">Best</span>
-            <span className="roll-panel-odds tabular" style={tierStyle(record.best)}>
-              {best ? rollOdds(best.tier) : '–'}
+      <Panel className="rng-card">
+        <div className="rng-head">
+          <div className="rng-best">
+            <span className="rng-label">Rarest</span>
+            <span className={`rng-best-title${best ? ` ${rollClass(best.tier)}` : ''}`}>
+              {best ? best.title : 'Nothing yet'}
             </span>
-            {best && <span className="roll-panel-title">{best.title}</span>}
+            {best && (
+              <span className="rng-best-meta tabular">
+                {rollOdds(best.tier)} · {record.count.toLocaleString()}{' '}
+                {record.count === 1 ? 'roll' : 'rolls'}
+              </span>
+            )}
           </div>
-          <span className="flex-1" />
-          {record.count > 0 && (
-            <span className="muted text-sm tabular">
-              {record.count.toLocaleString()} {record.count === 1 ? 'roll' : 'rolls'}
-            </span>
-          )}
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={xp < record.cost}
-            onClick={() => setOpen(true)}
-          >
+          <Button variant="primary" disabled={xp < record.cost} onClick={() => setOpen(true)}>
             Roll for {record.cost} XP
           </Button>
         </div>
-        <RollLadder counts={record.counts} best={record.best} titles />
+        <RollIndex counts={record.counts} best={record.best} />
+        <div className="rng-options">
+          <label className="rng-option">
+            <input
+              type="checkbox"
+              checked={choice.profile}
+              onChange={(e) => void save({ profile: e.target.checked })}
+            />
+            Show on my profile
+          </label>
+          {styles.length > 0 && (
+            <label className="rng-option">
+              Name
+              <select
+                className="rng-select"
+                value={String(choice.name)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  void save({
+                    name: (v === 'auto' || v === 'off' ? v : Number(v)) as RollNameChoice,
+                  });
+                }}
+              >
+                <option value="auto">Auto</option>
+                <option value="off">Plain</option>
+                {styles.map((t) => (
+                  <option key={t.tier} value={t.tier}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
       </Panel>
       {open && (
         <RollSlot

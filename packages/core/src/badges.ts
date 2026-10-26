@@ -1,6 +1,13 @@
 import { addDays, dayOfWeek, localHour, startOfWeekMonday, toLocalDate } from './dates';
 import { jackTotals, GAMBLER_FOCUS_SECONDS } from './jack';
-import { ROLL_BADGE_FROM, ROLL_TIERS, rollBadgeKey, rollOdds } from './rolls';
+import {
+  ROLL_BADGE_FROM,
+  ROLL_TIERS,
+  rollBadgeKey,
+  rollBadges,
+  rollOdds,
+  type RollRecordInput,
+} from './rolls';
 import type { ISODate, PlannedBlock, Session, StreakState, StudyNode } from './types';
 
 /** Badge catalogue (spec §7). Keys are stable; conditions are evaluated in `evaluateBadges`. */
@@ -15,7 +22,7 @@ export interface BadgeDef {
    * the mode stays something people turn on, not something the badges advertise.
    */
   jack?: true;
-  /** Rolls' badges, one per rarity past 1 in 256: listed once someone has rolled. */
+  /** RNG Rolls' badges (rarities past 1 in 256, and gambling feats): listed once someone has rolled. */
   roll?: true;
 }
 
@@ -77,12 +84,23 @@ export const BADGE_XP: Record<string, number> = {
   'gamble-25': 75,
   'gamble-50': 100,
   'gamble-100': 150,
-  // Rolls: one for each rarity past 1 in 256
+  // RNG Rolls: gambling feats, then one for each rarity past 1 in 256
+  'rolls-10': 25,
+  'roll-rare': 50,
+  'roll-double': 75,
+  'rolls-100': 100,
+  'roll-beginner': 100,
+  'roll-cold': 100,
+  'roll-full-house': 150,
+  'rolls-500': 250,
+  'rolls-1000': 500,
   'roll-512': 150,
   'roll-1024': 300,
   'roll-2048': 600,
   'roll-4096': 1000,
   'roll-8192': 2000,
+  'roll-16384': 3500,
+  'roll-32768': 5000,
 };
 
 /** What a badge pays when it unlocks. */
@@ -268,7 +286,36 @@ const CATALOGUE: Array<Omit<BadgeDef, 'xp'>> = [
     description: 'Spin one hundred times.',
     jack: true,
   },
-  // --- Rolls (2026-10-25): named after the rarity's title ---
+  // --- RNG Rolls (2026-10-25): gambling feats, then the rarities past 1/256 by their titles ---
+  { key: 'rolls-10', name: 'Pocket change', description: 'Roll ten times.', roll: true },
+  { key: 'roll-rare', name: 'First shine', description: 'Roll 1/32 or rarer.', roll: true },
+  {
+    key: 'roll-double',
+    name: 'Double take',
+    description: 'Two rolls of 1/16 or rarer in a row.',
+    roll: true,
+  },
+  { key: 'rolls-100', name: 'Hooked', description: 'Roll one hundred times.', roll: true },
+  {
+    key: 'roll-beginner',
+    name: "Beginner's luck",
+    description: '1/64 or rarer in your first ten rolls.',
+    roll: true,
+  },
+  { key: 'roll-cold', name: 'Cold streak', description: 'Eight 1/2s in a row.', roll: true },
+  {
+    key: 'roll-full-house',
+    name: 'Full house',
+    description: 'Land every rarity from 1/2 to 1/64.',
+    roll: true,
+  },
+  {
+    key: 'rolls-500',
+    name: 'Regular at the tables',
+    description: 'Roll five hundred times.',
+    roll: true,
+  },
+  { key: 'rolls-1000', name: 'All in', description: 'Roll a thousand times.', roll: true },
   ...ROLL_TIERS.filter((t) => t.tier >= ROLL_BADGE_FROM).map((t) => ({
     key: rollBadgeKey(t.tier)!,
     name: t.title,
@@ -300,8 +347,8 @@ export interface BadgeInput {
   rewardsRedeemed?: number;
   /** How many weekly reviews carry a written note. */
   weeklyNotes?: number;
-  /** The rarest roll, as its tier (0 before the first). */
-  rollBest?: number;
+  /** RNG Rolls: how many, the rarest and the running record. Absent is none. */
+  rolls?: RollRecordInput;
 }
 
 export interface RoutineTick {
@@ -444,11 +491,8 @@ export function satisfiedBadges(input: BadgeInput): Set<string> {
   if (rolls >= 50) done.add('gamble-50');
   if (rolls >= 100) done.add('gamble-100');
 
-  /* --- Rolls --- */
-  for (let tier = ROLL_BADGE_FROM; tier <= (input.rollBest ?? 0); tier++) {
-    const key = rollBadgeKey(tier);
-    if (key) done.add(key);
-  }
+  /* --- RNG Rolls --- */
+  if (input.rolls) for (const key of rollBadges(input.rolls)) done.add(key);
   if (input.streak.current >= 30) {
     // Freeze used within the current 30-day run disqualifies.
     const start = new Date(Date.parse(`${input.today}T00:00:00Z`) - 29 * 86_400_000)

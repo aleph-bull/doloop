@@ -145,8 +145,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
     requests: true,
     live: true,
     schoolActivity: false,
-    rollColour: true,
   },
+  rolls: { name: 'auto', profile: true },
   dashboard: { focusOnly: false },
   nav: { style: 'sidebar' },
   focusScreen: { openOnStart: 'ask' },
@@ -206,6 +206,12 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
   const social = out.social as { leaderboard: unknown };
   if (social.leaderboard === true) social.leaderboard = 'global';
   else if (social.leaderboard === false) social.leaderboard = 'off';
+  // The name colour was an on/off switch under Social for an afternoon (2026-10-25): off
+  // there is a plain name now, unless a name has been picked since.
+  const oldColour = (social as { rollColour?: unknown }).rollColour;
+  delete (social as { rollColour?: unknown }).rollColour;
+  const rollName = (partial.rolls as { name?: unknown } | undefined)?.name;
+  if (oldColour === false && rollName === undefined) (out.rolls as { name: string }).name = 'off';
 
   const settings = out as unknown as UserSettings;
   settings.dismissed = asList<string>(settings.dismissed, []);

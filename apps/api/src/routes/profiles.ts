@@ -62,7 +62,7 @@ export interface PublicProfile {
   friendship: FriendshipStatus;
   /** Over 45 minutes of focus with Jack mode on: a die by the name. */
   gambler: boolean;
-  /** The rarest roll on Achievements, as its tier (core rolls.ts): its title shows; 0 for none. */
+  /** The rarest roll on Achievements, as its tier (core rolls.ts): its title shows; 0 for none or hidden. */
   rollBest: number;
   /** The rarity the name is coloured by, or null. */
   nameTier: number | null;
@@ -85,8 +85,17 @@ export interface ProfileStats {
   levelRatio: number;
   /** Break Jack mode's slot machine gave and took, all time; null before the first spin. */
   jack: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
-  /** Rolls on Achievements: how many, and per rarity (index i is tier i + 1); null before the first. */
-  rolls: { count: number; counts: number[] } | null;
+}
+
+/** Their RNG Rolls, when they show them (Achievements › RNG Rolls). */
+export interface ProfileRolls {
+  /** The rarest, as its tier. */
+  best: number;
+  count: number;
+  /** Rolls per rarity: index i is tier i + 1. */
+  counts: number[];
+  /** Their RNG Rolls badges, the biggest first. */
+  badges: ProfileBadge[];
 }
 
 export interface ProfileBadge {
@@ -110,6 +119,8 @@ export interface ProfileResponse {
   people: Record<string, Person>;
   /** In a session right now: shown to friends, when they let friends see it. */
   live: LiveMember | null;
+  /** Null before the first roll, or when they keep them off their profile. */
+  rolls: ProfileRolls | null;
 }
 
 /**
@@ -135,6 +146,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
     const settings = settingsOf(row);
     const you = row.id === req.user.id;
     const showStats = you || settings.social.stats;
+    const showRolls = settings.rolls.profile && row.rollCount > 0;
     const friendship = await friendshipWith(db, req.user.id, row.id);
     // A post kept to friends shows only to the author and their friends.
     const ownCircle = you || friendship.status === 'friends';
@@ -152,8 +164,8 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         PROFILE_POSTS_LIMIT,
       ),
       friendIds(db, row.id),
-      showStats ? listAchievements(db, row.id) : Promise.resolve([]),
-      showStats && row.rollCount > 0 ? rollCounts(db, row.id) : Promise.resolve(null),
+      showStats || showRolls ? listAchievements(db, row.id) : Promise.resolve([]),
+      showRolls ? rollCounts(db, row.id) : Promise.resolve(null),
     ]);
     const tz = row.timezone;
     const lifetime = lifetimeStats({
@@ -182,7 +194,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
         friendship,
         acceptsRequests: settings.social.requests,
         gambler: jack.focusSeconds > GAMBLER_FOCUS_SECONDS,
-        rollBest: row.rollBest,
+        rollBest: showRolls ? row.rollBest : 0,
         nameTier: nameTierOf(row),
       },
       stats: showStats
@@ -205,7 +217,6 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
               jack.rolls > 0
                 ? { rolls: jack.rolls, wonSeconds: jack.wonSeconds, lostSeconds: jack.lostSeconds }
                 : null,
-            rolls: rolled ? { count: row.rollCount, counts: rolled } : null,
           }
         : null,
       heatmap: showStats
@@ -218,7 +229,19 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
           })
         : null,
       weekday: showStats ? weekdayProfile(sessions, tz) : null,
-      badges: showStats ? topBadges(held) : null,
+      // RNG Rolls badges live on their own card.
+      badges: showStats ? topBadges(held.filter((a) => !badgeByKey(a.key)?.roll)) : null,
+      rolls: rolled
+        ? {
+            best: row.rollBest,
+            count: row.rollCount,
+            counts: rolled,
+            badges: topBadges(
+              held.filter((a) => badgeByKey(a.key)?.roll),
+              Infinity,
+            ),
+          }
+        : null,
       clock: showStats ? timeOfDayClock(sessions, tz) : null,
       posts: showPosts ? page.posts : [],
       people: showPosts ? page.people : {},

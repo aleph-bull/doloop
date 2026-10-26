@@ -390,7 +390,7 @@ export function ProfileCard() {
   const avatar = useAvatar().data?.dataUrl ?? null;
   if (!user) return null;
   const name = personName(user.settings.profile.name, user.username);
-  const tier = nameTier(me?.rollBest ?? 0, user.settings.social.rollColour !== false);
+  const tier = nameTier(me?.rollBest ?? 0, user.settings.rolls?.name);
   const uni = universityById(user.settings.profile.university);
   return (
     <Panel as="aside" className="side-card" aria-label="You">

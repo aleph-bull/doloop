@@ -5,7 +5,6 @@ import {
   minCostUnlocksAt,
   REWARDS,
   resolveBackgroundId,
-  ROLL_NAME_TIER,
   POMODORO_DURATION_KEYS,
   POMODORO_LIMITS,
   formatSoundLength,
@@ -479,13 +478,6 @@ export function Settings() {
                 label="Share study activity with my school"
                 description="Show your current session and public posts to verified schoolmates."
               />
-              {(me.data!.rollBest ?? 0) >= ROLL_NAME_TIER && (
-                <Toggle
-                  checked={s.social.rollColour}
-                  onChange={(rollColour) => patch({ social: { rollColour } })}
-                  label="Coloured name from rolls"
-                />
-              )}
               <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />
             </Section>

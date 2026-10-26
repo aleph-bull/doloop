@@ -60,7 +60,7 @@ async function badgeInput(
     perfectRoutineWeeks: routineStats.perfectWeeks,
     rewardsRedeemed,
     weeklyNotes: notes.filter((n) => (n.note ?? '').trim().length > 0).length,
-    rollBest: user.rollBest,
+    rolls: { count: user.rollCount, best: user.rollBest, stats: user.rollStats },
   };
   return { input, have: have.map((a) => a.key) };
 }

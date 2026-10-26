@@ -5649,64 +5649,193 @@ button.start-subject:hover {
   }
 }
 
-/* ---------- Rolls on Achievements (2026-10-25): Jack mode's machine with one long reel ---------- */
-/* From 1/256 a rarity colours the name (Settings › Social can turn it off). Light enough to
-   read on dark glass; darker under the light theme. */
+/* ---------- RNG Rolls (2026-10-25): the rarities' looks, the machine, the cards ---------- */
+/* Each rarity has one colour (--rt-N: rings, flashes, coins) and from 1/32 a gradient (--rg-N),
+   brighter on dark and deeper on light. The look gets louder the rarer (lib/rolls.ts fxLevel):
+   l0-l1 a plain colour, l2 a flowing gradient, l3 a shine across it, l4 a glow, l5 the colours
+   cycling too. Names wear the same classes (`named()`). */
 :root {
-  --name-tier-8: #e4c46a;
-  --name-tier-9: #ee9cb0;
-  --name-tier-10: #8ec5ff;
-  --name-tier-11: #8edba4;
-  --name-tier-12: #c0aefc;
-  --name-tier-13: #ff8a7a;
+  --rt-1: #aab1bf;
+  --rt-2: #92d8a4;
+  --rt-3: #92bfff;
+  --rt-4: #f0c674;
+  --rt-5: #8fb0ff;
+  --rt-6: #b8eaff;
+  --rt-7: #ff9466;
+  --rt-8: #7795ff;
+  --rt-9: #55e3a2;
+  --rt-10: #ffe9a0;
+  --rt-11: #74c9ff;
+  --rt-12: #e192ff;
+  --rt-13: #ffb9e0;
+  --rt-14: #ff9a6b;
+  --rt-15: #fff4c2;
+  --rg-5: linear-gradient(90deg, #6fa8ff, #b69bff, #6fa8ff);
+  --rg-6: linear-gradient(90deg, #9ff0ff, #eef2ff, #b9a6ff, #9ff0ff);
+  --rg-7: linear-gradient(90deg, #ffb35c, #ff5e3a, #ffd166, #ffb35c);
+  --rg-8: linear-gradient(90deg, #5b9dff, #4a63ff, #a283ff, #5b9dff);
+  --rg-9: linear-gradient(90deg, #5ff0a0, #1ec8b0, #b4f05a, #5ff0a0);
+  --rg-10: linear-gradient(90deg, #fff0a8, #ffffff, #8fd0ff, #fff0a8);
+  --rg-11: linear-gradient(90deg, #4ff0d0, #5aa0ff, #ff6fc0, #4ff0d0);
+  --rg-12: linear-gradient(90deg, #b57bff, #ff8a3d, #ffd0a0, #b57bff);
+  --rg-13: linear-gradient(90deg, #ff9fd0, #ffe08a, #8ff0ff, #c0a0ff, #ff9fd0);
+  --rg-14: linear-gradient(90deg, #ff5f6d, #ffc371, #ffffff, #ff5fd0, #ff5f6d);
+  --rg-15: linear-gradient(90deg, #ff6b6b, #ffd93d, #6bff95, #4dd8ff, #b56bff, #ff6b6b);
 }
 :root[data-theme='light'] {
-  --name-tier-8: #8c6a0f;
-  --name-tier-9: #a8355a;
-  --name-tier-10: #1f62b8;
-  --name-tier-11: #1f7a3d;
-  --name-tier-12: #5d3fc4;
-  --name-tier-13: #b42318;
+  --rt-1: #6b7280;
+  --rt-2: #2f7a3e;
+  --rt-3: #285fb0;
+  --rt-4: #8a6210;
+  --rt-5: #2c5fd0;
+  --rt-6: #0b7c95;
+  --rt-7: #c2410c;
+  --rt-8: #2440c8;
+  --rt-9: #04875a;
+  --rt-10: #a26c00;
+  --rt-11: #0b74b0;
+  --rt-12: #8a2bd0;
+  --rt-13: #c0267f;
+  --rt-14: #d23a1e;
+  --rt-15: #7a2fd6;
+  --rg-5: linear-gradient(90deg, #1f5fd6, #6a43d8, #1f5fd6);
+  --rg-6: linear-gradient(90deg, #0b7c95, #4b5bd6, #7a4fe0, #0b7c95);
+  --rg-7: linear-gradient(90deg, #c2410c, #b91c1c, #b7791f, #c2410c);
+  --rg-8: linear-gradient(90deg, #1d4ed8, #2433b8, #6b3fd8, #1d4ed8);
+  --rg-9: linear-gradient(90deg, #04875a, #0b7f74, #5f8f0e, #04875a);
+  --rg-10: linear-gradient(90deg, #a26c00, #6b5bd6, #1f6fb8, #a26c00);
+  --rg-11: linear-gradient(90deg, #0b8a7a, #2563eb, #c0267f, #0b8a7a);
+  --rg-12: linear-gradient(90deg, #7e22ce, #c2410c, #9a3412, #7e22ce);
+  --rg-13: linear-gradient(90deg, #c0267f, #a16207, #0e7490, #6d28d9, #c0267f);
+  --rg-14: linear-gradient(90deg, #dc2638, #c26a00, #b0127e, #dc2638);
+  --rg-15: linear-gradient(90deg, #d62828, #b88600, #138a4b, #0b7fb3, #7a2fd6, #d62828);
 }
-.name-tier.name-tier-8 {
-  color: var(--name-tier-8);
+.roll-fx-1 {
+  color: var(--rt-1);
 }
-.name-tier.name-tier-9 {
-  color: var(--name-tier-9);
+.roll-fx-2 {
+  color: var(--rt-2);
 }
-.name-tier.name-tier-10 {
-  color: var(--name-tier-10);
+.roll-fx-3 {
+  color: var(--rt-3);
 }
-.name-tier.name-tier-11 {
-  color: var(--name-tier-11);
+.roll-fx-4 {
+  color: var(--rt-4);
 }
-.name-tier.name-tier-12 {
-  color: var(--name-tier-12);
+.roll-fx-5 {
+  --rg: var(--rg-5);
+  --flow: 7s;
 }
-.name-tier.name-tier-13 {
-  color: var(--name-tier-13);
+.roll-fx-6 {
+  --rg: var(--rg-6);
+  --flow: 6.5s;
 }
-.profile-roll.is-coloured {
-  color: var(--roll-colour);
+.roll-fx-7 {
+  --rg: var(--rg-7);
+  --flow: 6s;
+}
+.roll-fx-8 {
+  --rg: var(--rg-8);
+  --flow: 5s;
+}
+.roll-fx-9 {
+  --rg: var(--rg-9);
+  --flow: 4.6s;
+}
+.roll-fx-10 {
+  --rg: var(--rg-10);
+  --flow: 4.2s;
+}
+.roll-fx-11 {
+  --rg: var(--rg-11);
+  --flow: 3.6s;
+  --glow: color-mix(in srgb, var(--rt-11) 55%, transparent);
+}
+.roll-fx-12 {
+  --rg: var(--rg-12);
+  --flow: 3.3s;
+  --glow: color-mix(in srgb, var(--rt-12) 55%, transparent);
+}
+.roll-fx-13 {
+  --rg: var(--rg-13);
+  --flow: 3s;
+  --glow: color-mix(in srgb, var(--rt-13) 60%, transparent);
+}
+.roll-fx-14 {
+  --rg: var(--rg-14);
+  --flow: 2.6s;
+  --glow: color-mix(in srgb, var(--rt-14) 65%, transparent);
+}
+.roll-fx-15 {
+  --rg: var(--rg-15);
+  --flow: 2.2s;
+  --glow: color-mix(in srgb, var(--rt-15) 70%, transparent);
+}
+/* A gradient flowing through the letters. */
+.roll-fx-l2 {
+  background-image: var(--rg);
+  background-size: 200% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: roll-flow var(--flow) linear infinite;
+}
+/* From 1/256: a shine sweeping across as well. */
+.roll-fx-l3,
+.roll-fx-l4,
+.roll-fx-l5 {
+  background-image:
+    linear-gradient(105deg, transparent 42%, rgb(255 255 255 / 0.9) 50%, transparent 58%), var(--rg);
+  background-size:
+    250% 100%,
+    200% 100%;
+  background-repeat: no-repeat, repeat;
+  background-clip: text;
+  color: transparent;
+  animation: roll-flow-shine var(--flow) linear infinite;
+}
+/* From 1/2048: a glow round the letters. */
+.roll-fx-l4 {
+  filter: drop-shadow(0 0 0.32em var(--glow));
+}
+/* 1/16384 and up: the colours cycle round too. */
+.roll-fx-l5 {
+  animation:
+    roll-flow-shine var(--flow) linear infinite,
+    roll-hue 5s linear infinite;
+}
+@keyframes roll-flow {
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes roll-flow-shine {
+  from {
+    background-position:
+      140% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -140% 0,
+      200% 0;
+  }
+}
+@keyframes roll-hue {
+  from {
+    filter: hue-rotate(0deg) drop-shadow(0 0 0.4em var(--glow));
+  }
+  to {
+    filter: hue-rotate(360deg) drop-shadow(0 0 0.4em var(--glow));
+  }
 }
 
-/* The Rolls tile on a profile: the rarest in its colour, its title under it. */
-.days-panel-stats .profile-rolls-odds {
-  color: var(--roll-colour, currentColor);
-}
-.days-panel-stats .profile-rolls-title {
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--fg-muted);
-}
-
-/* The machine: Best and your XP across the top, the reel and lever, the title under them. */
+/* The machine: Best and your XP across the top, the reel and lever, the title under them,
+   a batch's haul, then ×1 ×10 ×100 and the price. */
 .roll-slot-card {
   gap: 16px;
   padding-top: var(--card-pad);
   cursor: default;
+  transition: box-shadow 400ms var(--ease-out);
 }
 .roll-slot-card:focus-visible {
   outline: none;
@@ -5720,50 +5849,340 @@ button.start-subject:hover {
 .roll-slot-best {
   display: flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 7px;
   flex: 1;
   min-width: 0;
 }
 .roll-slot-label,
 .roll-slot-xp,
-.roll-slot-best-title {
+.roll-slot-best-odds,
+.roll-slot-price {
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }
 .roll-slot-best-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.roll-slot-best-odds {
   display: inline-block;
   font-size: var(--text-lg);
   font-weight: 700;
-  color: var(--roll-colour, currentColor);
+  white-space: nowrap;
+}
+.roll-slot-best-title.is-shining {
+  animation:
+    roll-best-in 700ms var(--ease-spring),
+    roll-flow-shine var(--flow, 4s) linear infinite;
+}
+.roll-slot-best-title.roll-fx-l2.is-shining {
+  animation:
+    roll-best-in 700ms var(--ease-spring),
+    roll-flow var(--flow) linear infinite;
+}
+@keyframes roll-best-in {
+  from {
+    transform: scale(1.6);
+  }
 }
 .roll-slot-close {
   margin: -6px -10px -6px 0;
 }
+.roll-slot-machine {
+  position: relative;
+}
 .roll-slot-window {
-  font-size: 3rem;
+  font-size: 2.75rem;
 }
 .roll-reel {
-  width: 3.7em;
+  width: 4.5em;
   height: 100%;
   overflow: hidden;
 }
 .roll-reel .jack-reel-strip span {
   white-space: nowrap;
 }
-.roll-slot-card.is-rare .jack-slot-window {
-  --jack-flash: var(--roll-colour);
+.roll-reel-row-1 {
+  color: var(--rt-1);
 }
-.jack-slot-layer:not(.is-spin) .roll-slot-card.is-rare .jack-slot-reels {
-  color: var(--roll-colour);
+.roll-reel-row-2 {
+  color: var(--rt-2);
 }
-.jack-slot-layer:not(.is-spin) .roll-slot-card.is-rare .roll-slot-line {
-  color: var(--roll-colour);
+.roll-reel-row-3 {
+  color: var(--rt-3);
+}
+.roll-reel-row-4 {
+  color: var(--rt-4);
+}
+/* On the reel the rare ones show their colours, still: forty moving gradients would be a lot. */
+.roll-reel-row-5,
+.roll-reel-row-6,
+.roll-reel-row-7,
+.roll-reel-row-8,
+.roll-reel-row-9,
+.roll-reel-row-10,
+.roll-reel-row-11,
+.roll-reel-row-12,
+.roll-reel-row-13,
+.roll-reel-row-14,
+.roll-reel-row-15 {
+  background-clip: text;
+  color: transparent;
+}
+.roll-reel-row-5 {
+  background-image: var(--rg-5);
+}
+.roll-reel-row-6 {
+  background-image: var(--rg-6);
+}
+.roll-reel-row-7 {
+  background-image: var(--rg-7);
+}
+.roll-reel-row-8 {
+  background-image: var(--rg-8);
+}
+.roll-reel-row-9 {
+  background-image: var(--rg-9);
+}
+.roll-reel-row-10 {
+  background-image: var(--rg-10);
+}
+.roll-reel-row-11 {
+  background-image: var(--rg-11);
+}
+.roll-reel-row-12 {
+  background-image: var(--rg-12);
+}
+.roll-reel-row-13 {
+  background-image: var(--rg-13);
+}
+.roll-reel-row-14 {
+  background-image: var(--rg-14);
+}
+.roll-reel-row-15 {
+  background-image: var(--rg-15);
+}
+.roll-slot-layer .jack-slot-window {
+  --jack-flash: var(--roll-colour, var(--accent));
+}
+.roll-slot-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+}
+.roll-slot-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.roll-slot-line-odds {
+  color: var(--fg-muted);
+}
+
+/* The louder rarities: from 1/256 the card shakes harder and is ringed in the colour; from
+   1/2048 it shakes harder still and the ring glows; at 1/16384 and up the ring cycles colour. */
+.jack-slot-layer.is-result .roll-slot-card.fx-3 {
+  box-shadow: 0 0 0 2px var(--roll-colour);
+}
+.jack-slot-layer.is-result .roll-slot-card.fx-4,
+.jack-slot-layer.is-result .roll-slot-card.fx-5 {
+  animation: roll-shake-big 900ms var(--ease-out);
+  box-shadow:
+    0 0 0 2px var(--roll-colour),
+    0 0 48px 4px color-mix(in srgb, var(--roll-colour) 45%, transparent);
+}
+.jack-slot-layer.is-result .roll-slot-card.fx-5 {
+  animation:
+    roll-shake-big 900ms var(--ease-out),
+    roll-shake-big 900ms var(--ease-out) 950ms,
+    roll-hue 3s linear infinite;
+}
+@keyframes roll-shake-big {
+  0%,
+  100% {
+    transform: none;
+  }
+  10% {
+    transform: translateX(-12px) rotate(-2.4deg) scale(1.07);
+  }
+  25% {
+    transform: translateX(11px) rotate(2deg) scale(1.07);
+  }
+  40% {
+    transform: translateX(-8px) rotate(-1.2deg) scale(1.05);
+  }
+  55% {
+    transform: translateX(6px) rotate(0.8deg) scale(1.03);
+  }
+  75% {
+    transform: translateX(-3px);
+  }
+}
+/* A burst of light behind the card from 1/256, wider the rarer. */
+.roll-burst {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 50%,
+    color-mix(in srgb, var(--roll-colour) 60%, transparent) 0,
+    color-mix(in srgb, var(--roll-colour) 18%, transparent) 30%,
+    transparent 62%
+  );
+  animation: roll-burst 1.2s var(--ease-out) both;
+}
+.fx-4 > .roll-burst,
+.roll-burst.roll-fx-l4 {
+  animation-duration: 1.6s;
+}
+/* The top two: a ring of every colour turning behind it. */
+.roll-burst.roll-fx-l5 {
+  background: conic-gradient(
+    from 0deg,
+    #ff6b6b66,
+    #ffd93d66,
+    #6bff9566,
+    #4dd8ff66,
+    #b56bff66,
+    #ff6b6b66
+  );
+  mask-image: radial-gradient(circle, #000 0, #000 28%, transparent 64%);
+  animation:
+    roll-burst 2.6s var(--ease-out) both,
+    roll-spin 3s linear infinite;
+}
+@keyframes roll-burst {
+  from {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  22% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes roll-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+/* New record: a ribbon over the window, popping in with the colours flowing through it. */
+.roll-record {
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 62px;
+  z-index: 1;
+  width: max-content;
+  margin: 0 auto;
+  padding: 2px 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--roll-colour) 60%, transparent);
+  background-color: color-mix(in srgb, var(--bg-elevated) 72%, var(--roll-colour) 28%);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  animation: roll-record-in 520ms var(--ease-spring) backwards;
+}
+@keyframes roll-record-in {
+  from {
+    transform: translateY(10px) scale(0.4);
+  }
+}
+.jack-slot-card.is-record .jack-slot-window {
+  border-color: var(--roll-colour);
+}
+/* Sparks thrown out of the window for a new record. */
+.roll-spark {
+  position: fixed;
+  z-index: 81;
+  font-size: var(--size, 1rem);
+  line-height: 1;
+  pointer-events: none;
+  translate: -50% -50%;
+  animation: roll-spark 1s var(--ease-out) forwards;
+}
+@keyframes roll-spark {
+  from {
+    transform: translate(0, 0) scale(0.2) rotate(0deg);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg);
+    opacity: 0;
+  }
+}
+/* The coins of a new record: ringed in its colour. */
+.jack-coin.is-roll {
+  box-shadow: 0 0 0 2px var(--roll-colour);
+}
+/* A batch's haul: each rarity it drew and how many, in one at a time. */
+.roll-haul {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: -4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.roll-haul-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--roll-colour) 45%, transparent);
+  background: color-mix(in srgb, var(--roll-colour) 12%, transparent);
+  font-size: var(--text-sm);
   font-weight: 600;
+  animation: roll-chip-in 340ms var(--ease-spring) backwards;
+  animation-delay: calc(var(--i) * 110ms + 260ms);
+}
+.roll-haul-n {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+@keyframes roll-chip-in {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+.roll-slot-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+.roll-batch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.roll-batch-btn {
+  padding: 3px 11px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.roll-batch-btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--fg);
+  font-weight: 600;
+}
+.roll-batch-btn:disabled {
+  cursor: default;
 }
 /* The lever waits for the next pull after a result too, and rests when there is no XP for one. */
 .jack-slot-layer.roll-slot-layer.is-result.can-pull:not(.is-holding) .jack-lever-knob {
@@ -5777,115 +6196,235 @@ button.start-subject:hover {
   animation: none;
 }
 
-/* On the page: the best roll, the button, and every rarity with how often it came up. */
-.roll-panel {
+/* On Achievements: the rarest, the button, every rarity grouped by how rare, and the options
+   in small text. */
+.rng-card {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   padding: var(--card-pad);
 }
-.roll-panel-head {
+.rng-head {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
   flex-wrap: wrap;
 }
-.roll-panel-best {
+.rng-best {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
-.roll-panel-label {
+.rng-label,
+.rng-best-meta {
   font-size: var(--text-sm);
   color: var(--fg-muted);
 }
-.roll-panel-odds {
-  font-size: var(--text-2xl);
+.rng-best-title {
+  font-size: var(--text-3xl);
   font-weight: 700;
   line-height: 1.1;
-  color: var(--roll-colour, currentColor);
+  letter-spacing: -0.01em;
 }
-.roll-panel-title {
+.rng-index {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rng-band {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rng-band.is-mythic {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.rng-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 1px 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.rng-cell-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
-/* Twelve rarities in 2, 3, 4 or 6 columns, and 1/8192 across the last row on its own. */
-.roll-ladder-box {
-  container-type: inline-size;
+.rng-cell-odds {
+  grid-column: 1;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
 }
-.roll-ladder {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.rng-cell-n {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.is-common .rng-cell {
+  padding: 6px 12px;
+}
+.is-common .rng-cell-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.is-epic .rng-cell {
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--roll-colour) 22%, transparent);
+}
+.is-epic .rng-cell-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+.is-mythic .rng-cell {
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--roll-colour) 35%, transparent);
+  background: color-mix(in srgb, var(--roll-colour) 7%, transparent);
+}
+.is-mythic .rng-cell-title {
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+/* Not landed yet: faint and still. */
+.rng-cell:not(.is-hit) .rng-cell-title {
+  opacity: 0.38;
+  animation: none;
+  filter: none;
+}
+.rng-cell.is-best {
+  box-shadow: inset 0 0 0 1.5px var(--roll-colour);
+}
+.rng-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.rng-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.rng-option input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.rng-select {
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-xs);
+}
+@media (max-width: 560px) {
+  .rng-band,
+  .rng-band.is-mythic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .rng-band.is-mythic .rng-cell:first-child {
+    grid-column: 1 / -1;
+  }
+  .rng-best-title {
+    font-size: var(--text-2xl);
+  }
+}
+
+/* On a profile: the rarest in its colours, the rarest landed, and the RNG Rolls badges. */
+.profile-rng-best {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-rng-title {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.15;
+}
+.profile-rng-meta {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.rng-hits {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
-.roll-ladder-step:last-child {
-  grid-column: 1 / -1;
-}
-@container (min-width: 300px) {
-  .roll-ladder {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-@container (min-width: 440px) {
-  .roll-ladder {
-    grid-template-columns: repeat(6, 1fr);
-  }
-}
-.roll-ladder-box.has-titles .roll-ladder {
-  grid-template-columns: repeat(2, 1fr);
-}
-@container (min-width: 400px) {
-  .roll-ladder-box.has-titles .roll-ladder {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@container (min-width: 540px) {
-  .roll-ladder-box.has-titles .roll-ladder {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-@container (min-width: 760px) {
-  .roll-ladder-box.has-titles .roll-ladder {
-    grid-template-columns: repeat(6, 1fr);
-  }
-}
-.roll-ladder-step {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  padding: 8px 10px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--fg) 5%, transparent);
-  color: var(--fg-muted);
-}
-.roll-ladder-step.is-hit {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--fg) 9%, transparent);
-}
-.roll-ladder-step.is-best {
-  box-shadow: inset 0 0 0 1.5px var(--roll-colour, var(--accent));
-}
-.roll-ladder-odds {
+.rng-hit {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 3.2em;
+  align-items: baseline;
+  gap: 10px;
   font-size: var(--text-sm);
-  font-weight: 700;
 }
-.roll-ladder-step.is-hit .roll-ladder-odds {
-  color: var(--roll-colour, currentColor);
-}
-.roll-ladder-title {
-  font-size: var(--text-xs);
+.rng-hit-title {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 600;
 }
-.roll-ladder-count {
+.rng-hit-odds,
+.rng-hit-n {
   font-size: var(--text-xs);
   color: var(--fg-muted);
+  text-align: right;
+}
+.profile-rng-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.profile-rng-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font-size: var(--text-xs);
+}
+.profile-rng-badge svg {
+  color: var(--accent-text);
+}
+.profile-roll .roll-fx {
+  font-weight: 600;
+}
+
+:root[data-motion='off'] .roll-fx,
+:root[data-motion='off'] .roll-slot-layer *,
+:root[data-motion='off'] .roll-burst {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .roll-fx,
+  :root:not([data-motion='on']) .roll-slot-layer *,
+  :root:not([data-motion='on']) .roll-burst {
+    animation: none !important;
+  }
 }
 
 /* ---------- end-of-session score sheet ---------- */

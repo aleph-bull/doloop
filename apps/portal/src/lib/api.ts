@@ -621,8 +621,6 @@ export interface ProfileStats {
   levelRatio?: number;
   /** Break Jack mode's slot machine gave and took; null before the first spin. */
   jack?: { rolls: number; wonSeconds: number; lostSeconds: number } | null;
-  /** Rolls on Achievements: how many, and per rarity (index i is tier i + 1); null before the first. */
-  rolls?: { count: number; counts: number[] } | null;
 }
 
 /** Someone's rolls on Achievements (core rolls.ts). */
@@ -635,15 +633,28 @@ export interface RollRecord {
   counts: number[];
 }
 
-/** One pull: the rarity it landed on, and where that leaves you. */
+/** One pull, of one roll or a batch: what came up, and where that leaves you. */
 export interface RollResult {
+  /** Every roll, in the order drawn. Optional for an API from before batches. */
+  tiers?: number[];
+  /** The rarest of them. */
   tier: number;
   newBest: boolean;
   best: number;
   count: number;
   xp: number;
-  /** Badges it unlocked (a rarity past 1/256 for the first time). */
+  /** Badges it unlocked. */
   fresh: string[];
+}
+
+/** Someone's RNG Rolls on their profile, when they show them. */
+export interface ProfileRolls {
+  best: number;
+  count: number;
+  /** Rolls per rarity: index i is tier i + 1. */
+  counts: number[];
+  /** Their RNG Rolls badges, the biggest first. */
+  badges: ProfileBadge[];
 }
 
 /** One of the badges a profile shows: the ones that paid the most XP. */
@@ -676,6 +687,8 @@ export interface ProfileResponse {
   people: Record<string, Person>;
   /** A friend in a session right now, if they share it. Optional for older cached copies. */
   live?: LiveMember | null;
+  /** Their RNG Rolls; null before the first or when kept off. Optional for older cached copies. */
+  rolls?: ProfileRolls | null;
 }
 
 export interface SchoolSummary {
@@ -900,7 +913,7 @@ export const api = {
       /** Optional for older cached copies. */
       rolls?: RollRecord;
     }>('GET', '/api/shop'),
-  roll: () => request<RollResult>('POST', '/api/rolls'),
+  roll: (count = 1) => request<RollResult>('POST', '/api/rolls', { count }),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>

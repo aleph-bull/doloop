@@ -1,9 +1,10 @@
 /**
- * Rolls (asked for by the owner, 2026-10-25): on Achievements, 10 XP pulls the slot machine
- * for a rarity, each one half as likely as the one before: 1 in 2, 1 in 4, 1 in 8, up to
- * 1 in 8192. Everyone keeps their rarest roll. Each rarity has a title, shown on the
- * profile; from 1 in 256 the name takes that rarity's colour (Settings › Social can turn it
- * off), and every rarity past 1 in 256 is a badge.
+ * RNG Rolls (asked for by the owner, 2026-10-25): on Achievements, 10 XP pulls the slot
+ * machine for a rarity, each one half as likely as the one before: 1 in 2, 1 in 4, 1 in 8,
+ * up to 1 in 32768 (owner: "up until like 1/32000"). Everyone keeps their rarest roll. Each rarity has a title, shown on the
+ * profile; from 1 in 32 each has its own flowing gradient, wilder the rarer, which a name can
+ * take; every
+ * rarity past 1 in 256 is a badge, and so are a few gambling feats (`rollBadges`).
  *
  * The server draws the roll (`rollTier` on a random ticket); the portal only shows it.
  */
@@ -11,40 +12,50 @@
 /** What one roll costs. */
 export const ROLL_COST = 10;
 
-/** How many rarities there are: 1 in 2 up to 1 in 2^13 (8192). */
-export const ROLL_TIERS_COUNT = 13;
+/** How many can be rolled in one pull (owner: "roll multiple at once"). */
+export const ROLL_BATCHES = [1, 10, 100] as const;
+export type RollBatch = (typeof ROLL_BATCHES)[number];
+
+/** How many rarities there are: 1 in 2 up to 1 in 2^15 (32768). */
+export const ROLL_TIERS_COUNT = 15;
 
 /** Tickets are drawn from 0 to this, exclusive: one for each of the rarest roll's chances. */
 export const ROLL_TICKETS = 2 ** ROLL_TIERS_COUNT;
 
-/** From this rarity (1 in 256) the name takes the rarity's colour. */
+/** From this rarity (1 in 32) each has a gradient, and a name can wear it. */
+export const ROLL_GRADIENT_FROM = 5;
+
+/** From this rarity (1 in 256) a name takes the rarest roll's style by itself ('auto'). */
 export const ROLL_NAME_TIER = 8;
 
 /** Every rarity past 1 in 256 is a badge. */
 export const ROLL_BADGE_FROM = ROLL_NAME_TIER + 1;
 
 export interface RollTier {
-  /** 1 is 1 in 2, 13 is 1 in 8192. */
+  /** 1 is 1 in 2, 15 is 1 in 32768. */
   tier: number;
   /** The 2^tier in "1 in ...". */
   odds: number;
   title: string;
 }
 
+/** One word each, plain to grand, the way the collecting games name their finds. */
 const TITLES = [
-  'Coin flipper',
-  'Tourist',
-  "Beginner's luck",
-  'Hot streak',
-  'Card counter',
-  'Card shark',
-  'Big spender',
-  'High stakes',
-  'Jackpot',
-  'Lightning in a bottle',
-  'Four-leaf clover',
-  'Once in a blue moon',
-  'Beat the house',
+  'Common',
+  'Uncommon',
+  'Good',
+  'Natural',
+  'Rare',
+  'Crystal',
+  'Ember',
+  'Sapphire',
+  'Emerald',
+  'Starlight',
+  'Comet',
+  'Eclipse',
+  'Celestial',
+  'Supernova',
+  'Genesis',
 ];
 
 /** Every rarity, commonest first: index i is tier i + 1. */
@@ -66,7 +77,7 @@ export function rollOdds(tier: number): string {
 /**
  * The rarity a ticket from 0 to ROLL_TICKETS lands on: one more than its trailing zero bits,
  * so tier t comes up for exactly 1 in 2^t of the tickets. Ticket 0 (all zeros) would be a
- * second 1 in 8192; it goes to the commonest instead.
+ * second 1 in 32768; it goes to the commonest instead.
  */
 export function rollTier(ticket: number): number {
   const t = Math.floor(ticket) % ROLL_TICKETS;
@@ -85,7 +96,79 @@ export function rollBadgeKey(tier: number): string | null {
   return tier >= ROLL_BADGE_FROM && tier <= ROLL_TIERS_COUNT ? `roll-${2 ** tier}` : null;
 }
 
-/** The rarity whose colour a name shows, or null: below 1 in 256, or turned off. */
-export function nameTier(best: number, colourOn: boolean): number | null {
-  return colourOn && best >= ROLL_NAME_TIER ? Math.min(best, ROLL_TIERS_COUNT) : null;
+/**
+ * What a name wears (Achievements › RNG Rolls): 'auto' is the rarest roll's style once it is
+ * 1 in 256 or rarer, 'off' is plain, and a tier is that rarity's gradient, any from 1 in 32
+ * up to the rarest.
+ */
+export type RollNameChoice = 'auto' | 'off' | number;
+
+/** The rarity whose style a name shows, or null for a plain one. */
+export function nameTier(best: number, choice: RollNameChoice = 'auto'): number | null {
+  if (choice === 'off') return null;
+  if (
+    typeof choice === 'number' &&
+    Number.isInteger(choice) &&
+    choice >= ROLL_GRADIENT_FROM &&
+    choice <= Math.min(best, ROLL_TIERS_COUNT)
+  )
+    return choice;
+  return best >= ROLL_NAME_TIER ? Math.min(best, ROLL_TIERS_COUNT) : null;
+}
+
+/** The running record the gambling badges read, kept on the account (users.roll_stats). */
+export interface RollStats {
+  /** Each rarity landed at least once: bit t for tier t. */
+  hit?: number;
+  /** The last roll's tier. */
+  last?: number;
+  /** 1 in 2s in a row right now, and the most ever. */
+  commonRun?: number;
+  longestCommonRun?: number;
+  /** Two of 1 in 16 or rarer back to back. */
+  doubles?: number;
+  /** The rarest within the first ten rolls. */
+  firstTen?: number;
+}
+
+/** The record after one more roll of `tier`; `count` is the number of rolls before it. */
+export function advanceRollStats(stats: RollStats, tier: number, count: number): RollStats {
+  const commonRun = tier === 1 ? (stats.commonRun ?? 0) + 1 : 0;
+  return {
+    hit: (stats.hit ?? 0) | (1 << tier),
+    last: tier,
+    commonRun,
+    longestCommonRun: Math.max(stats.longestCommonRun ?? 0, commonRun),
+    doubles: (stats.doubles ?? 0) + (tier >= 4 && (stats.last ?? 0) >= 4 ? 1 : 0),
+    firstTen: count < 10 ? Math.max(stats.firstTen ?? 0, tier) : (stats.firstTen ?? 0),
+  };
+}
+
+/** Everything the gambling badges need to know about someone's rolls. */
+export interface RollRecordInput {
+  count: number;
+  best: number;
+  stats: RollStats;
+}
+
+/** Rolls landed on every rarity up to this one: Full house. */
+const FULL_HOUSE_UP_TO = 6;
+
+/** The rolls' badges this record has earned (the catalogue is in badges.ts). */
+export function rollBadges(rolls: RollRecordInput): Set<string> {
+  const done = new Set<string>();
+  for (let tier = ROLL_BADGE_FROM; tier <= Math.min(rolls.best, ROLL_TIERS_COUNT); tier++)
+    done.add(rollBadgeKey(tier)!);
+  const s = rolls.stats;
+  if (rolls.count >= 10) done.add('rolls-10');
+  if (rolls.count >= 100) done.add('rolls-100');
+  if (rolls.count >= 500) done.add('rolls-500');
+  if (rolls.count >= 1000) done.add('rolls-1000');
+  if (rolls.best >= ROLL_GRADIENT_FROM) done.add('roll-rare');
+  if ((s.firstTen ?? 0) >= 6) done.add('roll-beginner');
+  if ((s.doubles ?? 0) >= 1) done.add('roll-double');
+  if ((s.longestCommonRun ?? 0) >= 8) done.add('roll-cold');
+  const all = (1 << (FULL_HOUSE_UP_TO + 1)) - 2;
+  if (((s.hit ?? 0) & all) === all) done.add('roll-full-house');
+  return done;
 }

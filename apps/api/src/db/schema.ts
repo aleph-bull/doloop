@@ -3,6 +3,7 @@ import type {
   OnboardingAnswers,
   PomodoroSnapshot,
   RestDayChange,
+  RollStats,
   SessionReview,
   SleepGap,
   StreakState,
@@ -74,6 +75,8 @@ export const users = pgTable('users', {
   rollBest: integer('roll_best').notNull().default(0),
   /** How many times they have rolled. Each roll is also a line in xp_transactions. */
   rollCount: integer('roll_count').notNull().default(0),
+  /** The running record the RNG Rolls badges read (core `RollStats`). */
+  rollStats: jsonb('roll_stats').$type<RollStats>().notNull().default({}),
 });
 
 /**

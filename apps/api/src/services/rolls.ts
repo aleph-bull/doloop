@@ -1,4 +1,4 @@
-import { nameTier, ROLL_TIERS_COUNT, type UserSettings } from '@komogon/core';
+import { nameTier, ROLL_TIERS_COUNT, withDefaults, type UserSettings } from '@komogon/core';
 import { and, eq, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { xpTransactions } from '../db/schema';
@@ -18,10 +18,10 @@ export async function rollCounts(db: Db, userId: string): Promise<number[]> {
   return counts;
 }
 
-/** The rarity a person's name is coloured by, or null (below 1 in 256, or turned off). */
+/** The rarity whose style a person's name wears (their choice on Achievements), or null. */
 export function nameTierOf(row: {
   rollBest: number;
   settings: Partial<UserSettings>;
 }): number | null {
-  return nameTier(row.rollBest, row.settings.social?.rollColour !== false);
+  return nameTier(row.rollBest, withDefaults(row.settings).rolls.name);
 }

@@ -23,12 +23,13 @@ import { SchoolMark } from '../components/social/SchoolMark';
 import { FriendButton } from '../components/social/FriendButton';
 import { LiveDot, LiveLine } from '../components/social/LiveNow';
 import { PostCard } from '../components/social/PostCard';
-import { RollLadder } from '../components/slot/RollLadder';
-import { nameClass, tierStyle } from '../lib/rolls';
+import { RollHits } from '../components/slot/RollIndex';
+import { nameClass, rollClass, tierStyle } from '../lib/rolls';
 import {
   ApiError,
   type LiveMember,
   type ProfileBadge,
+  type ProfileRolls,
   type ProfileStats,
   type PublicProfile,
 } from '../lib/api';
@@ -116,15 +117,12 @@ function Head({
           )}
           {roll && (
             <span
-              className={cn(
-                'chip chip-neutral profile-chip profile-roll',
-                !!profile.nameTier && 'is-coloured',
-              )}
-              style={profile.nameTier ? tierStyle(roll.tier) : undefined}
+              className="chip chip-neutral profile-chip profile-roll"
+              style={tierStyle(roll.tier)}
               title={`Rarest roll ${rollOdds(roll.tier)}`}
             >
               <Dices size={13} aria-hidden />
-              {roll.title}
+              <span className={rollClass(roll.tier)}>{roll.title}</span>
             </span>
           )}
           {profile.university && (
@@ -268,22 +266,17 @@ function TopBadges({ badges, you }: { badges: ProfileBadge[]; you: boolean }) {
   );
 }
 
-/** How much of a gambler they are: the rolls, the rarest, and every rarity they have hit. */
-function Rolls({
-  rolls,
-  best,
-  you,
-}: {
-  rolls: NonNullable<ProfileStats['rolls']>;
-  best: number;
-  you: boolean;
-}) {
-  const rarest = rollTierInfo(best);
+/**
+ * RNG Rolls, at the foot of the side column: their rarest roll in its colours, how many
+ * they have rolled, the rarest they have landed and their RNG Rolls badges.
+ */
+function Rolls({ rolls, you }: { rolls: ProfileRolls; you: boolean }) {
+  const rarest = rollTierInfo(rolls.best);
   return (
-    <Panel as="section" className="rc-tile profile-rolls" aria-labelledby="profile-rolls-h">
+    <Panel as="section" className="rc-tile profile-rng" aria-labelledby="profile-rng-h">
       <div className="profile-side-head">
-        <h2 id="profile-rolls-h" className="rc-tile-title">
-          Rolls
+        <h2 id="profile-rng-h" className="rc-tile-title">
+          RNG Rolls
         </h2>
         {you && (
           <Link to="/achievements" className="side-link">
@@ -292,22 +285,26 @@ function Rolls({
           </Link>
         )}
       </div>
-      <dl className="days-panel-stats profile-stats profile-rolls-stats">
-        <div>
-          <dt>Rolls</dt>
-          <dd className="tabular">{rolls.count.toLocaleString()}</dd>
+      {rarest && (
+        <div className="profile-rng-best" style={tierStyle(rarest.tier)}>
+          <span className={`profile-rng-title ${rollClass(rarest.tier)}`}>{rarest.title}</span>
+          <span className="profile-rng-meta tabular">
+            {rollOdds(rarest.tier)} · {rolls.count.toLocaleString()}{' '}
+            {rolls.count === 1 ? 'roll' : 'rolls'}
+          </span>
         </div>
-        {rarest && (
-          <div>
-            <dt>Rarest</dt>
-            <dd className="tabular profile-rolls-odds" style={tierStyle(rarest.tier)}>
-              {rollOdds(rarest.tier)}
-            </dd>
-            <dd className="profile-rolls-title">{rarest.title}</dd>
-          </div>
-        )}
-      </dl>
-      <RollLadder counts={rolls.counts} best={best} />
+      )}
+      <RollHits counts={rolls.counts} />
+      {rolls.badges.length > 0 && (
+        <ul className="profile-rng-badges" aria-label="RNG Rolls badges">
+          {rolls.badges.map((b) => (
+            <li key={b.key} className="profile-rng-badge" title={b.description}>
+              <Award size={13} aria-hidden />
+              {b.name}
+            </li>
+          ))}
+        </ul>
+      )}
     </Panel>
   );
 }
@@ -382,8 +379,6 @@ export function Profile() {
       </Panel>,
     );
   if (badges.length > 0) side.push(<TopBadges key="badges" badges={badges} you={you} />);
-  if (stats?.rolls && stats.rolls.count > 0)
-    side.push(<Rolls key="rolls" rolls={stats.rolls} best={profile.rollBest ?? 0} you={you} />);
   if (clock && clock.totalMinutes > 0) {
     const title = 'Peak study hours';
     const note = clockLabel(clock, you);
@@ -397,6 +392,8 @@ export function Profile() {
       </Panel>,
     );
   }
+  // At the foot, below Peak study hours.
+  if (q.data.rolls) side.push(<Rolls key="rolls" rolls={q.data.rolls} you={you} />);
 
   const postsList =
     posts.length > 0 || you ? (

@@ -3,6 +3,7 @@
  * Clients render in the user's timezone (stored on the user).
  */
 
+import type { RollNameChoice } from './rolls';
 import type { TimelapseAspect, TimelapseLayout } from './timelapse-layout';
 
 export type ISODateTime = string; // e.g. "2026-09-20T15:04:05.000Z"
@@ -305,8 +306,12 @@ export interface UserSettings {
     live: boolean;
     /** Share current study activity with other verified members of your school. */
     schoolActivity: boolean;
-    /** A roll of 1 in 256 or rarer colours your name (rolls.ts); off keeps it plain. */
-    rollColour: boolean;
+  };
+  /** RNG Rolls on Achievements (rolls.ts): what your name wears, and whether your profile shows them. */
+  rolls: {
+    name: RollNameChoice;
+    /** The rarest roll's title by your name and the RNG Rolls card on your profile. */
+    profile: boolean;
   };
   /** Where the pages sit on a computer: a bar along the top, or a sidebar down the left. */
   nav: { style: 'top' | 'sidebar' };

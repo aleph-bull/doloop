@@ -311,12 +311,14 @@ and never explain the difference on screen.
   (`data-jack-target`), which waits at 0:00 and counts up as they land (`JackSlot.tsx`). Its badges show only to people
   using it, and its die emoji on the profile is the one emoji in the UI, at the owner's
   request. See DECISIONS.md.
-- Rolls (2026-10-25): on Achievements, 10 XP pulls a slot machine for a rarity, 1/2 to 1/8192
-  (core `rolls.ts`, drawn by `POST /api/rolls`). Each rarity has a title (shown on the profile);
-  from 1/256 the name takes that rarity's colour wherever Social shows it (`nameTier` on every
-  person; render names with `named()` from `lib/rolls.ts`), and past 1/256 each is a badge. The
-  machine shares its lever, motion and coins with Jack mode's (`components/slot/`): change them
-  there for both. See DECISIONS.md.
+- RNG Rolls (2026-10-25): on Achievements below the Shop, 10 XP a roll (×1, ×10 or ×100) spins a
+  slot machine for a rarity, 1/2 to 1/32768 (core `rolls.ts`, drawn by `POST /api/rolls`). Each
+  rarity has a title and a look that gets louder the rarer (`.roll-fx-*`, `fxLevel`): plain,
+  then from 1/32 a flowing gradient, a shine, a glow and a colour cycle. A name wears one by
+  choice (`settings.rolls.name`, `nameTier` on every person; render names with `named()` from
+  `lib/rolls.ts`). Gambling feats and rarities past 1/256 are badges (`rollBadges`,
+  `users.roll_stats`). The machine shares its lever, motion and coins with Jack mode's
+  (`components/slot/`): change them there for both. See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
   `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table
   (`components/Tags.tsx`), tags on the dashboard task cards, and a play button on courses.
