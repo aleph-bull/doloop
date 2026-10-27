@@ -97,7 +97,7 @@ export interface TimelapseBox {
   align?: TimelapseAlign;
   /** What a text piece sits on; a dark pill when absent. Not the mark. */
   pill?: TimelapsePill;
-  /** A text piece's typeface; the app's own sans when absent. Not the mark. */
+  /** Which of the person's own fonts a text piece is in; its own when absent (`ownFont`). Not the mark. */
   font?: TimelapseFont;
   /** A text piece's or the progress bar's colour; white when absent. */
   color?: TimelapseColor;
@@ -107,11 +107,12 @@ export type TimelapseAlign = 'left' | 'center' | 'right';
 
 /** What a text piece sits on: a dark pill, a pill of its colour, an outline, or nothing. */
 export type TimelapsePill = 'dark' | 'solid' | 'outline' | 'none';
-export type TimelapseFont = 'sans' | 'geometric' | 'mono' | 'serif';
+/** The person's own fonts, from Settings › Appearance › Fonts. Never one the app picks. */
+export type TimelapseFont = 'text' | 'heading' | 'timer';
 export type TimelapseColor = 'white' | 'gold' | 'mint' | 'sky' | 'rose' | 'lilac';
 
 export const TIMELAPSE_PILLS: readonly TimelapsePill[] = ['dark', 'solid', 'outline', 'none'];
-export const TIMELAPSE_FONTS: readonly TimelapseFont[] = ['sans', 'geometric', 'mono', 'serif'];
+export const TIMELAPSE_FONTS: readonly TimelapseFont[] = ['text', 'heading', 'timer'];
 export const TIMELAPSE_COLORS: readonly TimelapseColor[] = [
   'white',
   'gold',
@@ -128,10 +129,9 @@ export const TIMELAPSE_PILL_LABELS: Record<TimelapsePill, string> = {
   none: 'None',
 };
 export const TIMELAPSE_FONT_LABELS: Record<TimelapseFont, string> = {
-  sans: 'Sans',
-  geometric: 'Geometric',
-  mono: 'Mono',
-  serif: 'Serif',
+  text: 'Text',
+  heading: 'Headings',
+  timer: 'Timer',
 };
 export const TIMELAPSE_COLOR_LABELS: Record<TimelapseColor, string> = {
   white: 'White',
@@ -149,24 +149,25 @@ export interface TimelapsePieceStyle {
   color: TimelapseColor;
 }
 
-export const TIMELAPSE_PLAIN_STYLE: TimelapsePieceStyle = {
-  pill: 'dark',
-  font: 'sans',
-  color: 'white',
-};
+/** A piece's font when it has none of its own: the clocks the timer's, the words the text's. */
+export const ownFont = (id: TimelapseElementId): TimelapseFont =>
+  id === 'title' || id === 'note' ? 'text' : 'timer';
 
-export function pieceStyle(b: Pick<TimelapseBox, 'pill' | 'font' | 'color'>): TimelapsePieceStyle {
+export function pieceStyle(
+  id: TimelapseElementId,
+  b: Pick<TimelapseBox, 'pill' | 'font' | 'color'>,
+): TimelapsePieceStyle {
   return {
     pill: b.pill ?? 'dark',
-    font: b.font ?? 'sans',
+    font: b.font ?? ownFont(id),
     color: b.color ?? 'white',
   };
 }
 
-/** Whether two pieces are drawn alike: the same side, pill, font and colour. */
-export function sameLook(a: TimelapseBox, b: TimelapseBox): boolean {
-  const x = pieceStyle(a);
-  const y = pieceStyle(b);
+/** Whether two placings of a piece are drawn alike: the same side, pill, font and colour. */
+export function sameLook(id: TimelapseElementId, a: TimelapseBox, b: TimelapseBox): boolean {
+  const x = pieceStyle(id, a);
+  const y = pieceStyle(id, b);
   return (
     (a.align ?? 'left') === (b.align ?? 'left') &&
     x.pill === y.pill &&
@@ -367,7 +368,7 @@ export function clampBox(id: TimelapseElementId, b: TimelapseBox): TimelapseBox 
   // Only what differs from the plain look is kept, like the side.
   if (takesPill(id)) {
     if (b.pill && b.pill !== 'dark' && TIMELAPSE_PILLS.includes(b.pill)) out.pill = b.pill;
-    if (b.font && b.font !== 'sans' && TIMELAPSE_FONTS.includes(b.font)) out.font = b.font;
+    if (b.font && b.font !== ownFont(id) && TIMELAPSE_FONTS.includes(b.font)) out.font = b.font;
   }
   if (takesColor(id) && b.color && b.color !== 'white' && TIMELAPSE_COLORS.includes(b.color))
     out.color = b.color;
@@ -380,7 +381,7 @@ export function restyleBox(
   b: TimelapseBox,
   style: Partial<TimelapsePieceStyle>,
 ): TimelapseBox {
-  return clampBox(id, { ...b, ...pieceStyle({ ...pieceStyle(b), ...style }) });
+  return clampBox(id, { ...b, ...pieceStyle(id, { ...pieceStyle(id, b), ...style }) });
 }
 
 /**

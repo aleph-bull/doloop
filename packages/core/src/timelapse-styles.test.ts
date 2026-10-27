@@ -126,19 +126,29 @@ describe('your text on the video', () => {
 describe('how each piece is drawn', () => {
   it('keeps a pill, a font and a colour, and only what differs from the plain look', () => {
     const d = defaultTimelapseLayout(16 / 9);
-    const styled = restyleBox('title', d.title, { pill: 'solid', font: 'serif', color: 'gold' });
-    expect(styled).toMatchObject({ pill: 'solid', font: 'serif', color: 'gold' });
-    expect(pieceStyle(styled)).toEqual({ pill: 'solid', font: 'serif', color: 'gold' });
+    const styled = restyleBox('title', d.title, { pill: 'solid', font: 'heading', color: 'gold' });
+    expect(styled).toMatchObject({ pill: 'solid', font: 'heading', color: 'gold' });
+    expect(pieceStyle('title', styled)).toEqual({ pill: 'solid', font: 'heading', color: 'gold' });
     // Back to the plain look: nothing is stored for it.
-    const back = restyleBox('title', styled, { pill: 'dark', font: 'sans', color: 'white' });
+    const back = restyleBox('title', styled, { pill: 'dark', font: 'text', color: 'white' });
     expect(back).toEqual(d.title);
+  });
+
+  it('draws the clocks in the timer font and the words in the text font, unless told', () => {
+    const d = defaultTimelapseLayout(16 / 9);
+    for (const id of ['clock', 'elapsed', 'total', 'start', 'end'] as const)
+      expect(pieceStyle(id, d[id]).font).toBe('timer');
+    for (const id of ['title', 'note'] as const) expect(pieceStyle(id, d[id]).font).toBe('text');
+    // A clock's own font is not stored; another of theirs is.
+    expect(restyleBox('clock', d.clock, { font: 'timer' })).toEqual(d.clock);
+    expect(restyleBox('clock', d.clock, { font: 'text' }).font).toBe('text');
   });
 
   it('gives the progress bar a colour only, and the mark nothing', () => {
     const d = defaultTimelapseLayout(1);
-    const bar = restyleBox('progress', d.progress, { color: 'mint', pill: 'none', font: 'mono' });
+    const bar = restyleBox('progress', d.progress, { color: 'mint', pill: 'none', font: 'timer' });
     expect(bar).toEqual({ ...d.progress, color: 'mint' });
-    const mark = restyleBox('watermark', d.watermark, { color: 'rose', font: 'serif' });
+    const mark = restyleBox('watermark', d.watermark, { color: 'rose', font: 'heading' });
     expect(mark).toEqual(d.watermark);
   });
 
@@ -146,21 +156,49 @@ describe('how each piece is drawn', () => {
     const d = defaultTimelapseLayout(16 / 9);
     const read = normalizeTimelapseLayout({
       ...d,
-      clock: { ...d.clock, pill: 'outline', font: 'mono', color: 'sky' },
+      clock: { ...d.clock, pill: 'outline', font: 'heading', color: 'sky' },
       title: { ...d.title, pill: 'glow', font: 'comic', color: '#f0f' },
+      // Fonts the looks used to pick go back to the person's own.
+      elapsed: { ...d.elapsed, font: 'geometric' },
+      note: { ...d.note, font: 'serif' },
     });
-    expect(pieceStyle(read.clock)).toEqual({ pill: 'outline', font: 'mono', color: 'sky' });
+    expect(pieceStyle('clock', read.clock)).toEqual({
+      pill: 'outline',
+      font: 'heading',
+      color: 'sky',
+    });
     expect(read.title).toEqual(d.title);
+    expect(read.elapsed).toEqual(d.elapsed);
+    expect(read.note).toEqual(d.note);
   });
 
   it('draws the pieces a look leaves in place its way too', () => {
     const r = 16 / 9;
-    const mono = applyTimelapseStyle('mono', r, defaultTimelapseLayout(r));
+    const outline = applyTimelapseStyle('outline', r, defaultTimelapseLayout(r));
     for (const id of ['total', 'start', 'end'] as const)
-      expect(pieceStyle(mono[id])).toMatchObject({ pill: 'outline', font: 'mono' });
+      expect(pieceStyle(id, outline[id]).pill).toBe('outline');
     // Back to Classic, they are plain again.
-    const classic = applyTimelapseStyle('classic', r, mono);
+    const classic = applyTimelapseStyle('classic', r, outline);
     expect(classic.total).toEqual(defaultTimelapseLayout(r).total);
+  });
+
+  it('never picks a font, and keeps the ones the person gave', () => {
+    for (const r of SHAPES)
+      for (const s of TIMELAPSE_STYLES) {
+        const layout = applyTimelapseStyle(s.id, r, defaultTimelapseLayout(r));
+        for (const b of Object.values(layout)) expect(b.font).toBeUndefined();
+      }
+    const r = 16 / 9;
+    const mine = defaultTimelapseLayout(r);
+    mine.title = restyleBox('title', mine.title, { font: 'heading' });
+    mine.start = restyleBox('start', mine.start, { font: 'text' });
+    for (const s of TIMELAPSE_STYLES) {
+      const layout = applyTimelapseStyle(s.id, r, mine);
+      expect(layout.title.font).toBe('heading');
+      expect(layout.start.font).toBe('text');
+      // Still that look: the font is theirs, not the look's.
+      expect(matchTimelapseStyle(layout, r)).toBe(s.id);
+    }
   });
 
   it('no longer reads as its look once a piece is restyled', () => {

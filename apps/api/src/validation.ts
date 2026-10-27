@@ -231,7 +231,8 @@ const timelapseBox = z
     align: z.enum(['left', 'center', 'right']).optional(),
     // TIMELAPSE_PILLS, TIMELAPSE_FONTS and TIMELAPSE_COLORS in core.
     pill: z.enum(['dark', 'solid', 'outline', 'none']).optional(),
-    font: z.enum(['sans', 'geometric', 'mono', 'serif']).optional(),
+    // The person's own fonts; the last four are from before 2026-10-26, dropped when read.
+    font: z.enum(['text', 'heading', 'timer', 'sans', 'geometric', 'mono', 'serif']).optional(),
     color: z.enum(['white', 'gold', 'mint', 'sky', 'rose', 'lilac']).optional(),
   })
   .strict();

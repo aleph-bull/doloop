@@ -1,8 +1,9 @@
 /**
  * Ready-made looks for the timelapse, to start from instead of arranging every piece by
  * hand, and the person's own line of text that stays on the video. A look places the
- * clocks, the task name, that text, the progress bar and the mark, and says how the texts
- * are drawn (their pill and font); the screen stays where the person put it.
+ * clocks, the task name, that text, the progress bar and the mark, and says what the texts
+ * sit on; the screen stays where the person put it. A look never picks a font: the texts
+ * stay in the person's own (owner, 2026-10-26).
  */
 import {
   defaultTimelapseLayout,
@@ -17,7 +18,7 @@ import {
 } from './timelapse-layout';
 
 export type TimelapseStyleId =
-  'classic' | 'minimal' | 'big-timer' | 'headline' | 'story' | 'mono' | 'corner' | 'clean';
+  'classic' | 'minimal' | 'big-timer' | 'headline' | 'story' | 'outline' | 'corner' | 'clean';
 
 export interface TimelapseStyle {
   id: TimelapseStyleId;
@@ -41,7 +42,7 @@ export const TIMELAPSE_STYLES: readonly TimelapseStyle[] = [
     name: 'Story',
     description: 'A bar along the top, the time and the task low in the middle.',
   },
-  { id: 'mono', name: 'Mono', description: 'Outlined, in mono.' },
+  { id: 'outline', name: 'Outline', description: 'Outlined.' },
   { id: 'corner', name: 'Corner', description: 'Everything small, in one corner.' },
   { id: 'clean', name: 'Clean', description: 'The camera, the mark and your text.' },
 ];
@@ -53,14 +54,17 @@ const STYLED: readonly StyledId[] = ['clock', 'elapsed', 'title', 'note', 'progr
 /** Text pieces a look draws its way but leaves where they are. */
 const DRESSED: readonly TimelapseElementId[] = ['total', 'start', 'end'];
 
+/** How a look draws a text: its pill and colour, never its font. */
+type LookStyle = Partial<Pick<TimelapsePieceStyle, 'pill' | 'color'>>;
+
 /** How a look draws its texts, unless it says otherwise for one of them. */
-const REST: Record<TimelapseStyleId, Partial<TimelapsePieceStyle>> = {
+const REST: Record<TimelapseStyleId, LookStyle> = {
   classic: {},
   minimal: { pill: 'none' },
-  'big-timer': { pill: 'none', font: 'geometric' },
+  'big-timer': { pill: 'none' },
   headline: {},
-  story: { pill: 'none', font: 'geometric' },
-  mono: { pill: 'outline', font: 'mono' },
+  story: { pill: 'none' },
+  outline: { pill: 'outline' },
   corner: {},
   clean: { pill: 'none' },
 };
@@ -83,11 +87,14 @@ function plain(b: TimelapseBox): TimelapseBox {
   return out;
 }
 
-/** A text piece drawn this way: only what differs from a dark sans pill in white is kept. */
-function dress(b: TimelapseBox, s: Partial<TimelapsePieceStyle>): TimelapseBox {
+/**
+ * A text piece drawn this way: only what differs from a dark pill in white is kept. Its font
+ * stays the one the person gave it.
+ */
+function dress(b: TimelapseBox, s: LookStyle): TimelapseBox {
   const out = plain(b);
+  if (b.font) out.font = b.font;
   if (s.pill && s.pill !== 'dark') out.pill = s.pill;
-  if (s.font && s.font !== 'sans') out.font = s.font;
   if (s.color && s.color !== 'white') out.color = s.color;
   return out;
 }
@@ -117,7 +124,7 @@ function styledPieces(
   if (id === 'classic') return classic;
   const { u, mx, my, bar, mark, gap } = metrics(ratio);
   const rest = REST[id];
-  const as = (b: TimelapseBox, s: Partial<TimelapsePieceStyle> = rest) => dress(b, s);
+  const as = (b: TimelapseBox, s: LookStyle = rest) => dress(b, s);
   const progress = box(0, 1 - bar, 1, bar);
   const full = 1 - mx * 2;
   const markTop = box(1 - mx - 0.3, my, 0.3, mark, true, 'right');
@@ -155,12 +162,12 @@ function styledPieces(
   if (id === 'headline') {
     const head = u * 1.5;
     const elapsedY = my + head + gap;
-    const serif = { pill: 'none', font: 'serif' } as const;
+    const bare = { pill: 'none' } as const;
     return {
       clock: off(classic.clock),
-      title: as(box(mx, my, full, head), serif),
+      title: as(box(mx, my, full, head), bare),
       elapsed: as(box(mx, elapsedY, 0.3, u * 0.9)),
-      note: as(box(mx, elapsedY + u * 0.9 + gap, 0.6, line), serif),
+      note: as(box(mx, elapsedY + u * 0.9 + gap, 0.6, line), bare),
       progress,
       watermark: markBottom,
     };
@@ -178,12 +185,12 @@ function styledPieces(
       progress: box(mx, top, full, thin),
       watermark: box(1 - mx - 0.3, under, 0.3, mark, true, 'right'),
       clock: as(box(mx, under, 0.4, mark * 1.15)),
-      elapsed: as(box(mx, elapsedY, full, big, true, 'center'), { font: 'geometric' }),
+      elapsed: as(box(mx, elapsedY, full, big, true, 'center'), {}),
       title: as(box(mx, titleY, full, u, true, 'center')),
       note: as(box(mx, titleY - gap - line, full, line, true, 'center')),
     };
   }
-  if (id === 'mono') {
+  if (id === 'outline') {
     const s = u * 0.85;
     const elapsedY = 1 - my - bar - s;
     return {
@@ -233,9 +240,15 @@ export function applyTimelapseStyle(
 ): TimelapseLayout {
   const pieces = styledPieces(id, ratio, screenRatio);
   const out: TimelapseLayout = { ...current };
-  // The bar and the mark take no pill or font; a look also puts the bar's colour back.
-  for (const p of STYLED)
-    out[p] = p === 'progress' || p === 'watermark' ? plain(pieces[p]) : { ...pieces[p] };
+  // The bar and the mark take no pill or font; a look also puts the bar's colour back. A
+  // text keeps the font the person gave it.
+  for (const p of STYLED) {
+    if (p === 'progress' || p === 'watermark') out[p] = plain(pieces[p]);
+    else {
+      out[p] = { ...pieces[p] };
+      if (current[p].font) out[p].font = current[p].font;
+    }
+  }
   for (const p of DRESSED) out[p] = dress(current[p], REST[id]);
   return out;
 }
@@ -250,7 +263,8 @@ const anchor = (b: TimelapseBox) =>
  * Whether two placings of a piece are the same as far as a look goes. A saved text piece
  * is stored where it was drawn (its width the text's), so only its height, its top, the
  * side it holds to and how it is drawn are compared; the progress bar is compared whole.
- * Hidden is hidden, wherever it waits.
+ * Hidden is hidden, wherever it waits. The font is the person's, not the look's, so it is
+ * left out.
  */
 function samePiece(id: TimelapseElementId, a: TimelapseBox, b: TimelapseBox): boolean {
   if (a.visible !== b.visible) return false;
@@ -261,7 +275,7 @@ function samePiece(id: TimelapseElementId, a: TimelapseBox, b: TimelapseBox): bo
       (['x', 'y', 'w', 'h'] as const).every((k) => near(a[k], b[k], 0.004))
     );
   return (
-    sameLook(a, b) &&
+    sameLook(id, a, { ...b, font: a.font }) &&
     near(a.y, b.y, 0.004) &&
     near(a.h, b.h, 0.004) &&
     near(anchor(a), anchor(b), 0.006)

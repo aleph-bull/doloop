@@ -194,7 +194,7 @@ describe('settings: timelapse', () => {
     const story = {
       ...tl.storyLayout,
       title: { x: 0.05, y: 0.7, w: 0.9, h: 0.05, visible: true, pill: 'solid', color: 'gold' },
-      clock: { ...tl.storyLayout.clock, font: 'mono' },
+      clock: { ...tl.storyLayout.clock, font: 'heading' },
     };
     const ok = await api({
       method: 'PATCH',
@@ -205,7 +205,17 @@ describe('settings: timelapse', () => {
     const saved = ok.json().settings.timelapse;
     expect(saved.format).toBe('story');
     expect(saved.storyLayout.title).toMatchObject({ pill: 'solid', color: 'gold' });
-    expect(saved.storyLayout.clock.font).toBe('mono');
+    expect(saved.storyLayout.clock.font).toBe('heading');
+    // A font from before the person's own (an older tab saving) is taken, then dropped.
+    const old = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: {
+        timelapse: { storyLayout: { ...story, clock: { ...story.clock, font: 'mono' } } },
+      },
+    });
+    expect(old.statusCode).toBe(200);
+    expect(old.json().settings.timelapse.storyLayout.clock.font).toBeUndefined();
     // The computer's own layout is left as it was.
     expect(saved.layout).toEqual(tl.layout);
     for (const payload of [

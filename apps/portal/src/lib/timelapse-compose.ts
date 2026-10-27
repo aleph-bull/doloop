@@ -167,20 +167,28 @@ export const TIMELAPSE_COLOR_HEX: Record<TimelapseColor, { text: string; fill: s
   lilac: { text: '#cebff1', fill: '#53467e' },
 };
 
-/** The typefaces, as the canvas names them. The geometric one is the wordmark's. */
-export const TIMELAPSE_FONT_FAMILY: Record<TimelapseFont, string> = {
-  sans: FONT,
-  geometric: `Satoshi, ${FONT}`,
-  mono: `ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, Menlo, monospace`,
-  serif: `'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif`,
+/**
+ * The variable on <html> holding each of the person's fonts (Settings › Appearance › Fonts,
+ * set by lib/fonts.ts once the font has loaded). The video uses only these.
+ */
+export const TIMELAPSE_FONT_VAR: Record<TimelapseFont, string> = {
+  text: '--font-sans',
+  heading: '--font-display',
+  timer: '--font-timer',
 };
-/** A typeface's weight for the words that matter, and for the small label beside them. */
-const WEIGHTS: Record<TimelapseFont, [number, number]> = {
-  sans: [600, 450],
-  geometric: [700, 500],
-  mono: [600, 450],
-  serif: [600, 400],
-};
+
+type Families = Record<TimelapseFont, string>;
+
+/** The person's fonts as the canvas names them, read off the page once a frame. */
+function ownFamilies(): Families {
+  const css = typeof document === 'undefined' ? null : getComputedStyle(document.documentElement);
+  const read = (f: TimelapseFont) => css?.getPropertyValue(TIMELAPSE_FONT_VAR[f]).trim() || FONT;
+  return { text: read('text'), heading: read('heading'), timer: read('timer') };
+}
+
+/** The weight for the words that matter, and for the small label beside them. */
+const HEAVY = 600;
+const LIGHT = 450;
 
 /** One run of a piece's text, and whether it is the small part beside the number. */
 type Part = { text: string; small: boolean };
@@ -224,14 +232,14 @@ function drawText(
   w: number,
   h: number,
   box: TimelapseBox,
+  families: Families,
 ): Rect {
-  const { pill, font, color } = pieceStyle(box);
-  const family = TIMELAPSE_FONT_FAMILY[font];
-  const [heavy, light] = WEIGHTS[font];
+  const { pill, font, color } = pieceStyle(id, box);
+  const family = families[font];
   const parts = textParts(id, text);
   const clocklike = id !== 'title' && id !== 'note';
   const fontOf = (p: Part, size: number) =>
-    p.small ? `${light} ${size * 0.7}px ${family}` : `${heavy} ${size}px ${family}`;
+    p.small ? `${LIGHT} ${size * 0.7}px ${family}` : `${HEAVY} ${size}px ${family}`;
   const measure = (size: number) => {
     const gap = size * 0.24;
     const widths = parts.map((p) => {
@@ -400,9 +408,11 @@ export function composeFrame(
     ['title', frame.title],
     ['note', frame.note ?? null],
   ];
+  const families = ownFamilies();
   for (const [id, text] of texts) {
     const box = layout[id];
-    if (box.visible && text) drawn[id] = drawText(ctx, toRect(box, w, h), id, text, w, h, box);
+    if (box.visible && text)
+      drawn[id] = drawText(ctx, toRect(box, w, h), id, text, w, h, box, families);
   }
   if (layout.progress.visible && frame.progress !== null) {
     drawn.progress = toRect(layout.progress, w, h);

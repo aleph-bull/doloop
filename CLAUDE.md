@@ -790,10 +790,16 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   recording settings below the editor (length, fps, breaks, smooth, deflicker) still save
   on change.
 - **How each piece is drawn** (2026-10-25): every text piece has a `pill` (dark, solid
-  "Colour", outline, none), a `font` (sans, geometric = Satoshi, mono, serif) and a
+  "Colour", outline, none), a `font` and a
   `color` (white, gold, mint, sky, rose, lilac); the progress bar has a colour only and the
-  mark none. They sit on the layout box, absent meaning dark / sans / white, and only what
-  differs is stored (`clampBox`, `restyleBox`, `pieceStyle` in core). The editor shows
+  mark none. **The font is always one of the person's own** (owner, 2026-10-26: "only use
+  the main user's fonts, dont change fonts by urself"): Text, Headings or Timer, the fonts
+  from Settings › Appearance › Fonts, which `composeFrame` reads off <html>
+  (`--font-sans`, `--font-display`, `--font-timer`); absent, the clocks are in the timer
+  font and the task and your text in the text font (`ownFont`). Never draw a timelapse text
+  in a named font, and never let a look set one. They sit on the layout box, absent meaning
+  dark / own font / white, and only what differs is stored (`clampBox`, `restyleBox`,
+  `pieceStyle` in core). The editor shows
   them under the chosen piece's line-up buttons (`PieceLook`). `composeFrame` draws a
   clock's label and time-of-day ending smaller than its number, on one baseline, and
   measures a clock's digits as zeros so its pill keeps one width as the time runs. Set per
@@ -856,10 +862,11 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   the session, on the card and in "Change layout?", and belongs to that one video (owner,
   2026-10-22): the presets' `noteText` is kept but no longer used. There is no end card
   (built, then removed the same day). **Looks**
-  (`timelapse-styles.ts`: Classic, Minimal, Big timer, Headline, Story, Mono, Corner, Clean)
-  place the pieces for any shape and say how the texts are drawn (their pill and font, also
-  for the time elapsed, start and end they leave in place); `matchTimelapseStyle` reads a
-  saved layout back as its look, pills and fonts included. **"Change
+  (`timelapse-styles.ts`: Classic, Minimal, Big timer, Headline, Story, Outline, Corner, Clean)
+  place the pieces for any shape and say what the texts sit on (their pill, also for the
+  time elapsed, start and end they leave in place), never their font: a text keeps the font
+  the person gave it; `matchTimelapseStyle` reads a saved layout back as its look, pills
+  included, fonts left out. **"Change
   layout?"** beside a made video opens the layout editor in a dialog over a moment of that
   video (`RelayoutDialog.tsx`; not the Settings page, which would drop the stills) and
   remakes the video with what was saved. DECISIONS.md has both 2026-10-22 timelapse

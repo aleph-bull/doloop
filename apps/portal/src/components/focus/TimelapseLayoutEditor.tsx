@@ -74,7 +74,7 @@ import {
   composeFrame,
   sourceSize,
   TIMELAPSE_COLOR_HEX,
-  TIMELAPSE_FONT_FAMILY,
+  TIMELAPSE_FONT_VAR,
   type ComposeFrame,
   type DrawnRects,
 } from '../../lib/timelapse-compose';
@@ -222,7 +222,7 @@ const sameBoxes = (a: TimelapseLayout, b: TimelapseLayout) =>
 
 const sameLayout = (a: TimelapseLayout, b: TimelapseLayout) =>
   sameBoxes(a, b) &&
-  TIMELAPSE_ELEMENTS.every((id) => a[id].visible === b[id].visible && sameLook(a[id], b[id]));
+  TIMELAPSE_ELEMENTS.every((id) => a[id].visible === b[id].visible && sameLook(id, a[id], b[id]));
 
 /** Pieces that keep their own shape when resized: the screen, the texts and the mark. */
 const keepsShape = (id: TimelapseElementId) => id !== 'progress';
@@ -982,7 +982,7 @@ function PieceLook({
   box: TimelapseBox;
   onChange: (style: Partial<TimelapsePieceStyle>) => void;
 }) {
-  const s = pieceStyle(box);
+  const s = pieceStyle(id, box);
   return (
     <div className="tl-piece-look">
       {takesPill(id) && (
@@ -1005,7 +1005,7 @@ function PieceLook({
               options={TIMELAPSE_FONTS.map((v) => ({
                 value: v,
                 label: (
-                  <span style={{ fontFamily: TIMELAPSE_FONT_FAMILY[v] }}>
+                  <span style={{ fontFamily: `var(${TIMELAPSE_FONT_VAR[v]})` }}>
                     {TIMELAPSE_FONT_LABELS[v]}
                   </span>
                 ),
