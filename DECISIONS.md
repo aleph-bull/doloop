@@ -2796,7 +2796,7 @@ Owner: "add dots to deep sea and add grid and dots to some other minimalist back
 - **Dots**: Deep Sea, Dusk Rose and Salt Air. **Grid**: Linen, Night Shift and Tidepool. Off White and Quiet Stone keep their grain; Inkwell, Wisteria and Gold Leaf stay plain, so the list still has flat ones.
 - Setup's Minimalist look (Salt Air in light, Deep Sea in dark) now comes with dots in both.
 - Anyone already on one of these keeps their texture until they pick the theme again; the theme shows as Custom until then.
-- Then (same day): "add dots to the default minimalist light mode". Salt Air already had them for anyone picking it, so migration **0045_salt_air_dots** gives them to accounts already on it (its colour, no texture). Accounts on the other five keep what they had until they pick again.
+- Then (same day): "add dots to the default minimalist light mode". Salt Air already had them for anyone picking it, so migration **0045_salt_air_dots** gives them to accounts already on it (its colour, no texture). Then the other five too (owner said yes): migration **0046_theme_textures** gives accounts on Deep Sea, Dusk Rose, Linen, Night Shift or Tidepool with no texture the theme's own.
 
 ## A phone films for the computer's timelapse, 2026-10-28 (owner request)
 
