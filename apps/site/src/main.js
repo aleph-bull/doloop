@@ -1,7 +1,8 @@
 // Motion for the homepage. The hero lifts in on load, devices and all, and each section rises
 // as it scrolls into view. Below the hero, scenes marked [data-scrub] follow the scroll: the
-// Track tour, the ring of looks, the focus screen that grows, and the social fields. Nothing
-// here is needed to read the page; without it everything lays out flat.
+// timelapses, the focus screen that grows, the calendar, the Track tour and the ring of looks.
+// Nothing here is needed to read the page; without it everything lays out flat, and on a phone
+// it stays flat on purpose.
 
 const root = document.documentElement;
 const still =
@@ -40,13 +41,13 @@ if (!still && 'IntersectionObserver' in window) {
 
 // ---------- Scroll scenes ----------
 
-/** The heading's word, scrambled through random letters on its way to the next one. */
+/** A word in the looks' last line, scrambled through random letters on its way to the next. */
 function scrambler(el) {
   const words = el.dataset.words.split(',');
   const letters = 'abcdefghijklmnopqrstuvwxyz';
   let shown = el.textContent;
   let raf = 0;
-  return (i) => {
+  const to = (i) => {
     const target = words[clamp(i, 0, words.length - 1)];
     if (target === shown) return;
     shown = target;
@@ -64,6 +65,14 @@ function scrambler(el) {
     };
     raf = requestAnimationFrame(tick);
   };
+  /** Straight to the first word, as the page reads without the scene. */
+  const rest = () => {
+    cancelAnimationFrame(raf);
+    shown = words[0];
+    el.textContent = shown;
+    el.classList.remove('is-scrambling');
+  };
+  return { to, rest, count: words.length };
 }
 
 /*
@@ -92,6 +101,7 @@ function ringScene(scene) {
   let raf = 0;
   let last = 0;
   let onScreen = false;
+  let live = false;
 
   const measure = () => {
     W = view.clientWidth || window.innerWidth;
@@ -125,12 +135,12 @@ function ringScene(scene) {
     slide += dt * (CRUISE + push);
     push *= Math.exp(-dt * 2.2);
     draw();
-    if (onScreen) raf = requestAnimationFrame(tick);
+    if (live && onScreen) raf = requestAnimationFrame(tick);
     else last = 0;
   };
   new IntersectionObserver(([e]) => {
     onScreen = e.isIntersecting;
-    if (onScreen && !raf) raf = requestAnimationFrame(tick);
+    if (live && onScreen && !raf) raf = requestAnimationFrame(tick);
   }).observe(scene);
 
   return {
@@ -140,8 +150,26 @@ function ringScene(scene) {
       fan = 0.06 + 0.94 * ease(range(p, 0, 0.22));
       if (lastP !== null) push = clamp(push + (p - lastP) * 9, -1.2, 1.2);
       lastP = p;
-      word(Math.floor(range(p, 0.06, 0.8) * 4));
+      word.to(Math.floor(range(p, 0.06, 0.8) * word.count));
       if (!onScreen) draw();
+    },
+    start() {
+      live = true;
+      if (onScreen && !raf) raf = requestAnimationFrame(tick);
+    },
+    stop() {
+      live = false;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      last = 0;
+      lastP = null;
+      push = 0;
+      word.rest();
+      for (const card of cards) {
+        for (const prop of ['opacity', 'visibility', 'z-index', 'transform']) {
+          card.style.removeProperty(prop);
+        }
+      }
     },
   };
 }
@@ -197,6 +225,16 @@ function tourScene(scene) {
       target = k + turn * turn * (3 - 2 * turn);
       setStep(scene, Math.round(target));
       if (!raf) raf = requestAnimationFrame(tick);
+    },
+    stop() {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      last = 0;
+      drum?.style.removeProperty('transform');
+      for (const face of faces) {
+        face.style.removeProperty('transform');
+        face.style.removeProperty('opacity');
+      }
     },
   };
 }
@@ -262,6 +300,7 @@ function fallScene(scene) {
   let target = 0.4;
   let raf = 0;
   let onScreen = false;
+  let live = false;
   const tick = (now) => {
     raf = 0;
     const t = now / 1000;
@@ -279,21 +318,36 @@ function fallScene(scene) {
       const tilt = Math.sin(w * 0.5 + 0.7) * 9;
       c.el.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0) perspective(1000px) rotateY(${tilt.toFixed(2)}deg) rotate(${turn.toFixed(2)}deg)`;
     }
-    if (onScreen) raf = requestAnimationFrame(tick);
+    if (live && onScreen) raf = requestAnimationFrame(tick);
   };
   new IntersectionObserver(([e]) => {
     onScreen = e.isIntersecting;
-    if (onScreen && !raf) raf = requestAnimationFrame(tick);
+    if (live && onScreen && !raf) raf = requestAnimationFrame(tick);
   }).observe(scene);
   return {
     update(p) {
       target = p;
     },
+    start() {
+      live = true;
+      if (onScreen && !raf) raf = requestAnimationFrame(tick);
+    },
+    stop() {
+      live = false;
+      cancelAnimationFrame(raf);
+      raf = 0;
+      for (const c of cards) {
+        c.at = null;
+        c.el.style.removeProperty('transform');
+      }
+    },
   };
 }
 
+// Everything a scene writes on its own element; cleared when the scenes turn off.
+const SCENE_VARS = ['--p', '--enter', '--cw', '--sw', '--s', '--dark', '--ph', '--shift'];
+
 if (!still) {
-  root.classList.add('has-scrub');
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
     const kind = el.dataset.scrub;
     const steps = Number(el.dataset.steps) || 0;
@@ -326,8 +380,10 @@ if (!still) {
   });
 
   let queued = false;
+  let on = false;
   const frame = () => {
     queued = false;
+    if (!on) return;
     const vh = window.innerHeight;
     for (const s of scenes) {
       const r = s.el.getBoundingClientRect();
@@ -348,22 +404,36 @@ if (!still) {
     requestAnimationFrame(frame);
   };
   const measure = () => {
+    if (!on) return;
     for (const s of scenes) s.measure?.();
     queue();
   };
-  measure();
-  frame();
+
+  // A phone gets the page flat (the owner, 2026-10-28): nothing pins, and each section is its
+  // words then its pictures, laid out by the CSS under the same query (change both together).
+  // A window dragged across the line switches between the two as it goes.
+  const flat = window.matchMedia('(max-width: 640px), (max-height: 500px)');
+  const apply = () => {
+    if (on === !flat.matches) return;
+    on = !flat.matches;
+    root.classList.toggle('has-scrub', on);
+    for (const s of scenes) {
+      if (on) {
+        s.start?.();
+        continue;
+      }
+      s.stop?.();
+      for (const name of SCENE_VARS) s.el.style.removeProperty(name);
+    }
+    if (on) {
+      measure();
+      frame();
+    }
+  };
+  apply();
+  flat.addEventListener('change', apply);
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', measure);
-
-  // On a phone a pinned stage is only as tall as what's in it and pins in the middle of the
-  // screen; the CSS takes half its height for that.
-  const half = new ResizeObserver((entries) => {
-    for (const e of entries) e.target.style.setProperty('--half', `${e.target.offsetHeight / 2}px`);
-  });
-  for (const el of document.querySelectorAll('.looks-stage, .zoom-stage, .plan-stage')) {
-    half.observe(el);
-  }
 }
 
 // ---------- Timelapses ----------
@@ -397,5 +467,70 @@ for (const v of clips) {
   );
   v.addEventListener('webkitpresentationmodechanged', () => {
     if (v.webkitPresentationMode === 'picture-in-picture') v.webkitSetPresentationMode('inline');
+  });
+}
+
+// ---------- The phones and their slideshow ----------
+
+// Each phone in the hero opens the slideshow at its own slide. The arrows, the dots, the arrow
+// keys or a sideways swipe move through it; Escape, the close button or a click outside the
+// box closes it, and focus goes back to the phone.
+const show = document.getElementById('features');
+if (show && typeof show.showModal === 'function') {
+  const slides = [...show.querySelectorAll('.slide')];
+  const dots = [...show.querySelectorAll('[data-go]')];
+  let at = 0;
+  /** Show slide `i`, coming in from the right (dir 1), the left (-1) or neither (0). */
+  const go = (i, dir = 0) => {
+    at = (i + slides.length) % slides.length;
+    slides.forEach((s, k) => {
+      s.classList.toggle('is-on', k === at);
+      if (k === at) s.style.setProperty('--from', String(dir));
+    });
+    dots.forEach((d, k) => d.setAttribute('aria-current', String(k === at)));
+  };
+  for (const phone of document.querySelectorAll('.lineup-phone')) {
+    phone.addEventListener('click', () => {
+      go(Number(phone.dataset.slide));
+      show.showModal();
+    });
+  }
+  show.querySelector('.slide-close').addEventListener('click', () => show.close());
+  for (const b of show.querySelectorAll('[data-step]')) {
+    const step = Number(b.dataset.step);
+    b.addEventListener('click', () => go(at + step, step));
+  }
+  for (const d of dots) {
+    const i = Number(d.dataset.go);
+    d.addEventListener('click', () => go(i, Math.sign(i - at)));
+  }
+  show.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault();
+    const step = e.key === 'ArrowRight' ? 1 : -1;
+    go(at + step, step);
+  });
+  // A click on the backdrop lands on the dialog itself, outside its box.
+  show.addEventListener('click', (e) => {
+    if (e.target !== show) return;
+    const r = show.getBoundingClientRect();
+    const out =
+      e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom;
+    if (out) show.close();
+  });
+  let x0 = null;
+  show.addEventListener('pointerdown', (e) => {
+    x0 = e.pointerType === 'mouse' ? null : e.clientX;
+  });
+  show.addEventListener('pointerup', (e) => {
+    if (x0 === null) return;
+    const dx = e.clientX - x0;
+    x0 = null;
+    if (Math.abs(dx) < 48) return;
+    const step = dx < 0 ? 1 : -1;
+    go(at + step, step);
+  });
+  show.addEventListener('pointercancel', () => {
+    x0 = null;
   });
 }

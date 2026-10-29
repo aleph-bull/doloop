@@ -1,5 +1,5 @@
 // The link preview (public/og.jpg): the hero at 1200x630, logo and headline over the photo
-// with the laptop and phone, without the nav links, buttons or paragraph.
+// with the row of phones, without the nav links, buttons, paragraph or the phones' labels.
 // Run the site, then: CAPTURE_DEPS=<folder with playwright-core> node scripts/og.mjs [url]
 import { createRequire } from 'node:module';
 import { join } from 'node:path';
@@ -14,12 +14,12 @@ const url = process.argv[2] ?? 'http://localhost:5190/';
 const out = fileURLToPath(new URL('../public/og.jpg', import.meta.url));
 
 const CSS = `
-  .site-nav-links, .site-nav-actions, .lede, .cta-row { display: none !important; }
+  .site-nav-links, .site-nav-actions, .lede, .cta-row, .lineup-label { display: none !important; }
   .site-nav { margin-top: 30px; width: 1200px; padding: 0 44px; box-sizing: border-box; }
   .hero { min-height: 0; padding-top: 96px; }
   .hero-photo { inset: 0; mask-image: none; }
-  .hero h1 { font-size: 78px; }
-  .devices { margin-top: 40px; width: 1040px; }
+  .hero h1 { font-size: 72px; }
+  .lineup { margin-top: 36px; width: 900px; }
   body { overflow: hidden; }
 `;
 

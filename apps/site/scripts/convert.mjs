@@ -13,6 +13,17 @@ const jobs = [
   // name, source, { crop: [left, top, width, height] (device px), width, quality }
   ['today', 'today', { quality: 82 }],
   ['today-phone', 'today-phone', { quality: 82 }],
+  ['feed-phone', 'feed-phone', { quality: 82 }],
+  ['lineup-plan', 'lineup-plan', { quality: 82 }],
+  ['lineup-track', 'lineup-track', { quality: 82 }],
+  ['lineup-xp', 'lineup-xp', { quality: 82 }],
+  ['xp-hero', 'xp-hero', { quality: 82 }],
+  // The phone's own XP card, for the XP section on a phone (the computer's is long and thin).
+  ['xp-hero-phone', 'lineup-xp', { crop: [24, 586, 1122, 594], quality: 82 }],
+  // The shop and the rolls with room round their headings, from the whole-window shots (the
+  // element shots crop right up to the headings, which the rounded frames then clip).
+  ['shop', 'achievements', { crop: [310, 994, 2260, 806], quality: 82 }],
+  ['rolls-panel', 'rolls', { crop: [310, 14, 2260, 1124], quality: 82 }],
   ['analytics', 'analytics', { width: 2400 }],
   ['social', 'feed', { width: 2400 }],
   ['board', 'leaderboard', { width: 2400 }],

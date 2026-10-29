@@ -25,6 +25,8 @@
   --site-page: #f7f3fa;
   --site-radius: 28px;
   --site-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* How far the laptop and phone hang below the hero, over the page. */
+  --hang: clamp(100px, 18vw, 220px);
 }
 
 html {
@@ -249,7 +251,7 @@ main {
 .hero-text {
   position: relative;
   z-index: 1;
-  width: min(760px, 100%);
+  width: min(900px, 100%);
   margin: 0 auto;
   display: grid;
   justify-items: center;
@@ -257,7 +259,7 @@ main {
   gap: 22px;
 }
 .hero h1 {
-  font-size: clamp(48px, 7.4vw, 92px);
+  font-size: clamp(40px, 6.6vw, 84px);
   text-shadow: 0 2px 30px rgb(40 25 60 / 0.25);
   text-wrap: balance;
 }
@@ -270,23 +272,142 @@ main {
   margin: 0;
 }
 
-/* ---------- Devices ---------- */
+/* The recording dot after the headline, blinking like the app's own. */
+.rec-mark {
+  display: inline-block;
+  width: 0.19em;
+  height: 0.19em;
+  margin-left: 0.2em;
+  border-radius: 50%;
+  background: #ef4444;
+  vertical-align: 0.2em;
+  animation: rec-blink 1.6s ease-in-out infinite;
+}
 
-.devices {
+/* ---------- The phones ---------- */
+
+/*
+ * Five phones in a row, hanging over the photo's edge, each a part of the app in another look:
+ * the middle one biggest and highest, the rest stepping back behind it. A phone pops up when
+ * pointed at and opens the slideshow about its part (main.js).
+ */
+.lineup {
   position: relative;
   z-index: 2;
-  width: min(1120px, 100%);
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: min(1000px, 100%);
   margin: 64px auto 0;
-  perspective: 2200px;
-  perspective-origin: 50% 20%;
-  /* The devices hang below the photo's fade, over the page. */
-  margin-bottom: clamp(-220px, -18vw, -100px);
+  /* The phones hang below the photo's fade, over the page. */
+  margin-bottom: calc(-1 * var(--hang));
+  padding: 0;
+  list-style: none;
 }
+.lineup-item {
+  --w: 18%;
+  --lift: 0%;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 var(--w);
+  margin-inline: -1.8%;
+  transform: translateY(var(--lift));
+}
+.lineup-item[data-pos='1'],
+.lineup-item[data-pos='3'] {
+  --w: 20.5%;
+  --lift: -5%;
+  z-index: 2;
+}
+.lineup-item[data-pos='2'] {
+  --w: 23.5%;
+  --lift: -10%;
+  z-index: 3;
+}
+.lineup-item:hover,
+.lineup-item:focus-within {
+  z-index: 4;
+}
+.lineup-phone {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  /* The bezel and corners follow the phone's own width. */
+  container-type: inline-size;
+}
+.lineup-phone:focus-visible {
+  outline: none;
+}
+.lineup-frame {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 2.8cqi;
+  background: #0d0d12;
+  border-radius: 14cqi;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.14) inset,
+    0 40px 70px -30px rgb(20 10 40 / 0.6);
+  transition:
+    transform 520ms var(--pop-ease),
+    box-shadow 520ms var(--site-ease);
+}
+.lineup-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1170 / 2532;
+  object-fit: cover;
+  border-radius: 11.4cqi;
+  background: #1d1a25;
+}
+.lineup-phone:hover .lineup-frame,
+.lineup-phone:focus-visible .lineup-frame {
+  transform: translateY(-7cqi) scale(1.045);
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.14) inset,
+    0 60px 90px -34px rgb(20 10 40 / 0.7);
+}
+.lineup-phone:active .lineup-frame {
+  transform: translateY(-4cqi) scale(1.015);
+  transition-duration: 160ms;
+}
+.lineup-phone:focus-visible .lineup-frame {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 4px;
+}
+.lineup-label {
+  padding: 6px 13px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: 0 0 0 1px rgb(27 26 43 / 0.06);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--site-ink);
+  white-space: nowrap;
+  transition:
+    background 220ms,
+    color 220ms;
+}
+.lineup-phone:hover .lineup-label,
+.lineup-phone:focus-visible .lineup-label {
+  background: var(--site-accent);
+  color: #fff;
+}
+
+/* ---------- The laptop ---------- */
+
+/* A CSS laptop around a playing video: the timelapse a session makes. */
 .laptop {
   position: relative;
-  margin-left: 12%;
-  transform-style: preserve-3d;
-  transform: rotateX(7deg) rotateY(-11deg) rotateZ(1deg);
   transform-origin: 50% 100%;
 }
 .laptop-screen {
@@ -296,13 +417,16 @@ main {
   padding: 14px 14px 18px;
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 0.12) inset,
-    0 40px 90px -30px rgb(20 10 40 / 0.6);
+    0 40px 90px -30px rgb(5 2 12 / 0.7);
 }
-.laptop-screen img {
+.laptop-screen video {
   display: block;
   border-radius: 10px;
   width: 100%;
   height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #1d1a25;
 }
 .laptop-notch {
   position: absolute;
@@ -332,26 +456,6 @@ main {
   background: rgb(0 0 0 / 0.12);
   border-radius: 0 0 6px 6px;
 }
-.phone {
-  position: absolute;
-  left: 0;
-  top: 18%;
-  width: clamp(120px, 19%, 210px);
-  padding: 8px;
-  background: #0d0d12;
-  border-radius: 34px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.14) inset,
-    0 40px 80px -24px rgb(20 10 40 / 0.65);
-  transform: rotateY(14deg) rotateZ(-4deg);
-  transform-origin: 50% 100%;
-}
-.phone img {
-  display: block;
-  border-radius: 27px;
-  width: 100%;
-  height: auto;
-}
 
 /* ---------- The ruled body ---------- */
 
@@ -359,8 +463,11 @@ main {
  * Below the hero the page is ruled: hairlines down both sides of the content (`.rail`) and
  * across between sections (`.band`), like aside.com. Screenshots sit straight on the page.
  */
+/* Padding goes inside the width, or a padded rail runs past the screen's edge and stops being
+   centred (it did, on every window under about 1330px). */
 .rail {
   position: relative;
+  box-sizing: border-box;
   width: min(1200px, 100% - 40px);
   margin-inline: auto;
   border-inline: 1px solid var(--site-line);
@@ -376,12 +483,27 @@ main {
   position: relative;
   border-top: 1px solid var(--site-line);
 }
-.band-first {
-  border-top: 0;
-  padding-top: clamp(220px, 21vw, 300px);
+
+/* All in one: a centred heading between the draw and everything else. */
+.rail.all-head {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding-block: 120px;
+  text-align: center;
 }
-.band-first > .tour > .tour-stage > .rail {
-  border-top: 1px solid var(--site-line);
+.all-head h2 {
+  margin: 0;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-size: clamp(40px, 5.6vw, 76px);
+  text-wrap: balance;
+}
+.all-head .lede-sm {
+  max-width: 40ch;
 }
 
 .feature-head {
@@ -391,7 +513,7 @@ main {
   align-items: end;
 }
 .feature-head h2,
-.tour-copy h2,
+.feature-title h3,
 .looks-head h2 {
   margin: 0;
   font-family: var(--site-brand-font);
@@ -401,8 +523,17 @@ main {
   font-feature-settings: 'ss01', 'ss02', 'ss03';
   text-wrap: balance;
 }
-.feature-head h2 {
+.feature-head h2,
+.feature-title h3 {
   font-size: clamp(34px, 4.4vw, 54px);
+}
+/* The parts of All in one: a small accent label over each heading. */
+.kicker {
+  margin: 0 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--site-accent);
 }
 .feature-head .lede-sm {
   justify-self: end;
@@ -425,7 +556,7 @@ main {
   gap: 48px;
   padding: 96px clamp(20px, 5vw, 64px);
 }
-.tour-copy h2 {
+.tour-copy .feature-title h3 {
   font-size: clamp(34px, 3.8vw, 50px);
 }
 .tour-copy .lede-sm {
@@ -489,6 +620,10 @@ main {
   background: var(--fall-ink);
   color: #fff;
   --fall-ink: #1c1526;
+}
+/* Straight after the hero it first clears the laptop hanging over the page, then the waves. */
+.hero + .fall-band {
+  margin-top: calc(var(--hang) + 34vh);
 }
 /*
  * The way in and out: three soft waves, ink, plum and a rose bloom, stacked like the
@@ -594,11 +729,15 @@ main {
 }
 .fall-copy p {
   margin: 0;
-  max-width: 34ch;
+  max-width: 40ch;
   font-size: clamp(16px, 1.4vw, 18px);
   line-height: 1.55;
   color: rgb(255 255 255 / 0.74);
   text-wrap: pretty;
+}
+.fall-copy .fall-note {
+  font-size: 14px;
+  color: rgb(255 255 255 / 0.55);
 }
 /* The app's own recording pill. */
 .rec-pill {
@@ -647,6 +786,69 @@ main {
   transform: translateY(calc((var(--y) + 0.4 * var(--v)) * 1vh)) rotate(var(--r));
   will-change: transform;
 }
+/*
+ * Under the floating clips, still on the dusk: the focus screen while it records, then the
+ * video it makes playing on a laptop, so it's plain the result is a short video of a real
+ * session.
+ */
+.recap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 1.15fr);
+  /* The two labels share a row, and the pictures are centred on the next. */
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 18px 28px;
+  width: min(1120px, 100% - 40px);
+  margin: 0 auto;
+  padding: 8vh 0 14vh;
+}
+.recap-item {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
+  margin: 0;
+}
+.recap-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  align-self: end;
+  justify-self: start;
+  font-size: 15px;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.82);
+}
+.recap-shot {
+  align-self: center;
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.1),
+    0 40px 80px -36px rgb(5 2 12 / 0.8);
+}
+.recap-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.recap-live {
+  grid-column: 1;
+}
+.recap-arrow {
+  grid-area: 2 / 2;
+  color: rgb(255 255 255 / 0.45);
+}
+.recap-video {
+  grid-column: 3;
+}
+.recap-video {
+  perspective: 1800px;
+}
+.recap-video .laptop {
+  transform: rotateY(-7deg) rotateX(3deg);
+}
 
 /* ---------- Make it yours: the ring ---------- */
 
@@ -655,9 +857,13 @@ main {
   padding: 0 20px;
 }
 .looks-head h2 {
-  font-size: clamp(44px, 6.4vw, 92px);
-  text-wrap: nowrap;
+  font-size: clamp(40px, 5.6vw, 80px);
 }
+.looks-head .lede-sm {
+  max-width: 46ch;
+  margin: 18px auto 0;
+}
+.accent-word,
 .scramble {
   color: var(--site-accent);
 }
@@ -732,7 +938,7 @@ main {
 
 .bento {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   border-top: 1px solid var(--site-line);
 }
 .cell {
@@ -743,10 +949,11 @@ main {
   gap: 18px;
 }
 .cell-feed {
-  grid-row: span 2;
+  grid-row: span 3;
   border-right: 1px solid var(--site-line);
 }
-.cell-jam {
+.cell-jam,
+.cell-board {
   border-top: 1px solid var(--site-line);
 }
 /* Each screenshot straight on the page, one corner; it rises a little as it arrives. */
@@ -765,11 +972,20 @@ main {
   width: 100%;
   height: auto;
 }
-/* The feed is a long picture in a fixed frame; main.js scrolls it as the page scrolls. */
+/* The feed is a long picture in a frame as tall as the three cells beside it; main.js scrolls
+   it as the page scrolls. Taken out of the flow, so it never makes the row taller. */
 .cell-feed .frame {
-  height: 720px;
+  position: relative;
+  align-self: stretch;
+  min-height: 540px;
 }
 .cell-feed .frame img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-height: 100%;
+  object-fit: cover;
+  object-position: top;
   transform: translateY(var(--shift, 0px));
 }
 .cell figcaption {
@@ -778,6 +994,61 @@ main {
   color: var(--site-muted);
 }
 .cell figcaption strong {
+  color: var(--site-ink);
+  font-weight: 600;
+}
+
+/* ---------- XP and rewards ---------- */
+
+/* The XP studying earns across the top, then the two ways to spend it side by side under it,
+   an arrow down into each. */
+.xp-flow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-block: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--site-line);
+}
+.xp-step {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  padding: 28px;
+}
+.xp-step:first-child {
+  grid-column: 1 / -1;
+}
+.xp-step + .xp-step {
+  border-top: 1px solid var(--site-line);
+}
+.xp-step:last-child {
+  border-left: 1px solid var(--site-line);
+}
+.xp-step + .xp-step::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 50%;
+  width: 36px;
+  height: 36px;
+  translate: -50% -50%;
+  rotate: 90deg;
+  border-radius: 50%;
+  background: #f3eef7
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b55eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E")
+    center / 18px no-repeat;
+  box-shadow: 0 0 0 1px var(--site-line);
+}
+.xp-step p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--site-muted);
+}
+.xp-step p strong {
   color: var(--site-ink);
   font-weight: 600;
 }
@@ -857,8 +1128,19 @@ main {
   letter-spacing: -0.03em;
   line-height: 1.05;
   font-feature-settings: 'ss01', 'ss02', 'ss03';
-  font-size: clamp(44px, 6vw, 76px);
+  font-size: clamp(40px, 5.4vw, 68px);
+  max-width: 15ch;
   text-wrap: balance;
+}
+.closing-small {
+  margin: 0;
+  font-size: 14px;
+  color: var(--site-subtle);
+}
+.cta-lg {
+  height: 56px;
+  padding: 0 32px;
+  font-size: 16px;
 }
 /* Footer */
 .site-footer {
@@ -894,6 +1176,197 @@ main {
   color: var(--site-ink);
 }
 
+/* ---------- The slideshow ---------- */
+
+/* What the hero's phones open: one part of the app a slide, its phone beside the words. */
+.slideshow {
+  position: fixed;
+  width: min(940px, 100% - 32px);
+  max-width: none;
+  height: min(680px, 100% - 32px);
+  max-height: none;
+  padding: 0;
+  border: 0;
+  border-radius: var(--site-radius);
+  background: #faf8fc;
+  color: var(--site-ink);
+  box-shadow: 0 60px 120px -40px rgb(20 10 40 / 0.6);
+  overflow: hidden;
+}
+.slideshow[open] {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  animation: slideshow-in 420ms var(--pop-ease);
+}
+.slideshow::backdrop {
+  background: rgb(20 14 30 / 0.55);
+  backdrop-filter: blur(6px);
+}
+@keyframes slideshow-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+}
+html:has(.slideshow[open]) {
+  overflow: hidden;
+}
+.slides {
+  min-height: 0;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+.slide {
+  display: none;
+}
+.slide.is-on {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 48px;
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 48px 64px 16px 48px;
+  animation: slide-in 440ms var(--rise-ease);
+}
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(var(--from, 0) * 40px));
+  }
+}
+.slide-phone {
+  justify-self: center;
+  box-sizing: border-box;
+  width: min(100%, 250px);
+  padding: 7px;
+  background: #0d0d12;
+  border-radius: 34px;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.14) inset,
+    0 40px 70px -30px rgb(20 10 40 / 0.55);
+}
+.slide-phone img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1170 / 2532;
+  object-fit: cover;
+  border-radius: 27px;
+  background: #1d1a25;
+}
+.slide-copy h2 {
+  margin: 0 0 16px;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  font-size: clamp(30px, 3.4vw, 42px);
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  text-wrap: balance;
+}
+.slide-copy p:not(.kicker) {
+  margin: 0;
+  max-width: 44ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--site-muted);
+  text-wrap: pretty;
+}
+.slide-facts {
+  display: grid;
+  gap: 10px;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.slide-facts li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.slide-facts li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--site-accent);
+}
+.slide-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 8px 24px 26px;
+}
+.slide-step,
+.slide-close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(27 26 43 / 0.06);
+  color: var(--site-ink);
+  cursor: pointer;
+  transition:
+    background 200ms,
+    transform 200ms var(--site-ease);
+}
+.slide-step:hover,
+.slide-close:hover {
+  background: rgb(27 26 43 / 0.11);
+}
+.slide-step:active,
+.slide-close:active {
+  transform: scale(0.94);
+}
+.slide-close {
+  position: absolute;
+  z-index: 2;
+  top: 16px;
+  right: 16px;
+}
+.slide-dots {
+  display: flex;
+  gap: 4px;
+}
+/* A small dot inside a bigger button, so it's easy to hit. */
+.slide-dots button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.slide-dots button::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 8px;
+  background: rgb(27 26 43 / 0.2);
+  transition:
+    width 400ms var(--site-ease),
+    background 300ms;
+}
+.slide-dots button[aria-current='true']::before {
+  width: 24px;
+  background: var(--site-accent);
+}
+.slideshow button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
 /* ---------- Scroll scenes ---------- */
 
 /*
@@ -903,7 +1376,7 @@ main {
  */
 @media (min-width: 900px) {
   html.has-scrub .tour {
-    height: 240vh;
+    height: 200vh;
   }
   html.has-scrub .tour-stage {
     position: sticky;
@@ -1195,6 +1668,33 @@ html.has-motion .devices.rise.is-in {
 /* ---------- Smaller screens ---------- */
 
 @media (max-width: 899px) {
+  /* The recording over the video, the arrow pointing down between them. */
+  .recap {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    justify-items: center;
+    gap: 20px;
+  }
+  .recap-item {
+    grid-area: auto;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    width: min(100%, 560px);
+  }
+  .recap-arrow {
+    grid-area: auto;
+    rotate: 90deg;
+  }
+  .xp-flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .xp-step:last-child {
+    border-left: 0;
+  }
+  .slide.is-on {
+    gap: 32px;
+    padding: 48px 40px 12px 32px;
+  }
   .tour-grid {
     grid-template-columns: 1fr;
     padding-block: 72px;
@@ -1213,6 +1713,9 @@ html.has-motion .devices.rise.is-in {
   .rail-pad-top0 {
     padding-top: 0;
     padding-bottom: 72px;
+  }
+  .rail.all-head {
+    padding-block: 88px;
   }
   .bento {
     grid-template-columns: 1fr;
@@ -1249,48 +1752,10 @@ html.has-motion .devices.rise.is-in {
     border-radius: 17px;
   }
 }
-/* On a phone the words sit high and fewer, smaller timelapses fall out from under them,
-   fading in rather than cut off, and every card stays inside the screen's width. */
-@media (max-width: 640px) {
-  .cell {
-    padding: 20px;
-  }
-  .fall-copy {
-    place-content: start center;
-    padding-top: 13vh;
-  }
-  .floaters {
-    top: 46vh;
-    --fs: 0.55;
-    mask-image: linear-gradient(
-      180deg,
-      transparent 0,
-      #000 12vh,
-      #000 calc(100% - 8vh),
-      transparent
-    );
-  }
-  .floater {
-    left: clamp(16px, var(--x), calc(100% - var(--w) * var(--fs) - 16px));
-  }
-  /* The ring fades out at the sides instead of stopping at the screen's edge. */
-  html.has-scrub .ring-view {
-    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  }
-  /* The focus phone sits under the screen and drops fully out of sight when it goes. */
-  html.has-scrub .zoom-phone {
-    width: 30vw;
-    bottom: 5vh;
-  }
-  .plan-phone {
-    right: 2%;
-  }
-  .floater:nth-child(6),
-  .floater:nth-child(7) {
-    display: none;
-  }
-}
 @media (max-width: 760px) {
+  :root {
+    --hang: clamp(60px, 20vw, 120px);
+  }
   .site-nav-links {
     display: none;
   }
@@ -1298,31 +1763,14 @@ html.has-motion .devices.rise.is-in {
     padding-top: 120px;
     min-height: 0;
   }
-  .devices {
-    margin-top: 40px;
-    margin-bottom: clamp(-120px, -20vw, -60px);
-  }
-  .band-first {
-    padding-top: clamp(110px, 24vw, 170px);
-  }
-  .laptop {
-    margin-left: 10%;
-    transform: rotateX(5deg) rotateY(-6deg);
-  }
-  .phone {
-    top: 24%;
-    width: 23%;
-    padding: 5px;
-    border-radius: 22px;
-  }
-  .phone img {
-    border-radius: 17px;
+  .lineup {
+    margin-top: 44px;
   }
   .laptop-screen {
     padding: 8px 8px 10px;
     border-radius: 14px 14px 4px 4px;
   }
-  .laptop-screen img {
+  .laptop-screen video {
     border-radius: 6px;
   }
   .site-footer-inner p {
@@ -1330,10 +1778,14 @@ html.has-motion .devices.rise.is-in {
     width: 100%;
   }
 }
-/* On a phone everything is centred, and a pinned scene is only as tall as what's in it: it
-   pins in the middle of the screen (main.js gives it --half, half its height), so it sits
-   close to the sections either side instead of in a screen of empty page. */
+/* On a phone everything is centred. */
 @media (max-width: 640px) {
+  .cell {
+    padding: 20px;
+  }
+  .plan-phone {
+    right: 2%;
+  }
   .tour-grid {
     padding-block: 56px;
   }
@@ -1372,63 +1824,169 @@ html.has-motion .devices.rise.is-in {
     padding-top: 56px;
     padding-bottom: 28px;
   }
+  .rail.all-head {
+    padding-block: 64px;
+  }
   .fall-band {
     margin-block: 18vh;
   }
+  .hero + .fall-band {
+    margin-top: calc(var(--hang) + 24vh);
+  }
   .fall-edge {
     height: 26vh;
-  }
-  html.has-scrub .looks-stage,
-  html.has-scrub .zoom-stage,
-  html.has-scrub .plan-stage {
-    top: max(0px, calc(50svh - var(--half, 50svh)));
-    height: auto;
-  }
-  html.has-scrub .looks-stage {
-    grid-template-rows: none;
-    gap: 24px;
-    padding: 40px 0;
-  }
-  html.has-scrub .ring-view {
-    height: calc(var(--cw, 234px) * 0.85);
-  }
-  html.has-scrub .zoom-stage {
-    padding: 24px 0;
-    overflow: visible;
-  }
-  /* The page still goes dark from edge to edge. */
-  html.has-scrub .zoom-dark {
-    position: fixed;
-  }
-  html.has-scrub .zoom-dots {
-    bottom: 9px;
-  }
-  /* The phone comes up under the screen, in the middle. */
-  html.has-scrub .zoom-phone {
-    top: calc(100% + 8px);
-    bottom: auto;
-    left: 50%;
-    translate: -50% 0;
-    width: 26vw;
-    opacity: var(--ph, 0);
-  }
-  /* The calendar's side lines run the whole scene, not just the stage. */
-  .plan {
-    background:
-      linear-gradient(var(--site-line), var(--site-line)) 20px 0 / 1px 100% no-repeat,
-      linear-gradient(var(--site-line), var(--site-line)) calc(100% - 20px) 0 / 1px 100% no-repeat;
-  }
-  .plan-grid {
-    border-inline-color: transparent;
-  }
-  html.has-scrub .plan-grid {
-    padding-block: 40px 64px;
   }
   .closing-inner {
     padding: 72px 20px 88px;
   }
   .site-footer-inner {
     justify-content: center;
+  }
+  /* The row of phones is wider than the screen, the outer two cut by its sides, so the
+     middle one is big enough to read. */
+  .lineup {
+    width: 132vw;
+    margin-inline: calc(50% - 66vw) 0;
+  }
+  .lineup-phone {
+    gap: 10px;
+  }
+  .lineup-label {
+    padding: 4px 9px;
+    font-size: 12px;
+  }
+  .cell,
+  .xp-step {
+    padding: 20px;
+  }
+  .xp-step p {
+    text-align: center;
+    text-wrap: balance;
+  }
+  /* The slideshow fills the screen: the phone, the words under it, the arrows at the bottom. */
+  .slideshow {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+  .slide.is-on {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: center;
+    gap: 24px;
+    padding: 64px 24px 8px;
+  }
+  .slide-phone {
+    width: min(52vw, 210px, (100svh - 430px) * 0.462 + 14px);
+    min-width: 120px;
+    padding: 5px;
+    border-radius: 24px;
+  }
+  .slide-phone img {
+    border-radius: 19px;
+  }
+  .slide-copy h2 {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .slide-copy p:not(.kicker) {
+    font-size: 16px;
+  }
+  .slide-facts {
+    margin-top: 16px;
+  }
+  .slide-nav {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+}
+/*
+ * Phones get the page flat (the owner, 2026-10-28): main.js leaves the scroll scenes off on a
+ * narrow or short screen (FLAT there; change the two together), so nothing pins and each
+ * section is its words, then its clips or pictures.
+ */
+@media (max-width: 640px), (max-height: 500px) {
+  /* The timelapses: the words, then four clips in a grid on the dusk. */
+  .fall-stage {
+    display: grid;
+    gap: 36px;
+    height: auto;
+    min-height: 0;
+    padding: 64px 20px 72px;
+  }
+  .fall-copy {
+    position: relative;
+    inset: auto;
+    padding: 0;
+  }
+  .floaters {
+    position: relative;
+    inset: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    width: min(100%, 720px);
+    margin-inline: auto;
+  }
+  .floater {
+    position: static;
+    width: 100%;
+    border-radius: 12px;
+    transform: none;
+    will-change: auto;
+  }
+  .floater:nth-child(n + 5) {
+    display: none;
+  }
+  /* The looks: six of them in a grid. */
+  .looks-band {
+    padding: 64px 0;
+  }
+  .ring-view {
+    padding: 32px 20px 28px;
+  }
+  .ring {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    width: min(100%, 560px);
+  }
+  .ring-card {
+    box-shadow: 0 20px 40px -24px rgb(40 20 70 / 0.45);
+  }
+  .ring-card:nth-child(n + 7) {
+    display: none;
+  }
+  /* The focus screen as it runs, and in front of it the phone's camera screen. Held sideways,
+     it and the calendar fit the screen's height. */
+  .zoom-stage {
+    padding: 0 20px 72px;
+  }
+  .zoom-screen {
+    width: min(100%, (100svh - 40px) * 1.6);
+  }
+  .plan-view {
+    width: min(100%, (100svh - 40px) * 1.385);
+  }
+  .zoom-phone {
+    display: block;
+    position: absolute;
+    right: 24px;
+    bottom: 20px;
+    width: min(22%, 120px);
+    padding: 5px;
+    background: #0d0d12;
+    border-radius: 22px;
+    box-shadow:
+      0 0 0 1px rgb(255 255 255 / 0.14) inset,
+      0 30px 60px -20px rgb(20 10 40 / 0.6);
+    transform: rotate(4deg);
+  }
+  .zoom-phone img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 17px;
+  }
+  .plan-grid {
+    padding-block: 56px 88px;
   }
 }
 /* On a phone the Discord button is just the mark. */
@@ -1441,8 +1999,54 @@ html.has-motion .devices.rise.is-in {
     display: none;
   }
 }
+/* A short, wide screen (a phone held sideways): the slide's phone is sized to the height, so
+   the phone and the words fit without scrolling. */
+@media (max-height: 560px) and (min-width: 641px) {
+  .slideshow {
+    width: min(940px, 100% - 16px);
+    height: calc(100% - 16px);
+  }
+  .slide.is-on {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 28px;
+    padding: 18px 64px 4px 28px;
+  }
+  .slide-phone {
+    width: calc((100svh - 110px) * 0.462);
+    padding: 4px;
+    border-radius: 18px;
+  }
+  .slide-phone img {
+    border-radius: 14px;
+  }
+  .slide-copy h2 {
+    margin-bottom: 10px;
+    font-size: 26px;
+  }
+  .slide-copy p:not(.kicker) {
+    font-size: 15px;
+  }
+  .slide-facts {
+    gap: 6px;
+    margin-top: 12px;
+  }
+  .slide-facts li {
+    font-size: 14px;
+  }
+  .slide-nav {
+    padding: 2px 24px 10px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+  .rec-mark,
+  .slideshow[open],
+  .slide.is-on {
+    animation: none;
+  }
+  .lineup-frame {
+    transition: none;
   }
 }

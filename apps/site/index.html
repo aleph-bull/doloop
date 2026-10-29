@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Komodon: study planner, Pomodoro timer and focus tracker</title>
+    <title>Komodon — Study timer, timelapse and planner</title>
     <meta
       name="description"
-      content="Komodon plans your work, times your focus, and shows the hours adding up. A Pomodoro timer, study timelapses, a week planner and friends to study with. Free."
+      content="Record your study sessions, share timelapses with friends, plan your week, and track your study hours. Free to use."
     />
     <link rel="canonical" href="https://app.komogon.app/" />
     <meta property="og:type" content="website" />
@@ -15,14 +15,14 @@
     <meta property="og:title" content="Komodon" />
     <meta
       property="og:description"
-      content="Komodon plans your work, times your focus, and shows the hours adding up."
+      content="Study with a timer, record timelapses, share your progress with friends, and plan your week. All in one place."
     />
     <!-- The link preview: the hero at 1200x630 (made from the page, not by hand). -->
     <meta property="og:image" content="https://app.komogon.app/og.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Komodon: Productive, every time." />
+    <meta property="og:image:alt" content="Komodon: Your study sessions, on record." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#f7f3fa" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -53,7 +53,7 @@
             "image": "https://app.komogon.app/og.jpg",
             "applicationCategory": "EducationalApplication",
             "operatingSystem": "Web",
-            "description": "Komodon plans your work, times your focus, and shows the hours adding up. A Pomodoro timer, study timelapses, a week planner and friends to study with.",
+            "description": "Record your study sessions, share timelapses with friends, plan your week, and track your study hours.",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
             "publisher": { "@id": "https://app.komogon.app/#org" }
           }
@@ -63,7 +63,7 @@
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="preload" as="image" href="/backgrounds/cotton-candy.webp" />
-    <link rel="preload" as="image" href="/shots/today.webp" />
+    <link rel="preload" as="image" href="/shots/feed-phone.webp" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
@@ -74,9 +74,9 @@
         <span class="site-wordmark">Komodon</span>
       </a>
       <nav class="site-nav-links" aria-label="Main">
-        <a href="#track">Track</a>
-        <a href="#focus">Focus</a>
-        <a href="#share">Share</a>
+        <a href="#timelapse">Timelapse</a>
+        <a href="#social">Social</a>
+        <a href="#all">Planner</a>
       </nav>
       <div class="site-nav-actions">
         <a
@@ -94,87 +94,73 @@
     </header>
 
     <main id="top">
-      <!-- Hero: the app's default photograph, fading out at the bottom, with the dashboard on a
-           laptop and a phone hanging over the edge. -->
+      <!-- Hero: the app's default photograph, fading out at the bottom, and a row of phones
+           hanging over the edge, each a part of the app in another look. A phone opens the
+           slideshow about that part (#features, main.js). -->
       <section class="hero">
         <div class="stage-photo hero-photo" aria-hidden="true"></div>
         <div class="hero-text">
-          <h1 class="rise">Productive,<br />every time.</h1>
+          <h1 class="rise">Your study sessions,<br />on record.<span class="rec-mark" aria-hidden="true"></span></h1>
           <p class="lede rise" style="--d: 140ms">
-            Komodon plans your work, times your focus, and shows the hours adding up. Study the
-            way runners train, with the people who keep you going.
+            Study with a timer, turn your sessions into timelapses, and share your progress with
+            friends. Plan your week and keep track of where your hours go, all in one place.
           </p>
           <div class="cta-row rise" style="--d: 280ms">
             <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
-            <a class="cta cta-ghost" href="#track">See how it works</a>
+            <a class="cta cta-ghost" href="#timelapse">See how it works</a>
           </div>
         </div>
-        <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
-          <div class="laptop">
-            <div class="laptop-screen">
-              <span class="laptop-notch"></span>
-              <img src="/shots/today.webp" alt="The Komodon dashboard: a greeting, today's most pressing tasks, and the start button" width="2880" height="1800" fetchpriority="high" />
-            </div>
-            <div class="laptop-base"><span class="laptop-lip"></span></div>
-          </div>
-          <div class="phone">
-            <img src="/shots/today-phone.webp" alt="The Komodon dashboard on a phone" width="1170" height="2532" />
-          </div>
-        </div>
+        <ul class="lineup rise rise-pop" style="--d: 200ms" aria-label="Parts of Komodon">
+          <li class="lineup-item" data-pos="0">
+            <button class="lineup-phone" type="button" data-slide="0" aria-haspopup="dialog">
+              <span class="lineup-frame"><img src="/shots/focus-phone.webp" alt="" width="780" height="1688" /></span>
+              <span class="lineup-label">Timelapse</span>
+            </button>
+          </li>
+          <li class="lineup-item" data-pos="1">
+            <button class="lineup-phone" type="button" data-slide="1" aria-haspopup="dialog">
+              <span class="lineup-frame"><img src="/shots/lineup-plan.webp" alt="" width="1170" height="2532" /></span>
+              <span class="lineup-label">Planner</span>
+            </button>
+          </li>
+          <li class="lineup-item" data-pos="2">
+            <button class="lineup-phone" type="button" data-slide="2" aria-haspopup="dialog">
+              <span class="lineup-frame"><img src="/shots/feed-phone.webp" alt="" width="1170" height="2532" fetchpriority="high" /></span>
+              <span class="lineup-label">Social</span>
+            </button>
+          </li>
+          <li class="lineup-item" data-pos="3">
+            <button class="lineup-phone" type="button" data-slide="3" aria-haspopup="dialog">
+              <span class="lineup-frame"><img src="/shots/lineup-track.webp" alt="" width="1170" height="2532" /></span>
+              <span class="lineup-label">Stats</span>
+            </button>
+          </li>
+          <li class="lineup-item" data-pos="4">
+            <button class="lineup-phone" type="button" data-slide="4" aria-haspopup="dialog">
+              <span class="lineup-frame"><img src="/shots/lineup-xp.webp" alt="" width="1170" height="2532" /></span>
+              <span class="lineup-label">XP</span>
+            </button>
+          </li>
+        </ul>
       </section>
 
       <!-- Below the hero the page is ruled like a notebook: thin lines down both sides of the
            content and across between sections. Most scenes pin while you scroll through them
-           (main.js drives them with --p); without the script they lay out flat. -->
-
-      <!-- Track: the list on the left walks through three screens in the window on the right. -->
-      <section id="track" class="band band-first">
-        <div class="tour" data-scrub="tour" data-steps="3">
-          <div class="tour-stage">
-            <div class="rail tour-grid">
-              <div class="tour-copy">
-                <h2 class="rise">Your habits backed by analytics</h2>
-                <p class="lede-sm rise" style="--d: 100ms">
-                  See how much time each module takes, and how your study hours add up before an
-                  exam.
-                </p>
-                <ol class="tour-list rise" style="--d: 200ms">
-                  <li class="tour-item" data-i="0">
-                    <span class="tour-text"><strong>Your week at a glance</strong> Hours this week beside last week, and your goal.</span>
-                    <img class="tour-inline-shot" src="/shots/analytics.webp" alt="Komodon Analytics: hours studied this week beside last week, the weekly goal and each day" width="2400" height="1500" loading="lazy" />
-                  </li>
-                  <li class="tour-item" data-i="1">
-                    <span class="tour-text"><strong>Friends studying with you</strong> Their timelapses, kudos, and who's studying right now.</span>
-                    <img class="tour-inline-shot" src="/shots/social.webp" alt="The Komodon feed: friends studying now, their posts and a timelapse" width="2400" height="1500" loading="lazy" />
-                  </li>
-                  <li class="tour-item" data-i="2">
-                    <span class="tour-text"><strong>A friendly leaderboard</strong> All-time hours, with your friends or with everyone.</span>
-                    <img class="tour-inline-shot" src="/shots/board.webp" alt="The Komodon leaderboard: all-time study hours with friends or everyone" width="2400" height="1500" loading="lazy" />
-                  </li>
-                </ol>
-              </div>
-              <div class="tour-window" aria-hidden="true">
-                <div class="tour-drum">
-                  <img data-i="0" src="/shots/analytics.webp" alt="" width="2400" height="1500" loading="lazy" />
-                  <img data-i="1" src="/shots/social.webp" alt="" width="2400" height="1500" loading="lazy" />
-                  <img data-i="2" src="/shots/board.webp" alt="" width="2400" height="1500" loading="lazy" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+           (main.js drives them with --p); without the script, and on a phone, they lay out
+           flat. The order: what draws people in (timelapses, friends), then everything else. -->
 
       <!-- Timelapses: a dusk interlude. Real Komodon timelapses float down around the words. -->
-      <section class="fall-band" aria-labelledby="fall-title">
+      <section id="timelapse" class="fall-band" aria-labelledby="fall-title">
         <div class="fall" data-scrub="fall">
           <div class="fall-stage">
             <div class="fall-copy">
               <span class="rec-pill"><span class="rec-dot"></span>Recording</span>
-              <h2 id="fall-title">Hours of work, in seconds.</h2>
+              <h2 id="fall-title">See what you got done.</h2>
               <p>
-                A hassle free timelapse tool that keeps you accountable.
+                Turn a study session into a short timelapse of you working. Add your screen if you
+                want, then keep the video for yourself or share it with friends.
               </p>
+              <p class="fall-note">No uploading while you record.</p>
             </div>
             <div class="floaters">
               <video class="floater clip" style="--x: 1.5%; --y: -50; --v: 95; --w: 260px; --r: -7deg; --dr: 6deg" src="/clips/desk.mp4" poster="/clips/desk.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse: a desk, with an Excel timeline on the screen"></video>
@@ -186,6 +172,26 @@
               <video class="floater clip" style="--x: 41%; --y: 76; --v: 44; --w: 230px; --r: -3deg; --dr: 4deg" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session over three hours long"></video>
             </div>
           </div>
+        </div>
+        <!-- The recording as it happens, then the video it makes (one of the owner's own). -->
+        <div class="recap">
+          <figure class="recap-item recap-live rise">
+            <figcaption class="recap-label"><span class="rec-dot"></span>While you study</figcaption>
+            <div class="recap-shot">
+              <img src="/shots/focus-rec.webp" alt="The Komodon focus screen while a timelapse records: the timer, the camera in the corner, and Live clip" width="2880" height="1800" loading="lazy" />
+            </div>
+          </figure>
+          <svg class="recap-arrow" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" /></svg>
+          <figure class="recap-item recap-video rise" style="--d: 120ms">
+            <figcaption class="recap-label">When you're done</figcaption>
+            <div class="laptop">
+              <div class="laptop-screen">
+                <span class="laptop-notch"></span>
+                <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="none" aria-label="The timelapse a session makes: a morning of studying for an exam, the screen in the corner and the focus time counting up"></video>
+              </div>
+              <div class="laptop-base"><span class="laptop-lip"></span></div>
+            </div>
+          </figure>
         </div>
         <div class="fall-edge fall-edge-top" aria-hidden="true">
           <svg class="edge-wave edge-pink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 247.7 L2840 242.7 L2800 237.5 L2760 232.3 L2720 227.2 L2680 222.3 L2640 217.9 L2600 214.0 L2560 210.8 L2520 208.4 L2480 206.8 L2440 206.0 L2400 206.2 L2360 207.3 L2320 209.3 L2280 212.1 L2240 215.6 L2200 219.7 L2160 224.3 L2120 229.3 L2080 234.5 L2040 239.7 L2000 244.8 L1960 249.7 L1920 254.1 L1880 258.0 L1840 261.2 L1800 263.6 L1760 265.2 L1720 266.0 L1680 265.8 L1640 264.7 L1600 262.7 L1560 259.9 L1520 256.4 L1480 252.3 L1440 247.7 L1400 242.7 L1360 237.5 L1320 232.3 L1280 227.2 L1240 222.3 L1200 217.9 L1160 214.0 L1120 210.8 L1080 208.4 L1040 206.8 L1000 206.0 L960 206.2 L920 207.3 L880 209.3 L840 212.1 L800 215.6 L760 219.7 L720 224.3 L680 229.3 L640 234.5 L600 239.7 L560 244.8 L520 249.7 L480 254.1 L440 258.0 L400 261.2 L360 263.6 L320 265.2 L280 266.0 L240 265.8 L200 264.7 L160 262.7 L120 259.9 L80 256.4 L40 252.3 L0 247.7 Z" /></svg>
@@ -199,13 +205,203 @@
         </div>
       </section>
 
+      <!-- Social: a ruled grid of the social screens, the feed down the left. -->
+      <section id="social" class="band">
+        <div class="rail rail-pad">
+          <div class="feature-head rise">
+            <h2>Studying is better with friends.</h2>
+            <p class="lede-sm">
+              Post your sessions, see what everyone else is working on, and give each other a
+              reason to keep going.
+            </p>
+          </div>
+        </div>
+        <div class="rail bento">
+          <figure class="cell cell-feed" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/feed.webp" alt="The Komodon feed: friends' posts, some with a timelapse" width="1020" height="2700" loading="lazy" />
+            </div>
+            <figcaption><strong>The feed</strong> See what your friends got done.</figcaption>
+          </figure>
+          <figure class="cell cell-group" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/groups.webp" alt="A study group's week: hours together, a line for each person, and who's studying now" width="1984" height="1064" loading="lazy" />
+            </div>
+            <figcaption><strong>Study groups</strong> Put your weeks side by side.</figcaption>
+          </figure>
+          <figure class="cell cell-jam" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/jams.webp" alt="Jams: a few days of studying where the most hours wins" width="1984" height="1260" loading="lazy" />
+            </div>
+            <figcaption><strong>Jams</strong> Pick a few days. Most hours wins.</figcaption>
+          </figure>
+          <figure class="cell cell-board" data-scrub="cell">
+            <div class="frame">
+              <img src="/shots/board.webp" alt="The Komodon leaderboard: all-time study hours with friends or everyone" width="2400" height="1500" loading="lazy" />
+            </div>
+            <figcaption><strong>Leaderboards</strong> Compare all-time hours with your friends or everyone on Komodon.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- All in one: everything else the app does, after the draw. -->
+      <section id="all" class="band">
+        <div class="rail rail-pad all-head rise">
+          <h2>Your whole study routine, in one place.</h2>
+          <p class="lede-sm">
+            No need to juggle a timer, a to-do list, a calendar, and a bunch of spreadsheets to
+            figure out how your studying is going.
+          </p>
+        </div>
+      </section>
+
+      <!-- Focus: the focus screen grows to fill the window, then runs through a Pomodoro. -->
+      <section id="focus" class="band">
+        <div class="rail rail-pad">
+          <div class="feature-head rise">
+            <div class="feature-title">
+              <p class="kicker">Focus</p>
+              <h3>Pick a task and get going.</h3>
+            </div>
+            <p class="lede-sm">
+              Use a Pomodoro timer with work blocks and breaks you choose, or let the timer run
+              until you're done. Record a timelapse if you want a recap of the session.
+            </p>
+          </div>
+        </div>
+        <div class="zoom" data-scrub="zoom" data-steps="4">
+          <div class="zoom-stage">
+            <div class="zoom-dark" aria-hidden="true"></div>
+            <div class="zoom-screen">
+              <img data-i="0" src="/shots/start-dialog.webp" alt="Starting a session: pick the task, then Pomodoro or continuous, and for how long" width="2880" height="1800" loading="lazy" />
+              <img data-i="1" src="/shots/focus-work.webp" alt="The Komodon focus screen during a Pomodoro: the countdown and the task" width="2880" height="1800" loading="lazy" />
+              <img data-i="2" src="/shots/focus-break.webp" alt="The focus screen on a short break" width="2880" height="1800" loading="lazy" />
+              <img data-i="3" src="/shots/focus-rec.webp" alt="The focus screen while a timelapse records: the camera in the corner, and Live clip" width="2880" height="1800" loading="lazy" />
+            </div>
+            <div class="zoom-phone">
+              <img src="/shots/focus-phone.webp" alt="On a phone, a recording session is the camera: the desk, with the timer over it" width="780" height="1688" loading="lazy" />
+            </div>
+            <div class="zoom-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Plan: the calendar week as it stands, Plan my week's suggestions around the classes,
+           then the week planned; the phone's day view joins at the end. -->
+      <section id="plan" class="band">
+        <div class="plan" data-scrub="plan" data-steps="3">
+          <div class="plan-stage">
+            <div class="rail plan-grid">
+              <div class="feature-head plan-head rise">
+                <div class="feature-title">
+                  <p class="kicker">Plan</p>
+                  <h3>Know what you're studying this week.</h3>
+                </div>
+                <p class="lede-sm">
+                  Add your courses and deadlines, drag study time onto your calendar, or let Plan
+                  my week fit sessions around your classes.
+                </p>
+              </div>
+              <div class="plan-view">
+                <div class="plan-window">
+                  <img data-i="0" src="/shots/cal-week.webp" alt="The Komodon calendar: this week's classes, finished sessions and what's due" width="2400" height="1733" loading="lazy" />
+                  <img data-i="1" src="/shots/cal-plan.webp" alt="Plan my week: seven suggested study blocks around the classes, to keep or move" width="2400" height="1733" loading="lazy" />
+                  <img data-i="2" src="/shots/cal-added.webp" alt="The week with the study blocks added" width="2400" height="1733" loading="lazy" />
+                </div>
+                <div class="plan-phone">
+                  <img src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="780" height="1688" loading="lazy" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Track: the list on the left walks through two screens in the window on the right. -->
+      <section id="track" class="band">
+        <div class="tour" data-scrub="tour" data-steps="2">
+          <div class="tour-stage">
+            <div class="rail tour-grid">
+              <div class="tour-copy">
+                <div class="feature-title rise">
+                  <p class="kicker">Track</p>
+                  <h3>See where your hours go.</h3>
+                </div>
+                <p class="lede-sm rise" style="--d: 100ms">
+                  Check this week against last week, keep an eye on your goal, and see how much
+                  time each course or module takes as an exam gets closer.
+                </p>
+                <ol class="tour-list rise" style="--d: 200ms">
+                  <li class="tour-item" data-i="0">
+                    <span class="tour-text"><strong>Your week at a glance</strong> Hours this week, last week, and your goal.</span>
+                    <img class="tour-inline-shot" src="/shots/analytics.webp" alt="Komodon Analytics: hours studied this week beside last week, the weekly goal and each day" width="2400" height="1500" loading="lazy" />
+                  </li>
+                  <li class="tour-item" data-i="1">
+                    <span class="tour-text"><strong>Today</strong> Your streak and the tasks that need your attention.</span>
+                    <img class="tour-inline-shot" src="/shots/today.webp" alt="The Komodon dashboard: the streak, today's most pressing tasks, and the start button" width="2880" height="1800" loading="lazy" />
+                  </li>
+                </ol>
+              </div>
+              <div class="tour-window" aria-hidden="true">
+                <div class="tour-drum">
+                  <img data-i="0" src="/shots/analytics.webp" alt="" width="2400" height="1500" loading="lazy" />
+                  <img data-i="1" src="/shots/today.webp" alt="" width="2880" height="1800" loading="lazy" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- XP and rewards: what study time turns into. The XP it earns across the top, then the
+           shop and RNG Rolls under it. Real parts of Achievements. -->
+      <section id="xp" class="band">
+        <div class="rail rail-pad">
+          <div class="feature-head rise">
+            <h2>Put your study hours to use.</h2>
+            <p class="lede-sm">
+              Earn XP as you study, then spend it on rewards you actually want. Unlock
+              backgrounds, grab streak freezes, or try your luck in Komodon's RNG minigame.
+            </p>
+          </div>
+        </div>
+        <ol class="rail xp-flow">
+          <li class="xp-step rise">
+            <div class="frame">
+              <!-- The computer's card is long and thin; a phone gets the phone's own card. -->
+              <picture>
+                <source media="(max-width: 640px)" srcset="/shots/xp-hero-phone.webp" width="1122" height="594" />
+                <img src="/shots/xp-hero.webp" alt="Achievements: the level, lifetime XP, what's left to spend, and XP spent" width="2128" height="368" loading="lazy" />
+              </picture>
+            </div>
+            <p><strong>Earn XP</strong> Your study time adds up to more than hours.</p>
+          </li>
+          <li class="xp-step rise" style="--d: 120ms">
+            <div class="frame">
+              <img src="/shots/shop.webp" alt="The shop: a streak freeze, a break day and backgrounds, each with its price in XP" width="2260" height="806" loading="lazy" />
+            </div>
+            <p><strong>Get rewards</strong> Spend your XP on backgrounds, streak freezes, and more.</p>
+          </li>
+          <li class="xp-step rise" style="--d: 240ms">
+            <div class="frame">
+              <img src="/shots/rolls-panel.webp" alt="RNG Rolls after ten rolls: each rarity, its odds and the XP it pays, and how many came up" width="2260" height="1124" loading="lazy" />
+            </div>
+            <p><strong>Roll for it</strong> Try the RNG minigame and see what you get.</p>
+          </li>
+        </ol>
+      </section>
+
       <!-- Make it yours: a ring of real screens in other photos, colours and themes, turning as
-           the page scrolls. main.js places the cards and swaps the word in the heading. -->
+           the page scrolls. main.js places the cards and swaps the word in the last line. -->
       <section class="band looks-band" aria-labelledby="looks-title">
         <div class="looks" data-scrub="looks">
           <div class="looks-stage">
             <div class="looks-head">
-              <h2 id="looks-title">Make it <span class="scramble" data-words="calm,bright,cozy,yours">yours</span>.</h2>
+              <h2 id="looks-title">Make it feel like <span class="accent-word">yours</span>.</h2>
+              <p class="lede-sm">
+                80+ backgrounds, themes, your own fonts and pictures, and panels in glass, matte
+                or any colour.
+              </p>
             </div>
             <div class="ring-view" aria-hidden="true">
               <div class="ring">
@@ -227,97 +423,10 @@
                 <img class="ring-card" src="/shots/looks/focus-milky.webp" alt="" width="960" height="600" loading="lazy" />
               </div>
             </div>
-            <p class="looks-note lede-sm">80+ backgrounds and fully customizable panels.</p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Focus: the focus screen grows to fill the window, then runs through a Pomodoro. -->
-      <section id="focus" class="band">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>Stay accountable and focused.</h2>
-            <p class="lede-sm">
-              Study and work like a dragon. The Pomodoro timer is yours to shape, a
-              timelapse records you and your screen so you can see that you stayed on task, and a
-              site blocker is there if you want it.
+            <p class="looks-note lede-sm">
+              Make your study space <span class="scramble" data-words="calm,bright,cozy">calm</span>, or
+              whatever works for you.
             </p>
-          </div>
-        </div>
-        <div class="zoom" data-scrub="zoom" data-steps="4">
-          <div class="zoom-stage">
-            <div class="zoom-dark" aria-hidden="true"></div>
-            <div class="zoom-screen">
-              <img data-i="0" src="/shots/start-dialog.webp" alt="Starting a session: pick the task, then Pomodoro or continuous, and for how long" width="2880" height="1800" loading="lazy" />
-              <img data-i="1" src="/shots/focus-work.webp" alt="The Komodon focus screen during a Pomodoro: the countdown and the task" width="2880" height="1800" loading="lazy" />
-              <img data-i="2" src="/shots/focus-break.webp" alt="The focus screen on a short break" width="2880" height="1800" loading="lazy" />
-              <img data-i="3" src="/shots/focus-rec.webp" alt="The focus screen while a timelapse records: the camera in the corner, and Live clip" width="2880" height="1800" loading="lazy" />
-            </div>
-            <div class="zoom-phone">
-              <img src="/shots/focus-phone.webp" alt="On a phone, a recording session is the camera: the desk, with the timer over it" width="780" height="1688" loading="lazy" />
-            </div>
-            <div class="zoom-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Share: a ruled grid of the social screens. -->
-      <section id="share" class="band">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>Share your wins with friends.</h2>
-            <p class="lede-sm">
-              After a session of hard work, share it with your friends, or set up a friendly
-              competition. Grow stronger and better together.
-            </p>
-          </div>
-        </div>
-        <div class="rail bento">
-          <figure class="cell cell-feed" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/feed.webp" alt="The Komodon feed: friends' posts, some with a timelapse" width="1020" height="2700" loading="lazy" />
-            </div>
-            <figcaption><strong>The feed</strong> What your friends got done.</figcaption>
-          </figure>
-          <figure class="cell cell-group" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/groups.webp" alt="A study group's week: hours together, a line for each person, and who's studying now" width="1984" height="1064" loading="lazy" />
-            </div>
-            <figcaption><strong>Groups</strong> Your week, side by side.</figcaption>
-          </figure>
-          <figure class="cell cell-jam" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/jams.webp" alt="Jams: a few days of studying where the most hours wins" width="1984" height="1260" loading="lazy" />
-            </div>
-            <figcaption><strong>Jams</strong> A few days, most hours wins.</figcaption>
-          </figure>
-        </div>
-      </section>
-
-      <!-- Plan: the calendar week as it stands, Plan my week's suggestions around the classes,
-           then the week planned; the phone's day view joins at the end. -->
-      <section id="plan" class="band">
-        <div class="plan" data-scrub="plan" data-steps="3">
-          <div class="plan-stage">
-            <div class="rail plan-grid">
-              <div class="feature-head plan-head rise">
-                <h2>Plan the week.</h2>
-                <p class="lede-sm">
-                  Drag study time onto the days before a test, or let Plan my week find the gaps
-                  around your classes.
-                </p>
-              </div>
-              <div class="plan-view">
-                <div class="plan-window">
-                  <img data-i="0" src="/shots/cal-week.webp" alt="The Komodon calendar: this week's classes, finished sessions and what's due" width="2400" height="1733" loading="lazy" />
-                  <img data-i="1" src="/shots/cal-plan.webp" alt="Plan my week: seven suggested study blocks around the classes, to keep or move" width="2400" height="1733" loading="lazy" />
-                  <img data-i="2" src="/shots/cal-added.webp" alt="The week with the study blocks added" width="2400" height="1733" loading="lazy" />
-                </div>
-                <div class="plan-phone">
-                  <img src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="780" height="1688" loading="lazy" />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -326,11 +435,14 @@
       <section class="band closing">
         <div class="rail closing-inner rise rise-pop">
           <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
-          <h2>Try it out!</h2>
-          <p class="lede-sm">Free to use. Currently in alpha.</p>
+          <h2>Give your study hours somewhere to go.</h2>
+          <p class="lede-sm">
+            Start a session, see how it adds up, and share the progress if you want.
+          </p>
+          <p class="closing-small">Free to use. Currently in alpha.</p>
           <div class="cta-row">
-            <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
-            <span class="cta cta-soon" aria-disabled="true">Get the extension <span class="soon-tag">In development!</span></span>
+            <a class="cta cta-primary cta-lg" href="https://komogon.app">Start for free</a>
+            <span class="cta cta-soon" aria-disabled="true">Get the extension <span class="soon-tag">In development</span></span>
           </div>
         </div>
       </section>
@@ -350,5 +462,114 @@
         </div>
       </footer>
     </main>
+
+    <!-- The slideshow the hero's phones open, one slide per phone, in the same order. -->
+    <dialog class="slideshow" id="features" aria-label="Komodon, part by part">
+      <button class="slide-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+      </button>
+      <div class="slides">
+        <article class="slide" data-i="0" aria-labelledby="slide-title-0">
+          <div class="slide-phone">
+            <img src="/shots/focus-phone.webp" alt="Recording on a phone: the camera fills the screen, with the timer and the task on top" width="780" height="1688" loading="lazy" />
+          </div>
+          <div class="slide-copy">
+            <p class="kicker">Timelapse</p>
+            <h2 id="slide-title-0">Record your session.</h2>
+            <p>
+              Switch it on when you start a session. On a phone, the session becomes the camera with
+              the timer on top. On a computer, the camera sits in the corner of the focus screen.
+            </p>
+            <ul class="slide-facts">
+              <li>Trim it, save it, or post it.</li>
+              <li>Live clip catches a moment at normal speed.</li>
+            </ul>
+          </div>
+        </article>
+        <article class="slide" data-i="1" aria-labelledby="slide-title-1">
+          <div class="slide-phone">
+            <img src="/shots/lineup-plan.webp" alt="The calendar on a phone: one day with classes and study blocks, the week in a strip above" width="1170" height="2532" loading="lazy" />
+          </div>
+          <div class="slide-copy">
+            <p class="kicker">Planner</p>
+            <h2 id="slide-title-1">Plan your week.</h2>
+            <p>
+              Every deadline on one calendar, with your classes and finished sessions on it too.
+              Drag a block to move it, or let Plan my week suggest when to study.
+            </p>
+            <ul class="slide-facts">
+              <li>Bring in your class timetable with a calendar link.</li>
+              <li>Start a session right from a planned block.</li>
+            </ul>
+          </div>
+        </article>
+        <article class="slide" data-i="2" aria-labelledby="slide-title-2">
+          <div class="slide-phone">
+            <img src="/shots/feed-phone.webp" alt="The Komodon feed on a phone: a friend's post with their timelapse" width="1170" height="2532" loading="lazy" />
+          </div>
+          <div class="slide-copy">
+            <p class="kicker">Social</p>
+            <h2 id="slide-title-2">Post it for your friends.</h2>
+            <p>
+              Share a finished session, with its timelapse if you made one. Friends give kudos and
+              comment, and Live now shows who's studying right now.
+            </p>
+            <ul class="slide-facts">
+              <li>Study groups and jams when you want some competition.</li>
+              <li>You choose who sees your posts.</li>
+            </ul>
+          </div>
+        </article>
+        <article class="slide" data-i="3" aria-labelledby="slide-title-3">
+          <div class="slide-phone">
+            <img src="/shots/lineup-track.webp" alt="The dashboard on a phone: the streak, this week's hours and today's most pressing tasks" width="1170" height="2532" loading="lazy" />
+          </div>
+          <div class="slide-copy">
+            <p class="kicker">Stats</p>
+            <h2 id="slide-title-3">Watch it add up.</h2>
+            <p>
+              The dashboard opens on your streak and what needs doing today. Analytics shows where
+              the time went, day by day and course by course.
+            </p>
+            <ul class="slide-facts">
+              <li>A daily streak and a weekly one.</li>
+              <li>Personal bests to beat.</li>
+            </ul>
+          </div>
+        </article>
+        <article class="slide" data-i="4" aria-labelledby="slide-title-4">
+          <div class="slide-phone">
+            <img src="/shots/lineup-xp.webp" alt="Achievements on a phone: lifetime XP, what's left to spend, and the shop" width="1170" height="2532" loading="lazy" />
+          </div>
+          <div class="slide-copy">
+            <p class="kicker">XP</p>
+            <h2 id="slide-title-4">Spend what you earn.</h2>
+            <p>
+              Every minute you study earns XP, with a bonus for keeping your streak going. Spend it
+              on streak freezes, break days and backgrounds, or roll for a rarity in RNG Rolls.
+            </p>
+            <ul class="slide-facts">
+              <li>Your level only goes up, even when you spend.</li>
+              <li>A roll costs 10 XP.</li>
+            </ul>
+          </div>
+        </article>
+      </div>
+      <div class="slide-nav">
+        <button class="slide-step" type="button" data-step="-1" aria-label="Previous">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+        <div class="slide-dots">
+          <button type="button" data-go="0" aria-label="Timelapse"></button>
+          <button type="button" data-go="1" aria-label="Planner"></button>
+          <button type="button" data-go="2" aria-label="Social"></button>
+          <button type="button" data-go="3" aria-label="Stats"></button>
+          <button type="button" data-go="4" aria-label="XP"></button>
+        </div>
+        <button class="slide-step" type="button" data-step="1" aria-label="Next">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </button>
+      </div>
+    </dialog>
   </body>
 </html>
