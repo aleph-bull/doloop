@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_SETTINGS } from './defaults';
 import { isAccentUnlocked, isBackgroundAvailable, solidColorOf } from './economy';
 import {
+  isMinimalistTheme,
   isPlainBackground,
   matchingThemePreset,
   SOLID_TEXT,
@@ -101,5 +102,16 @@ describe('theme presets', () => {
     expect(isPlainBackground('solid:#1c1c21')).toBe(true);
     expect(isPlainBackground('graphite')).toBe(true);
     expect(isPlainBackground('fuji')).toBe(false);
+  });
+
+  it('every Minimalist preset is a Minimalist theme, and no other is', () => {
+    for (const p of THEME_PRESETS)
+      expect(isMinimalistTheme({ ...theme, ...themePresetPatch(p) }), p.id).toBe(
+        p.tag === 'minimalist',
+      );
+    expect(isMinimalistTheme({ ...theme, backgroundId: 'solid:#123456' })).toBe(true);
+    expect(
+      isMinimalistTheme({ ...theme, backgroundId: 'solid:#123456', customBackgroundUrl: 'upload' }),
+    ).toBe(false);
   });
 });

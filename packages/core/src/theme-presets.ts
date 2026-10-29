@@ -185,6 +185,16 @@ export function isPlainBackground(id: string): boolean {
   return !!solidColorOf(id) || BACKGROUNDS.find((b) => b.id === id)?.category === 'minimal';
 }
 
+/**
+ * A Minimalist look: a plain background with no uploaded picture over it. Every Minimalist
+ * preset is one, and so is any flat colour picked by hand.
+ */
+export function isMinimalistTheme(
+  theme: Pick<Theme, 'backgroundId' | 'customBackgroundUrl'>,
+): boolean {
+  return !theme.customBackgroundUrl && isPlainBackground(theme.backgroundId);
+}
+
 /** The settings patch that puts a preset on: its look, and no uploaded image over it. */
 export function themePresetPatch(preset: ThemePreset): Partial<Theme> {
   return { ...preset.look, customBackgroundUrl: null };

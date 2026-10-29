@@ -2,6 +2,8 @@ import {
   BASS_HZ_LIMITS,
   DEFAULT_SETTINGS,
   VISUALIZER_PRESETS,
+  visualizerShows,
+  visualizerTurnedOn,
   type UserSettings,
   type VisualizerColorMode,
   type VisualizerPreset,
@@ -14,6 +16,8 @@ type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]>
 
 export interface VisualizerSettingsProps {
   value: UserSettings['visualizer'];
+  /** On a Minimalist theme, where it is off until turned on there. */
+  minimalist: boolean;
   onChange: (patch: DeepPartial<UserSettings>) => void;
   /**
    * The live capture, when this is rendered on the focus screen itself. Settings has no
@@ -89,16 +93,18 @@ function Layer({ checked, onChange, label, description, children }: LayerProps) 
  */
 export function VisualizerSettings({
   value,
+  minimalist,
   onChange,
   audio,
   showPromptPreference = false,
 }: VisualizerSettingsProps) {
   const set = (patch: Partial<UserSettings['visualizer']>) => onChange({ visualizer: patch });
+  const on = visualizerShows(value, minimalist);
   return (
     <div className="flex flex-col gap-4">
       <Toggle
-        checked={value.enabled}
-        onChange={(enabled) => set({ enabled })}
+        checked={on}
+        onChange={(enabled) => set(enabled ? visualizerTurnedOn(minimalist) : { enabled })}
         label="Enable audio visualizer"
         description="Soft light behind the focus timer that moves with your music."
       />
@@ -110,7 +116,7 @@ export function VisualizerSettings({
           description="Stop the focus screen offering to share audio on its own. You can still share from its controls."
         />
       )}
-      {value.enabled && audio && (
+      {on && audio && (
         <div className="flex items-center gap-3 flex-wrap">
           <Button
             size="sm"
@@ -132,7 +138,7 @@ export function VisualizerSettings({
           </span>
         </div>
       )}
-      {value.enabled && (
+      {on && (
         <>
           <div className="field">
             <span className="field-label">Intensity</span>
@@ -568,6 +574,7 @@ export function VisualizerSettings({
                   visualizer: {
                     ...DEFAULT_SETTINGS.visualizer,
                     enabled: value.enabled,
+                    onMinimalist: value.onMinimalist,
                     promptDismissed: value.promptDismissed,
                   },
                 })

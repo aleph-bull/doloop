@@ -39,6 +39,7 @@ describe('settings: visualizer', () => {
     expect(ok.statusCode).toBe(200);
     expect(ok.json().settings.visualizer).toEqual({
       enabled: true,
+      onMinimalist: false,
       promptDismissed: true,
       intensity: 0.8,
       opacity: 0.5,
@@ -96,6 +97,16 @@ describe('settings: visualizer', () => {
       preset: 'custom',
       customBassHigh: 300,
       customDrop: 0.2,
+    });
+    const minimalist = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { visualizer: { enabled: true, onMinimalist: true } },
+    });
+    expect(minimalist.statusCode).toBe(200);
+    expect(minimalist.json().settings.visualizer).toMatchObject({
+      enabled: true,
+      onMinimalist: true,
     });
     const badPreset = await api({
       method: 'PATCH',

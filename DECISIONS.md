@@ -2857,3 +2857,12 @@ The owner sent `komo3.0.svg` ("update the logo everywhere and change all screens
 - **Social is a row of five phones** (groups, jams, the feed in the middle, the leaderboard, a profile), each in another theme, replacing the bento. main.js moves them on springs: they fan out from a stack as the row comes in, the row leans toward the pointer, each floats a little, and the one pointed at rises while its neighbours lean away. On a phone they're a strip to swipe, the middle one biggest. Each opens the slideshow about its part (the owner's social copy lives there now).
 - **Focus is a real recording** (`clips/focus-start.mp4`, `scripts/record-focus.mjs`): Start a session, the task, Pomodoro, the focus screen counting down, playing in a plain window as it comes into view. The pinned growing screen and its steps are gone.
 - The small accent labels (Focus, Plan, Track) are gone. Screenshots were retaken in a spread of themes (analytics Golden Hour, the dashboard Sea Glass, the calendar Lilac Sky, the social phones in five looks); the drum's sixteen were retaken with the same looks only for the new logo.
+
+## The visualizer starts off on a Minimalist theme (owner request, 2026-10-29)
+
+The owner: "remove the audio visualizer by default if the user is using a minimalist theme", then "but only if they dont renable it".
+
+- **A Minimalist theme** is a plain background (a flat colour or one of the Minimal backgrounds) with no uploaded picture over it (`isMinimalistTheme` in core theme-presets.ts). That is every Minimalist preset and any flat colour picked by hand; a tested rule keeps the presets and this in step.
+- **There the visualizer is off** until it is turned on there: the focus screen draws nothing, its switch in Settings and the focus screen's controls reads off, and the focus screen doesn't offer to share audio on its own. Nothing is written to the account, so going back to a photo theme brings the visualizer back as it was.
+- **Turning it on over a Minimalist theme sticks**: the switch, Yes on the audio question and Try again save `visualizer.onMinimalist` with `enabled` (`visualizerTurnedOn`), and from then on `enabled` alone decides there too (`visualizerShows`). Turned on over a photo, it doesn't count: the next Minimalist theme starts it off again. Reset keeps the choice, like the on switch.
+- Accounts already on a Minimalist theme with the visualizer on lose it until they turn it on again: nothing recorded whether they had chosen it there. No migration (the new field defaults to false).

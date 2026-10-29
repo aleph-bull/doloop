@@ -100,6 +100,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   grading: { scale: UOFT_GRADE_SCALE, goalGpa: null, targetPercent: null },
   visualizer: {
     enabled: false,
+    onMinimalist: false,
     promptDismissed: false,
     intensity: 0.6,
     opacity: 0.5,

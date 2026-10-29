@@ -1,5 +1,6 @@
 import {
   dayStartUnlocksAt,
+  isMinimalistTheme,
   isPlainBackground,
   displayNameError,
   minCostUnlocksAt,
@@ -782,7 +783,12 @@ export function Settings() {
                 />
               </div>
               <div className="divider" />
-              <VisualizerSettings value={s.visualizer} onChange={patch} showPromptPreference />
+              <VisualizerSettings
+                value={s.visualizer}
+                minimalist={isMinimalistTheme(s.theme)}
+                onChange={patch}
+                showPromptPreference
+              />
               <div className="divider" />
               <h3 className="font-medium">Timelapse</h3>
               <p className="field-hint">

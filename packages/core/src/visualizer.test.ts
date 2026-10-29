@@ -23,7 +23,9 @@ import {
   valueNoise,
   VISUALIZER_PRESETS,
   visualizerPalette,
+  visualizerShows,
   visualizerTuning,
+  visualizerTurnedOn,
   waveformShape,
   type AnalysisState,
   type BarState,
@@ -429,6 +431,24 @@ describe('waveform', () => {
     for (const v of a) expect(Math.abs(v)).toBeLessThanOrEqual(0.3);
     const later = waveformShape(null, false, 2, new Float32Array(32));
     expect([...later]).not.toEqual([...a]);
+  });
+});
+
+describe('on or off', () => {
+  it('is off on a Minimalist theme until turned on there', () => {
+    const was = { enabled: true, onMinimalist: false };
+    expect(visualizerShows(was, false)).toBe(true);
+    expect(visualizerShows(was, true)).toBe(false);
+    const turned = { ...was, ...visualizerTurnedOn(true) };
+    expect(visualizerShows(turned, true)).toBe(true);
+    // Turned off again, it stays off; on again, it comes straight back.
+    expect(visualizerShows({ ...turned, enabled: false }, true)).toBe(false);
+    expect(visualizerShows({ enabled: false, onMinimalist: false }, false)).toBe(false);
+  });
+
+  it('only remembers the Minimalist choice when made on one', () => {
+    expect(visualizerTurnedOn(false)).toEqual({ enabled: true });
+    expect(visualizerTurnedOn(true)).toEqual({ enabled: true, onMinimalist: true });
   });
 });
 

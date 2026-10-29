@@ -192,6 +192,11 @@ export interface UserSettings {
   visualizer: {
     enabled: boolean;
     /**
+     * Turned on while on a Minimalist theme. Those themes start with the visualizer off
+     * (owner, 2026-10-29); once it is turned on over one, it follows `enabled` there too.
+     */
+    onMinimalist: boolean;
+    /**
      * "Never ask again": the focus screen stops offering to share audio on its own. The
      * feature stays available from Settings and the focus screen's own controls.
      */

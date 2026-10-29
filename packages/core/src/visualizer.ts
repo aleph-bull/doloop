@@ -1,4 +1,4 @@
-import type { VisualizerPreset } from './types';
+import type { UserSettings, VisualizerPreset } from './types';
 
 /**
  * Audio analysis for the focus screen's visualizer.
@@ -530,6 +530,24 @@ export function waveformShape(
   }
   out[n - 1] = n >= 2 ? 0.5 * before + 0.5 * prev : prev;
   return out;
+}
+
+/* ---------- on or off ---------- */
+
+/**
+ * Whether the focus screen draws the visualizer. On a Minimalist theme it is off until it is
+ * turned on there (owner, 2026-10-29); after that the switch alone decides.
+ */
+export function visualizerShows(
+  vis: Pick<UserSettings['visualizer'], 'enabled' | 'onMinimalist'>,
+  minimalist: boolean,
+): boolean {
+  return vis.enabled && (!minimalist || vis.onMinimalist);
+}
+
+/** What turning it on saves. On a Minimalist theme, that it stays on there too. */
+export function visualizerTurnedOn(minimalist: boolean): Partial<UserSettings['visualizer']> {
+  return minimalist ? { enabled: true, onMinimalist: true } : { enabled: true };
 }
 
 /* ---------- colour ---------- */

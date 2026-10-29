@@ -388,6 +388,7 @@ export const settingsSchema = z
     visualizer: z
       .object({
         enabled: z.boolean(),
+        onMinimalist: z.boolean(),
         promptDismissed: z.boolean(),
         intensity: z.number().min(0).max(1),
         opacity: z.number().min(0).max(1),

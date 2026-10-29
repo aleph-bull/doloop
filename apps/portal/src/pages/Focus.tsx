@@ -5,8 +5,11 @@ import {
   focusContext,
   focusLabel,
   focusProgress,
+  isMinimalistTheme,
   visualizerPalette,
+  visualizerShows,
   visualizerTuning,
+  visualizerTurnedOn,
   viewTimer,
   type StudyNode,
   type TimelapseDevice,
@@ -277,6 +280,9 @@ export function Focus() {
   /* ---------- audio + visualizer ---------- */
   const audio = useAudioCapture();
   const vis = settings?.visualizer;
+  // A Minimalist theme starts with it off, until it is turned on there.
+  const minimalist = !!settings && isMinimalistTheme(settings.theme);
+  const visOn = !!vis && visualizerShows(vis, minimalist);
   const [askOpen, setAskOpen] = useState(false);
   const askedRef = useRef(false);
   const session = active.data?.active ?? null;
@@ -718,17 +724,19 @@ export function Focus() {
     !retryClosed;
 
   // Offer to share audio once per visit, once the timer is on screen, unless told never to.
+  // Not over a Minimalist theme while the visualizer is off there.
   useEffect(() => {
     if (askedRef.current || !vis || !session) return;
     if (vis.promptDismissed || !audio.supported || audio.state !== 'idle') return;
+    if (minimalist && !visOn) return;
     askedRef.current = true;
     const id = window.setTimeout(() => setAskOpen(true), PROMPT_DELAY_MS);
     return () => window.clearTimeout(id);
-  }, [vis, session, audio.supported, audio.state]);
+  }, [vis, session, audio.supported, audio.state, minimalist, visOn]);
 
   const answerYes = () => {
     setAskOpen(false);
-    if (vis && !vis.enabled) void patch({ visualizer: { enabled: true } });
+    if (vis && !visOn) void patch({ visualizer: visualizerTurnedOn(minimalist) });
     // The share prompt must start on the click itself, so nothing is awaited before it.
     void audio.request().then((state) => {
       if (state === 'no-audio') toast('That share had no audio. Tick "share audio" and try again.');
@@ -844,7 +852,7 @@ export function Focus() {
         texture={appearance.texture}
         adjust={appearance.adjust}
       />
-      {vis?.enabled && (
+      {vis && visOn && (
         <AudioVisualizer
           enabled
           getCapture={audio.getCapture}
@@ -932,7 +940,7 @@ export function Focus() {
             type="button"
             className="focus-link"
             onClick={() => {
-              if (vis && !vis.enabled) void patch({ visualizer: { enabled: true } });
+              if (vis && !visOn) void patch({ visualizer: visualizerTurnedOn(minimalist) });
               void audio.request();
             }}
           >
@@ -1126,7 +1134,14 @@ export function Focus() {
             folded={folded.includes('visualizer')}
             onToggle={() => toggleFold('visualizer')}
           >
-            {vis && <VisualizerSettings value={vis} onChange={patch} audio={audio} />}
+            {vis && (
+              <VisualizerSettings
+                value={vis}
+                minimalist={minimalist}
+                onChange={patch}
+                audio={audio}
+              />
+            )}
           </SheetFold>
           <section className="focus-sheet-section">
             <Button variant="secondary" onClick={leave}>
@@ -1180,7 +1195,7 @@ export function Focus() {
 
       <AudioPermissionModal
         open={askOpen}
-        alreadyEnabled={!!vis?.enabled}
+        alreadyEnabled={visOn}
         onYes={answerYes}
         onNo={() => setAskOpen(false)}
         onNever={answerNever}
