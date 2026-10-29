@@ -1,8 +1,8 @@
 // Motion for the homepage. The hero lifts in on load, devices and all, and each section rises
 // as it scrolls into view. Below the hero, scenes marked [data-scrub] follow the scroll: the
-// timelapses, the focus screen that grows, the calendar, the Track tour and the ring of looks.
-// Nothing here is needed to read the page; without it everything lays out flat, and on a phone
-// it stays flat on purpose.
+// timelapses, the calendar, the Track tour and the ring of looks. The row of social phones
+// moves on springs of its own. Nothing here is needed to read the page; without it everything
+// lays out flat, and on a phone it stays flat on purpose.
 
 const root = document.documentElement;
 const still =
@@ -239,36 +239,6 @@ function tourScene(scene) {
   };
 }
 
-/** The focus screen: it grows to fill the window, the page goes dark, then a Pomodoro runs. */
-function zoomScene(scene) {
-  const stepsOf = Number(scene.dataset.steps) || 1;
-  let s0 = 0.75;
-  const measure = () => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const narrow = vw < 900;
-    const sw = narrow ? vw - 24 : Math.min(vw - 48, (vh - 48) * 1.6);
-    scene.style.setProperty('--sw', `${sw}px`);
-    s0 = narrow ? 0.86 : Math.min(1, Math.min(1040, vw - 120) / sw);
-  };
-  return {
-    measure,
-    update(p) {
-      const grow = ease(range(p, 0, 0.2)) * (1 - ease(range(p, 0.88, 1)));
-      scene.style.setProperty('--s', (s0 + (1 - s0) * grow).toFixed(4));
-      scene.style.setProperty(
-        '--dark',
-        (range(p, 0.02, 0.18) * (1 - range(p, 0.86, 0.97))).toFixed(3),
-      );
-      scene.style.setProperty(
-        '--ph',
-        (ease(range(p, 0.42, 0.54)) * (1 - ease(range(p, 0.8, 0.9)))).toFixed(3),
-      );
-      setStep(scene, Math.min(stepsOf - 1, Math.floor(range(p, 0.1, 0.86) * stepsOf)));
-    },
-  };
-}
-
 function setStep(el, step) {
   const next = String(step);
   if (el.dataset.step !== next) el.dataset.step = next;
@@ -345,7 +315,7 @@ function fallScene(scene) {
 }
 
 // Everything a scene writes on its own element; cleared when the scenes turn off.
-const SCENE_VARS = ['--p', '--enter', '--cw', '--sw', '--s', '--dark', '--ph', '--shift'];
+const SCENE_VARS = ['--p', '--enter', '--cw', '--ph'];
 
 if (!still) {
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
@@ -353,7 +323,6 @@ if (!still) {
     const steps = Number(el.dataset.steps) || 0;
     const scene = { el, kind };
     if (kind === 'looks') Object.assign(scene, ringScene(el));
-    else if (kind === 'zoom') Object.assign(scene, zoomScene(el));
     else if (kind === 'tour') Object.assign(scene, tourScene(el));
     else if (kind === 'fall') Object.assign(scene, fallScene(el));
     else if (kind === 'plan')
@@ -362,19 +331,6 @@ if (!still) {
         setStep(el, Math.min(steps - 1, Math.floor(range(p, 0.08, 0.86) * steps)));
         el.style.setProperty('--ph', ease(range(p, 0.6, 0.78)).toFixed(3));
       };
-    else if (kind === 'cell') {
-      const frame = el.querySelector('.frame');
-      const img = frame?.querySelector('img');
-      // The feed's long picture scrolls inside its frame while the cell crosses the screen.
-      scene.update = (_p, _enter, through) => {
-        if (!img || !el.classList.contains('cell-feed')) return;
-        const travel = Math.max(0, img.offsetHeight - frame.clientHeight);
-        el.style.setProperty(
-          '--shift',
-          `${(-travel * ease(range(through, 0.25, 0.85))).toFixed(1)}px`,
-        );
-      };
-    }
     if (el.dataset.step === undefined && steps) el.dataset.step = '0';
     return scene;
   });
@@ -470,11 +426,199 @@ for (const v of clips) {
   });
 }
 
-// ---------- The phones and their slideshow ----------
+// ---------- The social phones ----------
 
-// Each phone in the hero opens the slideshow at its own slide. The arrows, the dots, the arrow
-// keys or a sideways swipe move through it; Escape, the close button or a click outside the
-// box closes it, and focus goes back to the phone.
+/*
+ * The row of phones in Social, on springs. As the row comes up the screen the phones fan out
+ * from a stack in the middle; the row leans a little toward the pointer, each phone floats on
+ * its own slow clock, and the one pointed at (or focused) rises and straightens while its
+ * neighbours lean out of its way. On a phone the row is a strip to swipe through instead, and
+ * the phone nearest the middle is the biggest.
+ */
+function phoneRow(row) {
+  const items = [...row.querySelectorAll('.phones-item')];
+  const phones = items.map((li) => li.querySelector('.phones-phone'));
+  const mid = (items.length - 1) / 2;
+  const swipe = window.matchMedia('(max-width: 640px)');
+  // Stiffness and damping: a little overshoot, then still.
+  const K = 170;
+  const C = 17;
+  /** Each phone's spring for x, y (px), turn (deg) and scale: [value, velocity]. */
+  const springs = phones.map(() => ({ x: [0, 0], y: [0, 0], r: [0, 0], s: [1, 0] }));
+  let offsets = phones.map(() => 0);
+  let hover = -1;
+  let lean = [0, 0];
+  let leanTo = [0, 0];
+  let raf = 0;
+  let last = 0;
+  let fresh = true;
+  let onScreen = false;
+  let mode = '';
+
+  const put = (i, x, y, r, s) => {
+    const st = phones[i].style;
+    st.setProperty('--x', `${x.toFixed(1)}px`);
+    st.setProperty('--y', `${y.toFixed(1)}px`);
+    st.setProperty('--r', `${r.toFixed(2)}deg`);
+    st.setProperty('--s', s.toFixed(4));
+  };
+  const clear = () => {
+    for (const p of phones) for (const v of ['--x', '--y', '--r', '--s']) p.style.removeProperty(v);
+    for (const li of items) li.style.zIndex = '';
+  };
+  // Where each phone stands at rest, from the middle of the row.
+  const measure = () => {
+    const box = row.getBoundingClientRect();
+    const centre = box.left + box.width / 2;
+    offsets = items.map((li) => {
+      const b = li.getBoundingClientRect();
+      return b.left + b.width / 2 - centre;
+    });
+  };
+
+  const tick = (now) => {
+    raf = 0;
+    const dt = last ? Math.min(0.034, (now - last) / 1000) : 1 / 60;
+    last = now;
+    const t = now / 1000;
+    const box = row.getBoundingClientRect();
+    // 0 while the row is still low on the screen, stacked; 1 once it's well up, spread out.
+    const fan = ease(range((window.innerHeight - box.top) / window.innerHeight, 0.15, 0.8));
+    const k = 1 - Math.exp(-dt * 6);
+    lean = [lean[0] + (leanTo[0] - lean[0]) * k, lean[1] + (leanTo[1] - lean[1]) * k];
+    phones.forEach((_, i) => {
+      const d = i - mid;
+      const depth = 1 - Math.abs(d) * 0.18;
+      let x = -(1 - fan) * offsets[i] * 0.88 + lean[0] * 14 * depth;
+      let y = Math.abs(d) ** 1.6 * 6 * fan + (1 - fan) * (30 + Math.abs(d) * 12);
+      let r = d * 3 * fan + (1 - fan) * d * 6 + lean[0] * 1.6;
+      let s = 1 - (1 - fan) * 0.05 * Math.abs(d);
+      y += lean[1] * 8 * depth + Math.sin(t * 1.1 + i * 1.7) * 4;
+      if (hover === i) {
+        y -= 34;
+        s *= 1.06;
+        r *= 0.25;
+      } else if (hover >= 0) {
+        const away = i - hover;
+        x += (Math.sign(away) * 30) / Math.abs(away);
+        y += 8;
+        r += Math.sign(away) * 1.5;
+      }
+      const sp = springs[i];
+      const to = { x, y, r, s };
+      for (const key of ['x', 'y', 'r', 's']) {
+        const v = sp[key];
+        if (fresh) {
+          v[0] = to[key];
+          v[1] = 0;
+          continue;
+        }
+        v[1] += (K * (to[key] - v[0]) - C * v[1]) * dt;
+        v[0] += v[1] * dt;
+      }
+      put(i, sp.x[0], sp.y[0], sp.r[0], sp.s[0]);
+      items[i].style.zIndex = hover === i ? '6' : '';
+    });
+    fresh = false;
+    if (onScreen && mode === 'springs') raf = requestAnimationFrame(tick);
+    else last = 0;
+  };
+
+  // On a phone: the one nearest the middle of the strip is full size, the rest a step back.
+  const strip = () => {
+    const box = row.getBoundingClientRect();
+    const centre = box.left + box.width / 2;
+    items.forEach((li, i) => {
+      const b = li.getBoundingClientRect();
+      const off = b.left + b.width / 2 - centre;
+      const k = clamp(Math.abs(off) / b.width);
+      put(i, 0, k * 18, Math.sign(off) * k * 4, 1 - 0.12 * k);
+    });
+  };
+  let stripQueued = false;
+  row.addEventListener(
+    'scroll',
+    () => {
+      if (mode !== 'strip' || stripQueued) return;
+      stripQueued = true;
+      requestAnimationFrame(() => {
+        stripQueued = false;
+        strip();
+      });
+    },
+    { passive: true },
+  );
+
+  const start = () => {
+    if (mode === 'springs' && onScreen && !raf) raf = requestAnimationFrame(tick);
+  };
+  const apply = () => {
+    cancelAnimationFrame(raf);
+    raf = 0;
+    last = 0;
+    clear();
+    mode = swipe.matches ? 'strip' : 'springs';
+    if (mode === 'strip') {
+      // Open on the middle phone, the feed.
+      const b = items[Math.round(mid)].getBoundingClientRect();
+      const box = row.getBoundingClientRect();
+      row.scrollLeft += b.left + b.width / 2 - (box.left + box.width / 2);
+      strip();
+    } else {
+      fresh = true;
+      measure();
+      start();
+    }
+  };
+
+  phones.forEach((p, i) => {
+    p.addEventListener('pointerenter', (e) => {
+      if (e.pointerType === 'mouse') hover = i;
+    });
+    p.addEventListener('pointerleave', () => {
+      if (hover === i) hover = -1;
+    });
+    p.addEventListener('focus', () => {
+      hover = i;
+    });
+    p.addEventListener('blur', () => {
+      if (hover === i) hover = -1;
+    });
+  });
+  const section = row.closest('section') ?? row;
+  section.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    const b = row.getBoundingClientRect();
+    leanTo = [
+      clamp((e.clientX - b.left) / b.width) * 2 - 1,
+      clamp((e.clientY - b.top) / b.height) * 2 - 1,
+    ];
+  });
+  section.addEventListener('pointerleave', () => {
+    leanTo = [0, 0];
+  });
+  new IntersectionObserver(
+    ([e]) => {
+      onScreen = e.isIntersecting;
+      start();
+    },
+    { rootMargin: '200px 0px' },
+  ).observe(row);
+  window.addEventListener('resize', () => {
+    if (mode === 'springs') measure();
+    else strip();
+  });
+  swipe.addEventListener('change', apply);
+  apply();
+}
+
+if (!still) for (const row of document.querySelectorAll('.phones')) phoneRow(row);
+
+// ---------- The slideshow ----------
+
+// Each social phone opens the slideshow at its own slide. The arrows, the dots, the arrow keys
+// or a sideways swipe move through it; Escape, the close button or a click outside the box
+// closes it, and focus goes back to the phone.
 const show = document.getElementById('features');
 if (show && typeof show.showModal === 'function') {
   const slides = [...show.querySelectorAll('.slide')];
@@ -489,7 +633,7 @@ if (show && typeof show.showModal === 'function') {
     });
     dots.forEach((d, k) => d.setAttribute('aria-current', String(k === at)));
   };
-  for (const phone of document.querySelectorAll('.lineup-phone')) {
+  for (const phone of document.querySelectorAll('.phones-phone')) {
     phone.addEventListener('click', () => {
       go(Number(phone.dataset.slide));
       show.showModal();

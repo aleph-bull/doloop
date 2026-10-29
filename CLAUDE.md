@@ -1242,11 +1242,15 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   timelapse); both must go or the shot shows a dialog. Convert the PNGs to webp with sharp.
 - Images pasted into the chat never reach the disk. Ask the owner to save files into the
   folder (the PSD mockups and reference shots live in `apps/site/design`, gitignored).
-- **Order and phones (2026-10-28, redesigned 10-29 from the owner's brief):** the hero is
-  "Your study sessions, on record." over a row of five phones that open a slideshow
-  (`#features`); then the timelapses (with the recording beside the finished video), Social,
-  All in one (Focus, Plan, Track), XP and rewards, Make it yours. Copy is the owner's; keep
-  every claim true to the app (panels are styled, not arranged). On a phone (under 641px wide
+- **Order and phones (2026-10-28, reworked twice on 10-29):** the hero is "Your study
+  sessions, on record." over the laptop (a timelapse playing) and a phone (the dashboard);
+  then the timelapses (with the recording beside the finished video), Social as a row of five
+  phones on springs that open a slideshow (`#features`), All in one (Focus as a real screen
+  recording, Plan, Track), XP and rewards, Make it yours. Every phone is the owner's iPhone
+  frame (`.device`, `public/phone-frame.webp`); phone shots are taken at 393 x 852 with an
+  iPhone 14 Pro's safe areas so the app sits below the island. Screenshots use a spread of
+  themes. Copy is the owner's; keep every claim true to the app (panels are styled, not
+  arranged). No small labels over headings. On a phone (under 641px wide
   or 501px tall) the scroll scenes stay off and the page is flat; that query is in both
   `main.js` and `styles.css`, so change them together. `.rail` is border-box: a padded
   full-width box without it runs past the screen's edge and stops being centred.

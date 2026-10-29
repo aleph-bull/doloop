@@ -63,7 +63,7 @@
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="preload" as="image" href="/backgrounds/cotton-candy.webp" />
-    <link rel="preload" as="image" href="/shots/feed-phone.webp" />
+    <link rel="preload" as="image" href="/clips/slides-review.webp" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
@@ -94,9 +94,8 @@
     </header>
 
     <main id="top">
-      <!-- Hero: the app's default photograph, fading out at the bottom, and a row of phones
-           hanging over the edge, each a part of the app in another look. A phone opens the
-           slideshow about that part (#features, main.js). -->
+      <!-- Hero: the app's default photograph, fading out at the bottom, with one of the owner's
+           timelapses playing on a laptop and the dashboard on a phone hanging over the edge. -->
       <section class="hero">
         <div class="stage-photo hero-photo" aria-hidden="true"></div>
         <div class="hero-text">
@@ -110,38 +109,18 @@
             <a class="cta cta-ghost" href="#timelapse">See how it works</a>
           </div>
         </div>
-        <ul class="lineup rise rise-pop" style="--d: 200ms" aria-label="Parts of Komodon">
-          <li class="lineup-item" data-pos="0">
-            <button class="lineup-phone" type="button" data-slide="0" aria-haspopup="dialog">
-              <span class="lineup-frame"><img src="/shots/focus-phone.webp" alt="" width="780" height="1688" /></span>
-              <span class="lineup-label">Timelapse</span>
-            </button>
-          </li>
-          <li class="lineup-item" data-pos="1">
-            <button class="lineup-phone" type="button" data-slide="1" aria-haspopup="dialog">
-              <span class="lineup-frame"><img src="/shots/lineup-plan.webp" alt="" width="1170" height="2532" /></span>
-              <span class="lineup-label">Planner</span>
-            </button>
-          </li>
-          <li class="lineup-item" data-pos="2">
-            <button class="lineup-phone" type="button" data-slide="2" aria-haspopup="dialog">
-              <span class="lineup-frame"><img src="/shots/feed-phone.webp" alt="" width="1170" height="2532" fetchpriority="high" /></span>
-              <span class="lineup-label">Social</span>
-            </button>
-          </li>
-          <li class="lineup-item" data-pos="3">
-            <button class="lineup-phone" type="button" data-slide="3" aria-haspopup="dialog">
-              <span class="lineup-frame"><img src="/shots/lineup-track.webp" alt="" width="1170" height="2532" /></span>
-              <span class="lineup-label">Stats</span>
-            </button>
-          </li>
-          <li class="lineup-item" data-pos="4">
-            <button class="lineup-phone" type="button" data-slide="4" aria-haspopup="dialog">
-              <span class="lineup-frame"><img src="/shots/lineup-xp.webp" alt="" width="1170" height="2532" /></span>
-              <span class="lineup-label">XP</span>
-            </button>
-          </li>
-        </ul>
+        <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
+          <div class="laptop">
+            <div class="laptop-screen">
+              <span class="laptop-notch"></span>
+              <video class="clip" src="/clips/slides-review.mp4" poster="/clips/slides-review.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: an evening reviewing RSM222 slides, the screen in the corner and the focus time counting up"></video>
+            </div>
+            <div class="laptop-base"><span class="laptop-lip"></span></div>
+          </div>
+          <div class="phone">
+            <span class="device"><img class="device-screen" src="/shots/today-phone.webp" alt="The Komodon dashboard on a phone: the streak and what's most pressing today" width="1179" height="2556" fetchpriority="high" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+          </div>
+        </div>
       </section>
 
       <!-- Below the hero the page is ruled like a notebook: thin lines down both sides of the
@@ -187,7 +166,7 @@
             <div class="laptop">
               <div class="laptop-screen">
                 <span class="laptop-notch"></span>
-                <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="none" aria-label="The timelapse a session makes: a morning of studying for an exam, the screen in the corner and the focus time counting up"></video>
+                <video class="clip" src="/clips/day-session.mp4" poster="/clips/day-session.webp" width="960" height="540" muted loop playsinline disablepictureinpicture preload="none" aria-label="The timelapse a session makes: three hours at a desk on a bright afternoon, the focus time counting up"></video>
               </div>
               <div class="laptop-base"><span class="laptop-lip"></span></div>
             </div>
@@ -205,7 +184,9 @@
         </div>
       </section>
 
-      <!-- Social: a ruled grid of the social screens, the feed down the left. -->
+      <!-- Social: a row of phones, each a part of the social side in another look. They fan out
+           as the row comes in, lean toward the pointer and pop up when pointed at, and each
+           opens the slideshow about its part (#features, main.js). -->
       <section id="social" class="band">
         <div class="rail rail-pad">
           <div class="feature-head rise">
@@ -216,31 +197,34 @@
             </p>
           </div>
         </div>
-        <div class="rail bento">
-          <figure class="cell cell-feed" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/feed.webp" alt="The Komodon feed: friends' posts, some with a timelapse" width="1020" height="2700" loading="lazy" />
-            </div>
-            <figcaption><strong>The feed</strong> See what your friends got done.</figcaption>
-          </figure>
-          <figure class="cell cell-group" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/groups.webp" alt="A study group's week: hours together, a line for each person, and who's studying now" width="1984" height="1064" loading="lazy" />
-            </div>
-            <figcaption><strong>Study groups</strong> Put your weeks side by side.</figcaption>
-          </figure>
-          <figure class="cell cell-jam" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/jams.webp" alt="Jams: a few days of studying where the most hours wins" width="1984" height="1260" loading="lazy" />
-            </div>
-            <figcaption><strong>Jams</strong> Pick a few days. Most hours wins.</figcaption>
-          </figure>
-          <figure class="cell cell-board" data-scrub="cell">
-            <div class="frame">
-              <img src="/shots/board.webp" alt="The Komodon leaderboard: all-time study hours with friends or everyone" width="2400" height="1500" loading="lazy" />
-            </div>
-            <figcaption><strong>Leaderboards</strong> Compare all-time hours with your friends or everyone on Komodon.</figcaption>
-          </figure>
+        <div class="rail phones-rail">
+          <ul class="phones" aria-label="The social side of Komodon">
+            <li class="phones-item" data-pos="0">
+              <button class="phones-phone" type="button" data-slide="0" aria-haspopup="dialog" aria-label="Study groups">
+                <span class="device"><img class="device-screen" src="/shots/phone-groups.webp" alt="" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </button>
+            </li>
+            <li class="phones-item" data-pos="1">
+              <button class="phones-phone" type="button" data-slide="1" aria-haspopup="dialog" aria-label="Jams">
+                <span class="device"><img class="device-screen" src="/shots/phone-jams.webp" alt="" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </button>
+            </li>
+            <li class="phones-item" data-pos="2">
+              <button class="phones-phone" type="button" data-slide="2" aria-haspopup="dialog" aria-label="The feed">
+                <span class="device"><img class="device-screen" src="/shots/phone-feed.webp" alt="" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </button>
+            </li>
+            <li class="phones-item" data-pos="3">
+              <button class="phones-phone" type="button" data-slide="3" aria-haspopup="dialog" aria-label="Leaderboards">
+                <span class="device"><img class="device-screen" src="/shots/phone-board.webp" alt="" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </button>
+            </li>
+            <li class="phones-item" data-pos="4">
+              <button class="phones-phone" type="button" data-slide="4" aria-haspopup="dialog" aria-label="Your profile">
+                <span class="device"><img class="device-screen" src="/shots/phone-profile.webp" alt="" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </button>
+            </li>
+          </ul>
         </div>
       </section>
 
@@ -255,33 +239,21 @@
         </div>
       </section>
 
-      <!-- Focus: the focus screen grows to fill the window, then runs through a Pomodoro. -->
+      <!-- Focus: a real recording of starting a session and the focus screen counting down,
+           playing in a window once it comes into view. -->
       <section id="focus" class="band">
         <div class="rail rail-pad">
           <div class="feature-head rise">
-            <div class="feature-title">
-              <p class="kicker">Focus</p>
-              <h3>Pick a task and get going.</h3>
-            </div>
+            <h3>Pick a task and get going.</h3>
             <p class="lede-sm">
               Use a Pomodoro timer with work blocks and breaks you choose, or let the timer run
               until you're done. Record a timelapse if you want a recap of the session.
             </p>
           </div>
         </div>
-        <div class="zoom" data-scrub="zoom" data-steps="4">
-          <div class="zoom-stage">
-            <div class="zoom-dark" aria-hidden="true"></div>
-            <div class="zoom-screen">
-              <img data-i="0" src="/shots/start-dialog.webp" alt="Starting a session: pick the task, then Pomodoro or continuous, and for how long" width="2880" height="1800" loading="lazy" />
-              <img data-i="1" src="/shots/focus-work.webp" alt="The Komodon focus screen during a Pomodoro: the countdown and the task" width="2880" height="1800" loading="lazy" />
-              <img data-i="2" src="/shots/focus-break.webp" alt="The focus screen on a short break" width="2880" height="1800" loading="lazy" />
-              <img data-i="3" src="/shots/focus-rec.webp" alt="The focus screen while a timelapse records: the camera in the corner, and Live clip" width="2880" height="1800" loading="lazy" />
-            </div>
-            <div class="zoom-phone">
-              <img src="/shots/focus-phone.webp" alt="On a phone, a recording session is the camera: the desk, with the timer over it" width="780" height="1688" loading="lazy" />
-            </div>
-            <div class="zoom-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="rail focus-film">
+          <div class="window rise">
+            <video class="clip" src="/clips/focus-start.mp4" poster="/clips/focus-start.webp" width="1600" height="1000" muted loop playsinline disablepictureinpicture preload="none" aria-label="Starting a session in Komodon: Start a session, pick the task, Pomodoro, then the focus screen counting down"></video>
           </div>
         </div>
       </section>
@@ -294,7 +266,6 @@
             <div class="rail plan-grid">
               <div class="feature-head plan-head rise">
                 <div class="feature-title">
-                  <p class="kicker">Plan</p>
                   <h3>Know what you're studying this week.</h3>
                 </div>
                 <p class="lede-sm">
@@ -309,7 +280,7 @@
                   <img data-i="2" src="/shots/cal-added.webp" alt="The week with the study blocks added" width="2400" height="1733" loading="lazy" />
                 </div>
                 <div class="plan-phone">
-                  <img src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="780" height="1688" loading="lazy" />
+                  <span class="device"><img class="device-screen" src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
                 </div>
               </div>
             </div>
@@ -324,7 +295,6 @@
             <div class="rail tour-grid">
               <div class="tour-copy">
                 <div class="feature-title rise">
-                  <p class="kicker">Track</p>
                   <h3>See where your hours go.</h3>
                 </div>
                 <p class="lede-sm rise" style="--d: 100ms">
@@ -463,94 +433,74 @@
       </footer>
     </main>
 
-    <!-- The slideshow the hero's phones open, one slide per phone, in the same order. -->
-    <dialog class="slideshow" id="features" aria-label="Komodon, part by part">
+    <!-- The slideshow the social phones open, one slide per phone, in the same order. -->
+    <dialog class="slideshow" id="features" aria-label="The social side of Komodon">
       <button class="slide-close" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
       </button>
       <div class="slides">
         <article class="slide" data-i="0" aria-labelledby="slide-title-0">
           <div class="slide-phone">
-            <img src="/shots/focus-phone.webp" alt="Recording on a phone: the camera fills the screen, with the timer and the task on top" width="780" height="1688" loading="lazy" />
+            <span class="device"><img class="device-screen" src="/shots/phone-groups.webp" alt="A study group on a phone: the week together, a line for each person, and who's studying now" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
           <div class="slide-copy">
-            <p class="kicker">Timelapse</p>
-            <h2 id="slide-title-0">Record your session.</h2>
-            <p>
-              Switch it on when you start a session. On a phone, the session becomes the camera with
-              the timer on top. On a computer, the camera sits in the corner of the focus screen.
-            </p>
+            <h2 id="slide-title-0">Put your weeks side by side.</h2>
+            <p>A group shows the last seven days: hours together, a line for each person, and who's studying right now.</p>
             <ul class="slide-facts">
-              <li>Trim it, save it, or post it.</li>
-              <li>Live clip catches a moment at normal speed.</li>
+              <li>Nudge someone who's fallen behind.</li>
+              <li>Everyone's biggest subjects, at a glance.</li>
             </ul>
           </div>
         </article>
         <article class="slide" data-i="1" aria-labelledby="slide-title-1">
           <div class="slide-phone">
-            <img src="/shots/lineup-plan.webp" alt="The calendar on a phone: one day with classes and study blocks, the week in a strip above" width="1170" height="2532" loading="lazy" />
+            <span class="device"><img class="device-screen" src="/shots/phone-jams.webp" alt="Jams on a phone: the jams running, who's in, and their hours" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
           <div class="slide-copy">
-            <p class="kicker">Planner</p>
-            <h2 id="slide-title-1">Plan your week.</h2>
-            <p>
-              Every deadline on one calendar, with your classes and finished sessions on it too.
-              Drag a block to move it, or let Plan my week suggest when to study.
-            </p>
+            <h2 id="slide-title-1">Pick a few days. Most hours wins.</h2>
+            <p>Start a jam for a day, three days or a week. Friends join from their feed, anyone else with the code.</p>
             <ul class="slide-facts">
-              <li>Bring in your class timetable with a calendar link.</li>
-              <li>Start a session right from a planned block.</li>
+              <li>Hours count from when you join.</li>
+              <li>The card names the winner at the end.</li>
             </ul>
           </div>
         </article>
         <article class="slide" data-i="2" aria-labelledby="slide-title-2">
           <div class="slide-phone">
-            <img src="/shots/feed-phone.webp" alt="The Komodon feed on a phone: a friend's post with their timelapse" width="1170" height="2532" loading="lazy" />
+            <span class="device"><img class="device-screen" src="/shots/phone-feed.webp" alt="The Komodon feed on a phone: who's studying now, and a friend's post with their timelapse" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
           <div class="slide-copy">
-            <p class="kicker">Social</p>
-            <h2 id="slide-title-2">Post it for your friends.</h2>
-            <p>
-              Share a finished session, with its timelapse if you made one. Friends give kudos and
-              comment, and Live now shows who's studying right now.
-            </p>
+            <h2 id="slide-title-2">See what your friends got done.</h2>
+            <p>Every post is a real session: what it was on, how long it took, and the timelapse if there is one. Give kudos, or leave a comment.</p>
             <ul class="slide-facts">
-              <li>Study groups and jams when you want some competition.</li>
-              <li>You choose who sees your posts.</li>
+              <li>Live now shows who's studying right now.</li>
+              <li>Friends only, if you'd rather.</li>
             </ul>
           </div>
         </article>
         <article class="slide" data-i="3" aria-labelledby="slide-title-3">
           <div class="slide-phone">
-            <img src="/shots/lineup-track.webp" alt="The dashboard on a phone: the streak, this week's hours and today's most pressing tasks" width="1170" height="2532" loading="lazy" />
+            <span class="device"><img class="device-screen" src="/shots/phone-board.webp" alt="The leaderboard on a phone: all-time study hours, with friends or everyone" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
           <div class="slide-copy">
-            <p class="kicker">Stats</p>
-            <h2 id="slide-title-3">Watch it add up.</h2>
-            <p>
-              The dashboard opens on your streak and what needs doing today. Analytics shows where
-              the time went, day by day and course by course.
-            </p>
+            <h2 id="slide-title-3">Compare all-time hours.</h2>
+            <p>The top ten by focused time, with your friends or with everyone on Komodon.</p>
             <ul class="slide-facts">
-              <li>A daily streak and a weekly one.</li>
-              <li>Personal bests to beat.</li>
+              <li>Eight weeks of hours on every row.</li>
+              <li>Leave yourself off it in Settings.</li>
             </ul>
           </div>
         </article>
         <article class="slide" data-i="4" aria-labelledby="slide-title-4">
           <div class="slide-phone">
-            <img src="/shots/lineup-xp.webp" alt="Achievements on a phone: lifetime XP, what's left to spend, and the shop" width="1170" height="2532" loading="lazy" />
+            <span class="device"><img class="device-screen" src="/shots/phone-profile.webp" alt="A profile on a phone: the study days grid, best days and totals, then the posts" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
           <div class="slide-copy">
-            <p class="kicker">XP</p>
-            <h2 id="slide-title-4">Spend what you earn.</h2>
-            <p>
-              Every minute you study earns XP, with a bonus for keeping your streak going. Spend it
-              on streak freezes, break days and backgrounds, or roll for a rarity in RNG Rolls.
-            </p>
+            <h2 id="slide-title-4">Your profile.</h2>
+            <p>Your study days, your best days and your totals, with your posts under them.</p>
             <ul class="slide-facts">
-              <li>Your level only goes up, even when you spend.</li>
-              <li>A roll costs 10 XP.</li>
+              <li>Your university, once you verify it.</li>
+              <li>Show as much or as little as you like.</li>
             </ul>
           </div>
         </article>
@@ -560,16 +510,17 @@
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
         <div class="slide-dots">
-          <button type="button" data-go="0" aria-label="Timelapse"></button>
-          <button type="button" data-go="1" aria-label="Planner"></button>
-          <button type="button" data-go="2" aria-label="Social"></button>
-          <button type="button" data-go="3" aria-label="Stats"></button>
-          <button type="button" data-go="4" aria-label="XP"></button>
+          <button type="button" data-go="0" aria-label="Study groups"></button>
+          <button type="button" data-go="1" aria-label="Jams"></button>
+          <button type="button" data-go="2" aria-label="The feed"></button>
+          <button type="button" data-go="3" aria-label="Leaderboards"></button>
+          <button type="button" data-go="4" aria-label="Your profile"></button>
         </div>
         <button class="slide-step" type="button" data-step="1" aria-label="Next">
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
         </button>
       </div>
     </dialog>
+
   </body>
 </html>

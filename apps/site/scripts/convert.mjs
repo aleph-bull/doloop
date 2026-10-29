@@ -1,6 +1,8 @@
-// PNG captures in ./out -> the site's webp files, with the crops the page expects.
+// PNG captures in ./out -> the site's webp files, with the crops the page expects. Names as
+// arguments convert just those jobs (`today cal looks` takes today, today-phone, the cal-*
+// ones and every look); a job whose PNG isn't in ./out is skipped.
 import { createRequire } from 'node:module';
-import { mkdirSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 const sharp = createRequire(new URL('../../../package.json', import.meta.url))('sharp');
@@ -39,13 +41,29 @@ const jobs = [
   ['cal-plan', 'cal-plan', { width: 2400 }],
   ['cal-added', 'cal-added', { width: 2400 }],
   ['cal-phone', 'cal-phone', { width: 780 }],
+  // The row of phones for the social side (iPhone 14 Pro shots, like today-phone).
+  ['phone-feed', 'phone-feed', { quality: 82 }],
+  ['phone-groups', 'phone-groups', { quality: 82 }],
+  ['phone-jams', 'phone-jams', { quality: 82 }],
+  ['phone-board', 'phone-board', { quality: 82 }],
+  ['phone-profile', 'phone-profile', { quality: 82 }],
 ];
 for (const f of readdirSync(IN).filter((f) => f.startsWith('look-'))) {
   const name = f.replace(/^look-/, '').replace(/\.png$/, '');
   jobs.push([`looks/${name}`, f.replace(/\.png$/, ''), { width: 960, quality: 76 }]);
 }
 
+const only = process.argv.slice(2);
+const want = (name) =>
+  only.length === 0 ||
+  only.some((o) => name === o || name.startsWith(`${o}-`) || name.startsWith(`${o}/`));
+
 for (const [name, src, { crop, width, quality = 80 }] of jobs) {
+  if (!want(name)) continue;
+  if (!existsSync(join(IN, `${src}.png`))) {
+    console.log(name.padEnd(22), `skipped: no ${src}.png`);
+    continue;
+  }
   let img = sharp(join(IN, `${src}.png`));
   if (crop) img = img.extract({ left: crop[0], top: crop[1], width: crop[2], height: crop[3] });
   if (width) img = img.resize(width);

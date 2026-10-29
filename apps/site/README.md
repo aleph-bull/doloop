@@ -13,30 +13,32 @@ pnpm build      # static output in dist/
 
 - `index.html` and `src/styles.css`: the app's default photograph (Cotton Candy, frostroomhead
   on Pexels) runs edge to edge behind the hero and fades out at the bottom into a light
-  gradient page. Over its edge hang five phones in a row (`.lineup`), each a part of the app
-  in another look: Timelapse (`focus-phone`), Planner (`lineup-plan`), Social (`feed-phone`,
-  in the middle), Stats (`lineup-track`) and XP (`lineup-xp`). A phone pops up when pointed at
-  and opens the slideshow (`#features`, a `<dialog>`), one slide per phone in the same order.
-  Below the hero the page is ruled (hairlines down the sides of the content and across
-  between sections, like aside.com). What draws people in comes first, then everything else
-  (the owner, 2026-10-28 and 10-29):
+  gradient page. One of the owner's timelapses (`clips/slides-review.mp4`, their 10-22
+  session, 2x speed) plays on a CSS laptop, and the dashboard (`today-phone`) is on a phone
+  hanging in front of it. Every phone on the page is the owner's iPhone (`.device`: a
+  screenshot under `public/phone-frame.webp`, cut out of their mockup by
+  `scripts/cut-phone.mjs`); phone shots are taken at 393 x 852, an iPhone 14 Pro's screen,
+  with its safe areas. Below the hero the page is ruled (hairlines down the sides of the
+  content and across between sections, like aside.com). What draws people in comes first,
+  then everything else (the owner, 2026-10-28 and 10-29):
   - **Timelapses**: a dusk interlude, pinned: Cotton Candy under a dark plum wash. Seven
     timelapses float down on either side of "See what you got done." with the app's
     Recording pill. `fallScene` in `main.js` moves them: each drifts toward where the scroll
     puts it a beat behind and sways and tilts a little on its own, so they float rather than
     slide. Under them, still on the dusk, `.recap`: the focus screen while it records beside
-    the owner's 10-23 timelapse (`clips/morning-exam.mp4`, sped up 2x) playing on a CSS
-    laptop. The way in and out is three blurred waves (ink, plum, a rose bloom) drifting
-    sideways in the band's margins (`.fall-edge`), not a straight fade.
-  - **Social** (`#social`): a ruled bento of plain screenshots: the feed down the left (a
-    long picture that scrolls inside its frame as the page scrolls, as tall as the cells
-    beside it), then a study group, jams and the leaderboard.
-  - **All in one** (`#all`): a centred heading, then Focus, Plan and Track, each with a
-    small accent label (`.kicker`) over its heading.
-  - **Focus**: pinned. The focus screen grows from a card to the whole window while the page
-    goes dark around it, then runs a Pomodoro: start a session, focus, short break, and the
-    focus screen recording a timelapse (the camera in the corner, no settings sheet). The
-    phone slides in on the way, as the camera screen a recording session is on a phone.
+    the owner's 10-18 timelapse (`clips/day-session.mp4`, 2x) playing on a CSS laptop. The
+    way in and out is three blurred waves (ink, plum, a rose bloom) drifting sideways in the
+    band's margins (`.fall-edge`), not a straight fade.
+  - **Social** (`#social`): five phones in a row (`.phones`: groups, jams, the feed in the
+    middle, the leaderboard, a profile), each in another theme. `phoneRow` in `main.js` moves
+    them on springs: they fan out from a stack as the row comes in, the row leans toward the
+    pointer, each floats a little, and the one pointed at rises while its neighbours lean
+    away. On a phone they're a strip to swipe, the one in the middle biggest. Each opens the
+    slideshow (`#features`, a `<dialog>`) at its own slide.
+  - **All in one** (`#all`): a centred heading, then Focus, Plan and Track.
+  - **Focus**: a real screen recording (`clips/focus-start.mp4`, made by
+    `scripts/record-focus.mjs`): Start a session, the task, Pomodoro, the focus screen
+    counting down, in a plain window that plays while it's on screen.
   - **Plan**: pinned. The calendar week (classes from a timetable, finished sessions, what's
     due), then Plan my week's suggestions, then the week with them added; the phone's day
     view rises in at the end.

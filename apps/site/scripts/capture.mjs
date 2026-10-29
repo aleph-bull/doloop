@@ -1,8 +1,9 @@
 // Every screenshot the homepage uses, from the seeded sandbox (Jerry). PNGs land in ./out;
 // convert.mjs turns them into the site's webp files.
-import { api, openBrowser, newPage, go, outDir, fakeCamera } from './capture-lib.mjs';
+import { api, newPage, go, outDir, fakeCamera } from './capture-lib.mjs';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join } from 'node:path';
 
 const OUT = outDir(process.env.SHOTS_OUT ?? fileURLToPath(new URL('./out', import.meta.url)));
@@ -22,7 +23,16 @@ await api('PATCH', '/api/me/settings', {
 // Clear the nudge so the dashboard reads cleanly.
 await api('POST', '/api/social/nudges/seen').catch(() => {});
 
-const browser = await openBrowser();
+// The installed Chrome on the CPU renderer (SwiftShader), so a run never loads the GPU of the
+// PC it runs on.
+const { chromium } = createRequire(join(process.env.CAPTURE_DEPS ?? '.', 'noop.js'))(
+  'playwright-core',
+);
+const browser = await chromium.launch({
+  channel: 'chrome',
+  headless: true,
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+});
 
 async function shoot(name, path, opts = {}) {
   if (!want(name)) return;
@@ -37,8 +47,17 @@ async function shoot(name, path, opts = {}) {
     wait = 1800,
     // A selector: the shot is that element alone (locator.screenshot), not the window.
     el = null,
+    // A theme for this shot alone (over BASE_THEME), put back afterwards.
+    look = null,
+    // Safe areas for env(safe-area-inset-*), in CSS px (see PHONE).
+    insets = null,
   } = opts;
+  if (look) await theme(look);
   const { ctx, page } = await newPage(browser, { width, height, scale, mobile, css, init });
+  if (insets) {
+    const cdp = await ctx.newCDPSession(page);
+    await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets });
+  }
   await go(page, path, wait);
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForTimeout(300);
@@ -52,10 +71,21 @@ async function shoot(name, path, opts = {}) {
   else await page.screenshot({ path: join(OUT, `${name}.png`) });
   console.log('shot', name);
   await ctx.close();
+  if (look) await theme({});
 }
 
 const theme = (t) => api('PATCH', '/api/me/settings', { theme: { ...BASE_THEME, ...t } });
-const PHONE = { width: 390, height: 844, scale: 3, mobile: true };
+// An iPhone 14 Pro: 393x852 at 3x (1179x2556) with its safe areas (59 top for the Dynamic
+// Island, 34 bottom for the home indicator), so the app lays out below the island as it does
+// on the phone (viewport-fit=cover); the site puts these shots in that phone's frame.
+// Until 2026-10-29 the phone shots were 390x844 with no safe areas.
+const PHONE = {
+  width: 393,
+  height: 852,
+  scale: 3,
+  mobile: true,
+  insets: { top: 59, bottom: 34, left: 0, right: 0 },
+};
 // The username notice, then the notifications ask, if either shows.
 const dismiss = async (page) => {
   for (const name of ['Keep it', 'Not now']) {
@@ -65,11 +95,36 @@ const dismiss = async (page) => {
     await page.waitForTimeout(1200);
   }
 };
+// The looks the feature sections are dressed in (2026-10-29), each over BASE_THEME.
+const SEA_GLASS = { mode: 'light', backgroundId: 'sea-glass', accent: 'mint' };
+const LILAC = { mode: 'light', backgroundId: 'lilac-sky', accent: 'rose' };
+
 // ---- The app as it is: the hero and the feature sections ----
-await shoot('today', '/');
-await shoot('today-phone', '/', { width: 390, height: 844, scale: 3, mobile: true });
+await shoot('today', '/', { look: SEA_GLASS });
+// The phone in the hero: the dashboard with the streak, in the base look.
+await shoot('today-phone', '/', { ...PHONE, before: dismiss });
 await shoot('feed-phone', '/social', { ...PHONE, before: dismiss });
-await shoot('analytics', '/analytics');
+await shoot('analytics', '/analytics', { look: { backgroundId: 'golden-hour', accent: 'amber' } });
+
+// ---- The social side on a phone: a row of five, each in its own look ----
+await shoot('phone-feed', '/social', { ...PHONE, before: dismiss });
+await shoot('phone-groups', '/social?tab=groups', {
+  ...PHONE,
+  look: { backgroundId: 'fuji' },
+  before: dismiss,
+});
+await shoot('phone-jams', '/social?tab=jams', {
+  ...PHONE,
+  look: { backgroundId: 'neon', accent: 'violet' },
+  before: dismiss,
+});
+await shoot('phone-board', '/social?tab=leaderboard', {
+  ...PHONE,
+  look: { mode: 'light', backgroundId: 'wheatland', accent: 'lemon' },
+  before: dismiss,
+});
+// Jerry's own profile.
+await shoot('phone-profile', '/profile', { ...PHONE, look: SEA_GLASS, before: dismiss });
 await shoot('start-dialog', '/', {
   before: async (page) => {
     await page.getByRole('button', { name: 'Start a session' }).first().click();
@@ -84,7 +139,7 @@ const morning = (hour) => async (page) =>
   }, hour);
 // A taller window so a whole day shows. "Add all" saves the blocks, so they are taken off
 // again afterwards and a second run starts from the same week.
-const CAL = { height: 1040, before: morning(8) };
+const CAL = { height: 1040, look: LILAC, before: morning(8) };
 const planIt = (add) => async (page) => {
   await page.getByRole('button', { name: 'Plan my week' }).first().click();
   await page.waitForTimeout(1200);
@@ -109,11 +164,12 @@ if (want('cal-added')) {
     if (!before.has(id)) await api('DELETE', `/api/planned-blocks/${id}`);
 }
 await shoot('cal-phone', '/calendar', {
-  width: 390,
-  height: 844,
-  scale: 3,
-  mobile: true,
-  before: morning(9),
+  ...PHONE,
+  look: LILAC,
+  before: async (page) => {
+    await dismiss(page);
+    await morning(9)(page);
+  },
 });
 
 // ---- The line-up: three phone screens, each in its own look ----
