@@ -399,20 +399,24 @@ const LOGO_MIN_CONTRAST = 3;
 
 /**
  * Komo, the mark in the nav, is drawn in the accent. When that accent is too dark to make
- * out on a dark surface it is white instead (owner, 2026-10-22). Null keeps the accent. The
- * surface is the solid colour's own shades when there is one, else a dark card.
+ * out on a dark surface it is white instead (owner, 2026-10-22); when it is too pale on a
+ * light one (a mint or lemon accent in light mode) it is the accent deepened until it reads
+ * (2026-10-29, with the komo3.0 mark). Null keeps the accent. The surface is the solid
+ * colour's own shades when there is one, else a dark or light card.
  */
 export function logoColor(
   hsl: [number, number, number],
   theme: ResolvedTheme,
   solid: RGB | null = null,
 ): string | null {
-  if (theme !== 'dark') return null;
   const accent = hslToRgb(hsl[0], hsl[1], hsl[2]);
   const t = solid ? tonalSurfaces(solid, theme) : null;
-  const surfaces = t ? [t.bg, t.card] : [DARK_SURFACE];
-  const worst = Math.min(...surfaces.map((s) => contrastRatio(accent, s)));
-  return worst < LOGO_MIN_CONTRAST ? '#ffffff' : null;
+  const surfaces = t ? [t.bg, t.card] : [theme === 'dark' ? DARK_SURFACE : LIGHT_SURFACE];
+  const worst = surfaces.reduce((a, b) =>
+    contrastRatio(accent, b) < contrastRatio(accent, a) ? b : a,
+  );
+  if (contrastRatio(accent, worst) >= LOGO_MIN_CONTRAST) return null;
+  return theme === 'dark' ? '#ffffff' : readableAccent(hsl, worst, LOGO_MIN_CONTRAST, true);
 }
 
 export interface ExtensionBackdropChoice {

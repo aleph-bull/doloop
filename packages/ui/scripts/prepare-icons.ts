@@ -6,7 +6,9 @@
  *  - the apple-touch icon, square-cornered because iOS rounds and shadows it itself;
  *  - the web app manifest icons (192/512, plus a full-bleed maskable 512 that Android crops
  *    to its own shape, so the face sits inside the central safe zone);
- *  - the extension's 16/48/128 icons.
+ *  - the extension's 16/48/128 icons;
+ *  - the homepage's copies (apps/site): its logo, favicon, apple-touch icon and 512 icon, the
+ *    same files as the portal's.
  *
  * Run: pnpm --filter @komogon/ui prepare:icons
  */
@@ -19,6 +21,7 @@ import { logoSvg } from '../src/logo';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PORTAL_PUBLIC = resolve(HERE, '../../../apps/portal/public');
 const EXTENSION_ICONS = resolve(HERE, '../../../apps/extension/public/icons');
+const SITE_PUBLIC = resolve(HERE, '../../../apps/site/public');
 
 async function png(svg: string, size: number, out: string) {
   // Rasterise well above the target size, then downsample, for clean edges at 16px.
@@ -42,6 +45,13 @@ async function main() {
   await png(logoSvg({ inset: 6 }), 16, resolve(EXTENSION_ICONS, 'icon16.png'));
   await png(logoSvg({ inset: 10 }), 48, resolve(EXTENSION_ICONS, 'icon48.png'));
   await png(logoSvg({ inset: 11 }), 128, resolve(EXTENSION_ICONS, 'icon128.png'));
+
+  for (const name of ['logo.svg', 'favicon.svg']) {
+    writeFileSync(resolve(SITE_PUBLIC, name), logoSvg({ inset: 11 }) + '\n');
+    console.log(`site/public/${name}`);
+  }
+  await png(logoSvg({ inset: 12, radius: 0 }), 180, resolve(SITE_PUBLIC, 'apple-touch-icon.png'));
+  await png(logoSvg({ inset: 11 }), 512, resolve(SITE_PUBLIC, 'icon-512.png'));
 }
 
 await main();
