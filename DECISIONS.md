@@ -2788,3 +2788,11 @@ Owner: "for timelapse presets only use the main user's fonts, dont change fonts 
 - **Absent, a piece takes its own** (`ownFont`): the clocks (current time, focus time, time elapsed, start, end) the timer font, the task name and your text the text font. With no fonts picked that is Inter, as before.
 - **Looks never set a font**, and keep the one a piece was given; `matchTimelapseStyle` leaves fonts out, so a layout in Minimal with the task in Headings still reads as Minimal. Mono no longer meant anything, so it is now **Outline** ("Outlined."), the same outlined pills. Headline's task and text are bare pills in their own font; Story's focus time keeps its dark pill.
 - **Old fonts are dropped when read**: a saved Sans, Geometric, Mono or Serif goes back to the piece's own font (`normalizeTimelapseLayout`). The API still takes the old four (an older tab saving) beside the new three, and the reader drops them.
+
+## Dots and grids on the Minimalist themes, 2026-10-29 (owner request)
+
+Owner: "add dots to deep sea and add grid and dots to some other minimalist backgrounds". The textures already existed (Appearance › Texture); only the themes changed.
+
+- **Dots**: Deep Sea, Dusk Rose and Salt Air. **Grid**: Linen, Night Shift and Tidepool. Off White and Quiet Stone keep their grain; Inkwell, Wisteria and Gold Leaf stay plain, so the list still has flat ones.
+- Setup's Minimalist look (Salt Air in light, Deep Sea in dark) now comes with dots in both.
+- Anyone already on one of these keeps their texture until they pick the theme again; the theme shows as Custom until then.

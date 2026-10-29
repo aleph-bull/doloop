@@ -120,10 +120,10 @@ export const THEME_PRESETS: ThemePreset[] = [
       texture: DEFAULT_SETTINGS.theme.texture,
     },
   },
-  solid('linen', 'Linen', '#e7e6e3', 'light', 'custom:232,24,30', 'none'),
-  solid('deep-sea', 'Deep Sea', '#1d1e26', 'dark', 'custom:165,18,40', 'none'),
+  solid('linen', 'Linen', '#e7e6e3', 'light', 'custom:232,24,30', 'grid'),
+  solid('deep-sea', 'Deep Sea', '#1d1e26', 'dark', 'custom:165,18,40', 'dots'),
   solid('off-white', 'Off White', '#f4f1ea', 'light', DEFAULT_SETTINGS.theme.accent, 'grain'),
-  solid('night-shift', 'Night Shift', '#313338', 'dark', 'custom:235,86,65', 'none'),
+  solid('night-shift', 'Night Shift', '#313338', 'dark', 'custom:235,86,65', 'grid'),
   solid('inkwell', 'Inkwell', '#1c1c21', 'dark', 'custom:29,100,71', 'none'),
   {
     id: 'quiet-stone',
@@ -160,10 +160,10 @@ export const THEME_PRESETS: ThemePreset[] = [
   photo('still-water', 'Still Water', 'abstract', 'lagoon', 'mint'),
   // The owner's palettes (2026-10-25), at the end of the list. Salt Air and Gold Leaf are
   // also setup's Minimalist look.
-  solid('dusk-rose', 'Dusk Rose', '#1a1c23', 'dark', 'custom:320,12,46', 'none'),
-  solid('salt-air', 'Salt Air', '#e2e6e9', 'light', 'custom:195,20,32', 'none'),
+  solid('dusk-rose', 'Dusk Rose', '#1a1c23', 'dark', 'custom:320,12,46', 'dots'),
+  solid('salt-air', 'Salt Air', '#e2e6e9', 'light', 'custom:195,20,32', 'dots'),
   solid('wisteria', 'Wisteria', '#f2f1f4', 'light', 'custom:266,10,42', 'none'),
-  solid('tidepool', 'Tidepool', '#191f1f', 'dark', 'custom:183,18,38', 'none'),
+  solid('tidepool', 'Tidepool', '#191f1f', 'dark', 'custom:183,18,38', 'grid'),
   solid('gold-leaf', 'Gold Leaf', '#0d0f11', 'dark', 'custom:42,26,40', 'none'),
 ];
 
