@@ -38,6 +38,7 @@ import {
   RectangleHorizontal,
   RectangleVertical,
   Share2,
+  Smartphone,
   Square,
   Video,
 } from 'lucide-react';
@@ -307,6 +308,33 @@ export function ScreenPrompt({ open, onYes, onNo }: ScreenPromptProps) {
   );
 }
 
+export interface CameraLinkPromptProps {
+  open: boolean;
+  onYes: () => void;
+  onNo: () => void;
+}
+
+/** On a phone, while a computer records the same session: film for it from here. */
+export function CameraLinkPrompt({ open, onYes, onNo }: CameraLinkPromptProps) {
+  return (
+    <Modal
+      open={open}
+      onClose={onNo}
+      title="Film from this phone?"
+      actions={
+        <>
+          <Button onClick={onNo}>Not now</Button>
+          <Button variant="primary" onClick={onYes}>
+            <Smartphone size={14} aria-hidden /> Film
+          </Button>
+        </>
+      }
+    >
+      <p className="muted text-sm">Your computer is recording.</p>
+    </Modal>
+  );
+}
+
 /* ---------- while recording ---------- */
 
 export interface TimelapseBadgeProps {
@@ -342,6 +370,11 @@ export function TimelapseBadge({
         className={`timelapse-dot${capturing && recorder.live ? '' : ' is-idle'}`}
         aria-hidden
       />
+      {recorder.remote && (
+        <span className="timelapse-from" title="Filming from your phone">
+          <Smartphone size={14} aria-label="Phone" />
+        </span>
+      )}
       <span className="tabular">
         {clip
           ? `Live clip ${clipTime(clip)}`
@@ -396,8 +429,12 @@ export function screenProblem(status: ScreenStatus): string | null {
   return null;
 }
 
-/** What went wrong with the camera, in a line. */
-export function recorderProblem(status: RecorderStatus): string | null {
+/** What went wrong with the camera, in a line; `screen` when the screen records on without it. */
+export function recorderProblem(status: RecorderStatus, screen = false): string | null {
+  if (screen && (status === 'denied' || status === 'unavailable' || status === 'error'))
+    return status === 'denied'
+      ? 'Camera blocked. Recording the screen.'
+      : 'No camera. Recording the screen.';
   if (status === 'denied') return 'The camera was blocked. Allow it in the address bar to record.';
   if (status === 'unavailable') return 'This browser has no camera to record with.';
   if (status === 'error') return 'The camera would not start. Is another app using it?';
@@ -936,14 +973,17 @@ export interface TimelapseExportProps {
   recording: boolean;
   /** The video was saved, so the stills behind it are safe to lose. */
   onSaved?: () => void;
-  /** The session the stills came from, so sharing can attach it to the post. */
-  sessionId?: string | null;
   /**
-   * What a post says about that session, for its preview: focus minutes, focus and breaks
-   * together, and the task.
+   * The sessions the stills came from, oldest first, so sharing can attach them to the post:
+   * several when the recording went on into the next session (another task).
+   */
+  sessionIds?: string[];
+  /**
+   * What a post says about those sessions, for its preview: focus minutes, focus and breaks
+   * together, and the tasks.
    */
   postSession?: { minutes: number; elapsedMinutes: number; subject: string | null } | null;
-  /** When the session started and, once over, ended: the video's start and end times. */
+  /** When the first session started and, once over, the last ended: the video's start and end. */
   sessionSpan?: { startedAt: string; endedAt: string | null } | null;
   /** Which way a phone's video goes, picked before the camera opened. */
   orientation?: TimelapseOrientation | null;
@@ -959,7 +999,7 @@ export function TimelapseExport({
   onChange,
   recording,
   onSaved,
-  sessionId,
+  sessionIds,
   postSession,
   sessionSpan,
   orientation,
@@ -1204,7 +1244,7 @@ export function TimelapseExport({
       const poster = picture ? await posterFromImage(picture) : null;
       await share.mutateAsync({
         body: input.body || undefined,
-        sessionId: sessionId ?? undefined,
+        sessionIds: sessionIds?.length ? sessionIds : undefined,
         showTime: input.showTime,
         showElapsed: input.showElapsed,
         friendsOnly: input.friendsOnly,

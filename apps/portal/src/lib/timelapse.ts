@@ -302,6 +302,16 @@ export interface TimelapseRecorderArgs {
   stamp: () => StillStamp;
   /** Which camera to film with; the front one when absent. Changing it swaps the camera. */
   facing?: CameraFacing;
+  /**
+   * A phone's camera streamed here (lib/camera-link.ts): filmed in place of this device's
+   * own while it is there, which comes back when it goes.
+   */
+  remote?: MediaStream | null;
+  /**
+   * False keeps the camera on without taking stills: a phone filming for a computer, which
+   * takes them itself.
+   */
+  keepStills?: boolean;
 }
 
 export interface TimelapseRecorder {
@@ -315,6 +325,8 @@ export interface TimelapseRecorder {
   count: number;
   /** The live camera, for a small preview, while recording. */
   stream: MediaStream | null;
+  /** The camera filming is a phone's, streamed here. */
+  remote: boolean;
   /**
    * The camera is on but sending no pictures for now (a phone's page hidden, or the camera
    * borrowed by another app). No stills are taken until it comes back.
@@ -347,6 +359,8 @@ export function useTimelapseRecorder({
   options,
   stamp,
   facing = 'user',
+  remote = null,
+  keepStills = true,
 }: TimelapseRecorderArgs): TimelapseRecorder {
   const [status, setStatus] = useState<RecorderStatus>('off');
   const [screenStatus, setScreenStatus] = useState<ScreenStatus>('off');
@@ -408,7 +422,36 @@ export function useTimelapseRecorder({
 
   /* ----- the camera ----- */
   useEffect(() => {
-    if (!wantCamera) return;
+    if (!wantCamera || !remote) return;
+    // A phone filming for this computer: its picture takes the webcam's place while it lasts.
+    // The stills wait for its first frame like any camera's (`readyState`).
+    let cancelled = false;
+    const video = streamPlayer(remote);
+    void video.play().catch(() => undefined);
+    const track = remote.getVideoTracks()[0];
+    const onMute = () => !cancelled && setCameraMuted(true);
+    const onUnmute = () => !cancelled && setCameraMuted(false);
+    track?.addEventListener('mute', onMute);
+    track?.addEventListener('unmute', onUnmute);
+    cameraVideo.current = video;
+    setStream(remote);
+    setCameraMuted(!!track?.muted);
+    setStatus('on');
+    return () => {
+      cancelled = true;
+      track?.removeEventListener('mute', onMute);
+      track?.removeEventListener('unmute', onUnmute);
+      // The tracks belong to the link, not to this page to stop.
+      video.srcObject = null;
+      if (cameraVideo.current === video) cameraVideo.current = null;
+      setStream(null);
+      setCameraMuted(false);
+      setStatus('off');
+    };
+  }, [wantCamera, remote]);
+
+  useEffect(() => {
+    if (!wantCamera || remote) return;
     if (!cameraSupported()) {
       setStatus('unavailable');
       return;
@@ -464,7 +507,7 @@ export function useTimelapseRecorder({
       setCameraMuted(false);
       setStatus((s) => (s === 'on' || s === 'starting' || s === 'ended' ? 'off' : s));
     };
-  }, [wantCamera, facing, cameraTry]);
+  }, [wantCamera, facing, cameraTry, remote]);
 
   const restartCamera = useCallback(() => setCameraTry((n) => n + 1), []);
 
@@ -546,7 +589,7 @@ export function useTimelapseRecorder({
 
   /* ----- taking stills ----- */
   useEffect(() => {
-    if (!recording) return;
+    if (!recording || !keepStills) return;
     let cancelled = false;
     let timer = 0;
     const canvas = document.createElement('canvas');
@@ -611,7 +654,7 @@ export function useTimelapseRecorder({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [recording]);
+  }, [recording, keepStills]);
 
   /* ----- live clips ----- */
   const stopClip = useCallback(() => {
@@ -740,6 +783,7 @@ export function useTimelapseRecorder({
     live: (status === 'on' && !cameraMuted) || screenStatus === 'on',
     count,
     stream,
+    remote: !!remote && status === 'on',
     cameraMuted,
     restartCamera,
     requestScreen,
@@ -751,6 +795,7 @@ export function useTimelapseRecorder({
       !clipOn &&
       !clipsFull &&
       recording &&
+      keepStills &&
       capturing &&
       sources.camera &&
       status === 'on' &&
@@ -976,6 +1021,8 @@ function frameDrawer(
     return cache.get(id) ?? null;
   };
   let previous: number | null = null;
+  /** The camera buffer holds a picture, which a moment with none goes on showing. */
+  let cameraShown = false;
 
   /** Blend the stills behind a frame for one source into its buffer; false when it has none. */
   const blend = async (
@@ -1044,11 +1091,11 @@ function frameDrawer(
       gain = g / (to - from);
     }
     const live = !!plan.live?.[j];
-    const camera = buffers.camera
-      ? (await blend(buffers.camera, 'blob', from, to, gain, live))
-        ? buffers.camera.canvas
-        : null
-      : null;
+    // A moment with no camera picture (a phone filming for the computer cut off for a while,
+    // a camera paused) holds the last one rather than going dark behind the screen.
+    if (buffers.camera && (await blend(buffers.camera, 'blob', from, to, gain, live)))
+      cameraShown = true;
+    const camera = buffers.camera && cameraShown ? buffers.camera.canvas : null;
     const screen =
       buffers.screen && look.layout.screen.visible
         ? (await blend(buffers.screen, 'screen', from, to, 1, live))

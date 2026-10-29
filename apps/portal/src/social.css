@@ -458,6 +458,14 @@
   font-size: var(--text-base);
   font-weight: 600;
   line-height: 1.3;
+  /* One line; a long one (several tasks in one post) ends in "…", whole on hover. */
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.post-title.is-full {
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 /* Focus (and elapsed) as small cards on a soft tint. */

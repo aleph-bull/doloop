@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Settings2,
   SkipForward,
+  Smartphone,
   Square,
   X,
 } from 'lucide-react';
@@ -50,6 +51,7 @@ import {
   useMe,
   useNodes,
   usePace,
+  usePostableSessions,
   useRoutines,
   useUpdateSettings,
 } from '../lib/queries';
@@ -63,6 +65,7 @@ import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { StartSessionDialog } from '../components/StartSessionDialog';
 import { SessionSummary } from '../components/SessionSummary';
 import { announceAchievements } from '../lib/achievements';
+import { useCameraHost, useCameraSender, type CameraLinkStatus } from '../lib/camera-link';
 import { isPhone, useWakeLock } from '../lib/device';
 import {
   cameraSupported,
@@ -77,6 +80,7 @@ import {
 import { FocusWake } from '../components/focus/FocusWake';
 import { PhoneCamera, type CameraView } from '../components/focus/PhoneCamera';
 import {
+  CameraLinkPrompt,
   OrientationPrompt,
   presetOf,
   recorderProblem,
@@ -90,6 +94,29 @@ import {
 } from '../components/focus/Timelapse';
 
 type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+
+/** A session a timelapse went through, as it ended. */
+interface CoveredSession {
+  id: string;
+  startedAt: string;
+  endedAt: string;
+  workSeconds: number;
+  breakSeconds: number;
+  /** What it was on, "Course · Task", as a post names it. */
+  subject: string | null;
+}
+
+/** What one post about these sessions says, the way the API works it out. */
+function linkedPost(list: CoveredSession[]) {
+  const work = list.reduce((n, c) => n + c.workSeconds, 0);
+  const breaks = list.reduce((n, c) => n + c.breakSeconds, 0);
+  const subjects = [...new Set(list.flatMap((c) => (c.subject ? [c.subject] : [])))];
+  return {
+    minutes: Math.round(work / 60),
+    elapsedMinutes: Math.round((work + breaks) / 60),
+    subject: subjects.length ? subjects.join(', ') : null,
+  };
+}
 
 /** Seconds of stillness before the controls fade away. */
 const STILL_SECONDS = 4;
@@ -276,6 +303,16 @@ export function Focus() {
           : null;
   const recording = wantsRecording && (!phone || orientation !== null);
   const orientAskOpen = phone && wantsRecording && !!pickSession && orientation === null;
+  /**
+   * A phone filming for the computer recording this session (lib/camera-link.ts): the
+   * session it films for. The computer takes the stills; this phone only sends its camera.
+   */
+  const [filmsFor, setFilmsFor] = useState<string | null>(null);
+  const linking = phone && !!pickSession && filmsFor === pickSession;
+  /** The session the phone was asked about filming for the computer, so it's asked once. */
+  const [linkAskedFor, setLinkAskedFor] = useState<string | null>(null);
+  /** The camera is on: recording here, or filming for the computer. */
+  const cameraOn = recording || linking;
   // A remembered answer is kept for the session once the camera is on, so changing the
   // setting mid-session can't turn the video round.
   useEffect(() => {
@@ -294,6 +331,22 @@ export function Focus() {
   }, []);
   /** Off to Social with the video: the stills behind it are safe to leave. */
   const tlHandedOff = useRef(false);
+  /**
+   * Sessions this recording went through and that have ended, oldest first. A recording goes
+   * on into the next session in this tab while its video isn't made yet, so tasks done one
+   * after another make one timelapse, and one post.
+   */
+  const [tlCovered, setTlCovered] = useState<CoveredSession[]>([]);
+  /** What those sessions add to each still's clocks, so the video's run on across them. */
+  const tlOffset = useRef({ work: 0, breaks: 0 });
+  /** The session the recording was on in, so its end knows it was part of it. */
+  const tlRecordedIn = useRef<string | null>(null);
+  /** A session ended while recording: the next one here picks the recording up. */
+  const tlCarry = useRef<{
+    from: string;
+    screen: boolean;
+    o: TimelapseOrientation | null;
+  } | null>(null);
 
   // Where the session stands right now, from the server's timer and the wall clock: the
   // recorder takes stills only in focus, and stamps each with the time studied.
@@ -323,11 +376,12 @@ export function Focus() {
     });
     const v = viewTimer(t, now);
     const onBreak = t.phase === 'short-break' || t.phase === 'long-break';
+    const off = tlOffset.current;
     return {
       phase: t.phase,
-      workSeconds: v.workSeconds,
+      workSeconds: off.work + v.workSeconds,
       breakSeconds: onBreak ? v.phaseElapsedSeconds : null,
-      totalSeconds: v.workSeconds + v.breakSeconds,
+      totalSeconds: off.work + off.breaks + v.workSeconds + v.breakSeconds,
       title: titleRef.current,
     };
   }, []);
@@ -369,8 +423,10 @@ export function Focus() {
   const screenAskedFor = useRef<string | null>(null);
   const screenSessionId = session?.session.id ?? null;
   const tlSources = useMemo(() => ({ camera: true, screen: screenOn }), [screenOn]);
+  // A computer recording takes a phone's camera in place of its own while one films for it.
+  const phoneCamera = useCameraHost(!phone && recording ? screenSessionId : null, inFocus);
   const recorder = useTimelapseRecorder({
-    recording,
+    recording: cameraOn,
     capturing: inFocus,
     sources: tlSources,
     options: tlOptions,
@@ -379,7 +435,45 @@ export function Focus() {
       return { workSeconds, breakSeconds, totalSeconds, title };
     },
     facing,
+    remote: phoneCamera,
+    keepStills: !linking,
   });
+  // A phone open on a session the computer is recording offers to film for it.
+  const cameraLink = useCameraSender({
+    sessionId: phone ? pickSession : null,
+    watch: !!session && !recording,
+    film: linking,
+    stream: linking ? recorder.stream : null,
+    onHostGone: () => {
+      setFilmsFor(null);
+      toast('Your computer stopped recording.');
+    },
+  });
+  const linkAskOpen =
+    phone &&
+    !!pickSession &&
+    cameraLink.host &&
+    !cameraOn &&
+    linkAskedFor !== pickSession &&
+    !tlAskOpen;
+  const filmForComputer = () => {
+    if (!pickSession) return;
+    // Its own timelapse isn't asked about this session any more: the computer has it.
+    tlAskedFor.current = pickSession;
+    setTlAskOpen(false);
+    setLinkAskedFor(pickSession);
+    setFilmsFor(pickSession);
+  };
+
+  // The computer says when a phone takes over its camera, and when it lets go mid-recording.
+  const fromPhone = recorder.remote;
+  const wasFromPhone = useRef(false);
+  useEffect(() => {
+    if (fromPhone === wasFromPhone.current) return;
+    wasFromPhone.current = fromPhone;
+    if (fromPhone) toast('Filming from your phone.');
+    else if (recording) toast('Your phone stopped filming.');
+  }, [fromPhone, recording, toast]);
 
   // Phones list every camera only once one is allowed, so look again when it comes on.
   useEffect(() => {
@@ -387,7 +481,7 @@ export function Focus() {
   }, [phone, recorder.status]);
 
   /** On a phone, recording is the camera screen, which takes the focus screen's place. */
-  const cameraScreen = phone && recording && !!session;
+  const cameraScreen = phone && cameraOn && !!session;
   // The phone's camera stops when its screen locks, so the screen stays on while filming.
   useWakeLock(cameraScreen);
 
@@ -411,14 +505,26 @@ export function Focus() {
   /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
   const tlPending = recorder.count > 0 && recorder.count !== tlSavedAt;
 
-  // The camera would not start: say why once, and stop trying.
+  // The camera would not start: say why once, and stop trying. A computer recording its
+  // screen carries on without it, since a phone can film for it (and the screen alone is a
+  // timelapse too); it says so once a session.
   const problem = recorderProblem(recorder.status);
+  const screenCarries = !phone && (screenOn || screenAskOpen);
+  const toldNoCamera = useRef<string | null>(null);
   useEffect(() => {
     if (!problem) return;
+    if (screenCarries) {
+      if (toldNoCamera.current === screenSessionId) return;
+      toldNoCamera.current = screenSessionId;
+      toast(recorderProblem(recorder.status, true) ?? problem);
+      return;
+    }
     toast(problem);
     setRecording(false);
+    setFilmsFor(null);
     setScreenAskOpen(false);
-  }, [problem, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [problem, screenCarries, toast]);
 
   // The screen share fell short: say so once. The camera carries on either way.
   const screenIssue = recording && screenOn ? screenProblem(recorder.screenStatus) : null;
@@ -431,6 +537,70 @@ export function Focus() {
     setScreenOn(false);
     setScreenAskOpen(false);
   }, [screenSessionId]);
+
+  // A recording that starts with stills already made into a video starts over; with stills
+  // not yet made into one, it goes on with them (the same session, or the next).
+  const recorderRef = useRef(recorder);
+  const savedAtRef = useRef(tlSavedAt);
+  useEffect(() => {
+    recorderRef.current = recorder;
+    savedAtRef.current = tlSavedAt;
+  });
+  useEffect(() => {
+    if (!recording) return;
+    if (screenSessionId) tlRecordedIn.current = screenSessionId;
+    const r = recorderRef.current;
+    if (r.count > 0 && r.count !== savedAtRef.current) return;
+    if (r.count > 0) r.clear();
+    setTlCovered([]);
+    tlOffset.current = { work: 0, breaks: 0 };
+  }, [recording, screenSessionId]);
+
+  // The session after one that ended while recording picks the recording up, screen
+  // included, while its video isn't made yet: tasks one after another in one timelapse.
+  useEffect(() => {
+    const carry = tlCarry.current;
+    if (!screenSessionId || !carry || carry.from === screenSessionId) return;
+    tlCarry.current = null;
+    if (!tlPending) return;
+    tlAskedFor.current = screenSessionId;
+    screenAskedFor.current = screenSessionId;
+    if (phone && carry.o) setPicked({ session: screenSessionId, o: carry.o });
+    if (carry.screen) setScreenOn(true);
+    setRecording(true);
+    toast('Still recording.');
+  }, [screenSessionId, tlPending, phone, toast]);
+
+  /** A session ends: one the recording went through joins it, and its numbers run on. */
+  const coverEnded = (s: EndSummary) => {
+    const id = s.session.id;
+    if (tlRecordedIn.current !== id || recorder.count === 0) return;
+    tlRecordedIn.current = null;
+    const subject =
+      s.session.nodeId && nodeIndex.byId.has(s.session.nodeId)
+        ? focusLabel(focusContext(nodeIndex.byId, s.session.nodeId, ''))
+        : null;
+    setTlCovered((c) =>
+      c.some((x) => x.id === id)
+        ? c
+        : [
+            ...c,
+            {
+              id,
+              startedAt: s.session.startedAt,
+              endedAt: s.session.endedAt ?? new Date().toISOString(),
+              workSeconds: s.session.workSeconds,
+              breakSeconds: s.session.breakSeconds,
+              subject,
+            },
+          ],
+    );
+    tlOffset.current = {
+      work: tlOffset.current.work + s.session.workSeconds,
+      breaks: tlOffset.current.breaks + s.session.breakSeconds,
+    };
+    tlCarry.current = recording ? { from: id, screen: screenOn, o: picked?.o ?? null } : null;
+  };
 
   // The first recording in a session: ask about the screen.
   useEffect(() => {
@@ -483,13 +653,16 @@ export function Focus() {
   // first paint: "always" opens straight onto the camera, and "ask" puts the question up at
   // once over the focus screen, rather than showing a layout for a second and then swapping
   // it out from under the user. A phone has no audio question to wait for.
+  // A computer already recording the session comes first: the phone asks whether to film for
+  // it, and only after "Not now" goes on to its own timelapse.
+  const linkFirst = !cameraLink.checked || (cameraLink.host && linkAskedFor !== sessionId);
   useLayoutEffect(() => {
     if (!phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
-    if (!cameraSupported() || tlPending) return;
+    if (!cameraSupported() || tlPending || linkFirst) return;
     tlAskedFor.current = sessionId;
     if (tl.record === 'always') setRecording(true);
     else if (tl.record === 'ask') setTlAskOpen(true);
-  }, [phone, tl, sessionId, tlPending]);
+  }, [phone, tl, sessionId, tlPending, linkFirst]);
   useEffect(() => {
     if (phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
     if (askOpen || audio.state === 'requesting' || !cameraSupported()) return;
@@ -512,7 +685,7 @@ export function Focus() {
     if (recording) wake();
   }, [recording, inFocus, wake]);
   /** How dark the resting screen goes: the preset's dim while a timelapse is recording. */
-  const restingDim = recording && recorder.live ? (preset?.dim ?? 0) : 0;
+  const restingDim = cameraOn && recorder.live ? (preset?.dim ?? 0) : 0;
 
   // Unsaved stills live only in this tab: ask before it closes.
   useEffect(() => {
@@ -530,7 +703,8 @@ export function Focus() {
    * While a question or the browser's picker is up, the clock waits: choosing a window to
    * share, or whether to film, is not studying. Released the moment it closes, however it went.
    */
-  const holdTimer = askOpen || tlAskOpen || orientAskOpen || audio.state === 'requesting';
+  const holdTimer =
+    askOpen || tlAskOpen || orientAskOpen || linkAskOpen || audio.state === 'requesting';
   /** The "try again" line after a share that fell short. Closed with its x for this visit. */
   const [retryClosed, setRetryClosed] = useState(false);
   useEffect(() => {
@@ -582,8 +756,22 @@ export function Focus() {
   // How it listens: the preset, or the custom sliders.
   const tuning = useMemo(() => (vis ? visualizerTuning(vis) : null), [vis]);
 
+  // The sessions the summary's timelapse (and its post) are about: those the recording went
+  // through that can still be posted, the summary's own last.
+  const postable = usePostableSessions().data?.sessionIds;
+  const tlLinked = useMemo(() => {
+    if (!summary) return [];
+    const own = tlCovered.find((c) => c.id === summary.session.id);
+    if (!own) return tlCovered.length ? tlCovered : [];
+    const open = postable ? new Set(postable) : null;
+    return tlCovered.filter((c) => c === own || !open || open.has(c.id));
+  }, [summary, tlCovered, postable]);
+
   /* ---------- leaving ---------- */
-  const toSocial = useSocialAfterSession(summary?.session ?? null);
+  const toSocial = useSocialAfterSession(
+    summary?.session ?? null,
+    tlLinked.map((c) => c.id),
+  );
   const summarySessionId = summary?.session.id ?? null;
   const leave = useCallback(() => {
     void toSocial().then((path) => {
@@ -628,7 +816,9 @@ export function Focus() {
     };
   }, [session]);
 
-  if (!settings || !active.data || !nodes.data) {
+  // A phone waits for its first look for a computer too, so the screen isn't swapped for the
+  // camera a moment after it shows.
+  if (!settings || !active.data || !nodes.data || (phone && !!session && !cameraLink.checked)) {
     return (
       <div className="focus-screen focus-centre on-backdrop">
         <Backdrop
@@ -771,17 +961,19 @@ export function Focus() {
             cameraScreen
               ? {
                   recorder,
-                  filming: inFocus,
-                  orientation: orientation ?? 'upright',
+                  filming: linking ? cameraLink.filming : inFocus,
+                  orientation: linking ? null : (orientation ?? 'upright'),
+                  link: linking ? cameraLink.status : null,
                   facing,
                   onFlip: twoCameras ? flipCamera : undefined,
-                  onStopRecording: () => setRecording(false),
+                  onStopRecording: () => (linking ? setFilmsFor(null) : setRecording(false)),
                   view: cameraView,
                   onViewChange: setCameraView,
                 }
               : null
           }
           onEnded={(s) => {
+            coverEnded(s);
             setSummary(s);
             setRecording(false);
             void qc.invalidateQueries({ queryKey: keys.active });
@@ -805,23 +997,13 @@ export function Focus() {
               recording={recording}
               onSaved={() => setTlSavedAt(recorder.count)}
               onVideo={keepTlVideo}
-              sessionId={summary.session.id}
+              sessionIds={tlLinked.map((c) => c.id)}
               sessionSpan={{
-                startedAt: summary.session.startedAt,
-                endedAt: summary.session.endedAt,
+                startedAt: tlLinked[0]?.startedAt ?? summary.session.startedAt,
+                endedAt: tlLinked[tlLinked.length - 1]?.endedAt ?? summary.session.endedAt,
               }}
               orientation={picked?.o ?? null}
-              postSession={{
-                minutes: Math.round(summary.session.workSeconds / 60),
-                elapsedMinutes: Math.round(
-                  (summary.session.workSeconds + summary.session.breakSeconds) / 60,
-                ),
-                // Named as the post will be, "Course · Task".
-                subject:
-                  summary.session.nodeId && nodeIndex.byId.has(summary.session.nodeId)
-                    ? focusLabel(focusContext(nodeIndex.byId, summary.session.nodeId, ''))
-                    : null,
-              }}
+              postSession={linkedPost(tlLinked)}
             />
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
@@ -884,18 +1066,31 @@ export function Focus() {
               folded={folded.includes('timelapse')}
               onToggle={() => toggleFold('timelapse')}
             >
+              {/* Asked once a session; here it can film for the computer again. */}
+              {phone && session && cameraLink.host && !cameraOn && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setSheetOpen(false);
+                    filmForComputer();
+                  }}
+                >
+                  <Smartphone size={15} aria-hidden /> Film from this phone
+                </Button>
+              )}
               <TimelapseSettings
                 settings={settings}
                 device={device}
                 onChange={patch}
                 withRecordChoice
                 linkToLayout
-                recording={recording}
+                recording={cameraOn}
                 onRecordingChange={
                   session && cameraSupported()
                     ? (next) => {
                         tlAskedFor.current = session.session.id;
-                        setRecording(next);
+                        if (!next && linking) setFilmsFor(null);
+                        else setRecording(next);
                       }
                     : undefined
                 }
@@ -908,9 +1103,17 @@ export function Focus() {
                   onChange={patch}
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
-                  sessionId={session?.session.id ?? null}
+                  sessionIds={[
+                    ...tlCovered.map((c) => c.id),
+                    ...(session ? [session.session.id] : []),
+                  ]}
                   sessionSpan={
-                    session ? { startedAt: session.session.startedAt, endedAt: null } : null
+                    session
+                      ? {
+                          startedAt: tlCovered[0]?.startedAt ?? session.session.startedAt,
+                          endedAt: null,
+                        }
+                      : null
                   }
                   orientation={orientation ?? picked?.o ?? null}
                 />
@@ -940,6 +1143,12 @@ export function Focus() {
       )}
 
       <ScreenPrompt open={screenAskOpen} onYes={shareScreen} onNo={() => setScreenAskOpen(false)} />
+
+      <CameraLinkPrompt
+        open={linkAskOpen}
+        onYes={filmForComputer}
+        onNo={() => setLinkAskedFor(pickSession)}
+      />
 
       <TimelapsePrompt
         open={tlAskOpen}
@@ -998,7 +1207,8 @@ interface FocusSessionProps {
   camera: {
     recorder: TimelapseRecorder;
     filming: boolean;
-    orientation: TimelapseOrientation;
+    orientation: TimelapseOrientation | null;
+    link: CameraLinkStatus | null;
     facing: CameraFacing;
     onFlip?: () => void;
     onStopRecording: () => void;

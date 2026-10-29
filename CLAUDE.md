@@ -574,6 +574,15 @@ in its own tab sends the tab that opened it there and closes (`sendOpenerTo` /
 `useOpenerRequests` in `lib/focus-tab.ts`). The button that posts from the timelapse's Share
 to Social preview says "Social" (owner); the feed's composer still says Post.
 
+**Several sessions, one post** (2026-10-29): a post can be about several sessions on
+different tasks done one after another (`post_sessions`, a session in one post at most;
+`sessionIds` on `POST /api/social/posts`, up to 6; `posts.session_id` stays the first). Its
+numbers are added up, it runs from the first start to the last end, its title names each
+task once ("A · x, B · y"), and any query that asks "is this session posted?" must check
+`post_sessions` as well as `posts.session_id`. The post box links more with "Link another
+session". A post's title is one line ending in "…" when too long, whole on hover
+(`PostTitle`). What follows was written for one session and still holds for each.
+
 **Posts.** A post is always about one finished session (`sessionId` is required, the
 composer's Post button waits for one) and carries the session's minutes and what it was on,
 "Course · Task" (root course and the task itself, never the units between; `focusLabel`),
@@ -745,6 +754,25 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   at real speed. Clip frames are stills with `clip` set, never thinned; `planTimelapse`
   takes `liveMarks(stills)` and slots each clip in where it was filmed. The why and the
   details are in DECISIONS.md, "Live clip".
+- **A phone filming for the computer** (2026-10-28, `lib/camera-link.ts`): a phone open on a
+  session the computer is recording asks "Film from this phone?", then streams its camera
+  straight to the computer over WebRTC; the computer's recorder takes it as its camera
+  (`remote` on `useTimelapseRecorder`; the phone's own runs with `keepStills: false`), and
+  its webcam comes back when the phone goes. The API only passes one offer and one answer
+  (`POST /api/camera-link`, in memory); nothing is uploaded. No TURN relay, so devices on
+  networks that keep them apart won't link. The phone's camera screen in this mode has Stop
+  filming where Stop the session was: the session ends on the computer, which makes the
+  video. A computer with no webcam carries on recording its screen. DECISIONS.md, "A phone
+  films for the computer's timelapse". Testing: two headless Chrome pages with
+  `--use-fake-device-for-media-stream`, one in a phone's shape (touch, 390 px); a real phone
+  needs HTTPS for its camera.
+- **One recording across sessions** (2026-10-29, Focus.tsx): a session that ends while
+  recording hands it on to the next one started in the same tab while the video isn't saved
+  or shared yet (`tlCarry`): the camera and screen come back on by themselves, and each
+  still's clocks carry what the earlier sessions added up (`tlOffset` in `sample`), so the
+  video runs on. `tlCovered` lists the sessions it went through; the summary's card and
+  the trip to Social post them all as one. A recording that starts with saved stills
+  clears them first.
 
 **The layout (Settings › Timelapse, `/settings#timelapse`).**
 - **Two presets, Phone and Computer**, each folded until clicked (`/settings#timelapse-phone`

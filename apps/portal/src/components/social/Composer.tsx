@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Image as ImageIcon, Timer, Video, X } from 'lucide-react';
+import { Image as ImageIcon, Link2, Timer, Video, X } from 'lucide-react';
 import { useSearchParams } from 'react-router';
 import { Button, Panel, useToast } from '@komogon/ui';
-import { takeTimelapse } from '../../lib/after-session';
+import { postSessions, takeTimelapse } from '../../lib/after-session';
 import { fmtDate, fmtMinutes } from '../../lib/format';
 import {
   FALLBACK_LIMITS,
@@ -33,15 +33,22 @@ const MAX = 500;
 /** What one post carries: one video and three pictures (the API's limits). */
 const MAX_VIDEOS = 1;
 const MAX_IMAGES = 3;
+/** Sessions one post can hold (the API's limit). */
+const MAX_SESSIONS = 6;
 
-/** Where a post starts: a line, a session from the last few days, and a video and pictures. */
+/**
+ * Where a post starts: a line, a session from the last few days (others linked to it, for
+ * tasks done one after another), and a video and pictures.
+ */
 export function Composer() {
   const me = useMe().data?.user;
   const avatar = useAvatar().data?.dataUrl ?? null;
   const create = useCreatePost();
   const { toast } = useToast();
   const [text, setText] = useState('');
-  const [sessionId, setSessionId] = useState('');
+  /** The sessions it is about: the one picked, then any linked to it. */
+  const [sessionIds, setSessionIds] = useState<string[]>([]);
+  const sessionId = sessionIds[0] ?? '';
   const [showElapsed, setShowElapsed] = useState(false);
   // Settings › Social can keep every post to friends; then this one is too.
   const allFriends = me?.settings.social.posts === 'friends';
@@ -67,20 +74,22 @@ export function Composer() {
     return (sessions ?? [])
       .filter((s) => s.endedAt && s.workSeconds >= 60 && open.has(s.id))
       .slice(0, 10)
-      .map((s) => ({
-        id: s.id,
-        label: `${fmtDate(s.startedAt)} · ${fmtMinutes(s.workSeconds / 60)} focus${
-          s.nodeId && titles.get(s.nodeId)
-            ? ` · ${titles.get(s.nodeId)}`
-            : s.routineId
-              ? ' · routine'
-              : ''
-        }`,
-      }));
+      .map((s) => {
+        const on =
+          s.nodeId && titles.get(s.nodeId) ? titles.get(s.nodeId)! : s.routineId ? 'routine' : '';
+        return {
+          id: s.id,
+          label: `${fmtDate(s.startedAt)} · ${fmtMinutes(s.workSeconds / 60)} focus${on ? ` · ${on}` : ''}`,
+          // On a linked session's chip.
+          short: on || `${fmtMinutes(s.workSeconds / 60)} focus`,
+        };
+      });
   }, [sessions, nodes, postable]);
+  const linkable = recent.filter((s) => !sessionIds.includes(s.id));
 
   // Sent here from a session's summary (`?post=`, lib/after-session.ts): that session picked
-  // and the box open, with the timelapse made for it attached, then the address forgets it.
+  // (with any before it in the same timelapse) and the box open, with the timelapse made for
+  // it attached, then the address forgets it.
   const [params, setParams] = useSearchParams();
   const asked = params.get('post');
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -98,11 +107,12 @@ export function Composer() {
       return;
     }
     if (settling || !sessions || !postable) return;
-    if (recent.some((s) => s.id === asked)) {
-      setSessionId(asked);
+    const found = postSessions(asked).filter((id) => recent.some((s) => s.id === id));
+    if (found.length) {
+      setSessionIds(found.slice(0, MAX_SESSIONS));
       setOpened(true);
       // The box is empty here, so the video fits; one too big waits on "Compress it".
-      const video = takeTimelapse(asked);
+      const video = takeTimelapse(found);
       const problem = video ? mediaProblem(video, limits) : null;
       if (video && problem?.kind === 'size')
         setOversize({ file: video, maxBytes: problem.maxBytes });
@@ -198,14 +208,14 @@ export function Composer() {
         );
       await create.mutateAsync({
         body: text.trim() || undefined,
-        sessionId,
+        sessionIds,
         showElapsed,
         friendsOnly: friendsOnly || allFriends,
         files: sent.length ? sent : undefined,
         poster,
       });
       setText('');
-      setSessionId('');
+      setSessionIds([]);
       setShowElapsed(false);
       setFriendsOnly(false);
       clearFiles();
@@ -218,7 +228,7 @@ export function Composer() {
     }
   };
 
-  const resting = !opened && !text && !sessionId && files.length === 0 && !oversize;
+  const resting = !opened && !text && sessionIds.length === 0 && files.length === 0 && !oversize;
 
   return (
     <Panel as="section" className={`composer${resting ? ' is-resting' : ''}`} aria-label="New post">
@@ -246,11 +256,52 @@ export function Composer() {
               <select
                 className="select composer-select"
                 value={sessionId}
-                onChange={(e) => setSessionId(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSessionIds((ids) => (v ? [v, ...ids.slice(1).filter((x) => x !== v)] : []));
+                }}
                 aria-label="Share a session"
               >
                 <option value="">Which session?</option>
-                {recent.map((s) => (
+                {recent
+                  .filter((s) => s.id === sessionId || !sessionIds.includes(s.id))
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
+          {/* Sessions on other tasks, one after another: one post, and one timelapse. */}
+          {sessionIds.slice(1).map((id) => (
+            <span key={id} className="chip composer-file">
+              <Link2 size={13} aria-hidden />
+              {recent.find((s) => s.id === id)?.short ?? 'Session'}
+              <button
+                type="button"
+                className="composer-file-x"
+                aria-label="Unlink this session"
+                onClick={() => setSessionIds((ids) => ids.filter((x) => x !== id))}
+              >
+                <X size={12} aria-hidden />
+              </button>
+            </span>
+          ))}
+          {sessionId && linkable.length > 0 && sessionIds.length < MAX_SESSIONS && (
+            <label className="composer-session">
+              <Link2 size={15} aria-hidden />
+              <select
+                className="select composer-select"
+                value=""
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v) setSessionIds((ids) => (ids.includes(v) ? ids : [...ids, v]));
+                }}
+                aria-label="Link another session"
+              >
+                <option value="">Link another session</option>
+                {linkable.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.label}
                   </option>

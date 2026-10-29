@@ -158,6 +158,31 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+/** A note one side of a phone filming for a computer leaves for the other (lib/camera-link.ts). */
+export interface CameraLinkMessage {
+  id: number;
+  link: string;
+  kind: 'offer' | 'answer' | 'bye';
+  sdp?: string;
+}
+
+export interface CameraLinkExchange {
+  sessionId: string;
+  /** The computer recording the session, or the phone filming for it. */
+  role: 'host' | 'camera';
+  /** The highest message id already read. */
+  after?: number;
+  send?: Array<Omit<CameraLinkMessage, 'id'>>;
+  /** The computer stops recording. */
+  leave?: boolean;
+}
+
+export interface CameraLinkState {
+  /** A computer is recording this session. */
+  host: boolean;
+  messages: CameraLinkMessage[];
+}
+
 /** A calendar added by its link. The link itself never comes back from the API. */
 export interface CalendarFeed {
   id: string;
@@ -409,7 +434,8 @@ export type FeedScope = 'everyone' | 'friends';
 
 export interface NewPost {
   body?: string;
-  sessionId?: string;
+  /** The sessions it is about, one or several (tasks done one after another, in one post). */
+  sessionIds?: string[];
   /** Show the session's minutes and task on the post (the API's default); false leaves them off. */
   showTime?: boolean;
   /** Also show the time elapsed: focus and breaks together. */
@@ -1101,6 +1127,8 @@ export const api = {
     request<void>('PUT', '/api/push/subscription', subscription),
   pushUnsubscribe: (endpoint: string) =>
     request<void>('DELETE', '/api/push/subscription', { endpoint }),
+  cameraLink: (body: CameraLinkExchange) =>
+    request<CameraLinkState>('POST', '/api/camera-link', body),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

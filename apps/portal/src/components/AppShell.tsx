@@ -34,7 +34,7 @@ import {
   useToast,
   watchGlassPanes,
 } from '@komogon/ui';
-import { handTimelapse, postPathSession } from '../lib/after-session';
+import { handTimelapse, postPathSessions } from '../lib/after-session';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FOCUS_PATH, openFocusTab, useOpenerRequests } from '../lib/focus-tab';
@@ -453,7 +453,7 @@ export function AppShell() {
   // the timelapse made for it.
   const goPost = useCallback(
     (path: string, file: File | null) => {
-      handTimelapse(postPathSession(path), file);
+      handTimelapse(postPathSessions(path).at(-1) ?? null, file);
       navigate(path);
     },
     [navigate],

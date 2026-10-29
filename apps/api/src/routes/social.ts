@@ -19,12 +19,13 @@ import {
   postLikes,
   postMedia,
   posts,
+  postSessions,
   routines,
   sessions,
   users,
   type UserRow,
 } from '../db/schema';
-import { badRequest, conflict, forbidden, notFound } from '../errors';
+import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from '../errors';
 import { inWorldOf, ownerInWorldOf, sameWorld } from '../services/dev-accounts';
 import { removeAll, type MediaStore } from '../services/media-store';
 import { loadPeople, type Person } from '../services/people';
@@ -51,6 +52,8 @@ export const POST_MAX_VIDEOS = 1;
 export const POST_MAX_IMAGES = 3;
 /** Only a session that ended within this long, and has no post yet, can be posted. */
 export const POST_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60_000;
+/** Sessions one post can hold: tasks done one after another, in one post and one timelapse. */
+export const POST_MAX_SESSIONS = 6;
 /** Room for a video and three pictures sent with the post, as base64 (no R2). */
 const POST_BODY_LIMIT = 24 * 1024 * 1024;
 export const FEED_PAGE = 20;
@@ -272,12 +275,15 @@ export async function loadPosts(
   const liked = sql<boolean>`exists(select 1 from post_likes l where l.post_id = posts.id and l.user_id = ${viewerId})`;
   const comments = sql<number>`(select count(*) from post_comments c where c.post_id = posts.id)::int`;
   const shares = sql`(posts.user_id = ${viewerId} or coalesce((select (u.settings -> 'social' ->> 'stats')::boolean from users u where u.id = posts.user_id), true))`;
+  // Every session in the post (post_sessions; posts.session_id for a row from before it).
+  const inPost = sql`(s.id = posts.session_id or s.id in (select ps.session_id from post_sessions ps where ps.post_id = posts.id))`;
   const badges = sql<
     string[] | string | null
-  >`(select s.badges_awarded from sessions s where s.id = posts.session_id and ${shares})`;
+  >`(select jsonb_agg(distinct b.badge) from sessions s cross join lateral jsonb_array_elements_text(s.badges_awarded) as b(badge) where ${inPost} and ${shares})`;
+  // The streak as the last of them ended.
   const streak = sql<
     number | null
-  >`(select s.streak from sessions s where s.id = posts.session_id and ${shares})`;
+  >`(select s.streak from sessions s where ${inPost} and ${shares} order by s.ended_at desc nulls last limit 1)`;
   const rows = await db
     .select({
       id: posts.id,
@@ -475,6 +481,14 @@ export function socialRoutes(
               .from(posts)
               .where(and(eq(posts.userId, req.user.id), isNotNull(posts.sessionId))),
           ),
+          notInArray(
+            sessions.id,
+            db
+              .select({ id: postSessions.sessionId })
+              .from(postSessions)
+              .innerJoin(posts, eq(posts.id, postSessions.postId))
+              .where(eq(posts.userId, req.user.id)),
+          ),
         ),
       );
     return { sessionIds: rows.map((r) => r.id) };
@@ -484,7 +498,10 @@ export function socialRoutes(
     const input = z
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
-        sessionId: uuid,
+        /** The session it is about, the way a portal from before `sessionIds` sends it. */
+        sessionId: uuid.optional(),
+        /** Every session it is about: tasks done one after another, in one post. */
+        sessionIds: z.array(uuid).min(1).max(POST_MAX_SESSIONS).optional(),
         /** Show the session's minutes and task on the post; off keeps the post to the words and the file. */
         showTime: z.boolean().default(true),
         /** Also show focus and breaks together (not pauses), with the time shown. */
@@ -522,35 +539,52 @@ export function socialRoutes(
       (input.media || input.upload ? [{ media: input.media, upload: input.upload }] : []);
     if (wanted.some((f) => !f.media === !f.upload)) throw badRequest('One file each');
 
-    let minutes: number | null = null;
+    const asked = [...new Set(input.sessionIds ?? (input.sessionId ? [input.sessionId] : []))];
+    if (asked.length === 0) throw badRequest('Pick a session');
+    // Only your own finished sessions, so the numbers on a post are always real ones.
+    const found = await db.query.sessions.findMany({
+      where: and(inArray(sessions.id, asked), eq(sessions.userId, req.user.id)),
+    });
+    if (found.length !== asked.length || found.some((s) => !s.endedAt))
+      throw notFound('No such session');
+    const oldest = dt(clock()).getTime() - POST_SESSION_MAX_AGE_MS;
+    if (found.some((s) => s.endedAt!.getTime() < oldest)) throw badRequest('Too old to post');
+    const [postedNew, postedOld] = await Promise.all([
+      db.query.postSessions.findFirst({
+        where: inArray(postSessions.sessionId, asked),
+        columns: { sessionId: true },
+      }),
+      db.query.posts.findFirst({
+        where: and(eq(posts.userId, req.user.id), inArray(posts.sessionId, asked)),
+        columns: { id: true },
+      }),
+    ]);
+    if (postedNew || postedOld) throw conflict('Already posted');
+    // In the order they happened: the post runs from the first's start to the last's end,
+    // with their focus added up and what each was on.
+    const linked = found.sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+    const work = linked.reduce((n, s) => n + s.workSeconds, 0);
+    const breaks = linked.reduce((n, s) => n + s.breakSeconds, 0);
+    let minutes: number | null = Math.round(work / 60);
     let subject: string | null = null;
     let elapsedMinutes: number | null = null;
     let span: { startedAt: Date; endedAt: Date } | null = null;
-    if (input.sessionId) {
-      // Only your own finished sessions, so the numbers on a post are always real ones.
-      const s = await db.query.sessions.findFirst({
-        where: and(eq(sessions.id, input.sessionId), eq(sessions.userId, req.user.id)),
-      });
-      if (!s || !s.endedAt) throw notFound('No such session');
-      if (s.endedAt.getTime() < dt(clock()).getTime() - POST_SESSION_MAX_AGE_MS)
-        throw badRequest('Too old to post');
-      const posted = await db.query.posts.findFirst({
-        where: and(eq(posts.userId, req.user.id), eq(posts.sessionId, s.id)),
-        columns: { id: true },
-      });
-      if (posted) throw conflict('Already posted');
-      minutes = Math.round(s.workSeconds / 60);
-      // Hiding the time hides when it was too.
-      if (input.showTime) span = { startedAt: s.startedAt, endedAt: s.endedAt };
-      if (input.showTime && input.showElapsed)
-        elapsedMinutes = Math.round((s.workSeconds + s.breakSeconds) / 60);
-      if (!input.showTime) minutes = null;
-      else if (s.nodeId) subject = await taskLabel(db, s.nodeId);
-      else if (s.routineId) {
-        const r = await db.query.routines.findFirst({ where: eq(routines.id, s.routineId) });
-        subject = r?.title ?? null;
+    // Hiding the time hides when it was, and what on, too.
+    if (input.showTime) {
+      span = { startedAt: linked[0]!.startedAt, endedAt: linked[linked.length - 1]!.endedAt! };
+      if (input.showElapsed) elapsedMinutes = Math.round((work + breaks) / 60);
+      const labels: string[] = [];
+      for (const s of linked) {
+        let label: string | null = null;
+        if (s.nodeId) label = await taskLabel(db, s.nodeId);
+        else if (s.routineId) {
+          const r = await db.query.routines.findFirst({ where: eq(routines.id, s.routineId) });
+          label = r?.title ?? null;
+        }
+        if (label && !labels.includes(label)) labels.push(label);
       }
-    }
+      subject = labels.length ? labels.join(', ') : null;
+    } else minutes = null;
 
     const poster = input.poster
       ? parseDataUrl(
@@ -609,7 +643,7 @@ export function socialRoutes(
           .values({
             userId: req.user.id,
             body: input.body,
-            sessionId: input.sessionId ?? null,
+            sessionId: linked[0]!.id,
             minutes,
             subject,
             elapsedMinutes,
@@ -622,6 +656,10 @@ export function socialRoutes(
             createdAt: dt(clock()),
           })
           .returning({ id: posts.id });
+        // The key holds a session to one post, should two posts race for it.
+        await tx
+          .insert(postSessions)
+          .values(linked.map((s) => ({ sessionId: s.id, postId: row!.id })));
         if (ready.length)
           await tx.insert(postMedia).values(
             ready.map((f, position) => ({
@@ -637,6 +675,7 @@ export function socialRoutes(
       });
     } catch (err) {
       if (keys.length) await removeAll(store!, keys, req.log);
+      if (isUniqueViolation(err)) throw conflict('Already posted');
       throw err;
     }
     // The copies under posts/ are the ones kept; the lifecycle rule would get these anyway.

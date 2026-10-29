@@ -4,7 +4,7 @@ import { useAvatar, useMe } from '../../lib/queries';
 import { Avatar } from '../social/Avatar';
 import { CompressOffer } from '../social/CompressOffer';
 import type { PostSession } from '../../lib/api';
-import { SessionSide } from '../social/PostCard';
+import { PostTitle, SessionSide } from '../social/PostCard';
 
 /** The longest line a post on Social takes (POST_MAX_LENGTH in the API). */
 const SOCIAL_MAX = 500;
@@ -188,7 +188,7 @@ const PreviewPost = memo(function PreviewPost({
             <span className="post-when">Just now</span>
           </div>
           <SessionSide session={session} />
-          {session?.subject && <h3 className="post-title">{session.subject}</h3>}
+          {session?.subject && <PostTitle text={session.subject} />}
         </header>
         {body && <p className="post-body">{body}</p>}
         {/* Still until pressed, like a post on the feed: a looping video under the box

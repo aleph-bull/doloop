@@ -530,6 +530,24 @@ export const postMedia = pgTable(
 );
 
 /**
+ * Every session a post is about, several when sessions on different tasks went into one post
+ * and one timelapse. A session goes in one post at most (the key). `posts.session_id` stays
+ * the first of them, for what reads a single session.
+ */
+export const postSessions = pgTable(
+  'post_sessions',
+  {
+    sessionId: uuid('session_id')
+      .primaryKey()
+      .references(() => sessions.id, { onDelete: 'cascade' }),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+  },
+  (t) => [index('post_sessions_post_idx').on(t.postId)],
+);
+
+/**
  * Every R2 upload link handed out, with the size it was signed for, kept two days: what
  * each account sent in the last day, and what the bucket may have taken since it was last
  * measured (services/upload-quota.ts).
@@ -1109,6 +1127,7 @@ export const schema = {
   rollHoldings,
   posts,
   postMedia,
+  postSessions,
   mediaUploads,
   postLikes,
   postComments,

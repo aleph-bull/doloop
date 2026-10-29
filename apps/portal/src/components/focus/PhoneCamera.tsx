@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useToast } from '@komogon/ui';
+import type { CameraLinkStatus } from '../../lib/camera-link';
 import { isUpright } from '../../lib/device';
 import type { SessionController } from '../../lib/session-controller';
 import { clipTime, type CameraFacing, type TimelapseRecorder } from '../../lib/timelapse';
@@ -33,8 +34,14 @@ export interface PhoneCameraProps {
   recorder: TimelapseRecorder;
   /** Stills are being taken right now. */
   filming: boolean;
-  /** Which way the video goes, picked before the camera opened. */
-  orientation: TimelapseOrientation;
+  /** Which way the video goes, picked before the camera opened; null filming for a computer. */
+  orientation: TimelapseOrientation | null;
+  /**
+   * Filming for the computer recording this session instead of recording here
+   * (lib/camera-link.ts): how the link stands. The computer takes the stills and makes the
+   * video, so the session is ended there; the button on the right stops filming.
+   */
+  link?: CameraLinkStatus | null;
   /** Which camera is filming, so the front one shows as a mirror. */
   facing: CameraFacing;
   /** Swap cameras; absent when there is only one. */
@@ -75,6 +82,7 @@ export function PhoneCamera({
   recorder,
   filming,
   orientation,
+  link = null,
   facing,
   onFlip,
   onStopRecording,
@@ -118,7 +126,7 @@ export function PhoneCamera({
   useEffect(() => {
     const media = window.matchMedia?.('(orientation: portrait)');
     const check = () => {
-      if (toldTurn.current || isUpright() === (orientation === 'upright')) return;
+      if (!orientation || toldTurn.current || isUpright() === (orientation === 'upright')) return;
       toldTurn.current = true;
       toast(orientation === 'upright' ? 'Turn your phone upright.' : 'Turn your phone sideways.');
     };
@@ -133,18 +141,26 @@ export function PhoneCamera({
       ? 'Starting the camera'
       : stopped
         ? 'The camera stopped'
-        : recorder.cameraMuted
-          ? 'The camera is paused'
-          : clip
-            ? `Live clip ${clipTime(clip)}`
-            : filming
-              ? 'Recording'
-              : onBreak
-                ? 'Not filming the break'
-                : timer.phase === 'paused'
-                  ? 'Paused'
-                  : 'Waiting for focus';
-  const clipButton = !!clip || recorder.canClip || recorder.clipsFull;
+        : link === 'connecting'
+          ? 'Connecting to your computer'
+          : link === 'lost'
+            ? 'Reconnecting'
+            : recorder.cameraMuted
+              ? 'The camera is paused'
+              : clip
+                ? `Live clip ${clipTime(clip)}`
+                : filming
+                  ? link
+                    ? 'Filming for your computer'
+                    : 'Recording'
+                  : onBreak
+                    ? 'Not filming the break'
+                    : timer.phase === 'paused'
+                      ? 'Paused'
+                      : 'Waiting for focus';
+  // Filming for a computer, the clips are the computer's (L there).
+  const clipButton = !link && (!!clip || recorder.canClip || recorder.clipsFull);
+  const live = filming && recorder.live && (!link || link === 'on');
 
   const chrome = `focus-chrome${chromeVisible ? '' : ' is-hidden'}`;
 
@@ -165,10 +181,7 @@ export function PhoneCamera({
 
       <div className="pcam-top">
         <span className="pcam-rec" role="status">
-          <span
-            className={`timelapse-dot${filming && recorder.live ? '' : ' is-idle'}`}
-            aria-hidden
-          />
+          <span className={`timelapse-dot${live ? '' : ' is-idle'}`} aria-hidden />
           <span className="pcam-rec-text">{status}</span>
         </span>
         <span className={`pcam-top-actions ${chrome}`}>
@@ -190,14 +203,16 @@ export function PhoneCamera({
               <SwitchCamera size={20} aria-hidden />
             </button>
           )}
-          <button
-            type="button"
-            className="pcam-round"
-            aria-label="Stop recording"
-            onClick={onStopRecording}
-          >
-            <VideoOff size={20} aria-hidden />
-          </button>
+          {!link && (
+            <button
+              type="button"
+              className="pcam-round"
+              aria-label="Stop recording"
+              onClick={onStopRecording}
+            >
+              <VideoOff size={20} aria-hidden />
+            </button>
+          )}
         </span>
       </div>
 
@@ -288,15 +303,26 @@ export function PhoneCamera({
           >
             {ctl.canResume ? <Play size={26} aria-hidden /> : <Pause size={26} aria-hidden />}
           </button>
-          <button
-            type="button"
-            className="pcam-round is-stop"
-            aria-label="Stop the session"
-            onClick={() => void ctl.stop()}
-            disabled={ctl.busy}
-          >
-            <Square size={16} aria-hidden />
-          </button>
+          {link ? (
+            <button
+              type="button"
+              className="pcam-round"
+              aria-label="Stop filming"
+              onClick={onStopRecording}
+            >
+              <VideoOff size={20} aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="pcam-round is-stop"
+              aria-label="Stop the session"
+              onClick={() => void ctl.stop()}
+              disabled={ctl.busy}
+            >
+              <Square size={16} aria-hidden />
+            </button>
+          )}
         </div>
       </div>
     </div>

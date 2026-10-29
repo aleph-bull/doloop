@@ -61,6 +61,23 @@ export function figure(minutes: number): { value: string; unit: string } {
   return { value: String(h >= 100 ? Math.round(h) : Math.round(h * 10) / 10), unit: 'h' };
 }
 
+/**
+ * What a post is about, on one line: one too long (several tasks in one post) ends in "…",
+ * and hovering it shows the whole of it. `full` writes it all out (a phone's post screen).
+ */
+export function PostTitle({ text, full = false }: { text: string; full?: boolean }) {
+  const [cut, setCut] = useState(false);
+  return (
+    <h3
+      className={`post-title${full ? ' is-full' : ''}`}
+      title={cut ? text : undefined}
+      onMouseEnter={(e) => setCut(e.currentTarget.scrollWidth > e.currentTarget.clientWidth)}
+    >
+      {text}
+    </h3>
+  );
+}
+
 /** The top right of a post: when the session ran, then focus (and elapsed) as small cards. */
 export function SessionSide({ session }: { session: PostSession | null }) {
   if (!session) return null;
@@ -820,7 +837,7 @@ export function PostCard({
           </span>
         </div>
         <SessionSide session={post.session} />
-        {post.session?.subject && <h3 className="post-title">{post.session.subject}</h3>}
+        {post.session?.subject && <PostTitle text={post.session.subject} full={!!sheet} />}
       </header>
 
       {editing ? (

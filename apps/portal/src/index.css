@@ -4984,6 +4984,11 @@ button.start-subject:hover {
 :root[data-motion='off'] .timelapse-dot {
   animation: none;
 }
+/* The camera is a phone's, filming for this computer. */
+.timelapse-from {
+  display: inline-flex;
+  margin-right: -4px;
+}
 .timelapse-export {
   display: flex;
   flex-direction: column;
