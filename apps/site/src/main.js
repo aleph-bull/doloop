@@ -817,3 +817,85 @@ const app = appSection ? appTabs(appSection) : null;
 for (const a of document.querySelectorAll('a[data-tab]')) {
   a.addEventListener('click', () => app?.pick(a.dataset.tab));
 }
+
+// ---------- Settling on each part ----------
+
+/*
+ * On a computer, when a scroll comes to rest close to the start of a part, the page eases
+ * onto it, slowly, and anywhere else it stays where it stopped (the owner: "make the screen
+ * stick to sections and then go with enough scroll", then "too aggressive, make it
+ * smoother"). The hero, the timelapses and the phones settle at their top; the app, the looks
+ * and the closing in the middle of the screen. Any new scroll, key, touch or click stops the
+ * ease where it is.
+ */
+if (!still) {
+  const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
+  const parts = [
+    ['.hero', 'top'],
+    ['.fall-band', 'top'],
+    ['#phone', 'top'],
+    ['#app', 'middle'],
+    ['#looks', 'middle'],
+    ['.closing', 'middle'],
+  ]
+    .map(([q, at]) => [document.querySelector(q), at])
+    .filter(([el]) => el);
+  // How near a part a scroll must stop to be eased onto it, as a share of the screen.
+  const NEAR = 0.22;
+  const MS = 700;
+  const inOut = (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
+  let wait = 0;
+  let raf = 0;
+  let gliding = false;
+  const halt = () => {
+    cancelAnimationFrame(raf);
+    raf = 0;
+    gliding = false;
+  };
+  const glide = (to) => {
+    const from = window.scrollY;
+    const start = performance.now();
+    gliding = true;
+    const step = (now) => {
+      const t = Math.min(1, (now - start) / MS);
+      window.scrollTo({ top: from + (to - from) * inOut(t), behavior: 'instant' });
+      if (t < 1) raf = requestAnimationFrame(step);
+      else halt();
+    };
+    raf = requestAnimationFrame(step);
+  };
+  const settle = () => {
+    if (!roomy.matches) return;
+    const y = window.scrollY;
+    const vh = window.innerHeight;
+    const max = document.documentElement.scrollHeight - vh;
+    let best = null;
+    for (const [el, at] of parts) {
+      const r = el.getBoundingClientRect();
+      const top = r.top + y;
+      const to = Math.min(max, Math.max(0, at === 'top' ? top : top + r.height / 2 - vh / 2));
+      const d = Math.abs(to - y);
+      if (d > 2 && d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
+    }
+    if (best !== null) glide(best);
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (gliding) return;
+      clearTimeout(wait);
+      wait = setTimeout(settle, 180);
+    },
+    { passive: true },
+  );
+  for (const type of ['wheel', 'touchstart', 'keydown', 'pointerdown']) {
+    window.addEventListener(
+      type,
+      () => {
+        clearTimeout(wait);
+        if (gliding) halt();
+      },
+      { passive: true },
+    );
+  }
+}

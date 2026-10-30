@@ -1348,34 +1348,6 @@ html.has-scrub .ring-card {
   will-change: transform, opacity;
 }
 
-/* ---------- Settling on each part ---------- */
-
-/*
- * On a computer the page settles on each part as it scrolls: a short scroll springs back to
- * the part on screen and a firm one carries on to the next (the owner: "make the screen stick
- * to sections and then go with enough scroll"). A part taller than the screen, like the
- * pinned timelapses, scrolls freely inside before the next one takes over. Shorter parts settle
- * in the middle of the screen. Phones scroll freely.
- */
-@media (min-width: 641px) and (min-height: 501px) {
-  html {
-    scroll-snap-type: y mandatory;
-  }
-  .hero,
-  .fall-band,
-  #phone {
-    scroll-snap-align: start;
-  }
-  #app,
-  #looks,
-  .closing {
-    scroll-snap-align: center;
-  }
-  .site-footer {
-    scroll-snap-align: end;
-  }
-}
-
 /* ---------- Entrance motion ---------- */
 
 /*
