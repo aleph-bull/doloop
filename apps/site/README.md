@@ -14,7 +14,7 @@ pnpm build      # static output in dist/
 - `index.html` and `src/styles.css`: the app's default photograph (Cotton Candy, frostroomhead
   on Pexels) runs edge to edge behind the hero and fades out at the bottom into a light
   gradient page. One of the owner's timelapses (`clips/morning-exam.mp4`, their 10-23
-  morning before an exam, 2x speed) plays on a CSS laptop, and the dashboard (`today-phone`)
+  morning before an exam, 2x speed, its first 5 s cut at their word) plays on a CSS laptop, and the dashboard (`today-phone`)
   is on a phone hanging in front of it. Two real pieces of the app sit tilted at the hero's
   sides like stickers (`sticker-live`, Live now from the feed; `sticker-week`, the week's
   hours from Analytics; nothing about the rolls, at the owner's word), from 1300px wide,
@@ -26,8 +26,8 @@ pnpm build      # static output in dist/
   (2026-10-30).
 - **Short and calm** (the owner, 2026-10-30: the long scroll made the app look like more than
   it is; "make the site feel fluid beautiful and professional"; earlier, 10-29: "make the
-  site feel interactive but not intimidating"). About eight screens on a computer, two of
-  them the pinned scenes; nothing shows twice.
+  site feel interactive but not intimidating"). About seven screens on a computer, one of
+  them the pinned timelapses; nothing shows twice.
   - **Record** (`#timelapse`): a dusk band: Cotton Candy under a dark plum wash, pinned for a
     screen of scrolling. Seven timelapses fall past "See what you got done." with the app's
     Recording pill, fading in and out at the stage's top and bottom rather than being cut off
@@ -36,7 +36,7 @@ pnpm build      # static output in dist/
     (ink, plum, a rose bloom) drifting sideways in the band's margins (`.fall-edge`).
   - **On your phone** (`#phone`): a hand of five phones (`.phones`: Pomodoro, Tasks and
     courses, the feed in the middle, Jams and groups, Streaks and profile), each in another
-    theme and each a still of its screen, over a bank of mist (`.mist`). `phoneRow` in
+    theme and each a still of its screen, with clouds drifting behind (`.sky`). `phoneRow` in
     `main.js` moves them on springs: they fan out from a stack as the row comes in, the row
     leans toward the pointer, and the one pointed at rises. Picking one (the owner: "like a
     hand of cards", not a popup) puts `data-picked` on the rail: it moves left, grows and
@@ -52,18 +52,20 @@ pnpm build      # static output in dist/
     through and the next tab comes up by itself while the window is on screen, the picked tab
     filling along its foot; the tabs and the card's button pick one by hand, and the window's
     pause holds it. Keep Earn's words true to the app if the shop changes.
-  - **Make it yours** (`#looks`): a deep night-to-violet card, held in the middle of the
-    screen for a screen of scrolling. Sixteen screens in other photos, colours, themes and
-    panels turn across it on the inside of a drum, fanning out as the card comes up and
-    pushed by the scroll, with what can be changed as chips bobbing around the heading (in a
-    row under it below 1024px). The last line names calm, bright and cozy, and lights each in
-    turn every few seconds.
+  - **Make it yours** (`#looks`): a deep night-to-violet card, not pinned (the owner took
+    its pin off). Sixteen screens in other photos, colours, themes and panels turn across it
+    on the inside of a drum, fanning out as the card comes up and pushed by the scroll; it
+    can be dragged round with the mouse and thrown (touch drags sideways, so the page still
+    scrolls). What can be changed sits as chips bobbing around the heading (in a row under it
+    below 1024px). The last line names calm, bright and cozy, and marks each in turn like a
+    highlighter every few seconds.
   - **The closing**: a card of sky, blue into the page's lilac, with mist along its foot.
-- **The mist** (`.mist`, `public/sky`): made the way the app's audio visualizer makes its
-  cloud mist (`packages/ui/src/mist-texture.ts` on core's `cloudNoise`): two banks that tile
-  sideways, dense at the foot with a wandering top edge, the back one wider, fainter and
-  slower, drifting right to left over a faint bank of light. The textures were drawn once by
-  a script with the same noise.
+- **The clouds** (`public/sky`): made the way the app's audio visualizer makes its cloud
+  mist (`packages/ui/src/mist-texture.ts` on core's `cloudNoise`), drawn once by a script
+  with the same noise and shading. Behind the phones, single clouds (`cloud-*`, the bank
+  gathered into an oval) drift across (`.sky`); along the sky card's foot, two banks tile
+  sideways (`.mist`, `mist-*`), the back one wider, fainter and slower, over a faint bank of
+  light.
 - **On a phone the page is flat** (the owner, 2026-10-28): under 641px wide, or under 501px
   tall (a phone held sideways), `main.js` leaves the scenes off and the CSS under the same
   query lays each section out as its words, then its pictures: four clips in a grid on the

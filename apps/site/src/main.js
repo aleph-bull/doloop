@@ -54,8 +54,9 @@ function cycler(words) {
  * growing and turning to face inward as they reach the sides. Each card sits at a place `u`
  * along the arc (-1 at the left edge, 0 in the middle, 1 at the right). The drum turns on
  * its own while it's on screen, right to left, and those leaving one side come back on the
- * other; scrolling gives it a push that eases off. The cards fan out from the middle as the
- * card comes up the screen, and the last line lights its next word every few seconds.
+ * other; scrolling gives it a push that eases off, and it can be dragged round by hand and
+ * thrown. The cards fan out from the middle as the card comes up the screen, and the last
+ * line lights its next word every few seconds.
  */
 function ringScene(scene) {
   const view = scene.querySelector('.ring-view');
@@ -79,6 +80,10 @@ function ringScene(scene) {
   let last = 0;
   let onScreen = false;
   let live = false;
+  /** The pointer holding the drum: its id, where and when it last moved, and how fast. */
+  let held = null;
+  // Arc turned for a drag across the whole strip.
+  const DRAG = 1.3;
 
   const measure = () => {
     W = view.clientWidth || window.innerWidth;
@@ -109,8 +114,11 @@ function ringScene(scene) {
     raf = 0;
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 0;
     last = now;
-    slide += dt * (CRUISE + push);
-    push *= Math.exp(-dt * 2.2);
+    // While it's held, the hand turns it; otherwise its own turn and whatever push it has.
+    if (!held) {
+      slide += dt * (CRUISE + push);
+      push *= Math.exp(-dt * 2.2);
+    }
     wordClock += dt;
     if (wordClock > 2.8) {
       wordClock = 0;
@@ -125,6 +133,37 @@ function ringScene(scene) {
     onScreen = e.isIntersecting;
     if (live && onScreen && !raf) raf = requestAnimationFrame(tick);
   }).observe(scene);
+
+  // Dragged sideways, the cards follow the pointer; let go and the drum carries on at the
+  // speed it was thrown, easing back to its own turn. A touch that moves up or down scrolls
+  // the page instead (touch-action in the CSS), which lets go here.
+  view.addEventListener('pointerdown', (e) => {
+    if (!live || e.button !== 0) return;
+    held = { id: e.pointerId, x: e.clientX, t: e.timeStamp, v: 0 };
+    view.setPointerCapture(e.pointerId);
+    view.classList.add('is-dragging');
+    push = 0;
+    e.preventDefault();
+  });
+  view.addEventListener('pointermove', (e) => {
+    if (!held || e.pointerId !== held.id) return;
+    const step = ((held.x - e.clientX) / W) * DRAG;
+    const dt = Math.max(1, e.timeStamp - held.t) / 1000;
+    slide += step;
+    held.v = held.v * 0.6 + (step / dt) * 0.4;
+    held.x = e.clientX;
+    held.t = e.timeStamp;
+  });
+  const letGo = (e) => {
+    if (!held || e.pointerId !== held.id) return;
+    // Held still before letting go is no throw.
+    const v = e.timeStamp - held.t > 80 ? 0 : held.v;
+    push = clamp(v - CRUISE, -3, 3);
+    held = null;
+    view.classList.remove('is-dragging');
+  };
+  view.addEventListener('pointerup', letGo);
+  view.addEventListener('pointercancel', letGo);
 
   return {
     measure,
@@ -145,6 +184,8 @@ function ringScene(scene) {
       last = 0;
       lastThrough = null;
       push = 0;
+      held = null;
+      view.classList.remove('is-dragging');
       wordClock = 0;
       wordAt = 0;
       word.rest();

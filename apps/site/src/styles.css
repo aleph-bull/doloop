@@ -640,10 +640,6 @@ main {
   color: rgb(255 255 255 / 0.74);
   text-wrap: pretty;
 }
-.fall-copy .fall-note {
-  font-size: 14px;
-  color: rgb(255 255 255 / 0.55);
-}
 /* The app's own recording pill. */
 .rec-pill {
   display: inline-flex;
@@ -726,12 +722,19 @@ main {
 .looks-card .accent-word {
   color: #c9b6ff;
 }
-/* calm, bright, cozy: the one lit takes the heading's colour. */
+/* calm, bright, cozy: the one lit is marked like a highlighter, in the heading's colour. The
+   mark is a shadow, not padding, so the line never shifts as it moves. */
 .cycle-word {
-  transition: color 500ms;
+  border-radius: 6px;
+  transition:
+    color 400ms,
+    background-color 400ms,
+    box-shadow 400ms;
 }
 .cycle-word.is-lit {
-  color: #c9b6ff;
+  color: #1d1442;
+  background-color: #c9b6ff;
+  box-shadow: 0 0 0 4px #c9b6ff;
 }
 .looks-note {
   position: relative;
@@ -868,9 +871,43 @@ main {
     translate: -50% 0;
   }
 }
+/*
+ * Behind the phones, single clouds drawn the same way (the visualizer's noise and shading,
+ * gathered into an oval), drifting slowly across right to left, each at its own height, size
+ * and pace.
+ */
+.sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cloud {
+  position: absolute;
+  left: 100%;
+  top: var(--top);
+  width: var(--w);
+  height: auto;
+  animation: cloud-drift var(--t) linear var(--at) infinite;
+}
+@keyframes cloud-drift {
+  to {
+    translate: calc(-100vw - 100% - 200px) 0;
+  }
+}
+@media (max-width: 640px) {
+  .cloud {
+    width: min(var(--w), 70vw);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .mist span {
     animation: none;
+  }
+  .cloud {
+    animation: none;
+    left: auto;
+    right: 6%;
   }
 }
 
@@ -1244,9 +1281,8 @@ html:not(.has-motion) .phones-rail[data-picked] .hand-text {
   display: block;
 }
 /*
- * Two scenes hold the screen while they play out: the timelapses fall past the words, and the
- * drum turns with its card held in the middle. The timelapses fade in and out at the stage's
- * top and bottom rather than being cut off by its edge.
+ * The timelapse band holds the screen while the timelapses fall past the words; they fade in
+ * and out at the stage's top and bottom rather than being cut off by its edge.
  */
 html.has-scrub .fall {
   height: 200vh;
@@ -1260,17 +1296,14 @@ html.has-scrub .fall-stage {
 html.has-scrub .floaters {
   mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
 }
-html.has-scrub .looks {
-  height: 190vh;
-}
-html.has-scrub .looks-card {
-  position: sticky;
-  top: max(24px, 50vh - 340px);
-}
-/* The ring: every card is placed by main.js around the middle of its strip of the card. */
+/* The ring: every card is placed by main.js around the middle of its strip of the card, and
+   the strip can be dragged to turn it (sideways only, so a touch still scrolls the page). */
 html.has-scrub .ring-view {
   position: relative;
   z-index: 1;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
   height: clamp(300px, 30vw, 400px);
   padding: 0;
 }
@@ -1282,8 +1315,12 @@ html.has-scrub .ring {
   width: 0;
   height: 0;
 }
+html.has-scrub .ring-view.is-dragging {
+  cursor: grabbing;
+}
 html.has-scrub .ring-card {
   position: absolute;
+  -webkit-user-drag: none;
   width: var(--cw, 340px);
   height: calc(var(--cw, 340px) * 0.625);
   left: calc(var(--cw, 340px) / -2);

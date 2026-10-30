@@ -1264,14 +1264,14 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   folder (the PSD mockups and reference shots live in `apps/site/design`, gitignored).
 - **Short and calm (2026-10-28, reworked on 10-29 and twice on 10-30):** the owner's rules are
   "make the site feel interactive but not intimidating" and "fluid beautiful and professional",
-  and a long scroll made the app look like more than it is: about eight screens, two of them
-  pinned scenes. The hero (laptop playing the 10-23 exam-morning timelapse, phone on the
+  and a long scroll made the app look like more than it is: about seven screens, the
+  timelapses pinned. The hero (laptop playing the 10-23 exam-morning timelapse, phone on the
   dashboard, two real crops tilted at the sides as stickers, nothing about the rolls), Record
   (the timelapses falling past the words, pinned), On your phone (five still phones in a hand:
   the picked one moves left and plays, its words beside it, the rest drop low; no popup, no
   pins), the app (Start, Plan, Track, Earn as tabs over one window, each a recording beside a
-  card in its colour), Make it yours (the drum on a deep card with chips, pinned), a sky
-  closing; mist like the visualizer's cloud mist. No side pills, no Jack mode. The words are
+  card in its colour), Make it yours (the drum on a deep card with chips, not pinned, draggable), a
+  sky closing; clouds and mist drawn like the visualizer's cloud mist. No side pills, no Jack mode. The words are
   the owner's own (2026-10-30): keep them verbatim. Never show the same thing twice. Every
   phone is the owner's iPhone frame (`.device`, `public/phone-frame.webp`); phone shots and
   recordings are taken at 393 x 852 with an iPhone 14 Pro's safe areas. Recordings are

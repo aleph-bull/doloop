@@ -2928,3 +2928,10 @@ The owner, on the pushed rework: "make this blend more seamlessly, pin the scree
 - **Clouds** are the visualizer's cloud mist: two tiling banks drifting along the foot of the phones and the sky card, drawn once with the same noise.
 - **Words:** every line is now the owner's (pasted 10-30). Their Make it yours line names calm, bright and cozy, so the three are lit in turn instead of one word scrambling. The structured-data description follows their search description.
 - **Fixed:** a picked phone's empty slot in the row sat over the lowered phones' tops and took their clicks; now only the phones take the pointer.
+
+## The homepage, small things, 2026-10-30 (owner request)
+
+- The hero's timelapse starts 5 seconds later (the first 5 s cut); its still and the link preview come from its new first frame.
+- "No uploading while you record." is gone from the timelapse band.
+- Make it yours: the lit word (calm, bright, cozy) is marked like a highlighter, "more obvious"; the drum is no longer pinned ("remove the screen pin here") and can be dragged round with the mouse and thrown.
+- The clouds behind the phones are back, now drawn like the audio visualizer's cloud mist (single clouds from the same noise); the mist bank stays on the sky card.
