@@ -32,8 +32,10 @@ pnpm build      # static output in dist/
     screen of scrolling. Seven timelapses fall past "See what you got done." with the app's
     Recording pill, fading in and out at the stage's top and bottom rather than being cut off
     by its edge. `fallScene` in `main.js` moves them: each drifts toward where the scroll puts
-    it a beat behind and sways and tilts on its own. The way in and out is three blurred waves
-    (ink, plum, a rose bloom) drifting sideways in the band's margins (`.fall-edge`).
+    it a beat behind and sways and tilts on its own. The way in and out is one long eased gradient
+    from the page into the band (`.fall-edge`), with three soft waves (ink, plum, a rose
+    bloom) drifting sideways over it; the band's own colour is the dusk photo's tone, so the
+    way in never dips darker than the band (the owner: "make this line more seamless").
   - **On your phone** (`#phone`): a hand of five phones (`.phones`: Pomodoro, Tasks and
     courses, the feed in the middle, Jams and groups, Streaks and profile), each in another
     theme and each a still of its screen, with clouds drifting behind (`.sky`). `phoneRow` in

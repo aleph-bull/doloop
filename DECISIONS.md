@@ -2935,3 +2935,9 @@ The owner, on the pushed rework: "make this blend more seamlessly, pin the scree
 - "No uploading while you record." is gone from the timelapse band.
 - Make it yours: the lit word (calm, bright, cozy) is marked like a highlighter, "more obvious"; the drum is no longer pinned ("remove the screen pin here") and can be dragged round with the mouse and thrown.
 - The clouds behind the phones are back, now drawn like the audio visualizer's cloud mist (single clouds from the same noise); the mist bank stays on the sky card.
+
+## The homepage text, second pass, 2026-10-30 (owner request)
+
+The owner pasted a shorter version of every line on the page, to go in verbatim, skipping anything already removed (the "No uploading while you record." line stays gone). The tab title is back to "Komodon — Study timer, timelapse and planner"; the Pomodoro phone has one point; the Make it yours line is "Your study space, your style. Calm, bright, or cozy.", the three words still marked in turn. The structured-data description follows the new search description.
+
+The same day, on the line where the page turns into the dusk band, "make this line more seemless": the three waves made stripes and a dark strip sat between them and the photo. Now one long eased gradient runs from the page into the band under softer waves, the photo fades in further down, and the band's own colour is lifted to the photo's tone, so the way in only ever gets darker (checked by sampling the brightness down the screen).

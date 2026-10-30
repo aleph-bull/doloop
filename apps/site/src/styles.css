@@ -524,37 +524,51 @@ main {
 .fall-band {
   position: relative;
   z-index: 3;
-  margin-block: 15vh;
+  margin-block: 22vh;
   background: var(--fall-ink);
   color: #fff;
-  --fall-ink: #1c1526;
+  /* The dusk photo's own tone, so the way in never dips darker than the band itself. */
+  --fall-ink: #43324a;
 }
 /* Straight after the hero: below the laptop hanging over the page. */
 .hero + .fall-band {
-  margin-top: calc(var(--hang) + 15vh);
+  margin-top: calc(var(--hang) + 22vh);
 }
 /*
- * The way in and out: three soft waves, ink, plum and a rose bloom, stacked like the
- * bands of a sunset and blurred together, each drifting sideways at its own pace. The top
- * edge is the bottom one turned over. They hang in the band's margins.
+ * The way in and out: one long gradient from the band's ink to nothing, eased so it has no
+ * steps, with three soft waves (ink, plum and a rose bloom) drifting sideways over it, each
+ * at its own pace, blurred well into it so they never read as stripes. The top edge is the
+ * bottom one turned over. They hang in the band's margins and reach a little into the band.
  */
 .fall-edge {
   position: absolute;
   left: -6%;
   right: -6%;
-  height: 24vh;
+  height: 40vh;
   pointer-events: none;
-  filter: blur(18px);
+  filter: blur(30px);
+  background: linear-gradient(
+    180deg,
+    var(--fall-ink) 0%,
+    var(--fall-ink) 14%,
+    rgb(82 56 88 / 0.9) 26%,
+    rgb(104 66 106 / 0.74) 40%,
+    rgb(132 86 128 / 0.52) 54%,
+    rgb(176 122 166 / 0.3) 68%,
+    rgb(222 178 208 / 0.12) 82%,
+    rgb(240 210 228 / 0.03) 92%,
+    transparent 100%
+  );
 }
 /* The waves stand in for the hairline between these sections. */
 .fall-band + .band {
   border-top: 0;
 }
 .fall-edge-bottom {
-  top: calc(100% - 6vh);
+  top: calc(100% - 8vh);
 }
 .fall-edge-top {
-  bottom: calc(100% - 6vh);
+  bottom: calc(100% - 8vh);
   transform: scaleY(-1);
 }
 .edge-wave {
@@ -570,17 +584,18 @@ main {
 }
 .edge-pink {
   color: #e9a8c9;
-  opacity: 0.6;
+  opacity: 0.3;
   animation-duration: 58s;
 }
 .edge-plum {
   color: #6b3866;
-  opacity: 0.9;
+  opacity: 0.45;
   animation-duration: 38s;
   animation-direction: reverse;
 }
 .edge-ink {
   color: var(--fall-ink);
+  opacity: 0.7;
 }
 @keyframes edge-drift {
   to {
@@ -606,7 +621,7 @@ main {
   background:
     linear-gradient(180deg, rgb(28 21 38 / 0.5) 0%, rgb(28 21 38 / 0.72) 100%),
     url('/backgrounds/cotton-candy.webp') center 35% / cover no-repeat;
-  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 78%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 66%, transparent 100%);
 }
 .fall-copy {
   position: absolute;
@@ -1725,13 +1740,13 @@ html.has-motion .devices.rise.is-in {
     padding-bottom: 28px;
   }
   .fall-band {
-    margin-block: 12vh;
+    margin-block: 16vh;
   }
   .hero + .fall-band {
-    margin-top: calc(var(--hang) + 12vh);
+    margin-top: calc(var(--hang) + 16vh);
   }
   .fall-edge {
-    height: 20vh;
+    height: 28vh;
   }
   .closing-inner {
     padding: 72px 20px 88px;
