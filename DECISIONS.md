@@ -2887,3 +2887,11 @@ The owner: "add option to disable comparing", with four choices: comparisons glo
 - **What follows it**: the Leaderboard tab's boards (no picker when one is left), "You and everyone" (Global only), the board beside the feed (Global and Friends as before, else the one board kept, else nothing, its column left empty so the posts don't move), and on the School tab the school rankings (Global only) and the "School leaderboard" button (Global or My school).
 - **Left as they were**: groups and jams, which rank their members, because joining one is choosing to compare (asked, the owner said leave them as is); other people's profiles and posts, which show their own numbers, not yours beside them; and what others see of you (Settings › Account › Social › Leaderboards still decides which boards count you).
 - Only what you see changes, so nothing is hidden server-side, and no migration (a missing or odd value reads as Global).
+
+## Settings search: a clean box and hidden tags, 2026-10-29 (owner request)
+
+The owner sent the search box showing a second box inside the pill and "Nothing in settings matches username" ("fix settings search bar"), then: "add tags to each settings like "change name" to display name and username and etc for the settings to make it easier for navigation", "hidden tags only used for settings".
+
+- **The box:** the input inside the pill no longer draws its own well, focus ring or the browser's ×; the pill is the field, with our own round clear button (as in the subject picker) and Escape to clear.
+- **Tags:** every section's `keywords` in `SettingsNav.tsx` now list each setting it holds, grouped by setting, with the words people would type for it ("change name", "username", "handle", "pfp", "night mode", "volume", "rest days"...). They are never shown; only search reads them. A new setting brings its own.
+- **Matching:** words that say what someone wants to do rather than what they're after ("change", "my", "how", "turn", "show"...) are left out when other words remain, so "change my username" searches for "username"; a plural finds the singular ("fonts" finds "font"). Every remaining word must still be found, as before.
