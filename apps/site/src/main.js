@@ -1,8 +1,8 @@
 // Motion for the homepage. The hero lifts in on load, devices and all, and each section rises
 // as it scrolls into view. Below the hero, scenes marked [data-scrub] follow the scroll: the
-// timelapses, the calendar, the Track tour and the ring of looks. The row of social phones
-// moves on springs of its own. Nothing here is needed to read the page; without it everything
-// lays out flat, and on a phone it stays flat on purpose.
+// timelapses and the ring of looks. The row of social phones moves on springs of its own, and
+// a rail down the left shows where you are in the walkthrough. Nothing here is needed to read
+// the page; without it everything lays out flat, and on a phone it stays flat on purpose.
 
 const root = document.documentElement;
 const still =
@@ -175,76 +175,6 @@ function ringScene(scene) {
 }
 
 /*
- * The Track tour: the screens on the chambers of a cylinder, a revolver's six with three
- * filled. Scrolling sets which chamber should face the front, holding on each screen and
- * turning between them; the cylinder eases toward it, so each turn settles into place.
- * Chambers fade as they turn away. The list on the left follows the nearest screen.
- */
-function tourScene(scene) {
-  const steps = Number(scene.dataset.steps) || 1;
-  const win = scene.querySelector('.tour-window');
-  const drum = scene.querySelector('.tour-drum');
-  const faces = [...scene.querySelectorAll('.tour-drum img')];
-  const TURN = 60;
-  let R = 400;
-  let target = 0;
-  let pos = 0;
-  let raf = 0;
-  let last = 0;
-
-  const draw = () => {
-    if (!drum) return;
-    drum.style.transform = `translateZ(${(-R).toFixed(1)}px) rotateX(${(pos * TURN).toFixed(2)}deg)`;
-    faces.forEach((face, i) => {
-      const off = Math.abs(pos - i) * TURN;
-      face.style.transform = `rotateX(${-i * TURN}deg) translateZ(${R.toFixed(1)}px)`;
-      face.style.opacity = (1 - range(off, 10, 58)).toFixed(3);
-    });
-  };
-  const tick = (now) => {
-    raf = 0;
-    const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
-    last = now;
-    pos += (target - pos) * (1 - Math.exp(-dt * 6));
-    if (Math.abs(target - pos) < 0.0005) pos = target;
-    draw();
-    if (pos !== target) raf = requestAnimationFrame(tick);
-    else last = 0;
-  };
-
-  return {
-    measure() {
-      // The cylinder's radius puts six chambers of the window's height edge to edge.
-      R = (win?.clientHeight || 500) * 0.866;
-      draw();
-    },
-    update(p) {
-      const run = range(p, 0.06, 0.94) * (steps - 1);
-      const k = Math.min(steps - 2, Math.floor(run));
-      const turn = range(run - k, 0.22, 0.78);
-      target = k + turn * turn * (3 - 2 * turn);
-      setStep(scene, Math.round(target));
-      if (!raf) raf = requestAnimationFrame(tick);
-    },
-    stop() {
-      cancelAnimationFrame(raf);
-      raf = 0;
-      last = 0;
-      drum?.style.removeProperty('transform');
-      for (const face of faces) {
-        face.style.removeProperty('transform');
-        face.style.removeProperty('opacity');
-      }
-    },
-  };
-}
-
-function setStep(el, step) {
-  const next = String(step);
-  if (el.dataset.step !== next) el.dataset.step = next;
-}
-
-/*
  * The floating timelapses. Each card has a place the scroll gives it (falling from --y by
  * --v, in vh, turning by --dr) but doesn't snap there: it drifts toward it a beat behind,
  * like something settling in water, and sways, bobs and tilts a little on its own clock, so
@@ -315,23 +245,14 @@ function fallScene(scene) {
 }
 
 // Everything a scene writes on its own element; cleared when the scenes turn off.
-const SCENE_VARS = ['--p', '--enter', '--cw', '--ph'];
+const SCENE_VARS = ['--p', '--enter', '--cw'];
 
 if (!still) {
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
     const kind = el.dataset.scrub;
-    const steps = Number(el.dataset.steps) || 0;
     const scene = { el, kind };
     if (kind === 'looks') Object.assign(scene, ringScene(el));
-    else if (kind === 'tour') Object.assign(scene, tourScene(el));
     else if (kind === 'fall') Object.assign(scene, fallScene(el));
-    else if (kind === 'plan')
-      // The week, Plan my week's suggestions, then the week planned; the phone joins last.
-      scene.update = (p) => {
-        setStep(el, Math.min(steps - 1, Math.floor(range(p, 0.08, 0.86) * steps)));
-        el.style.setProperty('--ph', ease(range(p, 0.6, 0.78)).toFixed(3));
-      };
-    if (el.dataset.step === undefined && steps) el.dataset.step = '0';
     return scene;
   });
 
@@ -395,21 +316,46 @@ if (!still) {
 // ---------- Timelapses ----------
 
 // The timelapses play while they're on screen and pause off it, so they load only when
-// someone gets that far. With reduced motion they wait on their poster with controls.
+// someone gets that far. With reduced motion they wait on their poster with controls, except
+// the phones' screens, which are inside the buttons that open the slideshow.
 const clips = [...document.querySelectorAll('video.clip')];
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-  for (const v of clips) v.controls = true;
+  for (const v of clips) if (!v.closest('button')) v.controls = true;
 } else if ('IntersectionObserver' in window) {
   const watch = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
-        if (e.isIntersecting) e.target.play().catch(() => {});
+        // One someone paused stays paused until they play it again.
+        if (e.isIntersecting && !e.target.dataset.held) e.target.play().catch(() => {});
         else e.target.pause();
       }
     },
     { threshold: 0.25 },
   );
   for (const v of clips) watch.observe(v);
+  // Each recording in a window has a quiet pause and play in its corner.
+  for (const v of document.querySelectorAll('.window video.clip')) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'window-toggle';
+    const label = () => {
+      const held = Boolean(v.dataset.held);
+      b.setAttribute('aria-label', held ? 'Play' : 'Pause');
+      b.classList.toggle('is-held', held);
+    };
+    b.addEventListener('click', () => {
+      if (v.dataset.held) {
+        delete v.dataset.held;
+        v.play().catch(() => {});
+      } else {
+        v.dataset.held = '1';
+        v.pause();
+      }
+      label();
+    });
+    label();
+    v.after(b);
+  }
 } else {
   for (const v of clips) v.play().catch(() => {});
 }
@@ -613,6 +559,59 @@ function phoneRow(row) {
 }
 
 if (!still) for (const row of document.querySelectorAll('.phones')) phoneRow(row);
+
+// ---------- Where you are ----------
+
+// The rail down the left: the step on screen is lit and the ones before it are done, and the
+// line fills from dot to dot as each step scrolls by. It shows only from the first step to the
+// closing, and turns light over the dark timelapse band.
+const rail = document.querySelector('.progress');
+if (rail) {
+  const links = [...rail.querySelectorAll('a')];
+  const steps = links.map((a) => document.querySelector(a.getAttribute('href')));
+  const fill = rail.querySelector('.progress-fill');
+  const line = rail.querySelector('.progress-line');
+  const closing = document.querySelector('.closing');
+  const band = document.querySelector('.fall-band');
+  let queued = false;
+  const update = () => {
+    queued = false;
+    const mid = window.innerHeight / 2;
+    const tops = steps.map((el) => el.getBoundingClientRect().top);
+    const end = closing.getBoundingClientRect().top;
+    let on = -1;
+    tops.forEach((t, i) => {
+      if (t <= mid) on = i;
+    });
+    links.forEach((a, i) => {
+      a.classList.toggle('is-on', i === on);
+      a.classList.toggle('is-done', i < on);
+      if (i === on) a.setAttribute('aria-current', 'step');
+      else a.removeAttribute('aria-current');
+    });
+    // Each dot's middle, down the line; the fill runs to the lit dot and on toward the next.
+    const dots = links.map((a) => a.offsetTop + a.offsetHeight / 2 - line.offsetTop);
+    let y = 0;
+    if (on >= 0) {
+      const next = on + 1 < steps.length ? tops[on + 1] : end;
+      const through = clamp((mid - tops[on]) / Math.max(1, next - tops[on]));
+      const to = on + 1 < dots.length ? dots[on + 1] : dots[on];
+      y = dots[on] + (to - dots[on]) * through;
+    }
+    fill.style.setProperty('--fill', `${Math.max(0, y).toFixed(1)}px`);
+    root.classList.toggle('show-progress', on >= 0 && end > mid);
+    const b = band?.getBoundingClientRect();
+    rail.dataset.tone = b && b.top < mid && b.bottom > mid ? 'dark' : '';
+  };
+  const queue = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(update);
+  };
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', queue);
+  update();
+}
 
 // ---------- The slideshow ----------
 

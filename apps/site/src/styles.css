@@ -4,14 +4,12 @@
  * gradient, the Cotton Candy photograph feathered into it, and the copy. Site-only class names
  * carry a `site-`, `cta` or `stage` prefix so nothing collides with the app's.
  */
-
 @font-face {
   font-family: 'Satoshi';
   src: url('/fonts/Satoshi-Variable.woff2') format('woff2');
   font-weight: 300 900;
   font-display: swap;
 }
-
 :root {
   --site-sans:
     'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -28,7 +26,6 @@
   /* How far the laptop and phone hang below the hero, over the page. */
   --hang: clamp(100px, 18vw, 220px);
 }
-
 html {
   font-family: var(--site-sans);
   color: var(--site-ink);
@@ -271,7 +268,6 @@ main {
   text-wrap: pretty;
   margin: 0;
 }
-
 /* The recording dot after the headline, blinking like the app's own. */
 .rec-mark {
   display: inline-block;
@@ -309,7 +305,6 @@ main {
   transform: rotateY(14deg) rotateZ(-4deg);
   transform-origin: 50% 100%;
 }
-
 /*
  * A phone: the owner's iPhone (cut out of their mockup by scripts/cut-phone.mjs) over a
  * screenshot that shows through its clear screen. The screen sits at these fractions of the
@@ -420,29 +415,6 @@ main {
   position: relative;
   border-top: 1px solid var(--site-line);
 }
-
-/* All in one: a centred heading between the draw and everything else. */
-.rail.all-head {
-  display: grid;
-  justify-items: center;
-  gap: 18px;
-  padding-block: 120px;
-  text-align: center;
-}
-.all-head h2 {
-  margin: 0;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
-  font-size: clamp(40px, 5.6vw, 76px);
-  text-wrap: balance;
-}
-.all-head .lede-sm {
-  max-width: 40ch;
-}
-
 .feature-head {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
@@ -479,63 +451,6 @@ main {
   text-wrap: pretty;
 }
 
-/* ---------- Track: the tour ---------- */
-
-.tour-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
-  gap: 48px;
-  padding: 96px clamp(20px, 5vw, 64px);
-}
-.tour-copy .feature-title h3 {
-  font-size: clamp(34px, 3.8vw, 50px);
-}
-.tour-copy .lede-sm {
-  margin-top: 20px;
-  max-width: 44ch;
-}
-.tour-list {
-  list-style: none;
-  margin: 40px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-.tour-item {
-  padding: 6px 0;
-}
-/* A thin accent bar beside each line's words; while the tour runs, only the one on show
-   keeps its colour and the rest grey out. */
-.tour-text {
-  display: block;
-  padding: 2px 0 2px 16px;
-  border-left: 2px solid var(--site-accent);
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--site-muted);
-  transition:
-    opacity 400ms,
-    border-color 400ms;
-}
-.tour-text strong {
-  display: block;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--site-ink);
-}
-.tour-inline-shot {
-  display: block;
-  width: 100%;
-  height: auto;
-  margin-top: 14px;
-  border-radius: 16px;
-  box-shadow: 0 24px 50px -28px rgb(40 20 70 / 0.5);
-}
-/* The window: the app running off the right edge of the screen. */
-.tour-window {
-  display: none;
-}
-
 /* ---------- Timelapses: the dusk interlude ---------- */
 
 /*
@@ -551,10 +466,6 @@ main {
   background: var(--fall-ink);
   color: #fff;
   --fall-ink: #1c1526;
-}
-/* Straight after the hero it first clears the laptop hanging over the page, then the waves. */
-.hero + .fall-band {
-  margin-top: calc(var(--hang) + 34vh);
 }
 /*
  * The way in and out: three soft waves, ink, plum and a rose bloom, stacked like the
@@ -717,69 +628,6 @@ main {
   transform: translateY(calc((var(--y) + 0.4 * var(--v)) * 1vh)) rotate(var(--r));
   will-change: transform;
 }
-/*
- * Under the floating clips, still on the dusk: the focus screen while it records, then the
- * video it makes playing on a laptop, so it's plain the result is a short video of a real
- * session.
- */
-.recap {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) auto minmax(0, 1.15fr);
-  /* The two labels share a row, and the pictures are centred on the next. */
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: 18px 28px;
-  width: min(1120px, 100% - 40px);
-  margin: 0 auto;
-  padding: 8vh 0 14vh;
-}
-.recap-item {
-  display: grid;
-  grid-row: span 2;
-  grid-template-rows: subgrid;
-  margin: 0;
-}
-.recap-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  align-self: end;
-  justify-self: start;
-  font-size: 15px;
-  font-weight: 500;
-  color: rgb(255 255 255 / 0.82);
-}
-.recap-shot {
-  align-self: center;
-  overflow: hidden;
-  border-radius: 14px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.1),
-    0 40px 80px -36px rgb(5 2 12 / 0.8);
-}
-.recap-shot img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.recap-live {
-  grid-column: 1;
-}
-.recap-arrow {
-  grid-area: 2 / 2;
-  color: rgb(255 255 255 / 0.45);
-}
-.recap-video {
-  grid-column: 3;
-}
-.recap-video {
-  perspective: 1800px;
-}
-.recap-video .laptop {
-  transform: rotateY(-7deg) rotateX(3deg);
-}
 
 /* ---------- Make it yours: the ring ---------- */
 
@@ -829,13 +677,11 @@ main {
   padding: 104px 0;
 }
 
-/* ---------- Focus: the recording ---------- */
+/* ---------- Recordings ---------- */
 
-/* A real recording of starting a session, in a plain window; it plays while it's on screen. */
-.focus-film {
-  padding: 8px clamp(20px, 5vw, 64px) 104px;
-}
+/* A real recording of the app in a plain window; it plays while it's on screen. */
 .window {
+  position: relative;
   overflow: hidden;
   border-radius: 18px;
   background: #1d1a25;
@@ -849,6 +695,60 @@ main {
   height: auto;
   aspect-ratio: 16 / 10;
   object-fit: cover;
+}
+/* Pause and play, in the corner: it shows when the window is pointed at, and stays while
+   paused. The icon is drawn: two bars, or a triangle once paused. */
+.window-toggle {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(10 12 24 / 0.55);
+  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16) inset;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 250ms,
+    transform 200ms var(--site-ease);
+}
+.window-toggle::before {
+  content: '';
+  width: 10px;
+  height: 12px;
+  border-inline: 3.5px solid currentColor;
+  box-sizing: border-box;
+}
+.window-toggle.is-held::before {
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-block: 7px solid transparent;
+  border-inline: 11px solid currentColor;
+  border-right-width: 0;
+}
+.window:hover .window-toggle,
+.window-toggle:focus-visible,
+.window-toggle.is-held {
+  opacity: 1;
+}
+.window-toggle:active {
+  transform: scale(0.94);
+}
+.window-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+@media (hover: none) {
+  .window-toggle {
+    opacity: 0.85;
+  }
 }
 
 /* ---------- Social: the row of phones ---------- */
@@ -921,116 +821,6 @@ main {
 .phones-phone:focus-visible .device-screen {
   outline: 3px solid var(--site-accent);
   outline-offset: 4px;
-}
-
-/* ---------- XP and rewards ---------- */
-
-/* The XP studying earns across the top, then the two ways to spend it side by side under it,
-   an arrow down into each. */
-.xp-flow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-block: 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--site-line);
-}
-.xp-step {
-  position: relative;
-  display: grid;
-  align-content: start;
-  gap: 18px;
-  padding: 28px;
-}
-.xp-step:first-child {
-  grid-column: 1 / -1;
-}
-.xp-step + .xp-step {
-  border-top: 1px solid var(--site-line);
-}
-.xp-step:last-child {
-  border-left: 1px solid var(--site-line);
-}
-.xp-step + .xp-step::before {
-  content: '';
-  position: absolute;
-  z-index: 1;
-  top: 0;
-  left: 50%;
-  width: 36px;
-  height: 36px;
-  translate: -50% -50%;
-  rotate: 90deg;
-  border-radius: 50%;
-  background: #f3eef7
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b55eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E")
-    center / 18px no-repeat;
-  box-shadow: 0 0 0 1px var(--site-line);
-}
-/* Each screen straight on the page, one corner. */
-.xp-step .frame {
-  overflow: hidden;
-  border-radius: 16px;
-  background: #241d2c;
-  box-shadow:
-    0 0 0 1px rgb(27 26 43 / 0.06),
-    0 30px 60px -32px rgb(40 20 70 / 0.5);
-}
-.xp-step .frame img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.xp-step p {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-  color: var(--site-muted);
-}
-.xp-step p strong {
-  color: var(--site-ink);
-  font-weight: 600;
-}
-
-/* ---------- Plan: the calendar ---------- */
-
-.plan-grid {
-  display: grid;
-  gap: 44px;
-  padding: 104px clamp(20px, 5vw, 64px);
-}
-.plan-view {
-  position: relative;
-  justify-self: center;
-  width: 100%;
-}
-.plan-window {
-  position: relative;
-  aspect-ratio: 2400 / 1733;
-  overflow: hidden;
-  border-radius: 16px;
-  background: #241d2c;
-  box-shadow:
-    0 0 0 1px rgb(27 26 43 / 0.08),
-    0 50px 100px -40px rgb(40 20 70 / 0.55);
-}
-.plan-window img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-/* Still, it shows the week planned. */
-.plan-window img:not([data-i='2']) {
-  opacity: 0;
-}
-.plan-phone {
-  position: absolute;
-  right: -3%;
-  bottom: -9%;
-  width: clamp(110px, 19%, 230px);
-  transform: rotate(4deg);
 }
 
 /* ---------- Closing ---------- */
@@ -1277,84 +1067,6 @@ html:has(.slideshow[open]) {
   outline: 2px solid var(--site-accent);
   outline-offset: 2px;
 }
-
-/* ---------- Scroll scenes ---------- */
-
-/*
- * With motion allowed, main.js adds .has-scrub and keeps --p (0 to 1 through a pinned
- * scene), --enter (0 to 1 as it comes up the screen) and data-step on each [data-scrub].
- * Everything here is transform and opacity on plain images, so it stays smooth.
- */
-@media (min-width: 900px) {
-  html.has-scrub .tour {
-    height: 200vh;
-  }
-  html.has-scrub .tour-stage {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    display: grid;
-    align-items: stretch;
-  }
-  html.has-scrub .tour-stage > .rail {
-    display: grid;
-    align-content: center;
-  }
-  html.has-scrub .tour-inline-shot {
-    display: none;
-  }
-  html.has-scrub .tour-item .tour-text {
-    opacity: 0.42;
-    border-left-color: rgb(27 26 43 / 0.25);
-  }
-  html.has-scrub .tour[data-step='0'] .tour-item[data-i='0'] .tour-text,
-  html.has-scrub .tour[data-step='1'] .tour-item[data-i='1'] .tour-text,
-  html.has-scrub .tour[data-step='2'] .tour-item[data-i='2'] .tour-text {
-    opacity: 1;
-    border-left-color: var(--site-accent);
-  }
-  html.has-scrub .tour-window {
-    display: block;
-    position: absolute;
-    top: 50%;
-    left: 47%;
-    /* Out past the rail to the edge of the screen. */
-    right: calc((100% - 100vw) / 2 - 1px);
-    height: min(66vh, 40vw);
-    translate: 0 -50%;
-    transform: translateX(calc((1 - var(--enter, 1)) * 30vw));
-    perspective: 1700px;
-  }
-  /* The screens sit on the chambers of a cylinder that main.js turns, like a revolver's:
-     the next one rolls up into the frame from below as the last rolls away over the top. */
-  html.has-scrub .tour-drum {
-    position: absolute;
-    inset: 0;
-    transform-style: preserve-3d;
-  }
-  html.has-scrub .tour-window img {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: auto;
-    aspect-ratio: 16 / 10;
-    border-radius: 16px;
-    box-shadow:
-      0 0 0 1px rgb(27 26 43 / 0.08),
-      0 50px 100px -40px rgb(40 20 70 / 0.55);
-    backface-visibility: hidden;
-  }
-  html.has-scrub .tour-window img:not([data-i='0']) {
-    opacity: 0;
-  }
-  html.has-scrub .tour-grid {
-    padding-block: 0;
-    min-height: 100vh;
-    align-content: center;
-  }
-}
-
 /* The ring: every card is placed by main.js around the middle of the stage. */
 html.has-scrub .looks-band {
   padding: 0;
@@ -1396,7 +1108,6 @@ html.has-scrub .ring-card {
   box-shadow: 0 30px 60px -30px rgb(40 20 70 / 0.45);
   will-change: transform, opacity;
 }
-
 /* The interlude pins too. */
 html.has-scrub .fall {
   height: 240vh;
@@ -1404,42 +1115,6 @@ html.has-scrub .fall {
 html.has-scrub .fall-stage {
   position: sticky;
   top: 0;
-}
-/* The calendar pins: the week, the suggestions, then the week planned, and the phone. */
-html.has-scrub .plan {
-  height: 230vh;
-}
-html.has-scrub .plan-stage {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100svh;
-  display: grid;
-}
-html.has-scrub .plan-grid {
-  align-content: center;
-  gap: 36px;
-  padding-block: 0;
-}
-html.has-scrub .plan-view {
-  width: min(100%, calc((100vh - 230px) * 1.385));
-}
-html.has-scrub .plan-window img {
-  opacity: 0;
-  transform: translateY(24px) scale(0.985);
-  transition:
-    opacity 600ms var(--site-ease),
-    transform 900ms var(--site-ease);
-}
-html.has-scrub .plan[data-step='0'] .plan-window img[data-i='0'],
-html.has-scrub .plan[data-step='1'] .plan-window img[data-i='1'],
-html.has-scrub .plan[data-step='2'] .plan-window img[data-i='2'] {
-  opacity: 1;
-  transform: none;
-}
-html.has-scrub .plan-phone {
-  opacity: var(--ph, 0);
-  transform: translateY(calc((1 - var(--ph, 0)) * 60%)) rotate(calc(10deg - var(--ph, 0) * 6deg));
 }
 
 /* ---------- Entrance motion ---------- */
@@ -1489,6 +1164,163 @@ html.has-motion .devices.rise.is-in {
   }
 }
 
+/* ---------- The walkthrough ---------- */
+
+/* The first step comes straight after the hero, under the laptop hanging over the page; the
+   ruled page starts below it. */
+.hero + .step {
+  border-top: 0;
+  padding-top: calc(var(--hang) + 40px);
+}
+.hero + .step > .rail:first-child {
+  border-top: 1px solid var(--site-line);
+}
+/* Each step's moving picture: a real recording of the app in a plain window, under its words. */
+.film-rail {
+  padding: 8px clamp(20px, 5vw, 64px) 104px;
+}
+/* Plan: the calendar's recording with the phone's day view in front, at its corner. */
+.film-with-phone {
+  position: relative;
+}
+.film-phone {
+  position: absolute;
+  right: -2%;
+  bottom: -9%;
+  width: clamp(110px, 17%, 220px);
+  transform: rotate(4deg);
+}
+/* Share: the phones are bigger than the other pictures, and each plays its screen. */
+.phones {
+  width: min(1160px, 100% - 40px);
+}
+
+/* ---------- Where you are ---------- */
+
+/*
+ * Down the left on a computer: the walkthrough's steps on a line that fills as the page
+ * scrolls, the one on screen lit. main.js sets --fill, .is-on and .is-done, the tone over the
+ * dark timelapse band, and shows it only between the first step and the closing. Names show
+ * where there's room beside the page, otherwise dots that name themselves when pointed at.
+ */
+.progress {
+  position: fixed;
+  z-index: 15;
+  left: 18px;
+  top: 50%;
+  display: none;
+  translate: 0 -50%;
+}
+.progress ol {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.progress-gap {
+  margin-top: 18px;
+}
+.progress-line {
+  position: absolute;
+  left: 3.25px;
+  top: 6px;
+  bottom: 6px;
+  width: 1.5px;
+  background: rgb(27 26 43 / 0.12);
+}
+.progress-fill {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--fill, 0%);
+  background: var(--site-accent);
+}
+.progress a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--site-subtle);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 300ms;
+}
+.progress a::before {
+  content: '';
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f4f0f7;
+  box-shadow: 0 0 0 1.5px rgb(27 26 43 / 0.28);
+  transition:
+    background 300ms,
+    box-shadow 300ms,
+    scale 300ms var(--site-ease);
+}
+.progress a:hover,
+.progress a.is-on {
+  color: var(--site-ink);
+}
+.progress a.is-done::before,
+.progress a.is-on::before {
+  background: var(--site-accent);
+  box-shadow: 0 0 0 1.5px var(--site-accent);
+}
+.progress a.is-on::before {
+  scale: 1.3;
+}
+.progress a:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+/* Over the dusk band the rail turns light, and the names fade so they don't sit on the clips
+   drifting past; pointing at a dot still names it. */
+.progress[data-tone='dark'] a {
+  color: transparent;
+}
+.progress[data-tone='dark'] a:hover,
+.progress[data-tone='dark'] a:focus-visible {
+  color: #fff;
+}
+.progress[data-tone='dark'] a::before {
+  background: #2a2133;
+  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.35);
+}
+.progress[data-tone='dark'] .progress-line {
+  background: rgb(255 255 255 / 0.18);
+}
+@media (min-width: 1100px) and (min-height: 600px) {
+  .progress {
+    display: block;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 400ms;
+  }
+  html.show-progress .progress {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+/* Without room for the names beside the page, only the dots; a dot names itself on hover. */
+@media (max-width: 1399px) {
+  .progress a {
+    position: relative;
+    gap: 0;
+    font-size: 0;
+  }
+  .progress a:hover,
+  .progress a:focus-visible {
+    gap: 10px;
+    padding: 4px 10px 4px 0;
+    font-size: 12.5px;
+  }
+}
+
 /* ---------- Smaller screens ---------- */
 
 /* Under the full width the tilted laptop's far corner and the phone's edge would run past the
@@ -1503,36 +1335,9 @@ html.has-motion .devices.rise.is-in {
   }
 }
 @media (max-width: 899px) {
-  /* The recording over the video, the arrow pointing down between them. */
-  .recap {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: none;
-    justify-items: center;
-    gap: 20px;
-  }
-  .recap-item {
-    grid-area: auto;
-    grid-template-rows: auto auto;
-    gap: 16px;
-    width: min(100%, 560px);
-  }
-  .recap-arrow {
-    grid-area: auto;
-    rotate: 90deg;
-  }
-  .xp-flow {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .xp-step:last-child {
-    border-left: 0;
-  }
   .slide.is-on {
     gap: 32px;
     padding: 48px 40px 12px 32px;
-  }
-  .tour-grid {
-    grid-template-columns: 1fr;
-    padding-block: 72px;
   }
   .feature-head {
     grid-template-columns: 1fr;
@@ -1547,12 +1352,6 @@ html.has-motion .devices.rise.is-in {
   }
   .rail-pad-top0 {
     padding-top: 0;
-    padding-bottom: 72px;
-  }
-  .rail.all-head {
-    padding-block: 88px;
-  }
-  .focus-film {
     padding-bottom: 72px;
   }
   .phones-rail {
@@ -1604,22 +1403,11 @@ html.has-motion .devices.rise.is-in {
 }
 /* On a phone everything is centred. */
 @media (max-width: 640px) {
-  .plan-phone {
-    right: 2%;
-  }
-  .tour-grid {
-    padding-block: 56px;
-  }
-  .tour-copy,
   .feature-head,
   .site-footer-inner {
     text-align: center;
   }
-  .tour-copy .lede-sm {
-    margin-inline: auto;
-  }
-  .lede-sm,
-  .tour-text {
+  .lede-sm {
     text-wrap: balance;
   }
   .feature-head {
@@ -1628,29 +1416,12 @@ html.has-motion .devices.rise.is-in {
   .feature-head .lede-sm {
     justify-self: center;
   }
-  .tour-list {
-    margin-top: 32px;
-    gap: 28px;
-  }
-  .tour-item {
-    padding: 0;
-  }
-  .tour-text {
-    padding: 0;
-    border-left: 0;
-  }
   .rail-pad {
     padding-top: 56px;
     padding-bottom: 28px;
   }
-  .rail.all-head {
-    padding-block: 64px;
-  }
   .fall-band {
     margin-block: 18vh;
-  }
-  .hero + .fall-band {
-    margin-top: calc(var(--hang) + 24vh);
   }
   .fall-edge {
     height: 26vh;
@@ -1660,9 +1431,6 @@ html.has-motion .devices.rise.is-in {
   }
   .site-footer-inner {
     justify-content: center;
-  }
-  .focus-film {
-    padding: 0 20px 56px;
   }
   /* The phones are a row to swipe through, centred on the feed; main.js makes the one in the
      middle the biggest. Room above and below for the shadows, which the scroller would clip. */
@@ -1693,13 +1461,6 @@ html.has-motion .devices.rise.is-in {
   .phones-item .phones-phone {
     --r: 0deg;
     --y: 0px;
-  }
-  .xp-step {
-    padding: 20px;
-  }
-  .xp-step p {
-    text-align: center;
-    text-wrap: balance;
   }
   /* The slideshow fills the screen: the phone, the words under it, the arrows at the bottom. */
   .slideshow {
@@ -1787,13 +1548,6 @@ html.has-motion .devices.rise.is-in {
   .ring-card:nth-child(n + 7) {
     display: none;
   }
-  /* Held sideways, the calendar fits the screen's height. */
-  .plan-view {
-    width: min(100%, (100svh - 40px) * 1.385);
-  }
-  .plan-grid {
-    padding-block: 56px 88px;
-  }
 }
 /* On a phone the Discord button is just the mark. */
 @media (max-width: 480px) {
@@ -1846,5 +1600,24 @@ html.has-motion .devices.rise.is-in {
   .slideshow[open],
   .slide.is-on {
     animation: none;
+  }
+}
+
+/* The walkthrough on narrower screens. */
+@media (max-width: 899px) {
+  .film-rail {
+    padding-bottom: 72px;
+  }
+}
+@media (max-width: 640px) {
+  .film-rail {
+    padding: 0 20px 56px;
+  }
+  .film-phone {
+    right: 2%;
+    width: 26%;
+  }
+  .hero + .step {
+    padding-top: calc(var(--hang) + 16px);
   }
 }
