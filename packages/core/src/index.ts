@@ -50,3 +50,4 @@ export * from './theme-presets';
 export * from './fonts';
 export * from './onboarding';
 export * from './names';
+export * from './comparisons';

@@ -1,10 +1,11 @@
 import { Link, useSearchParams } from 'react-router';
 import { Crown, Flame } from 'lucide-react';
+import type { Board } from '@komogon/core';
 import { Panel, Segmented, Sparkline, Spinner } from '@komogon/ui';
-import type { GlobalStats, LeaderboardEntry, LeaderboardScope } from '../../lib/api';
+import type { GlobalStats, LeaderboardEntry } from '../../lib/api';
 import { ApiError } from '../../lib/api';
 import { fmtDate, fmtHours } from '../../lib/format';
-import { useLeaderboard, useLeaderboardStats } from '../../lib/queries';
+import { useBoards, useLeaderboard, useLeaderboardStats } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Avatar } from './Avatar';
 import { CompareBento } from './CompareBento';
@@ -12,6 +13,13 @@ import { SchoolRankings } from './SchoolTab';
 import { named } from '../../lib/rolls';
 
 const to = (e: LeaderboardEntry) => (e.you ? '/profile' : `/profile/${e.userId}`);
+
+const BOARD_LABELS: Record<Board, string> = {
+  global: 'Global',
+  friends: 'Friends',
+  school: 'My school',
+  schools: 'Schools',
+};
 
 /** "1st", "2nd", "3rd", "4th". */
 function ordinal(n: number): string {
@@ -210,29 +218,25 @@ function Everyone({ stats }: { stats: GlobalStats }) {
  */
 export function LeaderboardTab() {
   const [params, setParams] = useSearchParams();
-  const rawScope = params.get('scope');
-  const scope: LeaderboardScope | 'schools' =
-    rawScope === 'friends' || rawScope === 'school' || rawScope === 'schools' ? rawScope : 'global';
-  const setScope = (next: LeaderboardScope | 'schools') => {
+  // Only the boards Settings › Pages › Social › Comparisons keeps; a link to another opens the first.
+  const boards = useBoards();
+  const rawScope = params.get('scope') as Board | null;
+  const scope: Board = rawScope && boards.includes(rawScope) ? rawScope : (boards[0] ?? 'global');
+  const setScope = (next: Board) => {
     const p = new URLSearchParams(params);
     if (next === 'global') p.delete('scope');
     else p.set('scope', next);
     setParams(p);
   };
-  const board = useLeaderboard(scope === 'schools' ? 'global' : scope);
-  const stats = useLeaderboardStats();
-  const picker = (
+  const board = useLeaderboard(scope === 'schools' ? 'global' : scope, scope !== 'schools');
+  const stats = useLeaderboardStats(scope === 'global');
+  const picker = boards.length > 1 && (
     <div className="board-scope">
       <Segmented
         ariaLabel="Which board"
         value={scope}
         onChange={setScope}
-        options={[
-          { value: 'global', label: 'Global' },
-          { value: 'friends', label: 'Friends' },
-          { value: 'school', label: 'My school' },
-          { value: 'schools', label: 'Schools' },
-        ]}
+        options={boards.map((b) => ({ value: b, label: BOARD_LABELS[b] }))}
       />
     </div>
   );

@@ -9,7 +9,7 @@ import { NotificationsBell } from '../components/social/Notifications';
 import { NotificationsAsk } from '../components/social/NotificationsAsk';
 import { SchoolTab } from '../components/social/SchoolTab';
 import { NARROW_QUERY, useMediaQuery } from '../lib/media';
-import { useFriends, useJams } from '../lib/queries';
+import { useBoards, useFriends, useJams } from '../lib/queries';
 
 const TABS = ['feed', 'school', 'groups', 'jams', 'leaderboard'] as const;
 type Tab = (typeof TABS)[number];
@@ -28,7 +28,10 @@ const TAB_LABELS: Record<Tab, string> = {
 export function Social() {
   const [params, setParams] = useSearchParams();
   const raw = params.get('tab');
-  const tab: Tab = (TABS as readonly string[]).includes(raw ?? '') ? (raw as Tab) : 'feed';
+  // Comparisons off (Settings › Pages › Social): no Leaderboard tab, and its links land on the feed.
+  const compared = useBoards().length > 0;
+  const tabs = TABS.filter((t) => compared || t !== 'leaderboard');
+  const tab: Tab = (tabs as readonly string[]).includes(raw ?? '') ? (raw as Tab) : 'feed';
   const waiting = useFriends().data?.incoming.length ?? 0;
   const running = useJams().data?.active.length ?? 0;
   const phone = useMediaQuery(NARROW_QUERY);
@@ -66,7 +69,7 @@ export function Social() {
           <NotificationsBell round />
         </div>
         <div className="social-tabs" role="group" aria-label="Social view">
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t}
               type="button"
@@ -113,7 +116,7 @@ export function Social() {
                 </>
               ),
             },
-            { value: 'leaderboard', label: 'Leaderboard' },
+            ...(compared ? [{ value: 'leaderboard' as const, label: 'Leaderboard' }] : []),
           ]}
         />
       </div>

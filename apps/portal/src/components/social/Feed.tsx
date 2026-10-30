@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Button, EmptyState, Segmented, Spinner } from '@komogon/ui';
 import type { FeedScope } from '../../lib/api';
 import { NARROW_QUERY, useMediaQuery } from '../../lib/media';
-import { useFeed, useLiveFriends } from '../../lib/queries';
+import { useBoards, useFeed, useLiveFriends } from '../../lib/queries';
 import { ErrorPanel } from '../ErrorState';
 import { Composer } from './Composer';
 import { FriendsCard, MiniLeaderboard, ProfileCard } from './FeedSide';
@@ -20,12 +20,14 @@ export function Feed() {
   const feed = useFeed(scope);
   const live = useLiveFriends();
   const phone = useMediaQuery(NARROW_QUERY);
+  // Comparisons off: no board, and its column stays empty so the posts keep their place.
+  const board = useBoards().length > 0;
   const posts = feed.data?.pages.flatMap((p) => p.posts) ?? [];
   const people = Object.assign({}, ...(feed.data?.pages.map((p) => p.people) ?? []));
 
   return (
     <div className="feed-wrap">
-      <div className="feed-layout">
+      <div className={`feed-layout${board ? '' : ' no-board'}`}>
         {!phone && (
           <div className="feed-side is-left">
             <ProfileCard />
@@ -85,9 +87,11 @@ export function Feed() {
             </>
           )}
         </div>
-        <div className="feed-side is-right">
-          <MiniLeaderboard />
-        </div>
+        {board && (
+          <div className="feed-side is-right">
+            <MiniLeaderboard />
+          </div>
+        )}
       </div>
     </div>
   );

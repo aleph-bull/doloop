@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck } from 'lucide-react';
 import { Panel, Segmented, Spinner, Toggle } from '@komogon/ui';
 import { api } from '../../lib/api';
-import { useMe, useUpdateSettings } from '../../lib/queries';
+import { useBoards, useMe, useUpdateSettings } from '../../lib/queries';
 import { fmtHours } from '../../lib/format';
 import { ErrorPanel } from '../ErrorState';
 import { UniversityField } from '../ProfileFields';
@@ -73,12 +73,15 @@ export function SchoolTab() {
   });
   const me = useMe();
   const update = useUpdateSettings();
+  const boards = useBoards();
   if (q.isError)
     return <ErrorPanel message="Your school could not load." onRetry={() => q.refetch()} />;
   if (!q.data) return <Spinner />;
   const { school, live, posts, people } = q.data;
+  // Rankings only while Comparisons keeps every board, the school leaderboard while it keeps yours.
+  const ranked = boards.includes('schools');
   return (
-    <div className="school-layout">
+    <div className={`school-layout${ranked ? '' : ' no-rankings'}`}>
       <div className="school-main">
         <Panel as="section">
           {school ? (
@@ -96,9 +99,11 @@ export function SchoolTab() {
                 onChange={(schoolActivity) => update.mutate({ social: { schoolActivity } })}
               />
               <div className="school-actions">
-                <Link to="/social?tab=leaderboard&scope=school" className="btn btn-secondary">
-                  School leaderboard
-                </Link>
+                {boards.includes('school') && (
+                  <Link to="/social?tab=leaderboard&scope=school" className="btn btn-secondary">
+                    School leaderboard
+                  </Link>
+                )}
                 <Link to="/profile" className="link-button">
                   Your profile
                 </Link>
@@ -164,7 +169,7 @@ export function SchoolTab() {
           </section>
         )}
       </div>
-      <SchoolRankings />
+      {ranked && <SchoolRankings />}
     </div>
   );
 }

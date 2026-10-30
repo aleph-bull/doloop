@@ -23,6 +23,7 @@ import {
   useDeleteFriendRequest,
   useFindPeople,
   useFriends,
+  useBoards,
   useLeaderboard,
   useLiveFriends,
   useMe,
@@ -425,30 +426,41 @@ export function ProfileCard() {
   );
 }
 
-/** The first few of a leaderboard, beside the feed, with the way to the whole board. */
+/**
+ * The first few of a leaderboard, beside the feed, with the way to the whole board: Global
+ * and Friends, or the one board Comparisons keeps. None kept, no card.
+ */
 export function MiniLeaderboard() {
-  const [scope, setScope] = useState<LeaderboardScope>('global');
-  const board = useLeaderboard(scope);
+  const boards = useBoards().filter((b): b is LeaderboardScope => b !== 'schools');
+  const scopes = boards.length > 1 ? boards.filter((b) => b !== 'school') : boards;
+  const [picked, setScope] = useState<LeaderboardScope>('global');
+  const scope = scopes.includes(picked) ? picked : scopes[0];
+  const board = useLeaderboard(scope ?? 'global', !!scope);
   const entries = board.data?.entries ?? [];
+  if (!scope) return null;
   return (
     <Panel as="aside" className="side-card is-board" aria-label="Leaderboard">
       <div className="side-head">
         <h2 className="side-title">Leaderboard</h2>
-        <div className="side-scope" role="group" aria-label="Which board">
-          {(['global', 'friends'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              className="side-scope-item"
-              aria-pressed={scope === s}
-              onClick={() => setScope(s)}
-            >
-              {s === 'global' ? 'Global' : 'Friends'}
-            </button>
-          ))}
-        </div>
+        {scopes.length > 1 && (
+          <div className="side-scope" role="group" aria-label="Which board">
+            {scopes.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className="side-scope-item"
+                aria-pressed={scope === s}
+                onClick={() => setScope(s)}
+              >
+                {s === 'global' ? 'Global' : 'Friends'}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {board.isPending ? (
+      {board.isError && scope === 'school' ? (
+        <p className="muted text-sm">Verify your school email to see this board.</p>
+      ) : board.isPending ? (
         <Spinner />
       ) : entries.length === 0 ? (
         <p className="muted text-sm">

@@ -551,6 +551,25 @@ export function Settings() {
                 label="Tips about the app"
                 description="Now and then a short tip about Komodon shows under the start panel, with a link to try it."
               />
+              {s.features.social && (
+                <>
+                  <h3 className="settings-group-head">Social</h3>
+                  <div className="field">
+                    <span className="field-label">Comparisons</span>
+                    <Segmented
+                      ariaLabel="Comparisons"
+                      value={s.social.comparisons ?? 'global'}
+                      onChange={(comparisons) => patch({ social: { comparisons } })}
+                      options={[
+                        { value: 'global', label: 'Global' },
+                        { value: 'school', label: 'My school' },
+                        { value: 'friends', label: 'Friends' },
+                        { value: 'off', label: 'Off' },
+                      ]}
+                    />
+                  </div>
+                </>
+              )}
             </Section>
 
             <Section id="theme" title="Appearance" glass>

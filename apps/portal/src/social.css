@@ -71,6 +71,10 @@
     grid-column: 1 / -1;
     order: 3;
   }
+  /* Comparisons off: no board, so the posts take its room. */
+  .feed-layout.no-board {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 @container (max-width: 660px) {
   .feed-layout {
@@ -3225,6 +3229,10 @@
   grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
   gap: 24px;
   align-items: start;
+}
+/* Comparisons not set to Global: no rankings beside it. */
+.school-layout.no-rankings {
+  grid-template-columns: minmax(0, 1fr);
 }
 .school-main,
 .school-posts {

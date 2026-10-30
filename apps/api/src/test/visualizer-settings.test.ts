@@ -135,6 +135,28 @@ describe('settings: visualizer', () => {
   });
 });
 
+describe('settings: comparisons', () => {
+  it('compares with everyone until changed, and takes only the four choices', async () => {
+    const me = await api({ method: 'GET', url: '/api/me' });
+    expect(me.json().user.settings.social.comparisons).toBe('global');
+    for (const comparisons of ['school', 'friends', 'off', 'global']) {
+      const ok = await api({
+        method: 'PATCH',
+        url: '/api/me/settings',
+        payload: { social: { comparisons } },
+      });
+      expect(ok.statusCode).toBe(200);
+      expect(ok.json().settings.social.comparisons).toBe(comparisons);
+    }
+    const bad = await api({
+      method: 'PATCH',
+      url: '/api/me/settings',
+      payload: { social: { comparisons: 'everyone' } },
+    });
+    expect(bad.statusCode).toBe(400);
+  });
+});
+
 describe('settings: timelapse', () => {
   it('defaults to asking, saves a choice, and rejects a frame rate past 60', async () => {
     const me = await api({ method: 'GET', url: '/api/me' });

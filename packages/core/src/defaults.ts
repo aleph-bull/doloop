@@ -1,3 +1,4 @@
+import { COMPARE_SCOPES, type CompareScope } from './comparisons';
 import { fontChoiceOf } from './fonts';
 import { UOFT_GRADE_SCALE } from './grades';
 import { defaultTimelapseLayout, normalizeTimelapseLayout } from './timelapse-layout';
@@ -156,6 +157,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     requests: true,
     live: true,
     schoolActivity: false,
+    comparisons: 'global',
   },
   rolls: { name: 'auto', profile: true },
   notifications: { nudges: true, kudos: true, comments: true, mentions: true },
@@ -217,9 +219,10 @@ export function withDefaults(partial: DeepPartial<UserSettings> | null | undefin
   // Idle detection is gone; a row saved while it existed still carries its group.
   delete out.idle;
   // The leaderboard choice was a yes or no for a day; those rows read as the two ends.
-  const social = out.social as { leaderboard: unknown };
+  const social = out.social as { leaderboard: unknown; comparisons: unknown };
   if (social.leaderboard === true) social.leaderboard = 'global';
   else if (social.leaderboard === false) social.leaderboard = 'off';
+  if (!COMPARE_SCOPES.includes(social.comparisons as CompareScope)) social.comparisons = 'global';
   // The name colour was an on/off switch under Social for an afternoon (2026-10-25): off
   // there is a plain name now, unless a name has been picked since.
   const oldColour = (social as { rollColour?: unknown }).rollColour;

@@ -455,6 +455,7 @@ export const settingsSchema = z
         requests: z.boolean(),
         live: z.boolean(),
         schoolActivity: z.boolean(),
+        comparisons: z.enum(['global', 'school', 'friends', 'off']),
       })
       .partial(),
     rolls: z

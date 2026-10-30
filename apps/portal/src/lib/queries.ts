@@ -1,4 +1,11 @@
-import type { PlannedBlock, StudyNode, TagColor, UserSettings } from '@komogon/core';
+import {
+  boardsFor,
+  type Board,
+  type PlannedBlock,
+  type StudyNode,
+  type TagColor,
+  type UserSettings,
+} from '@komogon/core';
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -809,20 +816,27 @@ export function useCompare() {
   return useQuery({ queryKey: keys.compare, queryFn: api.compare, staleTime: 60_000 });
 }
 
-export function useLeaderboardStats() {
+export function useLeaderboardStats(enabled = true) {
   return useQuery({
     queryKey: ['leaderboard', 'stats'],
     queryFn: api.leaderboardStats,
     staleTime: 60_000,
+    enabled,
   });
 }
 
-export function useLeaderboard(scope: LeaderboardScope) {
+export function useLeaderboard(scope: LeaderboardScope, enabled = true) {
   return useQuery({
     queryKey: keys.leaderboard(scope),
     queryFn: () => api.leaderboard(scope),
     staleTime: 60_000,
+    enabled,
   });
+}
+
+/** The boards kept by Settings › Pages › Social › Comparisons; none means no Leaderboard tab. */
+export function useBoards(): Board[] {
+  return boardsFor(useMe().data?.user.settings.social.comparisons ?? 'global');
 }
 
 export function useUpdateSettings() {

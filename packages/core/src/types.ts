@@ -3,6 +3,7 @@
  * Clients render in the user's timezone (stored on the user).
  */
 
+import type { CompareScope } from './comparisons';
 import type { RollNameChoice } from './rolls';
 import type { TimelapseAspect, TimelapseLayout } from './timelapse-layout';
 
@@ -298,7 +299,10 @@ export interface UserSettings {
     /** The Social page: your profile, and other people's. */
     social: boolean;
   };
-  /** What of yours other people get to see on Social. The API enforces each of these. */
+  /**
+   * What of yours other people get to see on Social. The API enforces each of these. The
+   * one exception is `comparisons`, which is about what you see.
+   */
   social: {
     /** Who sees your posts: everyone signed in, or your friends only. */
     posts: 'everyone' | 'friends';
@@ -315,6 +319,11 @@ export interface UserSettings {
     live: boolean;
     /** Share current study activity with other verified members of your school. */
     schoolActivity: boolean;
+    /**
+     * Who you are compared with on Social (the leaderboards, You and everyone, Compare, school
+     * rankings): everyone ('global'), your school only, your friends only, or no one ('off').
+     */
+    comparisons: CompareScope;
   };
   /** RNG Rolls on Achievements (rolls.ts): what your name wears, and whether your profile shows them. */
   rolls: {

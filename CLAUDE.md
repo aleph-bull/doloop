@@ -200,7 +200,9 @@ and never explain the difference on screen.
 - Pomodoro lengths have no limits and can change mid-session. Don't add locks or minimums.
 - People are compared in two places, both asked for by the owner: the leaderboard (Social ›
   Leaderboard, global or friends, top 10 by focused time) and jams (Social › Jams, a timed
-  game people choose to enter). Don't add comparison elsewhere.
+  game people choose to enter). Don't add comparison elsewhere. Anything that sets your
+  numbers beside other people's (boards, You and everyone, Compare, school rankings) must
+  follow Settings › Pages › Social › Comparisons (`useBoards`, see Sharing settings).
 - "Pomodoro" is the timer's name; never rename it in the app renames.
 - **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
   (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
@@ -638,6 +640,17 @@ normalised in `withDefaults`), and whether you take friend requests. Everything 
 default. The API enforces each of these in `routes/social.ts`, `profiles.ts` and
 `leaderboard.ts`: any new place that shows someone's numbers must check them too. Jams and
 groups have no setting because joining is the consent.
+
+**Comparisons (Settings › Pages › Social, `settings.social.comparisons`, 2026-10-29).** The one
+setting under `social` about what you see rather than what others see, for people who find
+comparing stressful: `'global'` (default, every board), `'school'` (only My school),
+`'friends'` (only Friends, with Compare under it) or `'off'`. Core `boardsFor` lists the boards
+kept and the portal's `useBoards()` reads it: the Leaderboard tab offers only those (no picker
+for one, and none means no tab, with `?tab=leaderboard` landing on the feed), "You and
+everyone" only with Global, the board beside the feed shows Global and Friends, the one kept
+board, or nothing (its column then stays empty so the posts keep their place), and the School
+tab's rankings and "School leaderboard" follow too. The API only validates it; nothing is
+hidden server-side. Groups and jams are untouched (joining one is choosing to compare).
 
 **Leaderboard.** `GET /api/leaderboard?scope=global|friends`: all-time focused time, top
 ten, test accounts and admins left out of the global board. Each row carries eight weeks of
