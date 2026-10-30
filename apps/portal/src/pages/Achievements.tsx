@@ -24,6 +24,7 @@ import {
   Spinner,
   useToast,
 } from '@komogon/ui';
+import { Inventory } from '../components/crates/Inventory';
 import { ErrorPanel } from '../components/ErrorState';
 import { CountingNumber, usePurchase } from '../components/Purchase';
 import { RewardShelf } from '../components/RewardShelf';
@@ -382,6 +383,13 @@ export function Achievements() {
           choice={me.data.user.settings.rolls}
         />
       )}
+      {s.rolls && (
+        <Inventory
+          rolled={rolled}
+          volume={me.data.user.settings.sounds.enabled ? me.data.user.settings.sounds.volume : 0}
+          confetti={me.data.user.settings.effects.confetti !== false}
+        />
+      )}
 
       <section className="flex flex-col gap-3" aria-labelledby="badges-h">
         <div className="flex items-baseline gap-3">
@@ -492,13 +500,16 @@ function Rolls({
   // The looks a name can wear: from Sapphire (1/256) up to the rarest roll.
   const styles = ROLL_TIERS.filter((t) => t.tier >= ROLL_NAME_TIER && t.tier <= record.best);
 
-  const rolled = (r: RollResult) =>
+  const rolled = (r: RollResult) => {
     qc.setQueryData<Awaited<ReturnType<typeof api.shop>>>(keys.shop, (shop) => {
       if (!shop?.rolls) return shop;
       const counts = [...shop.rolls.counts];
       for (const t of r.tiers ?? [r.tier]) counts[t - 1] = (counts[t - 1] ?? 0) + 1;
       return { ...shop, xp: r.xp, rolls: { ...shop.rolls, best: r.best, count: r.count, counts } };
     });
+    // Crates it offered wait in the inventory too.
+    if (r.offers?.length) void qc.invalidateQueries({ queryKey: keys.inventory });
+  };
   /** Prestige one rarity, or everything (`null`): the cards change, flash and sound. */
   const prestigeNow = async (tier: number | null) => {
     setPrestiging(true);
@@ -518,6 +529,7 @@ function Rolls({
       if (r.newBest && top) toast(`New record · ${top.title}`, { tone: 'ok' });
       if (r.fresh.length) announceAchievements(r.fresh);
       void qc.invalidateQueries({ queryKey: keys.me });
+      if (r.offers?.length) void qc.invalidateQueries({ queryKey: keys.inventory });
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not prestige');
     } finally {
@@ -528,6 +540,7 @@ function Rolls({
     setOpen(false);
     void qc.invalidateQueries({ queryKey: keys.shop });
     void qc.invalidateQueries({ queryKey: keys.me });
+    void qc.invalidateQueries({ queryKey: keys.inventory });
   };
 
   return (

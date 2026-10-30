@@ -2,6 +2,7 @@ import { randomInt } from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import {
   advanceRollStats,
+  crateOffersFrom,
   ROLL_BATCHES,
   ROLL_COST,
   ROLL_TICKETS,
@@ -16,6 +17,7 @@ import type { Db } from '../db/client';
 import { users, xpTransactions } from '../db/schema';
 import { badRequest } from '../errors';
 import { unlockNewBadges } from '../services/achievements';
+import { offerCrates } from '../services/crates';
 import { holdRolls, prestige } from '../services/rolls';
 import { addXp } from '../services/users';
 import { dt } from '../services/sessions-mapper';
@@ -79,6 +81,8 @@ export function rollRoutes(
       })),
     );
     await holdRolls(db, userId, tiers);
+    // A roll of 1/64 or rarer offers its crate; the roll stays held until the crate is taken.
+    const offers = await offerCrates(db, userId, tiers, 'roll');
     const newBest = top > req.user.rollBest && row!.rollBest === top;
     req.user.xp = paid.xp;
     if (won > 0) {
@@ -109,6 +113,8 @@ export function rollRoutes(
       won,
       xp: req.user.xp,
       fresh,
+      /** The crates these rolls offer, one for each of 1/64 or rarer. */
+      offers,
     };
   });
 
@@ -133,6 +139,13 @@ export function rollRoutes(
     const userId = req.user.id;
     const result = await prestige(db, userId, body.all ? null : body.tier!);
     if (!result) throw badRequest('Not enough to prestige.');
+    // A rarity of 1/64 or rarer made here offers its crate too.
+    const offers = await offerCrates(
+      db,
+      userId,
+      crateOffersFrom(result.made, result.held),
+      'prestige',
+    );
     let top = 0;
     let hit = req.user.rollStats.hit ?? 0;
     result.made.forEach((n, i) => {
@@ -170,6 +183,7 @@ export function rollRoutes(
       best: row!.rollBest,
       xp: req.user.xp,
       fresh,
+      offers,
     };
   });
 }

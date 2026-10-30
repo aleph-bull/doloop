@@ -11,7 +11,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { fireConfetti } from '@komogon/ui';
 import { announceAchievements } from '../../lib/achievements';
-import { api, type RollResult } from '../../lib/api';
+import { api, type CrateOffer, type RollResult } from '../../lib/api';
 import { fxLevel, rollClass, tierStyle } from '../../lib/rolls';
 import { playEffect, playTick, preloadEffects } from '../../lib/sounds';
 import {
@@ -33,6 +33,7 @@ import {
   type Coin,
 } from './slot-kit';
 import { SlotLever, type SlotLeverHandle } from './SlotLever';
+import { CrateOffers } from '../crates/CrateOffers';
 
 const POP = ROLL_POP;
 const SUCCESS = ROLL_SUCCESS;
@@ -177,6 +178,8 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
   const [shownBest, setShownBest] = useState(best);
   const [shining, setShining] = useState(0);
   const [last, setLast] = useState<RollResult | null>(null);
+  /** The crates the last pull offers that are still waiting for a choice. */
+  const [offers, setOffers] = useState<CrateOffer[]>([]);
   const [error, setError] = useState<string | null>(null);
   /** Counts up each landing, so the burst of light plays again. */
   const [bursts, setBursts] = useState(0);
@@ -259,6 +262,8 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
     leverRef.current?.swing(dy);
     playTick(l.volume, 0.6, 1.6);
     setError(null);
+    // Crates left unchosen stay offered on Achievements, their rolls held meanwhile.
+    setOffers([]);
     setStage('spin');
     latest.current.stage = 'spin';
     setMoney((m) => m - l.cost * n);
@@ -359,6 +364,7 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
       latest.current.onRolled(r);
       setTense(false);
       setLast(r);
+      setOffers(r.offers ?? []);
       // Winnings come in as coins, the XP counting up as they land; anything else at once.
       if ((r.won ?? 0) > 0 && !stillMotion()) {
         moneyFrom = latest.current.money;
@@ -604,6 +610,8 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') latest.current.onClose();
+      // A crate's buttons take their own keys rather than pulling the lever.
+      else if ((e.target as HTMLElement | null)?.closest?.('.crate-offers')) return;
       else if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) {
         e.preventDefault();
         pull(0);
@@ -728,6 +736,15 @@ export function RollSlot({ cost, xp, best, volume, confetti, onRolled, onClose }
               </li>
             ))}
           </ol>
+        )}
+        {stage === 'result' && offers.length > 0 && (
+          <CrateOffers
+            key={`offers-${bursts}`}
+            className="roll-slot-offers"
+            offers={offers}
+            volume={volume}
+            onSettled={(ids) => setOffers((o) => o.filter((x) => !ids.includes(x.id)))}
+          />
         )}
         <div className="roll-slot-foot">
           <div className="roll-batch" role="group" aria-label="Rolls a pull">

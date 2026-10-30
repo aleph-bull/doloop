@@ -17,6 +17,7 @@ import { analyticsRoutes } from './routes/analytics';
 import { calendarRoutes, type CalendarRouteOptions } from './routes/calendar';
 import { shopRoutes } from './routes/shop';
 import { rollRoutes } from './routes/rolls';
+import { crateRoutes } from './routes/crates';
 import { assetRoutes } from './routes/assets';
 import { rewardRoutes } from './routes/rewards';
 import { routineRoutes } from './routes/routines';
@@ -87,6 +88,8 @@ export interface BuildOptions {
   mediaStore?: MediaStore | null;
   /** Where rolls draw their ticket from (0 to ROLL_TICKETS); tests pick the rarity. */
   rollTicket?: () => number;
+  /** Where crates draw what they give from (0 to CRATE_TICKETS, asked twice a crate). */
+  crateTicket?: () => number;
   /** Injectable fetch for the browser notifications' push services, for tests. */
   pushFetch?: typeof fetch;
 }
@@ -218,6 +221,7 @@ export async function buildServer(opts: BuildOptions) {
   calendarRoutes(app, opts.db, clock, calendar);
   shopRoutes(app, opts.db, clock);
   rollRoutes(app, opts.db, clock, opts.rollTicket);
+  crateRoutes(app, opts.db, clock, opts.crateTicket);
   rewardRoutes(app, opts.db, clock);
   routineRoutes(app, opts.db, clock);
   trackerRoutes(app, opts.db, clock);

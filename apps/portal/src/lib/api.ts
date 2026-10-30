@@ -679,7 +679,28 @@ export interface RollResult {
   won?: number;
   /** Badges it unlocked. */
   fresh: string[];
+  /** The crates it offers, one for each roll of 1/64 or rarer. Optional for an older API. */
+  offers?: CrateOffer[];
 }
+
+/** A crate a roll offers: take it (giving up the roll) or keep the title. */
+export interface CrateOffer {
+  id: string;
+  tier: number;
+}
+
+/** Someone's crates and pets, and the crates waiting for a choice. */
+export interface Inventory {
+  crates: Array<{ tier: number; count: number }>;
+  pets: Array<{ id: string; count: number }>;
+  offers: CrateOffer[];
+  /** How many of each exist across everyone, by "crate:<tier>" and "pet:<id>". */
+  global: Record<string, number>;
+}
+
+/** What a crate gave: XP, a pet, or another crate. */
+export type CrateWin =
+  { kind: 'xp'; xp: number } | { kind: 'pet'; pet: string } | { kind: 'crate'; tier: number };
 
 /** A prestige: five of a rarity into one of the next, or everything that can be. */
 export interface PrestigeResponse {
@@ -692,6 +713,8 @@ export interface PrestigeResponse {
   best: number;
   xp: number;
   fresh: string[];
+  /** Crates for what it made of 1/64 or rarer. Optional for an older API. */
+  offers?: CrateOffer[];
 }
 
 /** Someone's RNG Rolls on their profile, when they show them. */
@@ -965,6 +988,19 @@ export const api = {
   roll: (count = 1) => request<RollResult>('POST', '/api/rolls', { count }),
   prestige: (body: { tier: number } | { all: true }) =>
     request<PrestigeResponse>('POST', '/api/rolls/prestige', body),
+  inventory: () => request<Inventory>('GET', '/api/inventory'),
+  chooseCrates: (ids: string[], choice: 'crate' | 'title') =>
+    request<{ taken: number[]; held: number[]; inventory: Inventory }>(
+      'POST',
+      '/api/crates/choose',
+      { ids, choice },
+    ),
+  openCrate: (tier: number) =>
+    request<{ win: CrateWin; isNew: boolean; xp: number; inventory: Inventory }>(
+      'POST',
+      '/api/crates/open',
+      { tier },
+    ),
   buyFreeze: () => request<{ xp: number }>('POST', '/api/shop/freeze'),
   buyBreakDay: () => request<{ xp: number; nextCost: number }>('POST', '/api/shop/break-day'),
   applyBreakDay: (date: string) =>

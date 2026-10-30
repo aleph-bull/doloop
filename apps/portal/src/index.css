@@ -6637,6 +6637,395 @@ button.start-subject:hover {
   }
 }
 
+/* ---------- Crates and the inventory (2026-10-29) ---------- */
+/* A crate is drawn flat in its title's colour (--roll-colour from tierStyle), its edges a
+   darker shade of it and its lid a lighter one. Pets are their sprite strips in whole pixels;
+   they walk on the spot while hovered (steps through the frames). */
+.crate-art {
+  --crate: var(--roll-colour, var(--accent));
+  --crate-edge: color-mix(in srgb, var(--crate) 42%, #11141b);
+  display: block;
+  width: 56px;
+  height: auto;
+  overflow: visible;
+}
+.crate-fill {
+  fill: var(--crate);
+  stroke: var(--crate-edge);
+  stroke-width: 2.5;
+}
+.crate-top {
+  fill: color-mix(in srgb, var(--crate) 76%, #fff);
+  stroke: var(--crate-edge);
+  stroke-width: 2.5;
+}
+.crate-line {
+  fill: none;
+  stroke: var(--crate-edge);
+  stroke-width: 2;
+  opacity: 0.45;
+}
+.crate-strap {
+  fill: none;
+  stroke: var(--crate-edge);
+  stroke-width: 4;
+  opacity: 0.3;
+}
+.crate-latch {
+  fill: var(--crate-edge);
+}
+.crate-lid {
+  transform-box: fill-box;
+  transform-origin: 0% 100%;
+}
+
+.pet-sprite {
+  display: inline-block;
+  flex: none;
+  width: var(--pet-w);
+  height: var(--pet-h);
+  background-repeat: no-repeat;
+  background-size: var(--pet-strip) var(--pet-h);
+  background-position: 0 0;
+  image-rendering: pixelated;
+}
+.pet-sprite.is-walking,
+.inv-tile:hover .pet-sprite,
+.inv-tile:focus-visible .pet-sprite {
+  animation: pet-walk calc(var(--pet-frames) * 110ms) steps(var(--pet-frames)) infinite;
+}
+@keyframes pet-walk {
+  to {
+    background-position: calc(var(--pet-strip) * -1) 0;
+  }
+}
+
+/* The crates a pull offered: one row per rarity, the choice on the right. */
+.crate-offers {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.crate-offer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--roll-colour) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--roll-colour) 35%, transparent);
+}
+.crate-offer-art {
+  width: 34px;
+}
+.crate-offer-name {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  color: var(--roll-colour);
+}
+.crate-offer-n {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.crate-offer-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+.roll-slot-offers {
+  width: 100%;
+  animation: roll-chip-in 340ms var(--ease-spring) backwards;
+  animation-delay: 420ms;
+}
+
+/* Achievements › Inventory. */
+.inv-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: var(--card-pad);
+}
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(124px, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inv-item {
+  height: 100%;
+}
+.inv-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 10px 10px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+.inv-tile.is-crate {
+  cursor: pointer;
+  transition: background-color 160ms var(--ease-out, ease);
+}
+.inv-tile.is-crate:hover {
+  background: color-mix(in srgb, var(--roll-colour) 12%, transparent);
+}
+.inv-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.inv-art {
+  display: grid;
+  place-items: end center;
+  width: 100%;
+  height: 80px;
+  padding-bottom: 6px;
+}
+.inv-art .crate-art {
+  width: 64px;
+}
+.inv-tile.is-crate:hover .crate-art {
+  animation: crate-wiggle 520ms var(--ease-spring);
+}
+.inv-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--roll-colour);
+}
+.inv-rarity,
+.inv-open {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.inv-count {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/* The card a tile shows while hovered: on the body, fixed to the window. */
+.inv-hover {
+  position: fixed;
+  z-index: 65;
+  padding: 14px 16px;
+  border-radius: 16px;
+  pointer-events: none;
+  animation: inv-hover-in 140ms var(--ease-out, ease) backwards;
+}
+@keyframes inv-hover-in {
+  from {
+    transform: translateY(4px);
+  }
+}
+.inv-hover-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.inv-hover-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.inv-hover-title {
+  font-weight: 600;
+  color: var(--roll-colour);
+}
+.inv-hover-rarity {
+  color: var(--roll-colour);
+}
+.inv-hover-meta {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+.inv-drops-xp {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inv-drop-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  font-size: var(--text-xs);
+}
+.inv-drops {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inv-drop {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+}
+.inv-drop-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--roll-colour);
+}
+.inv-drop-crate {
+  width: 22px;
+}
+.inv-drop-pct {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+}
+.inv-drop-pets {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 4px 8px;
+}
+
+/* Opening one: it shakes, the lid flies off, and what it gave rises out. */
+.crate-open {
+  display: grid;
+  place-items: center;
+  min-height: 260px;
+  padding-top: 12px;
+}
+.crate-open-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.crate-open-art {
+  width: 132px;
+}
+.crate-open[data-stage='shake'] .crate-open-art {
+  animation: crate-shake 1100ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+.crate-open[data-stage='open'] .crate-lid,
+.crate-open[data-stage='shown'] .crate-lid {
+  transform: translate(-30px, -6px) rotate(-38deg);
+  transition: transform 360ms var(--ease-spring);
+}
+.crate-open[data-stage='shown'] .crate-open-art {
+  width: 72px;
+  transition: width 360ms var(--ease-out, ease);
+}
+.crate-won {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: crate-won-in 520ms var(--ease-spring) backwards;
+}
+.crate-won .pet-sprite {
+  margin-bottom: 6px;
+}
+.crate-won-name {
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: 600;
+  color: var(--roll-colour);
+}
+.crate-won-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--roll-colour);
+  font-size: var(--text-sm);
+}
+.crate-won-new {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--roll-colour) 16%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.crate-won-xp {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.crate-won-xp small {
+  margin-left: 4px;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.crate-won-crate {
+  width: 88px;
+}
+@keyframes crate-shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-3px) rotate(-3deg);
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(3px) rotate(3deg);
+  }
+}
+@keyframes crate-wiggle {
+  30% {
+    transform: rotate(-5deg);
+  }
+  65% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes crate-won-in {
+  from {
+    transform: translateY(24px) scale(0.6);
+  }
+}
+:root[data-motion='off'] .pet-sprite,
+:root[data-motion='off'] .crate-open *,
+:root[data-motion='off'] .inv-tile * {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .pet-sprite,
+  :root:not([data-motion='on']) .crate-open *,
+  :root:not([data-motion='on']) .inv-tile * {
+    animation: none !important;
+  }
+}
+
 /* ---------- end-of-session score sheet ---------- */
 .summary {
   display: flex;

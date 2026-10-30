@@ -51,6 +51,7 @@ export const keys = {
   google: ['calendar', 'google'] as const,
   feeds: ['calendar', 'feeds'] as const,
   shop: ['shop'] as const,
+  inventory: ['inventory'] as const,
   /** An uploaded background's picture in this browser, by id ('server' for one the API kept). */
   customBackground: (id: string | null) => ['custom-background', id ?? 'server'] as const,
   customBackgroundTile: (id: string) => ['custom-background', 'tile', id] as const,
@@ -320,6 +321,11 @@ export function useCustomBackgrounds() {
 
 export function useShop() {
   return useQuery({ queryKey: keys.shop, queryFn: api.shop, staleTime: 30_000 });
+}
+
+/** Crates, pets and crates waiting for a choice (Achievements › Inventory). */
+export function useInventory() {
+  return useQuery({ queryKey: keys.inventory, queryFn: api.inventory, staleTime: 30_000 });
 }
 
 export function useRestDays() {

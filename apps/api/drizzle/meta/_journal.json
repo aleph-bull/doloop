@@ -330,6 +330,13 @@
       "when": 1793298564577,
       "tag": "0046_theme_textures",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1793309715708,
+      "tag": "0047_crates",
+      "breakpoints": true
     }
   ]
 }

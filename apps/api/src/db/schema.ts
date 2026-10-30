@@ -341,7 +341,17 @@ export const xpTransactions = pgTable(
     at: ts('at').notNull().defaultNow(),
     delta: integer('delta').notNull(),
     kind: text('kind', {
-      enum: ['session', 'freeze', 'break-day', 'background', 'reward', 'routine', 'badge', 'roll'],
+      enum: [
+        'session',
+        'freeze',
+        'break-day',
+        'background',
+        'reward',
+        'routine',
+        'badge',
+        'roll',
+        'crate',
+      ],
     }).notNull(),
     ref: text('ref'),
   },
@@ -364,6 +374,47 @@ export const rollHoldings = pgTable(
     held: integer('held').notNull().default(0),
   },
   (t) => [primaryKey({ columns: [t.userId, t.tier] })],
+);
+
+/**
+ * A crate a roll of 1/64 or rarer offers (core crates.ts), waiting for its choice: take the
+ * crate, which gives up that roll, or keep the title. The roll is held meanwhile, so an
+ * offer left alone keeps the title.
+ */
+export const crateOffers = pgTable(
+  'crate_offers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The roll's rarity, and so the crate's: 6 (1/64) to 15. */
+    tier: integer('tier').notNull(),
+    source: text('source', { enum: ['roll', 'prestige'] }).notNull(),
+    at: ts('at').notNull().defaultNow(),
+  },
+  (t) => [index('crate_offers_user_idx').on(t.userId)],
+);
+
+/**
+ * What someone has in their inventory: crates by rarity and pets by id, stacked. The sums
+ * across everyone are how many of each exist.
+ */
+export const inventoryItems = pgTable(
+  'inventory_items',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    kind: text('kind', { enum: ['crate', 'pet'] }).notNull(),
+    /** A crate's tier ("6") or a pet's id. */
+    item: text('item').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.kind, t.item] }),
+    index('inventory_items_item_idx').on(t.kind, t.item),
+  ],
 );
 
 /** Every change to a node's estimate, for estimate-accuracy analytics. */
@@ -1125,6 +1176,8 @@ export const schema = {
   userAssets,
   customBackgrounds,
   rollHoldings,
+  crateOffers,
+  inventoryItems,
   posts,
   postMedia,
   postSessions,

@@ -337,6 +337,13 @@ and never explain the difference on screen.
   `users.roll_stats`). Rolls are held per rarity (`roll_holdings`) and prestige turns five of
   one into one of the next (`POST /api/rolls/prestige`). The machine shares its lever, motion and coins with Jack mode's
   (`components/slot/`): change them there for both. See DECISIONS.md.
+- Crates and pets (2026-10-29): a roll of 1/64 or rarer, rolled or prestiged, offers its crate
+  (`crate_offers`); Take crate trades that held roll for it, Keep title lets it go. Crates
+  open (`POST /api/crates/open`) into a pet, 5 to 100 XP or another crate, better the rarer
+  (tables in core `crates.ts`); everything sits in Achievements › Inventory
+  (`inventory_items`, `components/crates/`), with global counts on hover. Pets are
+  `public/pets/<id>.png` walk-left strips (sizes in portal `lib/pet-sprites.ts`) and do
+  nothing yet (owner). See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
   `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table
   (`components/Tags.tsx`), tags on the dashboard task cards, and a play button on courses.

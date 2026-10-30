@@ -16,6 +16,7 @@ export * from './quotes';
 export * from './timer';
 export * from './jack';
 export * from './rolls';
+export * from './crates';
 export * from './sounds';
 export * from './session-plan';
 export * from './highlights-thresholds';
