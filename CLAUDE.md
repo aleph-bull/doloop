@@ -1262,20 +1262,22 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   timelapse); both must go or the shot shows a dialog. Convert the PNGs to webp with sharp.
 - Images pasted into the chat never reach the disk. Ask the owner to save files into the
   folder (the PSD mockups and reference shots live in `apps/site/design`, gitignored).
-- **Short and calm (2026-10-28, reworked on 10-29 and 10-30):** the owner's rules are "make
-  the site feel interactive but not intimidating" and "fluid beautiful and professional", and
-  a long scroll made the app look like more than it is: about six screens, nothing pins. The
-  hero (laptop playing a timelapse, phone on the dashboard, two real crops tilted at the sides
-  as stickers), Record (the floating timelapses on dusk), On your phone (five phones in a hand:
-  picking one moves it left with a pin and its words, the rest drop low; no popup), the app
-  (Start, Plan, Track, Earn as tabs over one window, each a recording beside a card in its
-  colour, playing one after another), Make it yours (the drum on a deep card with chips), a
-  sky closing; coloured pills down the left. Never show the same thing twice. Every phone is
-  the owner's iPhone frame (`.device`, `public/phone-frame.webp`); phone shots and
+- **Short and calm (2026-10-28, reworked on 10-29 and twice on 10-30):** the owner's rules are
+  "make the site feel interactive but not intimidating" and "fluid beautiful and professional",
+  and a long scroll made the app look like more than it is: about eight screens, two of them
+  pinned scenes. The hero (laptop playing the 10-23 exam-morning timelapse, phone on the
+  dashboard, two real crops tilted at the sides as stickers, nothing about the rolls), Record
+  (the timelapses falling past the words, pinned), On your phone (five still phones in a hand:
+  the picked one moves left and plays, its words beside it, the rest drop low; no popup, no
+  pins), the app (Start, Plan, Track, Earn as tabs over one window, each a recording beside a
+  card in its colour), Make it yours (the drum on a deep card with chips, pinned), a sky
+  closing; mist like the visualizer's cloud mist. No side pills, no Jack mode. The words are
+  the owner's own (2026-10-30): keep them verbatim. Never show the same thing twice. Every
+  phone is the owner's iPhone frame (`.device`, `public/phone-frame.webp`); phone shots and
   recordings are taken at 393 x 852 with an iPhone 14 Pro's safe areas. Recordings are
-  frame-stepped (`scripts/record-*.mjs`) so they never stutter. Copy is the owner's; keep
-  every claim true to the app (panels are styled, not arranged). No small labels over
-  headings. On a phone (under 641px wide or 501px tall) the scroll scenes stay off and the
-  page is flat; that query is in both `main.js` and `styles.css`, so change them together.
+  frame-stepped (`scripts/record-*.mjs`) so they never stutter. Keep every claim true to the
+  app (panels are styled, not arranged). No small labels over headings. On a phone (under
+  641px wide or 501px tall) nothing pins and the page is flat; that query is in both
+  `main.js` and `styles.css`, so change them together.
   `.rail` is border-box: a padded
   full-width box without it runs past the screen's edge and stops being centred.

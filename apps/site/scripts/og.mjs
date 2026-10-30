@@ -23,7 +23,11 @@ const CSS = `
   body { overflow: hidden; }
 `;
 
-const browser = await chromium.launch({ channel: 'chrome', headless: true });
+const browser = await chromium.launch({
+  channel: 'chrome',
+  headless: true,
+  args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
+});
 const page = await browser.newPage({
   viewport: { width: 1200, height: 630 },
   deviceScaleFactor: 1,
@@ -34,6 +38,13 @@ await page.addInitScript(() => {
 await page.goto(url, { waitUntil: 'networkidle' });
 await page.addStyleTag({ content: CSS });
 await page.evaluate(() => document.fonts.ready);
+// The laptop shows its timelapse's still, not wherever the video happens to be.
+await page.evaluate(() => {
+  const v = document.querySelector('.laptop video');
+  v.pause();
+  v.removeAttribute('src');
+  v.load();
+});
 await page.waitForTimeout(2500);
 await page.screenshot({
   path: out,

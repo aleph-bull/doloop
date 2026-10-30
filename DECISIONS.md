@@ -2916,3 +2916,15 @@ The owner: "some of the layouts are too boring and the confusion comes from how 
 - **The hand:** replaces the slideshow dialog. Picking a phone moves it left with a pin, its words beside it, the rest dropped low at the foot of the section; another phone swaps, the X or Escape fans them out. On a phone the words show under the strip.
 - **Touches:** the hero's stickers are real crops (Live now from the feed, the RNG Rolls machine); the looks' paragraph became the chips around its heading, so it isn't said twice; the clouds are drawn by script (`public/sky`).
 - **Words written here, for the owner to change:** "On your phone, too." and its line, and the phones' words for Pomodoro, Tasks and courses, Jams and groups, and Streaks and profile. The feed's and the four tabs' words are the owner's own.
+
+## The homepage's sixth pass, 2026-10-30 (owner request)
+
+The owner, on the pushed rework: "make this blend more seamlessly, pin the screen for that timelapse and the drum", "remove the colourful pills", "remove the literal pins on the phones", "Make the phones have still images except when you click on it then the scrolling image plays", "remove the gambling from the hero and replace it", "rempve any mentions of jack mode", "change the timelapse video used in the start", "use a type of clouds used in the audio visualizer instead", then all the page's words in their own wording.
+
+- **Pinned again:** the timelapse band and the drum each hold the screen for about one screen of scrolling (the band's stage sticky; the drum's card held in the middle). About eight screens in all on a computer. The falling timelapses now fade in and out at the stage's edges, so no clip is ever cut off by a straight line.
+- **Gone:** the coloured pills down the left; the pins on the picked phone; the RNG Rolls sticker (now the week's hours from Analytics); Jack mode from the Pomodoro phone. The app's tabs stay but are plain until picked.
+- **The phones** are stills; only the picked one plays, and closing or picking another sets it back to its first frame.
+- **The hero's timelapse** is the 10-23 exam morning (the owner's pick), the one from 10-28 restored from git.
+- **Clouds** are the visualizer's cloud mist: two tiling banks drifting along the foot of the phones and the sky card, drawn once with the same noise.
+- **Words:** every line is now the owner's (pasted 10-30). Their Make it yours line names calm, bright and cozy, so the three are lit in turn instead of one word scrambling. The structured-data description follows their search description.
+- **Fixed:** a picked phone's empty slot in the row sat over the lowered phones' tops and took their clicks; now only the phones take the pointer.

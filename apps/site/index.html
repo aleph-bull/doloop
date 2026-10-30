@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Komodon — Study timer, timelapse and planner</title>
+    <title>Komodon — Study timer, planner and study tracker</title>
     <meta
       name="description"
-      content="Record your study sessions, share timelapses with friends, plan your week, and track your study hours. Free to use."
+      content="Organize your courses and assignments, focus with a study timer, track your hours, and study alongside friends. Free to use."
     />
     <link rel="canonical" href="https://app.komogon.app/" />
     <meta property="og:type" content="website" />
@@ -15,7 +15,7 @@
     <meta property="og:title" content="Komodon" />
     <meta
       property="og:description"
-      content="Study with a timer, record timelapses, share your progress with friends, and plan your week. All in one place."
+      content="Plan your study week, stay focused, track your progress, and see what your friends are working on."
     />
     <!-- The link preview: the hero at 1200x630 (made from the page, not by hand). -->
     <meta property="og:image" content="https://app.komogon.app/og.jpg" />
@@ -53,7 +53,7 @@
             "image": "https://app.komogon.app/og.jpg",
             "applicationCategory": "EducationalApplication",
             "operatingSystem": "Web",
-            "description": "Record your study sessions, share timelapses with friends, plan your week, and track your study hours.",
+            "description": "Organize your courses and assignments, focus with a study timer, track your hours, and study alongside friends.",
             "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CAD" },
             "publisher": { "@id": "https://app.komogon.app/#org" }
           }
@@ -63,7 +63,7 @@
     <link rel="preconnect" href="https://rsms.me/" />
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
     <link rel="preload" as="image" href="/backgrounds/cotton-candy.webp" />
-    <link rel="preload" as="image" href="/clips/slides-review.webp" />
+    <link rel="preload" as="image" href="/clips/morning-exam.webp" />
     <link rel="stylesheet" href="/src/styles.css" />
     <script type="module" src="/src/main.js"></script>
   </head>
@@ -93,17 +93,6 @@
       </div>
     </header>
 
-    <!-- Where you are, down the left on a computer: a pill in each part's colour, the one on
-         screen filled in (main.js). The four in the middle are the app's tabs. -->
-    <nav class="pills" aria-label="On this page">
-      <a class="pill" href="#timelapse" style="--c: var(--c-record)">Record</a>
-      <a class="pill" href="#phone" style="--c: var(--c-share); --on: var(--site-ink)">Phone</a>
-      <a class="pill" href="#app" data-tab="start" style="--c: var(--c-start)">Start</a>
-      <a class="pill" href="#app" data-tab="plan" style="--c: var(--c-plan)">Plan</a>
-      <a class="pill" href="#app" data-tab="track" style="--c: var(--c-track)">Track</a>
-      <a class="pill" href="#app" data-tab="xp" style="--c: var(--c-xp)">Earn</a>
-      <a class="pill" href="#looks" style="--c: var(--c-looks); --on: var(--site-ink)">Make it yours</a>
-    </nav>
     <main id="top">
       <!-- Hero: the app's default photograph, fading out at the bottom, with one of the owner's
            timelapses playing on a laptop and the dashboard on a phone hanging over the edge. -->
@@ -112,8 +101,7 @@
         <div class="hero-text">
           <h1 class="rise">Your study sessions,<br />on record.<span class="rec-mark" aria-hidden="true"></span></h1>
           <p class="lede rise" style="--d: 140ms">
-            Study with a timer, turn your sessions into timelapses, and share your progress with
-            friends. Plan your week and keep track of where your hours go, all in one place.
+            Keep your courses, assignments, and study sessions in one place. Plan what to work on, stay focused with a timer, and see how your hours add up. You can even share your progress and study alongside friends.
           </p>
           <div class="cta-row rise" style="--d: 280ms">
             <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
@@ -123,13 +111,13 @@
         <!-- Two real pieces of the app tilted at the sides like stickers, leaning with the pointer. -->
         <div class="stickers" aria-hidden="true">
           <img class="sticker sticker-live" src="/shots/sticker-live.webp" alt="" width="600" height="226" />
-          <img class="sticker sticker-roll" src="/shots/sticker-roll.webp" alt="" width="520" height="499" />
+          <img class="sticker sticker-week" src="/shots/sticker-week.webp" alt="" width="520" height="251" />
         </div>
         <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
           <div class="laptop">
             <div class="laptop-screen">
               <span class="laptop-notch"></span>
-              <video class="clip" src="/clips/slides-review.mp4" poster="/clips/slides-review.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: an evening reviewing RSM222 slides, the screen in the corner and the focus time counting up"></video>
+              <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: a morning before an exam, the screen in the corner and the focus time counting up"></video>
             </div>
             <div class="laptop-base"><span class="laptop-lip"></span></div>
           </div>
@@ -152,8 +140,7 @@
               <span class="rec-pill"><span class="rec-dot"></span>Recording</span>
               <h2 id="fall-title">See what you got done.</h2>
               <p>
-                Turn a study session into a short timelapse of you working. Add your screen if you
-                want, then keep the video for yourself or share it with friends.
+                Ever finish a long study session and wonder where the time went? Turn it into a short timelapse you can look back on. Record your camera, add your screen if you want, and save the video or share it with friends.
               </p>
               <p class="fall-note">No uploading while you record.</p>
             </div>
@@ -180,56 +167,46 @@
         </div>
       </section>
 
-      <!-- On your phone: a hand of five phones, each a part of the app in another look, each
-           playing its screen. They fan out as the row comes in, lean toward the pointer and
-           pop up when pointed at (main.js). Pick one and it moves left with a pin in it, its
+      <!-- On your phone: a hand of five phones, each a part of the app in another look, each a
+           still of its screen. They fan out as the row comes in, lean toward the pointer and
+           pop up when pointed at (main.js). Pick one and it moves left and plays, its
            words come out beside it, and the rest drop down like cards held low; pick another
-           or close to fan them out again. Clouds drift behind. -->
+           or close to fan them out again. A bank of mist drifts along the foot. -->
       <section id="phone" class="band">
-        <div class="sky" aria-hidden="true">
-          <img class="cloud" src="/sky/cloud-a.webp" alt="" width="700" height="322" style="--top: 34%; --w: 340px; --t: 96s; --at: -20s" />
-          <img class="cloud" src="/sky/cloud-b.webp" alt="" width="700" height="322" style="--top: 58%; --w: 260px; --t: 120s; --at: -75s" />
-          <img class="cloud" src="/sky/cloud-c.webp" alt="" width="700" height="322" style="--top: 16%; --w: 220px; --t: 140s; --at: -110s" />
-        </div>
+        <div class="mist" aria-hidden="true"><span class="mist-back"></span><span class="mist-front"></span></div>
         <div class="rail rail-pad">
           <div class="feature-head rise">
             <h2>On your phone, too.</h2>
             <p class="lede-sm">
-              Your timer, your tasks, your friends and your streak. Pick a phone to see more.
+              Your timer, tasks, courses, friends, and streaks go wherever you do. Pick a phone to see how each feature works.
             </p>
           </div>
         </div>
         <div class="rail phones-rail">
-          <svg class="pin-defs" width="0" height="0" aria-hidden="true"><defs><radialGradient id="pin-head" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#ff8a80" /><stop offset="0.55" stop-color="#e5483d" /><stop offset="1" stop-color="#a8231b" /></radialGradient></defs></svg>
           <ul class="phones" aria-label="Komodon on a phone">
             <li class="phones-item" data-pos="0">
               <button class="phones-phone" type="button" data-pick="0" aria-expanded="false" aria-controls="hand-text" aria-label="Pomodoro">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-pomodoro.mp4" poster="/clips/phone-pomodoro.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
+                <span class="device"><video class="device-screen hand-clip" src="/clips/phone-pomodoro.mp4" poster="/clips/phone-pomodoro.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
               </button>
             </li>
             <li class="phones-item" data-pos="1">
               <button class="phones-phone" type="button" data-pick="1" aria-expanded="false" aria-controls="hand-text" aria-label="Tasks and courses">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-tasks.mp4" poster="/clips/phone-tasks.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
+                <span class="device"><video class="device-screen hand-clip" src="/clips/phone-tasks.mp4" poster="/clips/phone-tasks.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
               </button>
             </li>
             <li class="phones-item" data-pos="2">
               <button class="phones-phone" type="button" data-pick="2" aria-expanded="false" aria-controls="hand-text" aria-label="The feed">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-feed.mp4" poster="/clips/phone-feed.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
+                <span class="device"><video class="device-screen hand-clip" src="/clips/phone-feed.mp4" poster="/clips/phone-feed.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
               </button>
             </li>
             <li class="phones-item" data-pos="3">
               <button class="phones-phone" type="button" data-pick="3" aria-expanded="false" aria-controls="hand-text" aria-label="Jams and groups">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-together.mp4" poster="/clips/phone-together.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
+                <span class="device"><video class="device-screen hand-clip" src="/clips/phone-together.mp4" poster="/clips/phone-together.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
               </button>
             </li>
             <li class="phones-item" data-pos="4">
               <button class="phones-phone" type="button" data-pick="4" aria-expanded="false" aria-controls="hand-text" aria-label="Streaks and your profile">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-profile.mp4" poster="/clips/phone-profile.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
+                <span class="device"><video class="device-screen hand-clip" src="/clips/phone-profile.mp4" poster="/clips/phone-profile.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
               </button>
             </li>
           </ul>
@@ -240,42 +217,41 @@
             </button>
             <article class="hand-card" data-i="0" aria-labelledby="hand-title-0">
               <h3 id="hand-title-0">Work, break, repeat.</h3>
-              <p>Pick how long you work and how long you rest, and change either one mid-session. Or turn on Jack mode and let a slot machine set your break.</p>
+              <p>Set your own work and break lengths, then change them whenever you need. Whether you're working through a problem set or reviewing lecture notes, your timer keeps the session on track.</p>
               <ul class="hand-facts">
-                <li>Any length, changed whenever.</li>
-                <li>Jack mode: the slot machine sets your break.</li>
+                <li>Set any session length and change it whenever.</li>
               </ul>
             </article>
             <article class="hand-card" data-i="1" aria-labelledby="hand-title-1">
               <h3 id="hand-title-1">Know what's due.</h3>
-              <p>Add your courses and the tasks under them, with due dates and tags. Press play on any task to start a session on it.</p>
+              <p>Keep your courses and assignments organized in one place. Add due dates and tags, then start a focus session straight from a task. No switching between your to-do list and your timer to figure out what to work on.</p>
               <ul class="hand-facts">
-                <li>Tags on any task.</li>
-                <li>Due dates show on your calendar.</li>
+                <li>Tags to keep your tasks organized.</li>
+                <li>Due dates appear on your calendar.</li>
               </ul>
             </article>
             <article class="hand-card" data-i="2" aria-labelledby="hand-title-2">
               <h3 id="hand-title-2">See what your friends got done.</h3>
-              <p>Every post is a real session: what it was on, how long it took, and the timelapse if there is one. Give kudos, or leave a comment.</p>
+              <p>See what your friends have been studying, how long they've spent, and their timelapses if they've recorded one. Share your own sessions, give kudos, and leave comments.</p>
               <ul class="hand-facts">
                 <li>Live now shows who's studying right now.</li>
-                <li>Friends only, if you'd rather.</li>
+                <li>Keep your posts visible to friends only.</li>
               </ul>
             </article>
             <article class="hand-card" data-i="3" aria-labelledby="hand-title-3">
               <h3 id="hand-title-3">Study together, or race.</h3>
-              <p>Start a jam for a day, three days or a week, and the most hours wins. Or make a group and see your weeks side by side.</p>
+              <p>Turn studying into something you can do with other people. Start a jam for a day, three days, or a week and compete to put in the most hours. Or create a group to compare weekly progress and keep each other accountable.</p>
               <ul class="hand-facts">
-                <li>Friends join from their feed, anyone else with the code.</li>
+                <li>Friends can join from their feed; anyone else can join with the code.</li>
                 <li>Nudge someone who's fallen behind.</li>
               </ul>
             </article>
             <article class="hand-card" data-i="4" aria-labelledby="hand-title-4">
               <h3 id="hand-title-4">Keep the streak going.</h3>
-              <p>A daily streak and a weekly one, with streak freezes for the days you miss. Your profile shows your study days, best days and totals.</p>
+              <p>Build daily and weekly study streaks as you put in the hours. Miss a day? Use a streak freeze to keep your progress going. Your profile also shows your study history, best days, and total hours.</p>
               <ul class="hand-facts">
-                <li>Freezes from the shop.</li>
-                <li>Show as much or as little as you like.</li>
+                <li>Get streak freezes from the shop.</li>
+                <li>Choose how much of your activity others can see.</li>
               </ul>
             </article>
           </div>
@@ -284,7 +260,7 @@
 
       <!-- The app, a part at a time: the words on a card in that part's colour, beside a real
            recording of it. Each recording plays through and the next tab comes up by itself
-           (main.js); the tabs, the card's button and the pills down the left pick one by hand.
+           (main.js); the tabs and the card's button pick one by hand.
            The phone's day view joins the calendar. -->
       <section id="app" class="band app-band">
         <div class="rail app-rail">
@@ -301,29 +277,25 @@
                 <div class="app-panel is-on" id="panel-start" role="tabpanel" aria-labelledby="tab-start" data-tab="start">
                   <h2>Pick a task and get going.</h2>
                   <p>
-                    Use a Pomodoro timer with work blocks and breaks you choose, or let the timer
-                    run until you're done. Record a timelapse if you want a recap of the session.
+                    Choose an assignment, set a timer, and get to work. Use Pomodoro sessions with breaks or keep the timer running until you're done. Record a timelapse if you want to revisit the session later.
                   </p>
                 </div>
                 <div class="app-panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" data-tab="plan">
                   <h2>Know what you're studying this week.</h2>
                   <p>
-                    Add your courses and deadlines, drag study time onto your calendar, or let Plan
-                    my week fit sessions around your classes.
+                    Get your courses, deadlines, and study sessions onto one calendar. Drag sessions into your week yourself, or let Plan my week fit them around your classes.
                   </p>
                 </div>
                 <div class="app-panel" id="panel-track" role="tabpanel" aria-labelledby="tab-track" data-tab="track">
                   <h2>See where your hours go.</h2>
                   <p>
-                    Check this week against last week, keep an eye on your goal, and see how much
-                    time each course or module takes as an exam gets closer.
+                    Find out how much time you're actually putting into studying. Compare this week with last, keep an eye on your goals, and see which courses or modules are taking up the most time before exams.
                   </p>
                 </div>
                 <div class="app-panel" id="panel-xp" role="tabpanel" aria-labelledby="tab-xp" data-tab="xp">
                   <h2>Put your study hours to use.</h2>
                   <p>
-                    Earn XP as you study, then spend it on rewards you actually want. Unlock
-                    backgrounds, grab streak freezes, or try your luck in Komodon's RNG minigame.
+                    Studying earns you XP that you can spend on backgrounds, streak freezes, and other rewards. You can also try your luck in Komodon's RNG minigame.
                   </p>
                 </div>
               </div>
@@ -352,7 +324,8 @@
            around the heading. main.js turns the drum while it's on screen; scrolling pushes it. -->
       <section id="looks" class="band looks-band" aria-labelledby="looks-title">
         <div class="rail looks-rail">
-          <div class="looks-card rise" data-scrub="looks">
+          <div class="looks" data-scrub="looks">
+          <div class="looks-card rise">
             <div class="looks-head">
               <h2 id="looks-title">Make it feel like <span class="accent-word">yours</span>.</h2>
             </div>
@@ -387,27 +360,23 @@
               </div>
             </div>
             <p class="looks-note">
-              Make your study space <span class="scramble" data-words="calm,bright,cozy">calm</span>, or
-              whatever works for you.
+              Set up a study space that feels right for you, whether that's <span class="cycle-word is-lit">calm</span>, <span class="cycle-word">bright</span>, or <span class="cycle-word">cozy</span>.
             </p>
+          </div>
           </div>
         </div>
       </section>
 
-      <!-- Closing: a card of sky with clouds drifting across it. -->
+      <!-- Closing: a card of sky with a bank of mist drifting along its foot. -->
       <section class="band closing">
         <div class="rail closing-rail">
           <div class="closing-card rise rise-pop">
-            <div class="sky" aria-hidden="true">
-              <img class="cloud" src="/sky/cloud-a.webp" alt="" width="700" height="322" style="--top: 6%; --w: 300px; --t: 90s; --at: -30s" />
-              <img class="cloud" src="/sky/cloud-c.webp" alt="" width="700" height="322" style="--top: 58%; --w: 380px; --t: 110s; --at: -80s" />
-              <img class="cloud" src="/sky/cloud-b.webp" alt="" width="700" height="322" style="--top: 30%; --w: 200px; --t: 130s; --at: -5s" />
-            </div>
+            <div class="mist" aria-hidden="true"><span class="mist-back"></span><span class="mist-front"></span></div>
             <div class="closing-inner">
               <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
               <h2>Give your study hours somewhere to go.</h2>
               <p class="lede-sm">
-                Start a session, see how it adds up, and share the progress if you want.
+                Get your assignments organized, make time to focus, and see how much progress you make. Start studying on your own or bring your friends along.
               </p>
               <p class="closing-small">Free to use. Currently in alpha.</p>
               <div class="cta-row">

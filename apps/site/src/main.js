@@ -1,10 +1,10 @@
 // Motion for the homepage. The hero lifts in on load, devices and all, with two stickers of the
-// app leaning away from the pointer, and each section rises as it scrolls into view. Nothing
-// pins: the floating timelapses drift a little slower than the page and the drum of looks
-// turns on its own ([data-scrub]). The phones move on springs and open like a hand of cards,
-// the app's four parts play one after another in one window, and pills down the left show
-// where you are. Nothing here is needed to read the page; without it everything lays out flat,
-// and on a phone it stays flat on purpose.
+// app leaning away from the pointer, and each section rises as it scrolls into view. Two scenes
+// hold the screen while the page scrolls ([data-scrub]): the timelapses falling past the words,
+// and the drum of looks turning. The phones move on springs and open like a hand of cards, the
+// picked one playing its screen, and the app's four parts play one after another in one window.
+// Nothing here is needed to read the page; without it everything lays out flat, and on a phone
+// it stays flat on purpose.
 
 const root = document.documentElement;
 const still =
@@ -43,38 +43,10 @@ if (!still && 'IntersectionObserver' in window) {
 
 // ---------- Scroll scenes ----------
 
-/** A word in the looks' last line, scrambled through random letters on its way to the next. */
-function scrambler(el) {
-  const words = el.dataset.words.split(',');
-  const letters = 'abcdefghijklmnopqrstuvwxyz';
-  let shown = el.textContent;
-  let raf = 0;
-  const to = (i) => {
-    const target = words[clamp(i, 0, words.length - 1)];
-    if (target === shown) return;
-    shown = target;
-    cancelAnimationFrame(raf);
-    const start = performance.now();
-    el.classList.add('is-scrambling');
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / 480);
-      const fixed = Math.floor(t * target.length);
-      let out = target.slice(0, fixed);
-      for (let k = fixed; k < target.length; k++) out += letters[(Math.random() * 26) | 0];
-      el.textContent = out;
-      if (t < 1) raf = requestAnimationFrame(tick);
-      else el.classList.remove('is-scrambling');
-    };
-    raf = requestAnimationFrame(tick);
-  };
-  /** Straight to the first word, as the page reads without the scene. */
-  const rest = () => {
-    cancelAnimationFrame(raf);
-    shown = words[0];
-    el.textContent = shown;
-    el.classList.remove('is-scrambling');
-  };
-  return { to, rest, count: words.length };
+/** The words in the looks' last line (calm, bright, cozy), lit one after another. */
+function cycler(words) {
+  const to = (i) => words.forEach((w, k) => w.classList.toggle('is-lit', k === i));
+  return { to, rest: () => to(0), count: words.length };
 }
 
 /*
@@ -83,12 +55,12 @@ function scrambler(el) {
  * along the arc (-1 at the left edge, 0 in the middle, 1 at the right). The drum turns on
  * its own while it's on screen, right to left, and those leaving one side come back on the
  * other; scrolling gives it a push that eases off. The cards fan out from the middle as the
- * card comes up the screen, and the last line's word changes every few seconds.
+ * card comes up the screen, and the last line lights its next word every few seconds.
  */
 function ringScene(scene) {
   const view = scene.querySelector('.ring-view');
   const cards = [...scene.querySelectorAll('.ring-card')];
-  const word = scrambler(scene.querySelector('.scramble'));
+  const word = cycler([...scene.querySelectorAll('.cycle-word')]);
   const SPAN = 2.6;
   // Arc per second on its own: a card's width about every second and a half.
   const CRUISE = 0.11;
@@ -187,10 +159,10 @@ function ringScene(scene) {
 
 /*
  * The floating timelapses. Each card has a place the scroll gives it (from --y, falling by
- * --v, in vh, turning by --dr, as the band goes by) but doesn't snap there: it drifts toward
- * it a beat behind, like something settling in water, and sways, bobs and tilts a little on
- * its own clock, so it keeps moving when the page stops. Falling as the band rises, the cards
- * go by slower than the page, as if farther off. The loop runs only while it's on screen.
+ * --v, in vh, turning by --dr, while the band holds the screen) but doesn't snap there: it
+ * drifts toward it a beat behind, like something settling in water, and sways, bobs and tilts
+ * a little on its own clock, so it keeps moving when the page stops. The loop runs only while
+ * it's on screen.
  */
 function fallScene(scene) {
   const cards = [...scene.querySelectorAll('.floater')].map((el, i) => {
@@ -234,8 +206,8 @@ function fallScene(scene) {
     if (live && onScreen && !raf) raf = requestAnimationFrame(tick);
   }).observe(scene);
   return {
-    update(enter, through) {
-      target = 0.2 + 0.6 * through;
+    update(enter, through, p) {
+      target = p;
     },
     start() {
       live = true;
@@ -275,10 +247,11 @@ if (!still) {
       const r = s.el.getBoundingClientRect();
       if (r.bottom < -vh || r.top > vh * 2) continue;
       // enter: 0 to 1 as it comes up the screen; through: 0 to 1 from its top reaching the
-      // bottom to its bottom leaving the top.
+      // bottom to its bottom leaving the top; p: 0 to 1 while it holds the screen.
       const enter = clamp((vh - r.top) / vh);
       const through = clamp((vh - r.top) / (vh + r.height));
-      s.update?.(enter, through);
+      const p = clamp(-r.top / Math.max(1, r.height - vh));
+      s.update?.(enter, through, p);
     }
   };
   const queue = () => {
@@ -292,9 +265,9 @@ if (!still) {
     queue();
   };
 
-  // A phone gets the page flat (the owner, 2026-10-28): the scenes stay off, and each section
-  // is its words then its pictures, laid out by the CSS under the same query (change both
-  // together). A window dragged across the line switches between the two as it goes.
+  // A phone gets the page flat (the owner, 2026-10-28): nothing pins, and each section is its
+  // words then its pictures, laid out by the CSS under the same query (change both together).
+  // A window dragged across the line switches between the two as it goes.
   const flat = window.matchMedia('(max-width: 640px), (max-height: 500px)');
   const apply = () => {
     if (on === !flat.matches) return;
@@ -349,10 +322,9 @@ if (!still && stickers && window.matchMedia('(hover: hover)').matches) {
 
 // ---------- Timelapses ----------
 
-// The timelapses and the phones' screens play while they're on screen and pause off it, so
-// they load only when someone gets that far. With reduced motion they wait on their poster,
-// with controls unless they're inside a button. The app's four recordings play one at a time
-// (below).
+// The timelapses play while they're on screen and pause off it, so they load only when someone
+// gets that far. With reduced motion they wait on their poster with controls. The phones'
+// screens play only when picked, and the app's four recordings one at a time (below).
 const clips = [...document.querySelectorAll('video.clip')];
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   for (const v of clips) if (!v.closest('button')) v.controls = true;
@@ -610,18 +582,31 @@ function phoneRow(row) {
 if (!still) for (const row of document.querySelectorAll('.phones')) phoneRow(row);
 
 /*
- * Picking a phone: it marks the rail (data-picked), which the springs above follow, a pin goes
- * in, and its words come out beside it. Picking another swaps them; the close button or Escape
- * fans the hand out again. On a phone the picked one is brought to the middle of the strip and
- * its words show under it.
+ * Picking a phone: it marks the rail (data-picked), which the springs above follow, its screen
+ * plays and its words come out beside it; the others stay still, back at their first frame.
+ * Picking another swaps them; the close button or Escape fans the hand out again. On a phone
+ * the picked one is brought to the middle of the strip and its words show under it.
  */
 for (const rail of document.querySelectorAll('.phones-rail')) {
   const row = rail.querySelector('.phones');
   const phones = [...rail.querySelectorAll('.phones-phone')];
   const items = phones.map((p) => p.closest('.phones-item'));
+  const screens = phones.map((p) => p.querySelector('.hand-clip'));
   const cards = [...rail.querySelectorAll('.hand-card')];
   const swipe = window.matchMedia('(max-width: 640px)');
   let at = -1;
+  let onScreen = true;
+  const play = () => {
+    screens.forEach((v, k) => {
+      if (k === at && onScreen) {
+        v.play().catch(() => {});
+        return;
+      }
+      if (v.paused && v.currentTime === 0) return;
+      v.pause();
+      v.currentTime = 0;
+    });
+  };
   const pick = (i) => {
     at = i;
     if (i < 0) delete rail.dataset.picked;
@@ -629,7 +614,14 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
     items.forEach((li, k) => li.classList.toggle('is-picked', k === i));
     phones.forEach((p, k) => p.setAttribute('aria-expanded', String(k === i)));
     cards.forEach((c, k) => c.classList.toggle('is-on', k === i));
+    play();
   };
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => {
+      onScreen = e.isIntersecting;
+      play();
+    }).observe(rail);
+  }
   const close = () => {
     const was = at;
     pick(-1);
@@ -660,9 +652,9 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
 /*
  * One window, four recordings: Start, Plan, Track and Earn. The picked one plays through while
  * the window is on screen, then the next comes up by itself, round and round, its tab filling
- * along the foot as it plays. The tabs (and the arrow keys on them), the card's button and the
- * pills down the left pick one by hand, and the window's pause holds it. With reduced motion
- * nothing plays by itself: the picked recording has controls.
+ * along the foot as it plays. The tabs (and the arrow keys on them) and the card's button pick
+ * one by hand, and the window's pause holds it. With reduced motion nothing plays by itself:
+ * the picked recording has controls.
  */
 function appTabs(section) {
   const stage = section.querySelector('.app-stage');
@@ -673,7 +665,6 @@ function appTabs(section) {
   const win = section.querySelector('.app-window');
   const nextLabel = section.querySelector('.app-next-label');
   const quiet = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const listeners = [];
   let at = 0;
   let onScreen = false;
   let held = false;
@@ -733,7 +724,6 @@ function appTabs(section) {
     }
     nextLabel.textContent = tabs[(at + 1) % tabs.length].textContent;
     play();
-    for (const fn of listeners) fn(names[at]);
   };
   /** Picked by hand: a hold lets go. */
   const choose = (i) => {
@@ -777,56 +767,12 @@ function appTabs(section) {
   if (quiet) clips[at].controls = true;
   return {
     pick: (name) => choose(Math.max(0, names.indexOf(name))),
-    get current() {
-      return names[at];
-    },
-    onChange: (fn) => listeners.push(fn),
   };
 }
 
 const appSection = document.getElementById('app');
 const app = appSection ? appTabs(appSection) : null;
-// Links to a part of the app (the nav's Planner, the pills) pick its tab on the way there.
+// Links to a part of the app (the nav's Planner) pick its tab on the way there.
 for (const a of document.querySelectorAll('a[data-tab]')) {
   a.addEventListener('click', () => app?.pick(a.dataset.tab));
-}
-
-// ---------- Where you are ----------
-
-// The pills down the left: the part on screen is filled in, and while the app is up, its tab.
-// They show only from the timelapses to the closing.
-const pills = document.querySelector('.pills');
-if (pills) {
-  const links = [...pills.querySelectorAll('a')];
-  const parts = [...new Set(links.map((a) => a.getAttribute('href')))].map((h) =>
-    document.querySelector(h),
-  );
-  const closing = document.querySelector('.closing');
-  let queued = false;
-  const update = () => {
-    queued = false;
-    const mid = window.innerHeight / 2;
-    let on = null;
-    for (const el of parts) if (el.getBoundingClientRect().top <= mid) on = el;
-    const tab = app?.current;
-    for (const a of links) {
-      const lit =
-        on !== null &&
-        a.getAttribute('href') === `#${on.id}` &&
-        (!a.dataset.tab || a.dataset.tab === tab);
-      a.classList.toggle('is-on', lit);
-      if (lit) a.setAttribute('aria-current', 'location');
-      else a.removeAttribute('aria-current');
-    }
-    root.classList.toggle('show-pills', on !== null && closing.getBoundingClientRect().top > mid);
-  };
-  const queue = () => {
-    if (queued) return;
-    queued = true;
-    requestAnimationFrame(update);
-  };
-  window.addEventListener('scroll', queue, { passive: true });
-  window.addEventListener('resize', queue);
-  app?.onChange(queue);
-  update();
 }
