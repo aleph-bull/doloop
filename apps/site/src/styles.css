@@ -550,13 +550,13 @@ main {
   background: linear-gradient(
     180deg,
     var(--fall-ink) 0%,
-    var(--fall-ink) 14%,
-    rgb(82 56 88 / 0.9) 26%,
-    rgb(104 66 106 / 0.74) 40%,
-    rgb(132 86 128 / 0.52) 54%,
-    rgb(176 122 166 / 0.3) 68%,
-    rgb(222 178 208 / 0.12) 82%,
-    rgb(240 210 228 / 0.03) 92%,
+    var(--fall-ink) 32%,
+    rgb(82 56 88 / 0.9) 42%,
+    rgb(104 66 106 / 0.74) 52%,
+    rgb(132 86 128 / 0.52) 63%,
+    rgb(176 122 166 / 0.3) 74%,
+    rgb(222 178 208 / 0.12) 86%,
+    rgb(240 210 228 / 0.03) 94%,
     transparent 100%
   );
 }
@@ -564,11 +564,13 @@ main {
 .fall-band + .band {
   border-top: 0;
 }
+/* Each reaches 10vh into the band and is solid for a while either side of the band's edge, so
+   the page and the band never show through it differently (that made a line). */
 .fall-edge-bottom {
-  top: calc(100% - 8vh);
+  top: calc(100% - 10vh);
 }
 .fall-edge-top {
-  bottom: calc(100% - 8vh);
+  bottom: calc(100% - 10vh);
   transform: scaleY(-1);
 }
 .edge-wave {
@@ -1346,6 +1348,34 @@ html.has-scrub .ring-card {
   will-change: transform, opacity;
 }
 
+/* ---------- Settling on each part ---------- */
+
+/*
+ * On a computer the page settles on each part as it scrolls: a short scroll springs back to
+ * the part on screen and a firm one carries on to the next (the owner: "make the screen stick
+ * to sections and then go with enough scroll"). A part taller than the screen, like the
+ * pinned timelapses, scrolls freely inside before the next one takes over. Shorter parts settle
+ * in the middle of the screen. Phones scroll freely.
+ */
+@media (min-width: 641px) and (min-height: 501px) {
+  html {
+    scroll-snap-type: y mandatory;
+  }
+  .hero,
+  .fall-band,
+  #phone {
+    scroll-snap-align: start;
+  }
+  #app,
+  #looks,
+  .closing {
+    scroll-snap-align: center;
+  }
+  .site-footer {
+    scroll-snap-align: end;
+  }
+}
+
 /* ---------- Entrance motion ---------- */
 
 /*
@@ -1747,6 +1777,13 @@ html.has-motion .devices.rise.is-in {
   }
   .fall-edge {
     height: 28vh;
+  }
+  /* Still solid where the band begins (the shorter fade is solid for 9vh). */
+  .fall-edge-bottom {
+    top: calc(100% - 7vh);
+  }
+  .fall-edge-top {
+    bottom: calc(100% - 7vh);
   }
   .closing-inner {
     padding: 72px 20px 88px;

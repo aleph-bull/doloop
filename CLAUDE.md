@@ -1271,7 +1271,7 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   the picked one moves left and plays, its words beside it, the rest drop low; no popup, no
   pins), the app (Start, Plan, Track, Earn as tabs over one window, each a recording beside a
   card in its colour), Make it yours (the drum on a deep card with chips, not pinned, draggable), a
-  sky closing; clouds and mist drawn like the visualizer's cloud mist. No side pills, no Jack mode. The words are
+  sky closing; clouds and mist drawn like the visualizer's cloud mist. On a computer the page snaps to each part (a firm scroll moves on). No side pills, no Jack mode. The words are
   the owner's own (2026-10-30): keep them verbatim. Never show the same thing twice. Every
   phone is the owner's iPhone frame (`.device`, `public/phone-frame.webp`); phone shots and
   recordings are taken at 393 x 852 with an iPhone 14 Pro's safe areas. Recordings are

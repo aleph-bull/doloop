@@ -2941,3 +2941,9 @@ The owner, on the pushed rework: "make this blend more seamlessly, pin the scree
 The owner pasted a shorter version of every line on the page, to go in verbatim, skipping anything already removed (the "No uploading while you record." line stays gone). The tab title is back to "Komodon — Study timer, timelapse and planner"; the Pomodoro phone has one point; the Make it yours line is "Your study space, your style. Calm, bright, or cozy.", the three words still marked in turn. The structured-data description follows the new search description.
 
 The same day, on the line where the page turns into the dusk band, "make this line more seemless": the three waves made stripes and a dark strip sat between them and the photo. Now one long eased gradient runs from the page into the band under softer waves, the photo fades in further down, and the band's own colour is lifted to the photo's tone, so the way in only ever gets darker (checked by sampling the brightness down the screen).
+
+## The homepage settles on each part, 2026-10-30 (owner request)
+
+"i can see the line of the picture now": the fade into the dusk band was slightly see-through where the band began, so the light page above and the dark band below showed through it differently and drew a line. It is now solid from a little above the band's edge to 10vh inside it (7vh on a phone), at both ends of the band; the brightness down the screen runs smoothly from the page into the clouds.
+
+"make the screen stick to sections and then go with enough scroll": on a computer the page snaps to each part (mandatory scroll snapping): a short scroll springs back, a firm one carries on to the next. The hero, the timelapses and the phones settle at their top; the app, the looks and the closing in the middle; the footer at the end. Parts taller than the screen scroll freely inside, so the pinned timelapses still play out. Phones keep free scrolling.

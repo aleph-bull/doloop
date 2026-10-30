@@ -68,6 +68,12 @@ pnpm build      # static output in dist/
   gathered into an oval) drift across (`.sky`); along the sky card's foot, two banks tile
   sideways (`.mist`, `mist-*`), the back one wider, fainter and slower, over a faint bank of
   light.
+- **Settling on each part** (the owner, 2026-10-30: "make the screen stick to sections and then
+  go with enough scroll"): on a computer the page snaps (`scroll-snap-type: y mandatory`): a
+  short scroll springs back, a firm one moves on. The hero, the timelapses and the phones settle
+  at their top, the app, the looks and the closing in the middle of the screen, the footer at
+  the end. A part taller than the screen (the hero, the pinned timelapses) scrolls freely
+  inside. Phones scroll freely.
 - **On a phone the page is flat** (the owner, 2026-10-28): under 641px wide, or under 501px
   tall (a phone held sideways), `main.js` leaves the scenes off and the CSS under the same
   query lays each section out as its words, then its pictures: four clips in a grid on the
