@@ -16,6 +16,17 @@
 // Phone, an iPhone 14 Pro (393 x 852 with its safe areas) at 2x (786 x 1704): a slow scroll
 // down about two screens (or to the end), a pause and back to the top, so it loops:
 //  - phone-feed, phone-groups, phone-jams, phone-board, phone-profile.
+//  - phone-tasks: Tasks with the courses that hold something opened (every row starts
+//    folded), their tasks, due dates and tags. The seed makes no tags: when Jerry has none,
+//    three are added to a few tasks first, and kept.
+// Also on a phone, not that scroll:
+//  - phone-pomodoro: the focus screen in a Pomodoro work block counting down (the controls
+//    fade when left alone), then, the page's clock moved on, the block's last seconds and the
+//    break starting. Not recording: the timelapse is set not to ask, and any prompt is
+//    declined. The session is real and is ended once it has run a minute, as in
+//    record-focus.mjs.
+//  - phone-together: Social › Groups on the group's week, a tap on Jams, its jams, a short
+//    scroll down and back.
 //
 // CAPTURE_DEPS=<playwright-core + jose> FFMPEG=<ffmpeg with h264_nvenc>
 //   node scripts/record-takes.mjs [take ...]      (every take when none is named)
@@ -25,6 +36,7 @@ import {
   COMPUTER,
   PHONE,
   BASE_THEME,
+  POMODORO,
   Film,
   pageClock,
   settled,
@@ -91,6 +103,34 @@ const top = (page, sel) =>
     const el = document.querySelector(sel);
     return el ? el.getBoundingClientRect().top + window.scrollY : null;
   }, sel);
+
+/**
+ * A finger on the middle of an element, between two frames. By its box rather than
+ * `locator.tap()`, whose checks wait on animation frames the held clock doesn't run.
+ */
+async function tapOn(page, locator, label) {
+  const box = await locator.boundingBox();
+  if (!box) throw new Error(`Nothing to tap: ${label}`);
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+/** Tags on a few of Jerry's tasks for phone-tasks, when there are none (the seed makes none). */
+async function tagTasks() {
+  if ((await api('GET', '/api/tags')).tags.length) return;
+  const tag = async (name, color) => (await api('POST', '/api/tags', { name, color })).tag.id;
+  const reading = await tag('Reading', 'blue');
+  const graded = await tag('Graded', 'green');
+  const exam = await tag('Exam', 'purple');
+  const on = {
+    'Weekly reading': [reading],
+    'Problem set 3': [graded],
+    'Reading response': [reading, graded],
+    Midterm1: [exam],
+    'Case write-up': [graded],
+  };
+  for (const n of (await api('GET', '/api/nodes')).nodes)
+    if (on[n.title]) await api('PATCH', `/api/nodes/${n.id}`, { tagIds: on[n.title] });
+}
 
 const takes = {
   async 'plan-week'(browser) {
@@ -265,13 +305,170 @@ const takes = {
     // Under about 3 MB: the cap holds the scrolls' bitrate down.
     await film.finish({ cq: 23, bitrate: '1600k', maxrate: '1900k', bufsize: '3800k' });
   },
+
+  async 'phone-pomodoro'(browser) {
+    if ((await api('GET', '/api/sessions/active')).active)
+      throw new Error('A session is already running; end it first.');
+    const before = (await api('GET', '/api/me')).user.settings;
+    await api('PATCH', '/api/me/settings', {
+      timelapse: { record: 'never' },
+      pomodoro: { ...before.pomodoro, ...POMODORO, autoStartBreaks: true },
+    });
+    await theme({ backgroundId: 'golden-hour', accent: 'amber' });
+    const nodes = (await api('GET', '/api/nodes')).nodes;
+    const task =
+      nodes.find((n) => n.title === 'Problem set 3') ?? nodes.find((n) => n.kind !== 'course');
+    const film = new Film('phone-pomodoro');
+    let session = null;
+    let started = 0;
+    let ticks = null;
+    try {
+      // While it loads, the focus screen's clock runs at a twentieth of real speed (as in
+      // record-focus.mjs), so it still reads about 25:00 when filming starts.
+      const { ctx, page } = await newPage(browser, {
+        ...PHONE,
+        css: QUIET,
+        init: pageClock({ '/focus': 0.05 }),
+      });
+      try {
+        const cdp = await stopTimeline(ctx, page);
+        await cdp.send('Emulation.setSafeAreaInsetsOverride', { insets: PHONE.insets });
+        const a = await api('POST', '/api/sessions', { nodeId: task.id, mode: 'pomodoro' });
+        session = a.active.session;
+        started = Date.now();
+        const blockEnds = Date.parse(a.active.timer.phaseEndsAt);
+        await page.goto(PORTAL + '/focus', { waitUntil: 'load' });
+        await page.waitForFunction(
+          () => /\d:\d\d/.test(document.querySelector('.focus-time')?.textContent ?? ''),
+          null,
+          { timeout: 60_000, polling: 100 },
+        );
+        await page.evaluate(async () => {
+          await document.fonts.ready;
+          // The photo behind it, decoded (it shows its small placeholder until then).
+          const urls = [...document.querySelectorAll('.focus-screen div[style]')]
+            .map((d) => /url\("([^"]+)"\)/.exec(d.style.backgroundImage)?.[1])
+            .filter((u) => u && !u.startsWith('data:'));
+          await Promise.all(
+            urls.map((u) => {
+              const img = new Image();
+              img.src = u;
+              return img.decode().catch(() => {});
+            }),
+          );
+        });
+        await page.waitForTimeout(1500);
+        await dismiss(page);
+        // As `settled`, less the progress bars, which ease to a new width every second.
+        await page.waitForFunction(
+          () =>
+            document
+              .getAnimations()
+              .every(
+                (a) =>
+                  a.playState !== 'running' ||
+                  a.effect?.getTiming().iterations === Infinity ||
+                  /(^| )focus-bar-/.test(a.effect?.target?.classList?.value ?? ''),
+              ),
+          null,
+          { timeout: 60_000, polling: 200 },
+        );
+        await page.evaluate(() => window.__clock.hold());
+        // The phase and clock as the screen shows them, against page time, for the check.
+        await page.evaluate(() => {
+          const read = () =>
+            `${document.querySelector('.focus-phase')?.textContent} ${document.querySelector('.focus-time')?.textContent}`;
+          window.__ticks = [{ at: Date.now(), text: read() }];
+          new MutationObserver(() => {
+            const text = read();
+            if (text !== window.__ticks.at(-1).text) window.__ticks.push({ at: Date.now(), text });
+          }).observe(document.querySelector('.focus-screen'), {
+            subtree: true,
+            characterData: true,
+            childList: true,
+          });
+        });
+        film.trackNetwork(page);
+        // Counting down; left alone, the controls fade after four seconds.
+        await film.hold(page, 4500, 'work');
+        const cut = film.n;
+        // On to a few seconds before the block ends, unfilmed, half a minute at a time: the
+        // app reads a jump of ten minutes or more as the phone having slept.
+        for (;;) {
+          const left = blockEnds - 3600 - (await page.evaluate(() => Date.now()));
+          if (left <= 0) break;
+          await page.evaluate((ms) => window.__clock.step(ms), Math.min(left, 30_000));
+        }
+        await film.quiet();
+        await film.hold(page, 6400, 'end of the block');
+        ticks = { cut, blockEnds, log: await page.evaluate(() => window.__ticks) };
+      } finally {
+        await ctx.close();
+      }
+    } finally {
+      // The session, once it has run a minute (shorter ones can't be ended).
+      if (session) {
+        const left = started + 62_000 - Date.now();
+        if (left > 0) await new Promise((r) => setTimeout(r, left));
+        await api('POST', `/api/sessions/${session.id}/end`, {
+          review: { distracted: 'no', mood: 4 },
+        });
+      }
+      await api('PATCH', '/api/me/settings', {
+        timelapse: { record: before.timelapse.record },
+        pomodoro: before.pomodoro,
+      });
+    }
+    await film.finish({
+      cq: 30,
+      bitrate: '600k',
+      maxrate: '680k',
+      bufsize: '1400k',
+      extra: { ticks },
+    });
+  },
+
+  async 'phone-together'(browser) {
+    await theme({ backgroundId: 'neon', accent: 'violet' });
+    const film = new Film('phone-together');
+    const { ctx, page } = await open(browser, PHONE, '/social?tab=groups', { before: dismiss });
+    try {
+      film.trackNetwork(page);
+      // The group's week sits under the views, so Jams is a tap away.
+      await film.hold(page, 2400, 'groups');
+      await tapOn(page, page.locator('.social-tab', { hasText: 'Jams' }).first(), 'Jams');
+      await film.hold(page, 1400, 'jams');
+      const max = await page.evaluate(
+        () => document.scrollingElement.scrollHeight - window.innerHeight,
+      );
+      const to = Math.min(max, 640);
+      console.log('phone-together scroll', to, 'of', max);
+      await film.scroll(page, to, 2000, 'down');
+      await film.hold(page, 1600, 'below');
+      await film.scroll(page, 0, 1700, 'up');
+      await film.hold(page, 700, 'top again');
+    } finally {
+      await ctx.close();
+    }
+    await film.finish({ cq: 30, bitrate: '600k', maxrate: '680k', bufsize: '1400k' });
+  },
 };
 
-/** A phone page: a slow scroll down about two screens (or to its end), a pause, back up. */
-const phoneTake = (name, path, look) => async (browser) => {
+/**
+ * A phone page: a slow scroll down about two screens (or to its end), a pause, back up.
+ * `setup` runs first (data through the API); `before` on the loaded page, its clock running.
+ */
+const phoneTake = (name, path, look, more) => async (browser) => {
+  const { setup = null, before = null } = more ?? {};
+  if (setup) await setup();
   await theme(look);
   const film = new Film(name);
-  const { ctx, page } = await open(browser, PHONE, path, { before: dismiss });
+  const { ctx, page } = await open(browser, PHONE, path, {
+    before: async (page) => {
+      await dismiss(page);
+      if (before) await before(page);
+    },
+  });
   try {
     const max = await page.evaluate(
       () => document.scrollingElement.scrollHeight - window.innerHeight,
@@ -309,6 +506,25 @@ takes['phone-profile'] = phoneTake('phone-profile', '/profile', {
   backgroundId: 'sea-glass',
   accent: 'mint',
 });
+takes['phone-tasks'] = phoneTake(
+  'phone-tasks',
+  '/tasks',
+  { mode: 'light', backgroundId: 'pier', accent: 'rose' },
+  {
+    setup: tagTasks,
+    // Every row starts folded: each course with something in it opened, as a hand would.
+    before: async (page) => {
+      const folded = page.locator('li.tree-root > .tree-row .tt-toggle[aria-expanded="false"]');
+      for (let i = 0; i < 12 && (await folded.count()); i++) {
+        await folded.first().tap();
+        await page.waitForTimeout(700);
+      }
+      // Then on the title, so the last row tapped doesn't keep its hover (a phone's stays).
+      await page.locator('h1').first().tap();
+      await page.waitForTimeout(500);
+    },
+  },
+);
 
 for (const name of only)
   if (!(name in takes)) throw new Error(`No take "${name}": ${Object.keys(takes).join(', ')}`);

@@ -25,6 +25,15 @@
   --site-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* How far the laptop and phone hang below the hero, over the page. */
   --hang: clamp(100px, 18vw, 220px);
+  /* Each part's colour, for its pill and the app's card. White reads on all but Share and
+     Make it yours, which take the ink (4.5:1 or better either way). */
+  --c-record: #cf3d33;
+  --c-share: #ee93b8;
+  --c-start: #6450dc;
+  --c-plan: #3a74b8;
+  --c-track: #bb511c;
+  --c-xp: #2e6b50;
+  --c-looks: #b99ae8;
 }
 html {
   font-family: var(--site-sans);
@@ -279,6 +288,62 @@ main {
   vertical-align: 0.2em;
   animation: rec-blink 1.6s ease-in-out infinite;
 }
+/*
+ * Two real pieces of the app at the hero's sides, tilted like stickers and cut off by the
+ * window's edge. They float a little on their own and lean away from the pointer (main.js sets
+ * --mx and --my, -1 to 1). Only where there's room beside the headline.
+ */
+.stickers {
+  display: none;
+}
+@media (min-width: 1300px) and (min-height: 640px) {
+  .stickers {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+  }
+}
+.sticker {
+  position: absolute;
+  height: auto;
+  border-radius: 18px;
+  box-shadow: 0 30px 60px -24px rgb(20 10 40 / 0.55);
+  transform: translate3d(calc(var(--mx, 0) * var(--depth)), calc(var(--my, 0) * var(--depth)), 0)
+    rotate(var(--rot));
+  animation:
+    sticker-in 1100ms var(--pop-ease) var(--in) backwards,
+    sticker-float 7s ease-in-out var(--in) infinite alternate;
+}
+.sticker-live {
+  --rot: -8deg;
+  --depth: -16px;
+  --in: 420ms;
+  left: -6px;
+  top: 300px;
+  width: clamp(230px, 18vw, 300px);
+}
+.sticker-roll {
+  --rot: 9deg;
+  --depth: 12px;
+  --in: 560ms;
+  right: -24px;
+  top: 230px;
+  width: clamp(190px, 15vw, 250px);
+  animation-duration: 1100ms, 8s;
+}
+@keyframes sticker-in {
+  from {
+    opacity: 0;
+    scale: 0.8;
+  }
+}
+@keyframes sticker-float {
+  to {
+    translate: 0 -12px;
+  }
+}
 
 /* ---------- Devices ---------- */
 
@@ -462,10 +527,14 @@ main {
 .fall-band {
   position: relative;
   z-index: 3;
-  margin-block: 26vh;
+  margin-block: 15vh;
   background: var(--fall-ink);
   color: #fff;
   --fall-ink: #1c1526;
+}
+/* Straight after the hero: below the laptop hanging over the page. */
+.hero + .fall-band {
+  margin-top: calc(var(--hang) + 15vh);
 }
 /*
  * The way in and out: three soft waves, ink, plum and a rose bloom, stacked like the
@@ -476,7 +545,7 @@ main {
   position: absolute;
   left: -6%;
   right: -6%;
-  height: 34vh;
+  height: 24vh;
   pointer-events: none;
   filter: blur(18px);
 }
@@ -526,13 +595,10 @@ main {
     animation: none;
   }
 }
-/* Pinned stages are the screen's height with a phone's toolbars showing (svh), so the
-   toolbars never cover their bottom; on a computer it's the same as vh. */
+/* Nothing pins: the stage is about a screen tall and scrolls by like the rest. */
 .fall-stage {
   position: relative;
-  height: 100vh;
-  height: 100svh;
-  min-height: 560px;
+  height: clamp(560px, 92vh, 860px);
   overflow: hidden;
 }
 /* Cotton Candy under a dusk wash, melting into the ink at the top and bottom. */
@@ -629,18 +695,40 @@ main {
   will-change: transform;
 }
 
-/* ---------- Make it yours: the ring ---------- */
+/* ---------- Make it yours: the drum on a deep card ---------- */
 
+/*
+ * A deep card, night blue into violet, with the looks turning across it and what can be
+ * changed as chips drifting around the heading. The card clips the drum's big side cards.
+ */
+.looks-rail {
+  padding: 56px clamp(12px, 2vw, 24px) 72px;
+}
+.looks-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  border-radius: 32px;
+  padding: 72px 0 40px;
+  color: #fff;
+  background:
+    radial-gradient(60% 70% at 85% 0%, rgb(155 92 230 / 0.55), transparent 70%),
+    radial-gradient(55% 60% at 10% 100%, rgb(76 110 245 / 0.5), transparent 70%),
+    linear-gradient(160deg, #15123a 0%, #2a1f6b 55%, #4a2a86 100%);
+  box-shadow: 0 50px 100px -50px rgb(40 20 90 / 0.6);
+}
 .looks-head {
+  position: relative;
+  z-index: 2;
   text-align: center;
   padding: 0 20px;
 }
 .looks-head h2 {
-  font-size: clamp(40px, 5.6vw, 80px);
+  font-size: clamp(40px, 5.2vw, 72px);
 }
-.looks-head .lede-sm {
-  max-width: 46ch;
-  margin: 18px auto 0;
+.looks-card .accent-word,
+.looks-card .scramble {
+  color: #c9b6ff;
 }
 .accent-word,
 .scramble {
@@ -650,10 +738,66 @@ main {
   filter: blur(1.5px);
 }
 .looks-note {
+  position: relative;
+  z-index: 2;
   margin: 0 auto;
   text-align: center;
   max-width: 40ch;
   padding: 0 20px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 0.72);
+}
+/* The chips: white labels with an icon, each bobbing on its own clock. */
+.chips {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.chip {
+  position: absolute;
+  left: var(--cx);
+  top: var(--cy);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px 0 11px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.94);
+  color: var(--site-ink);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 16px 34px -14px rgb(10 5 40 / 0.6);
+  rotate: var(--r);
+  animation: chip-bob var(--t) ease-in-out infinite alternate;
+}
+/* The ones on the right are placed from the right edge, so they never run off the card. */
+.chip-r {
+  left: auto;
+  right: var(--cx);
+}
+.chip svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: var(--site-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@keyframes chip-bob {
+  from {
+    translate: 0 -6px;
+  }
+  to {
+    translate: 0 8px;
+  }
 }
 /* Without the script the screens are a plain grid. */
 .ring-view {
@@ -674,7 +818,38 @@ main {
   background: #3b3045;
 }
 .looks-band {
-  padding: 104px 0;
+  padding: 0;
+}
+
+/* ---------- The sky ---------- */
+
+/* Clouds drifting slowly across, right to left, each at its own height, size and pace. */
+.sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cloud {
+  position: absolute;
+  left: 100%;
+  top: var(--top);
+  width: var(--w);
+  height: auto;
+  opacity: 0.95;
+  animation: cloud-drift var(--t) linear var(--at) infinite;
+}
+@keyframes cloud-drift {
+  to {
+    translate: calc(-100vw - 100% - 200px) 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cloud {
+    animation: none;
+    left: auto;
+    right: 6%;
+  }
 }
 
 /* ---------- Recordings ---------- */
@@ -754,10 +929,10 @@ main {
 /* ---------- Social: the row of phones ---------- */
 
 /*
- * Five phones, the middle one biggest, each a part of the social side in another look.
- * main.js moves them on springs: they fan out from a stack as the row comes in, the row leans
- * toward the pointer, and the phone pointed at rises while its neighbours make room. Each
- * opens the slideshow about its part. Without the script they stand in a gentle arc.
+ * Five phones, the middle one biggest, each a part of the app in another look. main.js moves
+ * them on springs: they fan out from a stack as the row comes in, the row leans toward the
+ * pointer, and the phone pointed at rises while its neighbours make room. Picking one plays
+ * the hand (below). Without the script they stand in a gentle arc.
  */
 .phones-rail {
   padding: 56px 0 104px;
@@ -828,12 +1003,24 @@ main {
 .closing {
   padding: 0;
 }
+/* A card of sky, blue at the top into the page's lilac, with clouds drifting across. */
+.closing-rail {
+  padding: 56px clamp(12px, 2vw, 24px) 72px;
+}
+.closing-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 32px;
+  background: linear-gradient(180deg, #9fbaf3 0%, #c3cdf6 45%, #ece5f8 100%);
+  box-shadow: 0 50px 100px -60px rgb(40 50 120 / 0.5);
+}
 .closing-inner {
+  position: relative;
   display: grid;
   justify-items: center;
   text-align: center;
   gap: 18px;
-  padding: 128px 20px 136px;
+  padding: 104px 20px 112px;
 }
 .closing-mark {
   margin-bottom: 6px;
@@ -893,80 +1080,97 @@ main {
   color: var(--site-ink);
 }
 
-/* ---------- The slideshow ---------- */
+/* ---------- The hand of phones, one picked ---------- */
 
-/* What the hero's phones open: one part of the app a slide, its phone beside the words. */
-.slideshow {
-  position: fixed;
-  width: min(940px, 100% - 32px);
-  max-width: none;
-  height: min(680px, 100% - 32px);
-  max-height: none;
-  padding: 0;
-  border: 0;
-  border-radius: var(--site-radius);
-  background: #faf8fc;
-  color: var(--site-ink);
-  box-shadow: 0 60px 120px -40px rgb(20 10 40 / 0.6);
-  overflow: hidden;
+/*
+ * Picking a phone: main.js puts data-picked on the rail and moves the phones (the picked one
+ * to the left, the rest down like cards held low, cut off by the rail's foot). The pin goes in
+ * once the phone has landed, and its words come out beside it. Without the springs (a phone,
+ * reduced motion, no script) the words sit under the row instead.
+ */
+.phones-rail {
+  overflow-x: visible;
+  overflow-y: clip;
 }
-.slideshow[open] {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) auto;
-  animation: slideshow-in 420ms var(--pop-ease);
+.pin {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: -4%;
+  width: 17%;
+  translate: -50% 0;
+  opacity: 0;
+  scale: 1.8;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 5px rgb(20 10 40 / 0.3));
+  transition:
+    opacity 200ms,
+    scale 200ms;
 }
-.slideshow::backdrop {
-  background: rgb(20 14 30 / 0.55);
-  backdrop-filter: blur(6px);
+.pin svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
-@keyframes slideshow-in {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.97);
-  }
+.phones-item.is-picked .pin {
+  opacity: 1;
+  scale: 1;
+  transition:
+    opacity 250ms 420ms,
+    scale 450ms var(--pop-ease) 420ms;
 }
-html:has(.slideshow[open]) {
-  overflow: hidden;
+.pin-defs {
+  position: absolute;
 }
-.slides {
-  min-height: 0;
-  overflow-y: auto;
-  touch-action: pan-y;
+.hand-text {
+  position: absolute;
+  z-index: 7;
+  top: 80px;
+  left: 42%;
+  right: 4%;
+  opacity: 0;
+  visibility: hidden;
+  translate: 28px 0;
+  transition:
+    opacity 250ms,
+    translate 400ms var(--rise-ease),
+    visibility 0s 250ms;
 }
-.slide {
+.phones-rail[data-picked] .hand-text {
+  opacity: 1;
+  visibility: visible;
+  translate: none;
+  transition:
+    opacity 450ms 220ms,
+    translate 700ms var(--rise-ease) 220ms,
+    visibility 0s;
+}
+.hand-card {
   display: none;
+  max-width: 520px;
 }
-.slide.is-on {
-  display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 48px;
-  box-sizing: border-box;
-  min-height: 100%;
-  padding: 48px 64px 16px 48px;
-  animation: slide-in 440ms var(--rise-ease);
+.hand-card.is-on {
+  display: block;
+  animation: hand-in 600ms var(--rise-ease);
 }
-@keyframes slide-in {
+@keyframes hand-in {
   from {
     opacity: 0;
-    transform: translateX(calc(var(--from, 0) * 40px));
+    translate: 0 14px;
   }
 }
-.slide-phone {
-  justify-self: center;
-  width: min(100%, 272px);
-}
-.slide-copy h2 {
+.hand-card h3 {
   margin: 0 0 16px;
+  padding-right: 56px;
   font-family: var(--site-brand-font);
   font-weight: 600;
-  font-size: clamp(30px, 3.4vw, 42px);
+  font-size: clamp(30px, 3.2vw, 44px);
   letter-spacing: -0.03em;
-  line-height: 1.08;
+  line-height: 1.06;
   font-feature-settings: 'ss01', 'ss02', 'ss03';
   text-wrap: balance;
 }
-.slide-copy p {
+.hand-card p {
   margin: 0;
   max-width: 44ch;
   font-size: 17px;
@@ -974,20 +1178,20 @@ html:has(.slideshow[open]) {
   color: var(--site-muted);
   text-wrap: pretty;
 }
-.slide-facts {
+.hand-facts {
   display: grid;
   gap: 10px;
   margin: 22px 0 0;
   padding: 0;
   list-style: none;
 }
-.slide-facts li {
+.hand-facts li {
   position: relative;
   padding-left: 20px;
   font-size: 15px;
   line-height: 1.5;
 }
-.slide-facts li::before {
+.hand-facts li::before {
   content: '';
   position: absolute;
   left: 3px;
@@ -997,96 +1201,55 @@ html:has(.slideshow[open]) {
   border-radius: 50%;
   background: var(--site-accent);
 }
-.slide-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-  padding: 8px 24px 26px;
-}
-.slide-step,
-.slide-close {
+.hand-close {
+  position: absolute;
+  z-index: 1;
+  top: -6px;
+  right: 0;
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: rgb(27 26 43 / 0.06);
+  background: #fff;
   color: var(--site-ink);
+  box-shadow: 0 10px 24px -12px rgb(30 20 60 / 0.45);
   cursor: pointer;
   transition:
-    background 200ms,
-    transform 200ms var(--site-ease);
+    transform 200ms var(--site-ease),
+    background 200ms;
 }
-.slide-step:hover,
-.slide-close:hover {
-  background: rgb(27 26 43 / 0.11);
+.hand-close:hover {
+  background: #f2eef7;
 }
-.slide-step:active,
-.slide-close:active {
+.hand-close:active {
   transform: scale(0.94);
 }
-.slide-close {
-  position: absolute;
-  z-index: 2;
-  top: 16px;
-  right: 16px;
-}
-.slide-dots {
-  display: flex;
-  gap: 4px;
-}
-/* A small dot inside a bigger button, so it's easy to hit. */
-.slide-dots button {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-.slide-dots button::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 8px;
-  background: rgb(27 26 43 / 0.2);
-  transition:
-    width 400ms var(--site-ease),
-    background 300ms;
-}
-.slide-dots button[aria-current='true']::before {
-  width: 24px;
-  background: var(--site-accent);
-}
-.slideshow button:focus-visible {
+.hand-close:focus-visible {
   outline: 2px solid var(--site-accent);
   outline-offset: 2px;
 }
-/* The ring: every card is placed by main.js around the middle of the stage. */
-html.has-scrub .looks-band {
-  padding: 0;
+/* Without the springs: the words under the row, the phones where they stand. */
+html:not(.has-motion) .hand-text {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  display: none;
+  width: min(560px, 100% - 40px);
+  margin: 8px auto 0;
+  translate: none;
 }
-html.has-scrub .looks {
-  height: 240vh;
+html:not(.has-motion) .phones-rail[data-picked] .hand-text {
+  display: block;
 }
-html.has-scrub .looks-stage {
-  position: sticky;
-  top: 0;
-  box-sizing: border-box;
-  height: 100vh;
-  height: 100svh;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  overflow: hidden;
-  padding: clamp(72px, 11vh, 120px) 0 clamp(40px, 8vh, 80px);
-}
+/* The ring: every card is placed by main.js around the middle of its strip of the card. */
 html.has-scrub .ring-view {
   position: relative;
+  z-index: 1;
+  height: clamp(300px, 30vw, 400px);
   padding: 0;
 }
 html.has-scrub .ring {
@@ -1105,16 +1268,8 @@ html.has-scrub .ring-card {
   top: calc(var(--cw, 340px) * -0.3125);
   object-fit: cover;
   border-radius: 12px;
-  box-shadow: 0 30px 60px -30px rgb(40 20 70 / 0.45);
+  box-shadow: 0 30px 60px -30px rgb(10 5 40 / 0.6);
   will-change: transform, opacity;
-}
-/* The interlude pins too. */
-html.has-scrub .fall {
-  height: 240vh;
-}
-html.has-scrub .fall-stage {
-  position: sticky;
-  top: 0;
 }
 
 /* ---------- Entrance motion ---------- */
@@ -1164,31 +1319,253 @@ html.has-motion .devices.rise.is-in {
   }
 }
 
-/* ---------- The walkthrough ---------- */
+/* ---------- Pills ---------- */
 
-/* The first step comes straight after the hero, under the laptop hanging over the page; the
-   ruled page starts below it. */
-.hero + .step {
-  border-top: 0;
-  padding-top: calc(var(--hang) + 40px);
+/* A pill: tinted in its part's colour (--c), filled when it's the one on screen or picked. */
+.pill {
+  --on: #fff;
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 16%, #fff);
+  color: color-mix(in srgb, var(--c) 55%, var(--site-ink));
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 300ms,
+    color 300ms,
+    box-shadow 300ms,
+    width 300ms var(--site-ease),
+    height 300ms var(--site-ease);
 }
-.hero + .step > .rail:first-child {
-  border-top: 1px solid var(--site-line);
+.pill:hover,
+.pill.is-on {
+  background: var(--c);
+  color: var(--on);
 }
-/* Each step's moving picture: a real recording of the app in a plain window, under its words. */
-.film-rail {
-  padding: 8px clamp(20px, 5vw, 64px) 104px;
+.pill.is-on {
+  box-shadow: 0 10px 22px -12px var(--c);
 }
-/* Plan: the calendar's recording with the phone's day view in front, at its corner. */
-.film-with-phone {
+.pill:focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: 3px;
+}
+
+/* ---------- The app, a part at a time ---------- */
+
+/*
+ * The four tabs, then the words on a card in the part's colour beside a recording of it.
+ * main.js sets data-tab on the stage, .is-on on the tab, panel and clip, and --prog (0 to 1)
+ * on the tab as its recording plays.
+ */
+.app-band {
+  scroll-margin-top: 16px;
+}
+.app-rail {
+  padding: 72px clamp(20px, 4vw, 48px) 96px;
+}
+.app-tabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+.app-tab {
+  position: relative;
+  overflow: hidden;
+}
+/* How far through its recording the picked tab is: a line along its foot. */
+.app-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: calc(var(--prog, 0) * 100%);
+  height: 3px;
+  background: rgb(255 255 255 / 0.6);
+  opacity: 0;
+}
+.app-tab.is-on::after {
+  opacity: 1;
+}
+.app-stage {
+  --c: var(--c-start);
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.1fr);
+  gap: 20px;
+}
+.app-stage[data-tab='plan'] {
+  --c: var(--c-plan);
+}
+.app-stage[data-tab='track'] {
+  --c: var(--c-track);
+}
+.app-stage[data-tab='xp'] {
+  --c: var(--c-xp);
+}
+.app-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 40px 32px 28px;
+  border-radius: 28px;
+  background: var(--c);
+  color: #fff;
+  transition: background-color 600ms var(--site-ease);
+}
+/* The four panels share one place; the picked one rises in as the last one fades. */
+.app-panels {
+  display: grid;
+}
+.app-panel {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+  translate: 0 14px;
+  transition:
+    opacity 300ms,
+    translate 500ms var(--rise-ease),
+    visibility 0s 300ms;
+}
+.app-panel.is-on {
+  opacity: 1;
+  visibility: visible;
+  translate: none;
+  transition:
+    opacity 450ms 150ms,
+    translate 700ms var(--rise-ease) 150ms,
+    visibility 0s;
+}
+.app-panel h2 {
+  margin: 0 0 16px;
+  font-family: var(--site-brand-font);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-size: clamp(28px, 2.6vw, 38px);
+  text-wrap: balance;
+}
+.app-panel p {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: rgb(255 255 255 / 0.9);
+  text-wrap: pretty;
+}
+.app-next {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  padding: 0 5px 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--site-ink);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 200ms var(--site-ease);
+}
+.app-next:active {
+  transform: scale(0.97);
+}
+.app-next:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+.app-next-arrow {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--site-ink);
+  color: #fff;
+  transition: translate 250ms var(--site-ease);
+}
+.app-next:hover .app-next-arrow {
+  translate: 3px 0;
+}
+/* A paperclip holding the card, over its top edge. */
+.paperclip {
+  position: absolute;
+  top: -30px;
+  right: 30px;
+  width: 64px;
+  height: 64px;
+  rotate: -36deg;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 4px 3px rgb(20 10 40 / 0.28));
+}
+.paperclip-shade {
+  stroke: #8d92a7;
+  stroke-width: 2.2;
+}
+.paperclip-shine {
+  stroke: #f1f2f7;
+  stroke-width: 0.8;
+}
+/* The window: the first recording sets its size, the others lie over it. */
+.app-view {
   position: relative;
 }
-.film-phone {
+.app-clip {
+  transition:
+    opacity 500ms,
+    visibility 0s;
+}
+.app-clip + .app-clip {
   position: absolute;
-  right: -2%;
-  bottom: -9%;
-  width: clamp(110px, 17%, 220px);
-  transform: rotate(4deg);
+  inset: 0;
+  height: 100%;
+}
+.app-clip:not(.is-on) {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 500ms,
+    visibility 0s 500ms;
+}
+/* Pause sits top right here: the calendar's phone covers the bottom corner. */
+.app-window .window-toggle {
+  top: 14px;
+  bottom: auto;
+}
+/* The phone's day view, in front of the calendar's corner while Plan is up. */
+.app-phone {
+  position: absolute;
+  z-index: 2;
+  right: -3%;
+  bottom: -10%;
+  width: clamp(100px, 19%, 200px);
+  rotate: 5deg;
+  opacity: 0;
+  translate: 0 48px;
+  pointer-events: none;
+  transition:
+    opacity 400ms,
+    translate 800ms var(--pop-ease);
+}
+.app-stage[data-tab='plan'] .app-phone {
+  opacity: 1;
+  translate: none;
 }
 /* Share: the phones are bigger than the other pictures, and each plays its screen. */
 .phones {
@@ -1198,126 +1575,55 @@ html.has-motion .devices.rise.is-in {
 /* ---------- Where you are ---------- */
 
 /*
- * Down the left on a computer: the walkthrough's steps on a line that fills as the page
- * scrolls, the one on screen lit. main.js sets --fill, .is-on and .is-done, the tone over the
- * dark timelapse band, and shows it only between the first step and the closing. Names show
- * where there's room beside the page, otherwise dots that name themselves when pointed at.
+ * Down the left on a computer: the parts as pills, the one on screen filled in (main.js), and
+ * while the app is up, its tab. They show only from the timelapses to the closing. Without
+ * room beside the page they're dots that open into their pill when pointed at.
  */
-.progress {
+.pills {
   position: fixed;
   z-index: 15;
-  left: 18px;
+  left: 16px;
   top: 50%;
-  display: none;
   translate: 0 -50%;
+  display: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
-.progress ol {
-  position: relative;
-  display: grid;
-  gap: 14px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.progress-gap {
-  margin-top: 18px;
-}
-.progress-line {
-  position: absolute;
-  left: 3.25px;
-  top: 6px;
-  bottom: 6px;
-  width: 1.5px;
-  background: rgb(27 26 43 / 0.12);
-}
-.progress-fill {
-  position: absolute;
-  inset: 0 0 auto;
-  height: var(--fill, 0%);
-  background: var(--site-accent);
-}
-.progress a {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.pills .pill {
+  height: 30px;
+  padding: 0 13px;
   font-size: 12.5px;
-  font-weight: 500;
-  line-height: 1.2;
-  color: var(--site-subtle);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 300ms;
-}
-.progress a::before {
-  content: '';
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f4f0f7;
-  box-shadow: 0 0 0 1.5px rgb(27 26 43 / 0.28);
-  transition:
-    background 300ms,
-    box-shadow 300ms,
-    scale 300ms var(--site-ease);
-}
-.progress a:hover,
-.progress a.is-on {
-  color: var(--site-ink);
-}
-.progress a.is-done::before,
-.progress a.is-on::before {
-  background: var(--site-accent);
-  box-shadow: 0 0 0 1.5px var(--site-accent);
-}
-.progress a.is-on::before {
-  scale: 1.3;
-}
-.progress a:focus-visible {
-  outline: 2px solid var(--site-accent);
-  outline-offset: 4px;
-  border-radius: 6px;
-}
-/* Over the dusk band the rail turns light, and the names fade so they don't sit on the clips
-   drifting past; pointing at a dot still names it. */
-.progress[data-tone='dark'] a {
-  color: transparent;
-}
-.progress[data-tone='dark'] a:hover,
-.progress[data-tone='dark'] a:focus-visible {
-  color: #fff;
-}
-.progress[data-tone='dark'] a::before {
-  background: #2a2133;
-  box-shadow: 0 0 0 1.5px rgb(255 255 255 / 0.35);
-}
-.progress[data-tone='dark'] .progress-line {
-  background: rgb(255 255 255 / 0.18);
+  box-shadow: 0 6px 16px -10px rgb(30 20 60 / 0.35);
 }
 @media (min-width: 1100px) and (min-height: 600px) {
-  .progress {
-    display: block;
+  .pills {
+    display: flex;
     opacity: 0;
     pointer-events: none;
     transition: opacity 400ms;
   }
-  html.show-progress .progress {
+  html.show-pills .pills {
     opacity: 1;
     pointer-events: auto;
   }
 }
-/* Without room for the names beside the page, only the dots; a dot names itself on hover. */
-@media (max-width: 1399px) {
-  .progress a {
-    position: relative;
-    gap: 0;
-    font-size: 0;
+@media (max-width: 1419px) {
+  .pills {
+    gap: 12px;
   }
-  .progress a:hover,
-  .progress a:focus-visible {
-    gap: 10px;
-    padding: 4px 10px 4px 0;
-    font-size: 12.5px;
+  .pills .pill:not(:hover, :focus-visible) {
+    width: 12px;
+    height: 12px;
+    padding: 0;
+    font-size: 0;
+    background: var(--c);
+    opacity: 0.4;
+    box-shadow: none;
+  }
+  .pills .pill.is-on:not(:hover, :focus-visible) {
+    opacity: 1;
+    scale: 1.3;
   }
 }
 
@@ -1335,10 +1641,6 @@ html.has-motion .devices.rise.is-in {
   }
 }
 @media (max-width: 899px) {
-  .slide.is-on {
-    gap: 32px;
-    padding: 48px 40px 12px 32px;
-  }
   .feature-head {
     grid-template-columns: 1fr;
     gap: 14px;
@@ -1359,12 +1661,6 @@ html.has-motion .devices.rise.is-in {
   }
   .floaters {
     --fs: 0.62;
-  }
-  html.has-scrub .looks {
-    height: 200vh;
-  }
-  html.has-scrub .fall {
-    height: 200vh;
   }
 }
 @media (max-width: 760px) {
@@ -1421,10 +1717,13 @@ html.has-motion .devices.rise.is-in {
     padding-bottom: 28px;
   }
   .fall-band {
-    margin-block: 18vh;
+    margin-block: 12vh;
+  }
+  .hero + .fall-band {
+    margin-top: calc(var(--hang) + 12vh);
   }
   .fall-edge {
-    height: 26vh;
+    height: 20vh;
   }
   .closing-inner {
     padding: 72px 20px 88px;
@@ -1462,34 +1761,25 @@ html.has-motion .devices.rise.is-in {
     --r: 0deg;
     --y: 0px;
   }
-  /* The slideshow fills the screen: the phone, the words under it, the arrows at the bottom. */
-  .slideshow {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
+  /* Picking one: its words under the strip. */
+  .hand-text {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    display: none;
+    margin: 0 20px;
+    translate: none;
   }
-  .slide.is-on {
-    grid-template-columns: minmax(0, 1fr);
-    align-content: center;
-    gap: 22px;
-    padding: 60px 24px 8px;
+  .phones-rail[data-picked] .hand-text {
+    display: block;
   }
-  .slide-phone {
-    width: min(48vw, 210px, (100svh - 420px) * 0.5);
-    min-width: 116px;
-  }
-  .slide-copy h2 {
-    font-size: 28px;
+  .hand-card h3 {
+    font-size: 26px;
     margin-bottom: 12px;
   }
-  .slide-copy p {
+  .hand-card p {
     font-size: 16px;
-  }
-  .slide-facts {
-    margin-top: 16px;
-  }
-  .slide-nav {
-    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
 }
 /*
@@ -1530,12 +1820,9 @@ html.has-motion .devices.rise.is-in {
   .floater:nth-child(n + 5) {
     display: none;
   }
-  /* The looks: six of them in a grid. */
-  .looks-band {
-    padding: 64px 0;
-  }
+  /* The looks: six of them in a grid on the card. */
   .ring-view {
-    padding: 32px 20px 28px;
+    padding: 28px 16px 24px;
   }
   .ring {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -1543,7 +1830,7 @@ html.has-motion .devices.rise.is-in {
     width: min(100%, 560px);
   }
   .ring-card {
-    box-shadow: 0 20px 40px -24px rgb(40 20 70 / 0.45);
+    box-shadow: 0 20px 40px -24px rgb(10 5 40 / 0.6);
   }
   .ring-card:nth-child(n + 7) {
     display: none;
@@ -1559,65 +1846,89 @@ html.has-motion .devices.rise.is-in {
     display: none;
   }
 }
-/* A short, wide screen (a phone held sideways): the slide's phone is sized to the height, so
-   the phone and the words fit without scrolling. */
-@media (max-height: 560px) and (min-width: 641px) {
-  .slideshow {
-    width: min(940px, 100% - 16px);
-    height: calc(100% - 16px);
-  }
-  .slide.is-on {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 28px;
-    padding: 18px 64px 4px 28px;
-  }
-  .slide-phone {
-    width: calc((100svh - 110px) * 0.5);
-  }
-  .slide-copy h2 {
-    margin-bottom: 10px;
-    font-size: 26px;
-  }
-  .slide-copy p {
-    font-size: 15px;
-  }
-  .slide-facts {
-    gap: 6px;
-    margin-top: 12px;
-  }
-  .slide-facts li {
-    font-size: 14px;
-  }
-  .slide-nav {
-    padding: 2px 24px 10px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
   .rec-mark,
-  .slideshow[open],
-  .slide.is-on {
+  .hand-card.is-on {
     animation: none;
   }
 }
 
-/* The walkthrough on narrower screens. */
-@media (max-width: 899px) {
-  .film-rail {
-    padding-bottom: 72px;
+/* The app, the looks and the closing on narrower screens: the card above the window. */
+@media (max-width: 1099px) {
+  .app-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-card {
+    gap: 22px;
+    padding: 32px 28px 24px;
+  }
+  .app-panel p {
+    max-width: 60ch;
+  }
+  .app-phone {
+    right: 1%;
+    bottom: -8%;
+    width: 20%;
   }
 }
 @media (max-width: 640px) {
-  .film-rail {
-    padding: 0 20px 56px;
+  .app-rail {
+    padding: 48px 16px 64px;
   }
-  .film-phone {
-    right: 2%;
+  .app-tabs {
+    margin-bottom: 40px;
+  }
+  .app-card {
+    padding: 28px 22px 22px;
+    border-radius: 24px;
+  }
+  .paperclip {
+    top: -18px;
+    right: 22px;
+    width: 46px;
+    height: 46px;
+  }
+  .app-phone {
     width: 26%;
   }
-  .hero + .step {
-    padding-top: calc(var(--hang) + 16px);
+  .looks-rail,
+  .closing-rail {
+    padding: 40px 10px 48px;
+  }
+  .looks-card {
+    padding: 48px 0 28px;
+    border-radius: 24px;
+  }
+  .closing-card {
+    border-radius: 24px;
+  }
+  .cloud {
+    width: min(var(--w), 60vw);
+  }
+}
+/* Without room around the heading the chips sit in a row under it, still. */
+@media (max-width: 1023px), (max-height: 500px) {
+  .chips {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding: 22px 16px 0;
+  }
+  .chip {
+    position: static;
+    rotate: none;
+    animation: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chip,
+  .sticker {
+    animation: none;
   }
 }

@@ -75,8 +75,8 @@
       </a>
       <nav class="site-nav-links" aria-label="Main">
         <a href="#timelapse">Timelapse</a>
-        <a href="#social">Social</a>
-        <a href="#plan">Planner</a>
+        <a href="#phone">On your phone</a>
+        <a href="#app" data-tab="plan">Planner</a>
       </nav>
       <div class="site-nav-actions">
         <a
@@ -93,18 +93,16 @@
       </div>
     </header>
 
-    <!-- Where you are in the walkthrough, down the left on a computer (main.js lights it). -->
-    <nav class="progress" aria-label="On this page">
-      <span class="progress-line" aria-hidden="true"><span class="progress-fill"></span></span>
-      <ol>
-        <li><a href="#start">Start</a></li>
-        <li><a href="#timelapse">Record</a></li>
-        <li><a href="#social">Share</a></li>
-        <li class="progress-gap"><a href="#plan">Plan</a></li>
-        <li><a href="#track">Track</a></li>
-        <li><a href="#xp">Earn</a></li>
-        <li><a href="#looks">Make it yours</a></li>
-      </ol>
+    <!-- Where you are, down the left on a computer: a pill in each part's colour, the one on
+         screen filled in (main.js). The four in the middle are the app's tabs. -->
+    <nav class="pills" aria-label="On this page">
+      <a class="pill" href="#timelapse" style="--c: var(--c-record)">Record</a>
+      <a class="pill" href="#phone" style="--c: var(--c-share); --on: var(--site-ink)">Phone</a>
+      <a class="pill" href="#app" data-tab="start" style="--c: var(--c-start)">Start</a>
+      <a class="pill" href="#app" data-tab="plan" style="--c: var(--c-plan)">Plan</a>
+      <a class="pill" href="#app" data-tab="track" style="--c: var(--c-track)">Track</a>
+      <a class="pill" href="#app" data-tab="xp" style="--c: var(--c-xp)">Earn</a>
+      <a class="pill" href="#looks" style="--c: var(--c-looks); --on: var(--site-ink)">Make it yours</a>
     </nav>
     <main id="top">
       <!-- Hero: the app's default photograph, fading out at the bottom, with one of the owner's
@@ -119,8 +117,13 @@
           </p>
           <div class="cta-row rise" style="--d: 280ms">
             <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
-            <a class="cta cta-ghost" href="#start">See how it works</a>
+            <a class="cta cta-ghost" href="#timelapse">See how it works</a>
           </div>
+        </div>
+        <!-- Two real pieces of the app tilted at the sides like stickers, leaning with the pointer. -->
+        <div class="stickers" aria-hidden="true">
+          <img class="sticker sticker-live" src="/shots/sticker-live.webp" alt="" width="600" height="226" />
+          <img class="sticker sticker-roll" src="/shots/sticker-roll.webp" alt="" width="520" height="499" />
         </div>
         <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
           <div class="laptop">
@@ -137,29 +140,12 @@
       </section>
 
       <!-- Below the hero the page is ruled like a notebook: thin lines down both sides of the
-           content and across between sections. It walks through one study session (start,
-           record, share), then the rest of the week (plan, track, earn, make it yours). -->
+           content and across between sections. Short on purpose: the timelapses, friends, the
+           app a part at a time, the looks, and the way in. -->
 
-      <!-- Start: a real recording of starting a session and the focus screen counting down. -->
-      <section id="start" class="band step">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>Pick a task and get going.</h2>
-            <p class="lede-sm">
-              Use a Pomodoro timer with work blocks and breaks you choose, or let the timer run
-              until you're done. Record a timelapse if you want a recap of the session.
-            </p>
-          </div>
-        </div>
-        <div class="rail film-rail">
-          <div class="window rise">
-            <video class="clip" src="/clips/focus-start.mp4" poster="/clips/focus-start.webp" width="1600" height="1000" muted loop playsinline disablepictureinpicture preload="none" aria-label="Starting a session in Komodon: Start a session, pick the task, Pomodoro, then the focus screen counting down"></video>
-          </div>
-        </div>
-      </section>
-
-      <!-- Timelapses: a dusk interlude. Real Komodon timelapses float down around the words. -->
-      <section id="timelapse" class="fall-band step" aria-labelledby="fall-title">
+      <!-- Timelapses: a dusk interlude. Real Komodon timelapses drift around the words, a
+           little slower than the page, so they seem farther off. -->
+      <section id="timelapse" class="fall-band" aria-labelledby="fall-title">
         <div class="fall" data-scrub="fall">
           <div class="fall-stage">
             <div class="fall-copy">
@@ -194,121 +180,192 @@
         </div>
       </section>
 
-      <!-- Social: a row of phones, each a part of the social side in another look. They fan out
-           as the row comes in, lean toward the pointer and pop up when pointed at; each plays its
-           screen scrolling and opens the slideshow about its part (#features, main.js). -->
-      <section id="social" class="band step">
+      <!-- On your phone: a hand of five phones, each a part of the app in another look, each
+           playing its screen. They fan out as the row comes in, lean toward the pointer and
+           pop up when pointed at (main.js). Pick one and it moves left with a pin in it, its
+           words come out beside it, and the rest drop down like cards held low; pick another
+           or close to fan them out again. Clouds drift behind. -->
+      <section id="phone" class="band">
+        <div class="sky" aria-hidden="true">
+          <img class="cloud" src="/sky/cloud-a.webp" alt="" width="700" height="322" style="--top: 34%; --w: 340px; --t: 96s; --at: -20s" />
+          <img class="cloud" src="/sky/cloud-b.webp" alt="" width="700" height="322" style="--top: 58%; --w: 260px; --t: 120s; --at: -75s" />
+          <img class="cloud" src="/sky/cloud-c.webp" alt="" width="700" height="322" style="--top: 16%; --w: 220px; --t: 140s; --at: -110s" />
+        </div>
         <div class="rail rail-pad">
           <div class="feature-head rise">
-            <h2>Studying is better with friends.</h2>
+            <h2>On your phone, too.</h2>
             <p class="lede-sm">
-              Post your sessions, see what everyone else is working on, and give each other a
-              reason to keep going.
+              Your timer, your tasks, your friends and your streak. Pick a phone to see more.
             </p>
           </div>
         </div>
         <div class="rail phones-rail">
-          <ul class="phones" aria-label="The social side of Komodon">
+          <svg class="pin-defs" width="0" height="0" aria-hidden="true"><defs><radialGradient id="pin-head" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#ff8a80" /><stop offset="0.55" stop-color="#e5483d" /><stop offset="1" stop-color="#a8231b" /></radialGradient></defs></svg>
+          <ul class="phones" aria-label="Komodon on a phone">
             <li class="phones-item" data-pos="0">
-              <button class="phones-phone" type="button" data-slide="0" aria-haspopup="dialog" aria-label="Study groups">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-groups.mp4" poster="/clips/phone-groups.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              <button class="phones-phone" type="button" data-pick="0" aria-expanded="false" aria-controls="hand-text" aria-label="Pomodoro">
+                <span class="device"><video class="device-screen clip" src="/clips/phone-pomodoro.mp4" poster="/clips/phone-pomodoro.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
               </button>
             </li>
             <li class="phones-item" data-pos="1">
-              <button class="phones-phone" type="button" data-slide="1" aria-haspopup="dialog" aria-label="Jams">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-jams.mp4" poster="/clips/phone-jams.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              <button class="phones-phone" type="button" data-pick="1" aria-expanded="false" aria-controls="hand-text" aria-label="Tasks and courses">
+                <span class="device"><video class="device-screen clip" src="/clips/phone-tasks.mp4" poster="/clips/phone-tasks.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
               </button>
             </li>
             <li class="phones-item" data-pos="2">
-              <button class="phones-phone" type="button" data-slide="2" aria-haspopup="dialog" aria-label="The feed">
+              <button class="phones-phone" type="button" data-pick="2" aria-expanded="false" aria-controls="hand-text" aria-label="The feed">
                 <span class="device"><video class="device-screen clip" src="/clips/phone-feed.mp4" poster="/clips/phone-feed.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
               </button>
             </li>
             <li class="phones-item" data-pos="3">
-              <button class="phones-phone" type="button" data-slide="3" aria-haspopup="dialog" aria-label="Leaderboards">
-                <span class="device"><video class="device-screen clip" src="/clips/phone-board.mp4" poster="/clips/phone-board.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              <button class="phones-phone" type="button" data-pick="3" aria-expanded="false" aria-controls="hand-text" aria-label="Jams and groups">
+                <span class="device"><video class="device-screen clip" src="/clips/phone-together.mp4" poster="/clips/phone-together.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
               </button>
             </li>
             <li class="phones-item" data-pos="4">
-              <button class="phones-phone" type="button" data-slide="4" aria-haspopup="dialog" aria-label="Your profile">
+              <button class="phones-phone" type="button" data-pick="4" aria-expanded="false" aria-controls="hand-text" aria-label="Streaks and your profile">
                 <span class="device"><video class="device-screen clip" src="/clips/phone-profile.mp4" poster="/clips/phone-profile.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+                <span class="pin" aria-hidden="true"><svg viewBox="0 0 40 48"><ellipse cx="23" cy="45" rx="6" ry="2" fill="rgb(20 10 40 / 0.3)" /><path d="M20 28 21.5 44" stroke="#9aa0b4" stroke-width="2.2" stroke-linecap="round" /><circle cx="20" cy="17" r="13" fill="url(#pin-head)" /><ellipse cx="15.5" cy="12" rx="4" ry="3" fill="#fff" opacity="0.5" /></svg></span>
               </button>
             </li>
           </ul>
+          <!-- What the picked phone shows, beside it. -->
+          <div class="hand-text" id="hand-text">
+            <button class="hand-close" type="button" aria-label="Close">
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+            </button>
+            <article class="hand-card" data-i="0" aria-labelledby="hand-title-0">
+              <h3 id="hand-title-0">Work, break, repeat.</h3>
+              <p>Pick how long you work and how long you rest, and change either one mid-session. Or turn on Jack mode and let a slot machine set your break.</p>
+              <ul class="hand-facts">
+                <li>Any length, changed whenever.</li>
+                <li>Jack mode: the slot machine sets your break.</li>
+              </ul>
+            </article>
+            <article class="hand-card" data-i="1" aria-labelledby="hand-title-1">
+              <h3 id="hand-title-1">Know what's due.</h3>
+              <p>Add your courses and the tasks under them, with due dates and tags. Press play on any task to start a session on it.</p>
+              <ul class="hand-facts">
+                <li>Tags on any task.</li>
+                <li>Due dates show on your calendar.</li>
+              </ul>
+            </article>
+            <article class="hand-card" data-i="2" aria-labelledby="hand-title-2">
+              <h3 id="hand-title-2">See what your friends got done.</h3>
+              <p>Every post is a real session: what it was on, how long it took, and the timelapse if there is one. Give kudos, or leave a comment.</p>
+              <ul class="hand-facts">
+                <li>Live now shows who's studying right now.</li>
+                <li>Friends only, if you'd rather.</li>
+              </ul>
+            </article>
+            <article class="hand-card" data-i="3" aria-labelledby="hand-title-3">
+              <h3 id="hand-title-3">Study together, or race.</h3>
+              <p>Start a jam for a day, three days or a week, and the most hours wins. Or make a group and see your weeks side by side.</p>
+              <ul class="hand-facts">
+                <li>Friends join from their feed, anyone else with the code.</li>
+                <li>Nudge someone who's fallen behind.</li>
+              </ul>
+            </article>
+            <article class="hand-card" data-i="4" aria-labelledby="hand-title-4">
+              <h3 id="hand-title-4">Keep the streak going.</h3>
+              <p>A daily streak and a weekly one, with streak freezes for the days you miss. Your profile shows your study days, best days and totals.</p>
+              <ul class="hand-facts">
+                <li>Freezes from the shop.</li>
+                <li>Show as much or as little as you like.</li>
+              </ul>
+            </article>
+          </div>
         </div>
       </section>
 
-      <!-- Plan: Plan my week filling the calendar around the classes, with the phone's day view. -->
-      <section id="plan" class="band step">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>Know what you're studying this week.</h2>
-            <p class="lede-sm">
-              Add your courses and deadlines, drag study time onto your calendar, or let Plan my
-              week fit sessions around your classes.
-            </p>
+      <!-- The app, a part at a time: the words on a card in that part's colour, beside a real
+           recording of it. Each recording plays through and the next tab comes up by itself
+           (main.js); the tabs, the card's button and the pills down the left pick one by hand.
+           The phone's day view joins the calendar. -->
+      <section id="app" class="band app-band">
+        <div class="rail app-rail">
+          <div class="app-tabs rise" role="tablist" aria-label="The app">
+            <button class="pill app-tab is-on" type="button" role="tab" id="tab-start" aria-controls="panel-start" aria-selected="true" data-tab="start" style="--c: var(--c-start)">Start</button>
+            <button class="pill app-tab" type="button" role="tab" id="tab-plan" aria-controls="panel-plan" aria-selected="false" tabindex="-1" data-tab="plan" style="--c: var(--c-plan)">Plan</button>
+            <button class="pill app-tab" type="button" role="tab" id="tab-track" aria-controls="panel-track" aria-selected="false" tabindex="-1" data-tab="track" style="--c: var(--c-track)">Track</button>
+            <button class="pill app-tab" type="button" role="tab" id="tab-xp" aria-controls="panel-xp" aria-selected="false" tabindex="-1" data-tab="xp" style="--c: var(--c-xp)">Earn</button>
           </div>
-        </div>
-        <div class="rail film-rail">
-          <div class="film-with-phone rise">
-            <div class="window">
-              <video class="clip" src="/clips/plan-week.mp4" poster="/clips/plan-week.webp" width="1600" height="1000" muted loop playsinline disablepictureinpicture preload="none" aria-label="The Komodon calendar: the week with its classes, then Plan my week's suggestions, then the week with them added"></video>
+          <div class="app-stage rise" style="--d: 120ms" data-tab="start">
+            <div class="app-card">
+              <svg class="paperclip" viewBox="0 0 24 24" aria-hidden="true"><path class="paperclip-shade" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /><path class="paperclip-shine" d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" /></svg>
+              <div class="app-panels">
+                <div class="app-panel is-on" id="panel-start" role="tabpanel" aria-labelledby="tab-start" data-tab="start">
+                  <h2>Pick a task and get going.</h2>
+                  <p>
+                    Use a Pomodoro timer with work blocks and breaks you choose, or let the timer
+                    run until you're done. Record a timelapse if you want a recap of the session.
+                  </p>
+                </div>
+                <div class="app-panel" id="panel-plan" role="tabpanel" aria-labelledby="tab-plan" data-tab="plan">
+                  <h2>Know what you're studying this week.</h2>
+                  <p>
+                    Add your courses and deadlines, drag study time onto your calendar, or let Plan
+                    my week fit sessions around your classes.
+                  </p>
+                </div>
+                <div class="app-panel" id="panel-track" role="tabpanel" aria-labelledby="tab-track" data-tab="track">
+                  <h2>See where your hours go.</h2>
+                  <p>
+                    Check this week against last week, keep an eye on your goal, and see how much
+                    time each course or module takes as an exam gets closer.
+                  </p>
+                </div>
+                <div class="app-panel" id="panel-xp" role="tabpanel" aria-labelledby="tab-xp" data-tab="xp">
+                  <h2>Put your study hours to use.</h2>
+                  <p>
+                    Earn XP as you study, then spend it on rewards you actually want. Unlock
+                    backgrounds, grab streak freezes, or try your luck in Komodon's RNG minigame.
+                  </p>
+                </div>
+              </div>
+              <button class="app-next" type="button">
+                <span class="app-next-label">Plan</span>
+                <span class="app-next-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+              </button>
             </div>
-            <div class="film-phone">
-              <span class="device"><img class="device-screen" src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+            <div class="app-view">
+              <div class="window app-window">
+                <video class="app-clip is-on" data-tab="start" src="/clips/focus-start.mp4" poster="/clips/focus-start.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Starting a session in Komodon: Start a session, pick the task, Pomodoro, then the focus screen counting down"></video>
+                <video class="app-clip" data-tab="plan" src="/clips/plan-week.mp4" poster="/clips/plan-week.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="The Komodon calendar: the week with its classes, then Plan my week's suggestions, then the week with them added"></video>
+                <video class="app-clip" data-tab="track" src="/clips/analytics-scroll.mp4" poster="/clips/analytics-scroll.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komodon Analytics: hours this week beside last week and the goal, then each day, where the time went, and the streaks"></video>
+                <video class="app-clip" data-tab="xp" src="/clips/xp-buy.mp4" poster="/clips/xp-buy.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Achievements: lifetime XP and what is left to spend, buying a streak freeze as the XP coins fly into it, then the RNG Rolls rarities"></video>
+              </div>
+              <div class="app-phone">
+                <span class="device"><img class="device-screen" src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Track: Analytics, scrolled through the way someone reads it. -->
-      <section id="track" class="band step">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>See where your hours go.</h2>
-            <p class="lede-sm">
-              Check this week against last week, keep an eye on your goal, and see how much time
-              each course or module takes as an exam gets closer.
-            </p>
-          </div>
-        </div>
-        <div class="rail film-rail">
-          <div class="window rise">
-            <video class="clip" src="/clips/analytics-scroll.mp4" poster="/clips/analytics-scroll.webp" width="1600" height="1000" muted loop playsinline disablepictureinpicture preload="none" aria-label="Komodon Analytics: hours this week beside last week and the goal, then each day, where the time went, and the streaks"></video>
-          </div>
-        </div>
-      </section>
-
-      <!-- Earn: what study time turns into. Buying a streak freeze with XP, the coins flying in, then the rolls. -->
-      <section id="xp" class="band step">
-        <div class="rail rail-pad">
-          <div class="feature-head rise">
-            <h2>Put your study hours to use.</h2>
-            <p class="lede-sm">
-              Earn XP as you study, then spend it on rewards you actually want. Unlock
-              backgrounds, grab streak freezes, or try your luck in Komodon's RNG minigame.
-            </p>
-          </div>
-        </div>
-        <div class="rail film-rail">
-          <div class="window rise">
-            <video class="clip" src="/clips/xp-buy.mp4" poster="/clips/xp-buy.webp" width="1600" height="1000" muted loop playsinline disablepictureinpicture preload="none" aria-label="Achievements: lifetime XP and what is left to spend, buying a streak freeze as the XP coins fly into it, then the RNG Rolls rarities"></video>
-          </div>
-        </div>
-      </section>
-
-      <!-- Make it yours: a ring of real screens in other photos, colours and themes, turning as
-           the page scrolls. main.js places the cards and swaps the word in the last line. -->
-      <section id="looks" class="band looks-band step" aria-labelledby="looks-title">
-        <div class="looks" data-scrub="looks">
-          <div class="looks-stage">
+      <!-- Make it yours: a deep card with real screens in other photos, colours and themes
+           turning across it like the inside of a drum, and what can be changed as chips drifting
+           around the heading. main.js turns the drum while it's on screen; scrolling pushes it. -->
+      <section id="looks" class="band looks-band" aria-labelledby="looks-title">
+        <div class="rail looks-rail">
+          <div class="looks-card rise" data-scrub="looks">
             <div class="looks-head">
               <h2 id="looks-title">Make it feel like <span class="accent-word">yours</span>.</h2>
-              <p class="lede-sm">
-                80+ backgrounds, themes, your own fonts and pictures, and panels in glass, matte
-                or any colour.
-              </p>
             </div>
+            <ul class="chips" aria-label="What you can change">
+              <li class="chip" style="--cx: 2.5%; --cy: 6%; --r: -5deg; --t: 6.5s"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></svg>80+ backgrounds</li>
+              <li class="chip" style="--cx: 8%; --cy: 24%; --r: 4deg; --t: 7.4s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1a1.6 1.6 0 0 1 1.7-1.7h2c3 0 5.5-2.5 5.5-5.5C22 6 17.5 2 12 2z" /><circle cx="7.5" cy="10.5" r="1" /><circle cx="10.5" cy="6.5" r="1" /><circle cx="15.5" cy="7.5" r="1" /></svg>Themes</li>
+              <li class="chip" style="--cx: 2%; --cy: 47%; --r: 3deg; --t: 8.2s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h16v3M9 20h6M12 4v16" /></svg>Your own fonts</li>
+              <li class="chip" style="--cx: 9%; --cy: 70%; --r: -4deg; --t: 7s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3" /></svg>Your own pictures</li>
+              <li class="chip chip-r" style="--cx: 2.5%; --cy: 6%; --r: 5deg; --t: 7.8s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.8 2.2a2 2 0 0 0-1.6 0L2.6 6.1a1 1 0 0 0 0 1.8l8.6 3.9a2 2 0 0 0 1.6 0l8.6-3.9a1 1 0 0 0 0-1.8z" /><path d="m22 12.6-9.2 4.2a2 2 0 0 1-1.6 0L2 12.6" /><path d="m22 17.6-9.2 4.2a2 2 0 0 1-1.6 0L2 17.6" /></svg>Glass panels</li>
+              <li class="chip chip-r" style="--cx: 6%; --cy: 25%; --r: -3deg; --t: 6.8s"><svg viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="3" /></svg>Matte panels</li>
+              <li class="chip chip-r" style="--cx: 2%; --cy: 47%; --r: 4deg; --t: 8.6s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5S12.5 5.5 12 3c-.5 2.5-2 4.9-4 6.5S5 13 5 15a7 7 0 0 0 7 7z" /></svg>Any colour</li>
+              <li class="chip chip-r" style="--cx: 8%; --cy: 70%; --r: -5deg; --t: 7.2s"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" /></svg>Light or dark</li>
+            </ul>
             <div class="ring-view" aria-hidden="true">
               <div class="ring">
                 <img class="ring-card" src="/shots/looks/fuji.webp" alt="" width="960" height="600" loading="lazy" />
@@ -329,7 +386,7 @@
                 <img class="ring-card" src="/shots/looks/focus-milky.webp" alt="" width="960" height="600" loading="lazy" />
               </div>
             </div>
-            <p class="looks-note lede-sm">
+            <p class="looks-note">
               Make your study space <span class="scramble" data-words="calm,bright,cozy">calm</span>, or
               whatever works for you.
             </p>
@@ -337,18 +394,27 @@
         </div>
       </section>
 
-      <!-- Closing -->
+      <!-- Closing: a card of sky with clouds drifting across it. -->
       <section class="band closing">
-        <div class="rail closing-inner rise rise-pop">
-          <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
-          <h2>Give your study hours somewhere to go.</h2>
-          <p class="lede-sm">
-            Start a session, see how it adds up, and share the progress if you want.
-          </p>
-          <p class="closing-small">Free to use. Currently in alpha.</p>
-          <div class="cta-row">
-            <a class="cta cta-primary cta-lg" href="https://komogon.app">Start for free</a>
-            <span class="cta cta-soon" aria-disabled="true">Get the extension <span class="soon-tag">In development</span></span>
+        <div class="rail closing-rail">
+          <div class="closing-card rise rise-pop">
+            <div class="sky" aria-hidden="true">
+              <img class="cloud" src="/sky/cloud-a.webp" alt="" width="700" height="322" style="--top: 6%; --w: 300px; --t: 90s; --at: -30s" />
+              <img class="cloud" src="/sky/cloud-c.webp" alt="" width="700" height="322" style="--top: 58%; --w: 380px; --t: 110s; --at: -80s" />
+              <img class="cloud" src="/sky/cloud-b.webp" alt="" width="700" height="322" style="--top: 30%; --w: 200px; --t: 130s; --at: -5s" />
+            </div>
+            <div class="closing-inner">
+              <img class="closing-mark" src="/logo.svg" alt="" width="64" height="64" />
+              <h2>Give your study hours somewhere to go.</h2>
+              <p class="lede-sm">
+                Start a session, see how it adds up, and share the progress if you want.
+              </p>
+              <p class="closing-small">Free to use. Currently in alpha.</p>
+              <div class="cta-row">
+                <a class="cta cta-primary cta-lg" href="https://komogon.app">Start for free</a>
+                <span class="cta cta-soon" aria-disabled="true">Get the extension <span class="soon-tag">In development</span></span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -368,95 +434,5 @@
         </div>
       </footer>
     </main>
-
-    <!-- The slideshow the social phones open, one slide per phone, in the same order. -->
-    <dialog class="slideshow" id="features" aria-label="The social side of Komodon">
-      <button class="slide-close" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
-      </button>
-      <div class="slides">
-        <article class="slide" data-i="0" aria-labelledby="slide-title-0">
-          <div class="slide-phone">
-            <span class="device"><img class="device-screen" src="/shots/phone-groups.webp" alt="A study group on a phone: the week together, a line for each person, and who's studying now" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-          </div>
-          <div class="slide-copy">
-            <h2 id="slide-title-0">Put your weeks side by side.</h2>
-            <p>A group shows the last seven days: hours together, a line for each person, and who's studying right now.</p>
-            <ul class="slide-facts">
-              <li>Nudge someone who's fallen behind.</li>
-              <li>Everyone's biggest subjects, at a glance.</li>
-            </ul>
-          </div>
-        </article>
-        <article class="slide" data-i="1" aria-labelledby="slide-title-1">
-          <div class="slide-phone">
-            <span class="device"><img class="device-screen" src="/shots/phone-jams.webp" alt="Jams on a phone: the jams running, who's in, and their hours" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-          </div>
-          <div class="slide-copy">
-            <h2 id="slide-title-1">Pick a few days. Most hours wins.</h2>
-            <p>Start a jam for a day, three days or a week. Friends join from their feed, anyone else with the code.</p>
-            <ul class="slide-facts">
-              <li>Hours count from when you join.</li>
-              <li>The card names the winner at the end.</li>
-            </ul>
-          </div>
-        </article>
-        <article class="slide" data-i="2" aria-labelledby="slide-title-2">
-          <div class="slide-phone">
-            <span class="device"><img class="device-screen" src="/shots/phone-feed.webp" alt="The Komodon feed on a phone: who's studying now, and a friend's post with their timelapse" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-          </div>
-          <div class="slide-copy">
-            <h2 id="slide-title-2">See what your friends got done.</h2>
-            <p>Every post is a real session: what it was on, how long it took, and the timelapse if there is one. Give kudos, or leave a comment.</p>
-            <ul class="slide-facts">
-              <li>Live now shows who's studying right now.</li>
-              <li>Friends only, if you'd rather.</li>
-            </ul>
-          </div>
-        </article>
-        <article class="slide" data-i="3" aria-labelledby="slide-title-3">
-          <div class="slide-phone">
-            <span class="device"><img class="device-screen" src="/shots/phone-board.webp" alt="The leaderboard on a phone: all-time study hours, with friends or everyone" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-          </div>
-          <div class="slide-copy">
-            <h2 id="slide-title-3">Compare all-time hours.</h2>
-            <p>The top ten by focused time, with your friends or with everyone on Komodon.</p>
-            <ul class="slide-facts">
-              <li>Eight weeks of hours on every row.</li>
-              <li>Leave yourself off it in Settings.</li>
-            </ul>
-          </div>
-        </article>
-        <article class="slide" data-i="4" aria-labelledby="slide-title-4">
-          <div class="slide-phone">
-            <span class="device"><img class="device-screen" src="/shots/phone-profile.webp" alt="A profile on a phone: the study days grid, best days and totals, then the posts" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
-          </div>
-          <div class="slide-copy">
-            <h2 id="slide-title-4">Your profile.</h2>
-            <p>Your study days, your best days and your totals, with your posts under them.</p>
-            <ul class="slide-facts">
-              <li>Your university, once you verify it.</li>
-              <li>Show as much or as little as you like.</li>
-            </ul>
-          </div>
-        </article>
-      </div>
-      <div class="slide-nav">
-        <button class="slide-step" type="button" data-step="-1" aria-label="Previous">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        </button>
-        <div class="slide-dots">
-          <button type="button" data-go="0" aria-label="Study groups"></button>
-          <button type="button" data-go="1" aria-label="Jams"></button>
-          <button type="button" data-go="2" aria-label="The feed"></button>
-          <button type="button" data-go="3" aria-label="Leaderboards"></button>
-          <button type="button" data-go="4" aria-label="Your profile"></button>
-        </div>
-        <button class="slide-step" type="button" data-step="1" aria-label="Next">
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
-        </button>
-      </div>
-    </dialog>
-
   </body>
 </html>
