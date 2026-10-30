@@ -59,7 +59,7 @@ export {
   type AudioCaptureFailure,
   type AudioCaptureResult,
 } from './audio-capture';
-export { LOGO_PATH, LOGO_VIEWBOX, logoSvg } from './logo';
+export { LOGO_PNG, LOGO_SMALL_MAX, LOGO_SMALL_PNG, logoImage } from './logo';
 export { cn } from './cn';
 export {
   accentHexFor,

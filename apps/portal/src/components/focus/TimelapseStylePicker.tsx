@@ -7,7 +7,7 @@ import {
   type TimelapseStyleId,
 } from '@komogon/core';
 import { useEffect, useRef } from 'react';
-import { composeFrame, type ComposeFrame } from '../../lib/timelapse-compose';
+import { composeFrame, logoReady, type ComposeFrame } from '../../lib/timelapse-compose';
 
 /** What the pieces say in the little pictures, unless real ones are given. */
 const SAMPLE: Omit<ComposeFrame, 'camera' | 'screen'> = {
@@ -140,8 +140,9 @@ function LookPicture({
         { mark: '#ffffff', placeholders: true },
       );
     paint();
-    // The wordmark is in Satoshi, which may arrive after the first paint.
+    // The wordmark is in Satoshi, and the mark a picture: either may arrive after the first paint.
     void document.fonts?.load('600 24px Satoshi').then(paint, () => undefined);
+    void logoReady.then(paint);
   }, [w, h, layout, camera, screen, clock, elapsed, title, note, progress]);
   return <canvas ref={ref} width={w} height={h} aria-hidden />;
 }

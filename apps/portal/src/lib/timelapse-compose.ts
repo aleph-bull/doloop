@@ -7,7 +7,7 @@ import {
   type TimelapseFont,
   type TimelapseLayout,
 } from '@komogon/core';
-import { LOGO_PATH, LOGO_VIEWBOX } from '@komogon/ui';
+import { LOGO_PNG, LOGO_SMALL_PNG, logoImage } from '@komogon/ui';
 
 /**
  * Draws one frame of the timelapse from its layout: the camera across the whole frame, the
@@ -325,8 +325,41 @@ function drawProgress(
   ctx.restore();
 }
 
-const LOGO_SHAPE = typeof Path2D !== 'undefined' ? new Path2D(LOGO_PATH) : null;
-const [LOGO_X, LOGO_Y, LOGO_SIZE] = LOGO_VIEWBOX.split(' ').map(Number) as [number, number, number];
+/** The mark's two pictures (white), loaded once; a frame drawn before they arrive leaves it out. */
+const LOGO_PICTURES = new Map(
+  typeof Image === 'undefined'
+    ? []
+    : [LOGO_SMALL_PNG, LOGO_PNG].map((src) => [src, Object.assign(new Image(), { src })] as const),
+);
+
+/** Settles once the mark can be drawn, for anything that paints a single frame. */
+export const logoReady: Promise<unknown> = Promise.all(
+  [...LOGO_PICTURES.values()].map((img) => img.decode().catch(() => undefined)),
+);
+
+const logoBlack = new Map<string, HTMLCanvasElement>();
+
+/** The mark for `size` canvas pixels, in the watermark's tone, or null until it has loaded. */
+function logoIn(tone: WatermarkTone, size: number): CanvasImageSource | null {
+  const src = logoImage(size);
+  const img = LOGO_PICTURES.get(src);
+  if (!img?.complete || !img.naturalWidth) return null;
+  if (tone === '#ffffff') return img;
+  let black = logoBlack.get(src);
+  if (!black) {
+    black = document.createElement('canvas');
+    black.width = img.naturalWidth;
+    black.height = img.naturalHeight;
+    const c = black.getContext('2d');
+    if (!c) return null;
+    c.drawImage(img, 0, 0);
+    c.globalCompositeOperation = 'source-in';
+    c.fillStyle = tone;
+    c.fillRect(0, 0, black.width, black.height);
+    logoBlack.set(src, black);
+  }
+  return black;
+}
 
 /** The Komodon mark and wordmark, as in the portal nav, its height the box's. */
 function drawWatermark(
@@ -350,11 +383,10 @@ function drawWatermark(
     ctx.fillStyle = tone;
     ctx.textBaseline = 'middle';
     ctx.fillText(text, at.x + size * 1.35, cy + 1);
-    if (LOGO_SHAPE) {
-      ctx.translate(at.x, cy - size / 2);
-      ctx.scale(size / LOGO_SIZE, size / LOGO_SIZE);
-      ctx.translate(-LOGO_X, -LOGO_Y);
-      ctx.fill(LOGO_SHAPE, 'evenodd');
+    const mark = logoIn(tone, size);
+    if (mark) {
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(mark, at.x, cy - size / 2, size, size);
     }
   }
   ctx.restore();

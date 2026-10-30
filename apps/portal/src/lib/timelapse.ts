@@ -23,6 +23,7 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   composeFrame,
+  logoReady,
   rectLuma,
   sourceSize,
   type DrawnRects,
@@ -1192,6 +1193,7 @@ export async function renderTimelapse(
   signal?: AbortSignal,
 ): Promise<{ blob: Blob; mime: string; w: number; h: number }> {
   if (stills.length === 0 || plan.frames.length === 0) throw new Error('Nothing to make yet');
+  await logoReady;
   const firstCamera = await firstBitmap(stills, 'blob');
   const firstScreen = await firstBitmap(stills, 'screen');
   const shapeFrom = firstCamera ?? firstScreen;
