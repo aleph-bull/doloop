@@ -3007,3 +3007,15 @@ The owner asked to "make the opening crates more satisfying similar to csgo's ro
 - **Confetti in a dialog.** `fireConfetti` takes a `parent`. Its canvas went on the page, under the dialog, so the old opening's confetti showed behind the dim. Rings and sparks are put on the dialog for the same reason.
 - **Motion off** or reduced: the strip stands on the prize as soon as it's in, with no effects but the sound.
 - **Timing:** about 5.5 s from the click to the prize.
+
+## The hero glides, the band's foot on a phone, the drum spread, 2026-11-01 (owner request)
+
+"make the top hero transition smoother its janky right now", then, with screenshots from a phone, "not smooth transition on mobile" (the foot of the dusk band) and "spread the drum out on mobile".
+
+- **The hero's scene glides.** It cost little (no forced layouts, about 40 ms of style work over nine wheel notches), so the jank was its motion.
+  - It jumped with each wheel notch. Now it is drawn a beat behind the scroll, closing most of the way each frame (about 0.1 s to halve the gap), so the steps glide.
+  - Its parts started with a jolt (an ease-out from rest). Now each eases in and out over its own stretch, overlapping the next.
+  - The page's settle could fire between slow notches and tug the page toward the scene's end. The hero no longer has a settle.
+  - The scene writes its three translates straight onto the headline, the devices and the phone. The scenes now read every rectangle before writing anything.
+- **The band's foot on a phone** showed a line where the band ends: the fade's 30px blur, on the phone's shorter fade, left it see-through there (the brightness jumped 22 at the edge, against 3 on a computer). On a phone it is blurred 14px; the biggest jump is now the fade's own slope. A longer fade was tried and washed over "On your phone, too.".
+- **The drum on a phone is spread out**: its cards sit further apart round the arc (about seven at a time, not thirteen) and evenly across instead of bunched in the middle, the middle ones a little smaller, in a 220px strip. It still turns about a card every second and a half. The computer's drum is unchanged.

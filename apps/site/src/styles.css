@@ -1299,9 +1299,9 @@ html:not(.has-motion) .phones-rail[data-picked] .hand-text {
 /*
  * On a computer the hero holds the screen for 60% of a screen's scroll (the room is its
  * ::after): the headline starts in the middle of the window with the laptop and phone out of
- * sight below. main.js (the hero scene) brings the devices up (--dy, the phone just after the
- * laptop by --py) and moves the headline up into its place (--ty). Then the page scrolls on as
- * it always did.
+ * sight below. main.js (the hero scene) brings the devices up, the phone just after the laptop,
+ * and moves the headline up into its place, writing each one's translate a beat behind the
+ * scroll so it glides. Then the page scrolls on as it always did.
  */
 html.has-scrub .hero::after {
   content: '';
@@ -1312,14 +1312,10 @@ html.has-scrub .hero-stage {
   position: sticky;
   top: 0;
 }
-html.has-scrub .hero-text {
-  translate: 0 var(--ty, 0px);
-}
-html.has-scrub .devices {
-  translate: 0 var(--dy, 0px);
-}
+html.has-scrub .hero-text,
+html.has-scrub .devices,
 html.has-scrub .devices .phone {
-  translate: 0 var(--py, 0px);
+  will-change: translate, transform;
 }
 /*
  * The timelapse band holds the screen while the timelapses fall past the words; they fade in
@@ -1775,10 +1771,13 @@ html.has-motion .devices.rise.is-in {
   .fall-band {
     margin-block: 10vh;
   }
+  /* A softer blur: the full one, on this shorter fade, thinned it where the band ends and drew
+     a line there. */
   .fall-edge {
     height: 22vh;
+    filter: blur(14px);
   }
-  /* Still solid where the band begins (the shorter fade is solid for 7vh). */
+  /* Still solid where the band ends (the shorter fade is solid for 7vh). */
   .fall-edge-bottom {
     top: calc(100% - 6vh);
   }
@@ -1949,9 +1948,9 @@ html.has-motion .devices.rise.is-in {
   .looks:not(.is-live) .ring-card:nth-child(n + 7) {
     display: none;
   }
-  /* The drum on a phone: a shorter strip. */
+  /* The drum on a phone: a shorter strip, its cards spread further apart (main.js). */
   .looks.is-live .ring-view {
-    height: 250px;
+    height: 220px;
   }
 }
 /* On a phone the Discord button is just the mark. */

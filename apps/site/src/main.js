@@ -11,6 +11,8 @@ const still =
 
 const clamp = (v, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v));
 const ease = (t) => 1 - (1 - t) ** 3;
+/** Slow in and slow out. */
+const smooth = (t) => t * t * (3 - 2 * t);
 /** How far `v` is from `a` to `b`, as 0 to 1. */
 const range = (v, a, b) => clamp((v - a) / (b - a));
 
@@ -61,13 +63,17 @@ function ringScene(scene) {
   const view = scene.querySelector('.ring-view');
   const cards = [...scene.querySelectorAll('.ring-card')];
   const word = cycler([...scene.querySelectorAll('.cycle-word')]);
-  const SPAN = 2.6;
-  // Arc per second on its own: a card's width about every second and a half.
-  const CRUISE = 0.11;
+  // The arc the cards share, and its turn per second on its own: a card's width about every
+  // second and a half.
+  let span = 2.6;
+  let cruise = 0.11;
   let W = window.innerWidth;
-  // How far the cards spread (a share of the width) and how much they grow toward the sides.
-  // A phone gets bigger cards in the middle and a gentler spread, or they'd be specks.
+  // How far the cards spread (a share of the width), how evenly (1 is even, more bunches them
+  // in the middle) and how much they grow toward the sides. A phone spaces them further apart
+  // round the arc and evenly across, with bigger cards in the middle, or they'd crowd into a
+  // stack (the owner, 2026-11-01: "spread the drum out").
   let spread = 0.6;
+  let even = 1.4;
   let grow = [0.36, 1.45];
   let fan = 0.06;
   let slide = 0;
@@ -87,14 +93,17 @@ function ringScene(scene) {
   const measure = () => {
     W = view.clientWidth || window.innerWidth;
     const phone = W < 640;
-    spread = phone ? 0.5 : 0.6;
-    grow = phone ? [0.52, 0.7] : [0.36, 1.45];
+    span = phone ? 5.4 : 2.6;
+    cruise = 0.11 * (span / 2.6);
+    spread = phone ? 0.64 : 0.6;
+    even = phone ? 1 : 1.4;
+    grow = phone ? [0.44, 0.6] : [0.36, 1.45];
     scene.style.setProperty('--cw', `${phone ? W * 0.6 : Math.max(150, W * 0.19)}px`);
   };
 
   const draw = () => {
     for (let i = 0; i < cards.length; i++) {
-      const u = (((((i / cards.length) * SPAN - slide) % SPAN) + SPAN) % SPAN) - SPAN / 2;
+      const u = (((((i / cards.length) * span - slide) % span) + span) % span) - span / 2;
       const seen = 1 - range(Math.abs(u), 1.02, 1.2);
       const card = cards[i];
       card.style.opacity = seen.toFixed(3);
@@ -102,7 +111,7 @@ function ringScene(scene) {
       if (seen <= 0) continue;
       const f = u * fan;
       const a = Math.abs(f);
-      const x = Math.sign(f) * W * spread * a ** 1.4;
+      const x = Math.sign(f) * W * spread * a ** even;
       const s = grow[0] + grow[1] * a ** 2;
       card.style.zIndex = String(Math.round(a * 100));
       card.style.transform = `translateX(${x.toFixed(1)}px) perspective(1100px) rotateY(${(-f * 58).toFixed(2)}deg) scale(${s.toFixed(3)})`;
@@ -115,7 +124,7 @@ function ringScene(scene) {
     last = now;
     // While it's held, the hand turns it; otherwise its own turn and whatever push it has.
     if (!held) {
-      slide += dt * (CRUISE + push);
+      slide += dt * (cruise + push);
       push *= Math.exp(-dt * 2.2);
     }
     wordClock += dt;
@@ -157,7 +166,7 @@ function ringScene(scene) {
     if (!held || e.pointerId !== held.id) return;
     // Held still before letting go is no throw.
     const v = e.timeStamp - held.t > 80 ? 0 : held.v;
-    push = clamp(v - CRUISE, -3, 3);
+    push = clamp(v - cruise, -3, 3);
     held = null;
     view.classList.remove('is-dragging');
   };
@@ -277,33 +286,68 @@ function heroScene(scene) {
   const stage = scene.querySelector('.hero-stage');
   const text = scene.querySelector('.hero-text');
   const devices = scene.querySelector('.devices');
+  const phone = devices.querySelector('.phone');
   let shift = 0;
   let rise = 0;
   let run = 1;
+  // Where the scroll puts the scene (0 to 1) and where it is drawn, a beat behind.
+  let target = 0;
+  let at = null;
+  let raf = 0;
+  let last = 0;
+  // Each part eases in and out over its own stretch, overlapping the next, so nothing starts
+  // or stops with a jolt.
+  const draw = (q) => {
+    const up = smooth(range(q, 0.05, 0.7));
+    const late = smooth(range(q, 0.2, 0.85));
+    const move = smooth(range(q, 0.3, 1));
+    const ty = shift * (1 - move);
+    text.style.translate = `0 ${ty.toFixed(1)}px`;
+    devices.style.translate = `0 ${(ty + rise * (1 - up)).toFixed(1)}px`;
+    phone.style.translate = `0 ${(160 * (1 - late)).toFixed(1)}px`;
+  };
+  // A wheel scrolls in steps; each frame closes most of the way to the scroll's place, so the
+  // steps glide.
+  const tick = (now) => {
+    raf = 0;
+    const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
+    last = now;
+    at += (target - at) * (1 - Math.exp(-dt * 9));
+    if (Math.abs(target - at) < 0.0005) at = target;
+    draw(at);
+    if (at !== target) raf = requestAnimationFrame(tick);
+    else last = 0;
+  };
   const measure = () => {
     const vh = window.innerHeight;
     // From the middle of the window to its own place, and far enough down to be out of sight.
     shift = Math.max(0, vh / 2 - (text.offsetTop + text.offsetHeight / 2));
     rise = Math.max(0, vh - devices.offsetTop + 80);
     run = Math.max(1, scene.offsetHeight - stage.offsetHeight);
+    if (at !== null) draw(at);
   };
   return {
     measure,
     update(enter, through, p, r) {
-      const q = clamp(-r.top / run);
-      const up = ease(range(q, 0.15, 0.7));
-      const phone = ease(range(q, 0.3, 0.85));
-      const move = ease(range(q, 0.4, 1));
-      const s = scene.style;
-      s.setProperty('--ty', `${(shift * (1 - move)).toFixed(1)}px`);
-      s.setProperty('--dy', `${(shift * (1 - move) + rise * (1 - up)).toFixed(1)}px`);
-      s.setProperty('--py', `${(160 * (1 - phone)).toFixed(1)}px`);
+      target = clamp(-r.top / run);
+      // The first time it is drawn where it belongs at once, before anything shows.
+      if (at === null) {
+        at = target;
+        draw(at);
+      } else if (!raf && at !== target) raf = requestAnimationFrame(tick);
+    },
+    stop() {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      last = 0;
+      at = null;
+      for (const el of [text, devices, phone]) el.style.removeProperty('translate');
     },
   };
 }
 
 // Everything a scene writes on its own element; cleared when the scenes turn off.
-const SCENE_VARS = ['--cw', '--ty', '--dy', '--py'];
+const SCENE_VARS = ['--cw'];
 
 if (!still) {
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
@@ -319,17 +363,19 @@ if (!still) {
   const frame = () => {
     queued = false;
     const vh = window.innerHeight;
-    for (const s of scenes) {
-      if (!s.running) continue;
-      const r = s.el.getBoundingClientRect();
-      if (r.bottom < -vh || r.top > vh * 2) continue;
+    // Every rectangle first, then the writes, so no scene's writes make the next one's read
+    // lay the page out again.
+    const boxes = scenes.map((s) => s.running && s.el.getBoundingClientRect());
+    scenes.forEach((s, i) => {
+      const r = boxes[i];
+      if (!r || r.bottom < -vh || r.top > vh * 2) return;
       // enter: 0 to 1 as it comes up the screen; through: 0 to 1 from its top reaching the
       // bottom to its bottom leaving the top; p: 0 to 1 while it holds the screen.
       const enter = clamp((vh - r.top) / vh);
       const through = clamp((vh - r.top) / (vh + r.height));
       const p = clamp(-r.top / Math.max(1, r.height - vh));
       s.update?.(enter, through, p, r);
-    }
+    });
   };
   const queue = () => {
     if (queued) return;
@@ -881,14 +927,14 @@ for (const a of document.querySelectorAll('a[data-tab]')) {
  * On a computer, when a scroll comes to rest close to the start of a part, the page eases
  * onto it, slowly, and anywhere else it stays where it stopped (the owner: "make the screen
  * stick to sections and then go with enough scroll", then "too aggressive, make it
- * smoother"). The hero, the timelapses and the phones settle at their top; the app, the looks
- * and the closing in the middle of the screen. Any new scroll, key, touch or click stops the
- * ease where it is.
+ * smoother"). The timelapses and the phones settle at their top; the app, the looks and the
+ * closing in the middle of the screen. The hero has none: its opening scene follows the scroll
+ * by itself, and easing the page along inside it felt like a tug. Any new scroll, key, touch
+ * or click stops the ease where it is.
  */
 if (!still) {
   const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
   const parts = [
-    ['.hero', 'held'],
     ['.fall-band', 'top'],
     ['#phone', 'top'],
     ['#app', 'middle'],
@@ -930,10 +976,7 @@ if (!still) {
     for (const [el, at] of parts) {
       const r = el.getBoundingClientRect();
       const top = r.top + y;
-      // held: where the hero's scene ends and the page scrolls on (its top on a phone).
-      const held = at === 'held' && top + r.height - el.firstElementChild.offsetHeight;
-      const goal = held || (at === 'top' ? top : top + r.height / 2 - vh / 2);
-      const to = Math.min(max, Math.max(0, goal));
+      const to = Math.min(max, Math.max(0, at === 'top' ? top : top + r.height / 2 - vh / 2));
       const d = Math.abs(to - y);
       if (d > 2 && d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
     }

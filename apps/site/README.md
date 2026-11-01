@@ -25,8 +25,9 @@ pnpm build      # static output in dist/
   2026-10-31): it holds the screen for 60% of a screen's scroll (`.hero-stage` is sticky, the
   room is `.hero::after`), the headline starting in the middle of the window and the devices
   out of sight below; scrolling brings the laptop up and the phone just after it, and moves the
-  headline up into its place
-  (`heroScene` in `main.js`). The nav sits in the stage and holds with it. Phones keep the
+  headline up into its place (`heroScene` in `main.js`). Each part eases in and out over its
+  own stretch, and the whole scene trails the scroll a beat, so a wheel's steps glide (the
+  owner, 2026-11-01: "its janky"). The nav sits in the stage and holds with it. Phones keep the
   hero still. Below the hero the page is ruled (hairlines down the sides of
   the content and across between sections, like aside.com). The words are the owner's own
   (2026-10-30).
@@ -42,7 +43,8 @@ pnpm build      # static output in dist/
     the band's ink. The way out is one long eased gradient from the band into the page
     (`.fall-edge`), with three soft waves (ink, plum, a rose bloom) drifting sideways over it;
     the band's own colour is the dusk photo's tone, so it never dips darker than the band (the
-    owner: "make this line more seamless").
+    owner: "make this line more seamless"). On a phone the fade is shorter and less blurred; the
+    full blur thinned it where the band ends and drew a line there.
   - **On your phone** (`#phone`): a hand of five phones (`.phones`: Pomodoro, Tasks and
     courses, the feed in the middle, Jams and groups, Streaks and profile), each in another
     theme and each a still of its screen, with clouds drifting behind (`.sky`). `phoneRow` in
@@ -69,8 +71,10 @@ pnpm build      # static output in dist/
     its pin off). Sixteen screens in other photos, colours, themes and panels turn across it
     on the inside of a drum, fanning out as the card comes up and pushed by the scroll; it
     can be dragged round with the mouse and thrown (touch drags sideways, so the page still
-    scrolls). It turns on phones too, in a shorter strip (the owner, 2026-10-31): its CSS hangs
-    on `.looks.is-live`, set while `main.js` turns it, not on `has-scrub`. What can be changed sits as chips bobbing around the heading (in a row under it
+    scrolls). It turns on phones too, in a shorter strip (the owner, 2026-10-31), its cards
+    spaced further apart round the arc and evenly across, about seven at a time (2026-11-01:
+    "spread the drum out"; `span`, `even` and `grow` in `ringScene`). Its CSS hangs on
+    `.looks.is-live`, set while `main.js` turns it, not on `has-scrub`. What can be changed sits as chips bobbing around the heading (in a row under it
     below 1024px). The last line names calm, bright and cozy, and marks each in turn like a
     highlighter every few seconds.
   - **The closing**: a card of sky, blue into the page's lilac, with mist along its foot.
@@ -84,8 +88,9 @@ pnpm build      # static output in dist/
   go with enough scroll", then "too aggressive, make it smoother"): on a computer, when a
   scroll comes to rest within about a fifth of a screen of a part (`NEAR` in `main.js`), the
   page waits a moment and eases onto it over 0.7 s; anywhere else it stays where it stopped.
-  The hero settles where its opening scene ends, the timelapses and the phones at their top,
-  the app, the looks and the closing in the middle of the screen. Any scroll, key, touch or click stops the ease. No CSS
+  The timelapses and the phones settle at their top, the app, the looks and the closing in the
+  middle of the screen. The hero has none: easing the page along inside its scene felt like a
+  tug. Any scroll, key, touch or click stops the ease. No CSS
   scroll snapping (it was too forceful). Phones scroll freely.
 - **On a phone the page is flat** (the owner, 2026-10-28): under 641px wide, or under 501px
   tall (a phone held sideways), `main.js` leaves the scenes off and the CSS under the same
