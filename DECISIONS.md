@@ -2989,3 +2989,21 @@ The owner sent five screenshots of the site on their iPhone in Low Power Mode: "
 
 - **No pale page between the hero and the dusk band.** The hero's photo faded into the light page, and the band's top edge faded back out of it, so a pale stripe sat between two dusky parts, with grey where the photo met the page. Now, under the photo's fade, the hero stage carries the band's own colours (`.hero-stage::before`: a dusky mauve darkening into the band's ink) on down under the laptop to the band. The brightness falls steadily from the photo into the band with no dip. The band's top edge (its waves and rose glow) is gone, because over dusk it made a lighter stripe; the bottom edge, into the light page, stays. `--band-gap` (22vh, 10vh on a phone) is the room from the laptop to the band, used by both.
 - **The floating panels are gone**: the two tilted stickers beside the headline (Live now and the week's hours). The hero's opening scene keeps the rest: the headline starts centred, the laptop and phone rise in, and the headline moves up. Their images (`shots/sticker-*.webp`) were removed.
+
+## Opening a crate rolls like a case, 2026-11-01 (owner request)
+
+The owner asked to "make the opening crates more satisfying similar to csgo's rolling system and add effects and stuff". The shake-and-lid opening became a rolling strip (`components/crates/CrateOpening.tsx`, moved out of Inventory.tsx).
+
+- **The strip.** A row of tiles runs sideways under a line with a pointer at each end. Each tile is what the crate could give, drawn at the crate's real odds with core `openCrate` on random tickets, the same way the Rolls reel draws its rows. Only the prize's own tile is put there; nothing is placed beside it for show.
+- **Tiles** wear their prize's colour, with a bar of it along the bottom (`winColour` in `lib/crates.ts`). A pet wears its rarity's colour, a crate its title's. XP wears the rarity of the same rank: 5 XP common grey up to 100 XP legendary gold.
+- **The motion.** The lid comes off, then the strip races (blurred sideways by an SVG filter while fast). Once the prize is in, it slows over the same time whatever the prize is, so the length gives nothing away. It stops anywhere on the prize's tile, holds, then slides onto its middle. Each tile that passes the line clicks with the Rolls reel's card sound (`REEL_CLICK`, now in `slot-kit.ts`) and flicks the top pointer. The crate below rattles, harder for the last stretch.
+- **The show grows with the prize** (`winLevel`, 0 to 5, like the Rolls' `fxLevel`):
+  - from uncommon, a flash of its colour over the strip and a ring out of its tile;
+  - from rare, sparks;
+  - from epic, a second ring and rays turning behind what came out;
+  - from legendary, the fanfare instead of the pop, confetti and a quake;
+  - at mythic all of it twice over, the rays cycling through every colour.
+  - XP counts up from nothing, ticking higher, and lands with a coin.
+- **Confetti in a dialog.** `fireConfetti` takes a `parent`. Its canvas went on the page, under the dialog, so the old opening's confetti showed behind the dim. Rings and sparks are put on the dialog for the same reason.
+- **Motion off** or reduced: the strip stands on the prize as soon as it's in, with no effects but the sound.
+- **Timing:** about 5.5 s from the click to the prize.

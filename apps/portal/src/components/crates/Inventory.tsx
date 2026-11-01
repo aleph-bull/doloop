@@ -9,22 +9,19 @@ import {
   rollOdds,
   type CrateDrop,
 } from '@komogon/core';
-import { Button, cn, fireConfetti, Modal, Panel, useToast } from '@komogon/ui';
+import { Panel, useToast } from '@komogon/ui';
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { api, type CrateWin, type Inventory as InventoryData } from '../../lib/api';
-import { existLine, isBigPet, pct, rarityStyle } from '../../lib/crates';
+import { useRef, useState } from 'react';
+import { api } from '../../lib/api';
+import { existLine, pct, rarityStyle } from '../../lib/crates';
 import { keys, useInventory } from '../../lib/queries';
 import { tierStyle } from '../../lib/rolls';
-import { playEffect, preloadEffects } from '../../lib/sounds';
-import { ROLL_POP, ROLL_SUCCESS } from '../slot/slot-kit';
+import { preloadEffects } from '../../lib/sounds';
 import { CrateArt } from './CrateArt';
 import { CrateOffers } from './CrateOffers';
+import { CRATE_SOUNDS, CrateOpening, type Opened } from './CrateOpening';
 import { HoverCard } from './HoverCard';
 import { PetSprite } from './PetSprite';
-
-type ShopData = Awaited<ReturnType<typeof api.shop>>;
-type Opened = Awaited<ReturnType<typeof api.openCrate>>;
 
 /**
  * Achievements › Inventory (owner, 2026-10-29): crates first, then pets, each rarest first,
@@ -74,7 +71,7 @@ export function Inventory({
   const open = (tier: number) => {
     if (pending.current) return;
     pending.current = true;
-    preloadEffects([ROLL_POP, ROLL_SUCCESS]);
+    preloadEffects(CRATE_SOUNDS);
     const call = api.openCrate(tier);
     void call.then(
       () => (pending.current = false),
@@ -237,150 +234,6 @@ function PetCard({ id, count, global }: { id: string; count: number; global: num
         {existLine(global)}
         {count > 1 && ` · You have ${count.toLocaleString()}`}
       </div>
-    </div>
-  );
-}
-
-/** The crate shakes at least this long, then its lid comes off before what's inside shows. */
-const SHAKE_MS = 1100;
-const LID_MS = 380;
-
-/**
- * Opening a crate: it shakes, its lid flies off, and what it gave rises out of it: a pet
- * walking, XP, or another crate. The rarest pets get the fanfare and confetti. The call was
- * made on the click (`call`), so it never runs twice; the caches take its answer as it shows.
- */
-function CrateOpening({
-  tier,
-  call,
-  volume,
-  confetti,
-  onError,
-  onAgain,
-  onClose,
-}: {
-  tier: number;
-  call: Promise<Opened>;
-  volume: number;
-  confetti: boolean;
-  onError: (message: string) => void;
-  onAgain: () => void;
-  onClose: () => void;
-}) {
-  const qc = useQueryClient();
-  const [stage, setStage] = useState<'shake' | 'open' | 'shown'>('shake');
-  const [opened, setOpened] = useState<Opened | null>(null);
-  const shownRef = useRef(false);
-  const latest = useRef({ onError });
-  useEffect(() => {
-    latest.current = { onError };
-  });
-
-  useEffect(() => {
-    let live = true;
-    const timers: number[] = [];
-    const at = performance.now();
-    call.then(
-      (r) => {
-        if (!live) return;
-        const wait = Math.max(0, SHAKE_MS - (performance.now() - at));
-        timers.push(window.setTimeout(() => setStage('open'), wait));
-        timers.push(
-          window.setTimeout(() => {
-            setOpened(r);
-            setStage('shown');
-          }, wait + LID_MS),
-        );
-      },
-      (err: unknown) => {
-        if (live) latest.current.onError(err instanceof Error ? err.message : 'Could not open it');
-      },
-    );
-    return () => {
-      live = false;
-      for (const t of timers) window.clearTimeout(t);
-    };
-  }, [call]);
-
-  // What it gave goes into the caches, with its sound, once.
-  useEffect(() => {
-    if (!opened || shownRef.current) return;
-    shownRef.current = true;
-    qc.setQueryData<InventoryData>(keys.inventory, opened.inventory);
-    if (opened.win.kind === 'xp')
-      qc.setQueryData<ShopData>(keys.shop, (s) => (s ? { ...s, xp: opened.xp } : s));
-    const win = opened.win;
-    const big = win.kind === 'pet' && isBigPet(petInfo(win.pet)?.rarity ?? 'common');
-    if (big) {
-      playEffect(ROLL_SUCCESS, volume);
-      if (confetti) fireConfetti({ count: 140, durationMs: 1800 });
-    } else playEffect(ROLL_POP, volume, win.kind === 'xp' ? 0.9 : 1.05);
-  }, [opened, qc, volume, confetti]);
-
-  const left = opened?.inventory.crates.find((c) => c.tier === tier)?.count ?? 0;
-  return (
-    <Modal
-      open
-      strong
-      onClose={onClose}
-      title={crateName(tier)}
-      className="crate-open-modal"
-      actions={
-        stage === 'shown' ? (
-          <>
-            {left > 0 && (
-              <Button variant="secondary" onClick={onAgain}>
-                Open another
-              </Button>
-            )}
-            <Button variant="primary" onClick={onClose}>
-              Done
-            </Button>
-          </>
-        ) : undefined
-      }
-    >
-      <div className="crate-open" data-stage={stage} style={tierStyle(tier)}>
-        <div className="crate-open-stage">
-          <CrateArt tier={tier} className="crate-open-art" />
-          {opened && <Won win={opened.win} isNew={opened.isNew} />}
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/** What came out of a crate, under the crate it came from. */
-function Won({ win, isNew }: { win: CrateWin; isNew: boolean }) {
-  if (win.kind === 'xp')
-    return (
-      <div className="crate-won">
-        <span className="crate-won-xp tabular">
-          +{win.xp}
-          <small>XP</small>
-        </span>
-      </div>
-    );
-  if (win.kind === 'crate')
-    return (
-      <div className="crate-won" style={tierStyle(win.tier)}>
-        <CrateArt tier={win.tier} className="crate-won-crate" />
-        <span className="crate-won-name">{crateName(win.tier)}</span>
-      </div>
-    );
-  const info = petInfo(win.pet);
-  if (!info) return null;
-  return (
-    <div
-      className={cn('crate-won', isBigPet(info.rarity) && 'is-big')}
-      style={rarityStyle(info.rarity)}
-    >
-      <PetSprite id={win.pet} box={[200, 130]} max={6} walking />
-      <span className="crate-won-name">{info.name}</span>
-      <span className="crate-won-meta">
-        {PET_RARITY_NAMES[info.rarity]}
-        {isNew && <span className="crate-won-new">New</span>}
-      </span>
     </div>
   );
 }

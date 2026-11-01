@@ -345,7 +345,9 @@ and never explain the difference on screen.
   (tables in core `crates.ts`); everything sits in Achievements › Inventory
   (`inventory_items`, `components/crates/`), with global counts on hover. Pets are
   `public/pets/<id>.png` walk-left strips (sizes in portal `lib/pet-sprites.ts`) and do
-  nothing yet (owner). See DECISIONS.md.
+  nothing yet (owner). Opening one rolls a strip of prizes under a line, like a case
+  (2026-11-01, `CrateOpening.tsx`); its tiles are drawn at the crate's real odds, never set
+  for show. See DECISIONS.md.
 - Tags (2026-10-21): tasks carry Notion-style tags (`tags` table, `nodes.tag_ids`, palette
   `TAG_COLORS` in core): a Tags column with a tag menu and a Tags card under the table
   (`components/Tags.tsx`), tags on the dashboard task cards, and a play button on courses.

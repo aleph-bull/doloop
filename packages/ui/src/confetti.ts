@@ -6,6 +6,11 @@ export interface ConfettiOptions {
   durationMs?: number;
   count?: number;
   colors?: string[];
+  /**
+   * Where the canvas goes (the page by default). Over an open dialog it must go in the dialog,
+   * or it falls behind it.
+   */
+  parent?: HTMLElement;
 }
 
 export function fireConfetti(opts: ConfettiOptions = {}): void {
@@ -24,7 +29,7 @@ export function fireConfetti(opts: ConfettiOptions = {}): void {
   const canvas = document.createElement('canvas');
   canvas.style.cssText =
     'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:100';
-  document.body.appendChild(canvas);
+  (opts.parent ?? document.body).appendChild(canvas);
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     canvas.remove();

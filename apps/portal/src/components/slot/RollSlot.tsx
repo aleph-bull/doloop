@@ -20,9 +20,11 @@ import {
   COIN_COLLECT,
   COIN_DROP,
   CONFETTI_FROM,
+  easeInOutCubic,
   easeOutCubic,
   easeOutQuart,
   OVERSHOOT,
+  REEL_CLICK,
   ROLL_POP,
   ROLL_SUCCESS,
   SETTLE_MS,
@@ -37,8 +39,6 @@ import { CrateOffers } from '../crates/CrateOffers';
 
 const POP = ROLL_POP;
 const SUCCESS = ROLL_SUCCESS;
-/** The owner's playing card laid down, trimmed to its snap: the click of each row going by. */
-const REEL_CLICK = 'sounds/reel-card.wav';
 
 /**
  * Each row of the reel is a roll of its own at the real odds (owner, 2026-10-25: "i shouldnt
@@ -79,8 +79,6 @@ const BURST_DELAY = 700;
 function slowingMs(tier: number): number {
   return 1700 + Math.max(0, tier - 3) * 260;
 }
-
-const easeInOutCubic = (u: number) => (u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2);
 
 /** Where the reel is `ms` after it starts, getting up to speed, in rows. */
 function spunBy(ms: number): number {

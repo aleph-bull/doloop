@@ -11,6 +11,8 @@ export const COIN_COLLECT = 'sounds/coin-collect.mp3';
  */
 export const ROLL_POP = 'sounds/roll-pop.mp3';
 export const ROLL_SUCCESS = 'sounds/roll-success.mp3';
+/** The owner's playing card laid down, trimmed to its snap: the click of each row going by. */
+export const REEL_CLICK = 'sounds/reel-card.wav';
 /** From this rarity (1/256) a win gets the fanfare instead of the pop. */
 export const SUCCESS_FROM = 8;
 /** The first rarity rarer than the owner's 1/100 (1/128, Ember) throws confetti. */
@@ -32,6 +34,7 @@ export function stillMotion(): boolean {
 
 export const easeOutQuart = (u: number) => 1 - (1 - u) ** 4;
 export const easeOutCubic = (u: number) => 1 - (1 - u) ** 3;
+export const easeInOutCubic = (u: number) => (u < 0.5 ? 4 * u ** 3 : 1 - (-2 * u + 2) ** 3 / 2);
 
 /** The middle of the text itself, not of the box it sits in. */
 export function textCentre(el: HTMLElement): { x: number; y: number } {

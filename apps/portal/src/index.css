@@ -6930,35 +6930,169 @@ button.start-subject:hover {
   gap: 4px 8px;
 }
 
-/* Opening one: it shakes, the lid flies off, and what it gave rises out. */
-.crate-open {
-  display: grid;
-  place-items: center;
-  min-height: 260px;
-  padding-top: 12px;
+/* Opening one (2026-11-01, owner: "similar to csgo's rolling system"): a strip of what the
+   crate can give races under a line and slows onto the prize, each tile in its prize's colour
+   with a bar of it along the bottom. The crate sits open below, rattling, and what it gave
+   rises out of it. The rarer the prize, the louder the show (data-level, 0 to 5). */
+@media (min-width: 561px) {
+  .crate-open-modal {
+    max-width: min(720px, calc(100vw - 32px));
+  }
 }
-.crate-open-stage {
+.crate-open {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+.crate-reel {
+  position: relative;
+  height: 138px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.crate-reel-defs {
+  position: absolute;
+}
+.crate-strip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  will-change: transform;
+}
+.crate-tile {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: calc(var(--i) * var(--pitch) + 3px);
+  width: calc(var(--pitch) - 6px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  padding: 8px 6px 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--roll-colour) 14%, transparent);
+  transition:
+    opacity 420ms var(--ease-out, ease),
+    filter 420ms var(--ease-out, ease);
+}
+.crate-tile::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: var(--roll-colour);
+}
+.crate-tile-art {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.crate-tile-xp {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--roll-colour);
+}
+.crate-tile-crate {
+  width: 56px;
+}
+.crate-tile-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--roll-colour);
+}
+.crate-reel.is-done .crate-tile:not(.is-won) {
+  opacity: 0.3;
+  filter: saturate(0.3);
+}
+.crate-tile.is-won {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px var(--roll-colour);
+  animation: crate-tile-won 620ms var(--ease-spring);
+}
+/* The line, with a pointer at each end; the top one flicks as the tiles knock past it. */
+.crate-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--fg);
+  pointer-events: none;
+  transition: opacity 300ms var(--ease-out, ease);
+}
+.crate-marker-tip,
+.crate-marker::after {
+  position: absolute;
+  left: 50%;
+  width: 16px;
+  height: 11px;
+  margin-left: -8px;
+  background: var(--fg);
+}
+.crate-marker-tip {
+  top: 0;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: 50% 0;
+}
+.crate-marker::after {
+  content: '';
+  bottom: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.crate-reel.is-done .crate-marker {
+  opacity: 0;
+}
+.crate-reel-flash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: var(--roll-colour);
+  opacity: 0;
+  pointer-events: none;
+}
+.crate-open-stage {
+  display: grid;
+  place-items: center;
+  min-height: 210px;
 }
 .crate-open-art {
-  width: 132px;
+  width: 112px;
 }
-.crate-open[data-stage='shake'] .crate-open-art {
-  animation: crate-shake 1100ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-}
-.crate-open[data-stage='open'] .crate-lid,
-.crate-open[data-stage='shown'] .crate-lid {
+.crate-open:not([data-stage='ready']) .crate-open-art .crate-lid {
   transform: translate(-30px, -6px) rotate(-38deg);
   transition: transform 360ms var(--ease-spring);
 }
-.crate-open[data-stage='shown'] .crate-open-art {
-  width: 72px;
-  transition: width 360ms var(--ease-out, ease);
+.crate-open[data-stage='spin'] .crate-open-art {
+  animation: crate-rattle 900ms ease-in-out 300ms infinite;
+}
+.crate-open[data-stage='tense'] .crate-open-art {
+  animation: crate-shake 1100ms cubic-bezier(0.36, 0.07, 0.19, 0.97) infinite;
+}
+/* From legendary the whole thing quakes as it lands; for mythic twice. */
+.crate-open[data-stage='shown'][data-level='4'] {
+  animation: crate-quake 700ms var(--ease-out, ease);
+}
+.crate-open[data-stage='shown'][data-level='5'] {
+  animation:
+    crate-quake 700ms var(--ease-out, ease),
+    crate-quake 700ms var(--ease-out, ease) 760ms;
 }
 .crate-won {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6986,11 +7120,16 @@ button.start-subject:hover {
   background: color-mix(in srgb, var(--roll-colour) 16%, transparent);
   font-size: var(--text-xs);
   font-weight: 600;
+  animation: roll-chip-in 380ms var(--ease-spring) 420ms backwards;
 }
 .crate-won-xp {
-  font-size: 2.6rem;
+  font-size: 2.8rem;
   font-weight: 700;
   line-height: 1;
+  color: var(--roll-colour);
+}
+.crate-won-count {
+  display: inline-block;
 }
 .crate-won-xp small {
   margin-left: 4px;
@@ -7000,6 +7139,67 @@ button.start-subject:hover {
 }
 .crate-won-crate {
   width: 88px;
+  animation: crate-wiggle 520ms var(--ease-spring) 480ms;
+}
+/* Rays turning behind the rarest prizes, from epic; cycling through every colour for the top. */
+.crate-rays {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  z-index: -1;
+  width: 360px;
+  height: 360px;
+  margin: -180px 0 0 -180px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    color-mix(in srgb, var(--roll-colour) 38%, transparent) 0deg 8deg,
+    transparent 8deg 22.5deg
+  );
+  mask-image: radial-gradient(circle, #000 0, #000 18%, transparent 66%);
+  pointer-events: none;
+  animation:
+    crate-rays-in 700ms var(--ease-out, ease) backwards,
+    roll-spin 16s linear infinite;
+}
+.crate-rays.is-every {
+  animation:
+    crate-rays-in 700ms var(--ease-out, ease) backwards,
+    roll-spin 9s linear infinite,
+    crate-hue 3s linear infinite;
+}
+/* Thrown out of the tile it stopped on: on the dialog, fixed to the window. */
+.crate-ring {
+  position: fixed;
+  z-index: 5;
+  border: 3px solid var(--roll-colour);
+  border-radius: 50%;
+  pointer-events: none;
+  translate: -50% -50%;
+  animation: crate-ring 760ms var(--ease-out, ease) both;
+}
+.crate-spark {
+  position: fixed;
+  z-index: 5;
+  color: var(--roll-colour);
+  font-size: var(--size, 1rem);
+  line-height: 1;
+  pointer-events: none;
+  translate: -50% -50%;
+  animation: roll-spark 1s var(--ease-out, ease) both;
+}
+@media (max-width: 560px) {
+  .crate-reel {
+    height: 122px;
+  }
+  .crate-tile-xp {
+    font-size: 1.6rem;
+  }
+  .crate-tile-crate {
+    width: 46px;
+  }
+  .crate-open-stage {
+    min-height: 190px;
+  }
 }
 @keyframes crate-shake {
   0%,
@@ -7033,13 +7233,78 @@ button.start-subject:hover {
     transform: translateY(24px) scale(0.6);
   }
 }
+@keyframes crate-rattle {
+  0%,
+  30%,
+  100% {
+    transform: none;
+  }
+  8% {
+    transform: translateY(-2px) rotate(-3deg);
+  }
+  16% {
+    transform: rotate(2.5deg);
+  }
+  23% {
+    transform: rotate(-1deg);
+  }
+}
+@keyframes crate-tile-won {
+  40% {
+    transform: scale(1.12);
+  }
+}
+@keyframes crate-quake {
+  0%,
+  100% {
+    transform: none;
+  }
+  12% {
+    transform: translate(-8px, 2px) rotate(-1deg);
+  }
+  26% {
+    transform: translate(7px, -2px) rotate(0.8deg);
+  }
+  42% {
+    transform: translate(-5px, 1px);
+  }
+  60% {
+    transform: translate(3px, 0);
+  }
+  80% {
+    transform: translate(-1px, 0);
+  }
+}
+@keyframes crate-rays-in {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+@keyframes crate-hue {
+  to {
+    filter: hue-rotate(360deg);
+  }
+}
+@keyframes crate-ring {
+  from {
+    transform: scale(0.35);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3);
+    opacity: 0;
+  }
+}
 :root[data-motion='off'] .pet-sprite,
+:root[data-motion='off'] .crate-open,
 :root[data-motion='off'] .crate-open *,
 :root[data-motion='off'] .inv-tile * {
   animation: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
   :root:not([data-motion='on']) .pet-sprite,
+  :root:not([data-motion='on']) .crate-open,
   :root:not([data-motion='on']) .crate-open *,
   :root:not([data-motion='on']) .inv-tile * {
     animation: none !important;
