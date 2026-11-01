@@ -13,6 +13,10 @@
 //    answers the purchase in the browser instead and shows the shop one short of the most
 //    if need be, so nothing is spent and it can be taken again (the 2026-10-29 take bought
 //    Jerry's second freeze for real).
+//  - social-feed: Social's feed with Live now above it, a slow scroll down through a few
+//    posts, a pause, back up, then the Leaderboard tab. The seed's two people mid-session
+//    (Zachary, Priya with a pause) went quiet ten minutes after seeding, so the feed's Live
+//    now is answered in the browser as the seed left it; nothing is written.
 // Phone, an iPhone 14 Pro (393 x 852 with its safe areas) at 2x (786 x 1704): a slow scroll
 // down about two screens (or to the end), a pause and back to the top, so it loops:
 //  - phone-feed, phone-groups, phone-jams, phone-board, phone-profile.
@@ -88,14 +92,45 @@ async function open(browser, view, path, { gate = null, setup = null, before = n
   return { ctx, page, release };
 }
 
-/** The username notice, then the notifications ask, if either shows: tapped, on a phone. */
-async function dismiss(page) {
+/** The username notice, then the notifications ask, if either shows: tapped on a phone. */
+async function dismiss(page, { click = false } = {}) {
   for (const name of ['Keep it', 'Not now']) {
     const button = page.getByRole('button', { name, exact: true });
     if (!(await button.count())) continue;
-    await button.first().tap();
+    await (click ? button.first().click() : button.first().tap());
     await page.waitForTimeout(1200);
   }
+}
+
+/**
+ * Friends in a session for the feed's Live now, as the seed left them (Zachary an hour in,
+ * Priya twenty minutes in and paused), each on the subject of their latest post. Their start
+ * is fixed once, so a refetch while filming doesn't move the clocks.
+ */
+async function liveNow() {
+  const feed = await api('GET', '/api/social/feed');
+  const person = (name) => Object.values(feed.people).find((p) => p.name === name);
+  const at = Date.now();
+  const live = [
+    ['Zachary', 59 * 60 + 21, 'focus'],
+    ['Priya', 21 * 60 + 50, 'paused'],
+  ]
+    .map(([name, secs, state]) => {
+      const p = person(name);
+      if (!p) return null;
+      return {
+        userId: p.id,
+        startedAt: new Date(at - secs * 1000).toISOString(),
+        subject: feed.posts.find((x) => x.userId === p.id)?.session?.subject ?? null,
+        state,
+      };
+    })
+    .filter(Boolean);
+  if (!live.length) throw new Error('None of the seed people are on the feed');
+  return {
+    live,
+    people: Object.fromEntries(live.map((l) => [l.userId, feed.people[l.userId]])),
+  };
 }
 
 const top = (page, sel) =>
@@ -304,6 +339,56 @@ const takes = {
     }
     // Under about 3 MB: the cap holds the scrolls' bitrate down.
     await film.finish({ cq: 23, bitrate: '1600k', maxrate: '1900k', bufsize: '3800k' });
+  },
+
+  async 'social-feed'(browser) {
+    await theme({ backgroundId: 'fuji' });
+    const live = await liveNow();
+    const film = new Film('social-feed');
+    const { ctx, page } = await open(browser, COMPUTER, '/social', {
+      setup: (page) => page.route('**/api/social/live', (route) => route.fulfill({ json: live })),
+      before: async (page) => {
+        await dismiss(page, { click: true });
+        await page.mouse.move(COMPUTER.width - 40, COMPUTER.height / 2);
+      },
+    });
+    try {
+      if (await page.locator('[role="dialog"]').count()) throw new Error('A dialog is open');
+      if (!(await page.locator('.live').count())) throw new Error('No Live now on the feed');
+      film.trackNetwork(page);
+      await film.hold(page, 2000, 'feed');
+      // Down until the third post sits near the top: kudos, comments and the second video.
+      const posts = await page.evaluate(() =>
+        [...document.querySelectorAll('.feed .post')].map(
+          (p) => p.getBoundingClientRect().top + window.scrollY,
+        ),
+      );
+      const max = await page.evaluate(
+        () => document.scrollingElement.scrollHeight - window.innerHeight,
+      );
+      const to = Math.min(max, Math.round((posts[2] ?? posts.at(-1)) - 24));
+      console.log('social-feed scroll to', to, 'of', max);
+      await film.scroll(page, to, 4200, 'down');
+      await film.hold(page, 1500, 'posts');
+      await film.scroll(page, 0, 2600, 'up');
+      await film.hold(page, 200, 'top');
+      const tab = page
+        .getByRole('group', { name: 'Social view' })
+        .getByRole('button', { name: 'Leaderboard' });
+      await film.click(page, tab, 'leaderboard', { hover: 400 });
+      await page.mouse.move(COMPUTER.width - 40, COMPUTER.height / 2);
+      await film.hold(page, 2500, 'board');
+    } finally {
+      await ctx.close();
+    }
+    // Under about 2.5 MB. The poster is the feed a second in.
+    await film.finish({
+      cq: 23,
+      bitrate: '1300k',
+      maxrate: '1450k',
+      bufsize: '2900k',
+      posterFrame: 30,
+    });
   },
 
   async 'phone-pomodoro'(browser) {

@@ -2959,3 +2959,26 @@ The same day, on the line where the page turns into the dusk band, "make this li
 - **In the app** `LogoMark` is a span with the PNG as a mask over `currentColor`, so every rule that colours the mark (the accent, `--logo-color`, white on matte) still works. The nav and sidebar (22px) and onboarding (24px) take the small one, sign-in (40px) the normal one. The timelapse's mark draws the picture too, made black once on a canvas for light corners; `logoReady` lets single-frame paints (the looks) repaint once it has loaded, and `renderTimelapse` waits for it.
 - **Tab icons** are PNGs now, 16 and 32 with the small mark, on the same tile (`favicon-16.png`, `favicon-32.png`, replacing `favicon.svg`; the site's at `?v=4`). The apple-touch, manifest and 512 icons take the normal mark. The extension's icons were regenerated with the rest (16 small, 48 and 128 normal).
 - **On the homepage** `logo-small.png` (nav, footer, changelog and docs bars) and `logo.png` (the 64px one at the end) replace `logo.svg`, drawn at three times their size. The logo in the link preview (og.jpg) was swapped in place rather than retaken, so the rest of that picture is unchanged (`?v=2` so sites fetch it again). The app screenshots and recordings on the site still show the nav mark as it was; at that size the difference is the small mark's wider cut-outs.
+
+## The homepage on a phone, a Social tab and an opening scene, 2026-10-31 (owner request)
+
+The owner sent five screenshots of the site on their iPhone in Low Power Mode: "add the drum for mobile and make mobile look better it looks shit and has many visual glitches", "phone shouldnt need to be clicked to switch panel on mobile it should just show the information on which ever phone", and "make it look like there was care given to mobile users". Then "add a pill that explains the social part too", and "at the beginning top the hero text should be centred and the computer and phone should not be visible and then when the user scrolls down the panels fly to the side and then the phone and computer appears and then the main hero text moves up to the current position".
+
+- **The phones on a phone need no tap.** Whichever phone is in the middle of the strip is the picked one. Its words are always under the strip and change as it moves, cross-fading in one place so nothing below jumps, with a dot per phone (the middle one lit and long). Tapping a phone or a dot brings it to the middle. There the close button is gone, and so is "Pick a phone to take a closer look." (it stays on computers, where you do pick). The facts are pills.
+- **The drum turns on a phone too.** It is the one scene a phone keeps: not pinned, in a 250px strip, dragged sideways by a thumb while the page still scrolls up and down. Its CSS hangs on `.looks.is-live` instead of `has-scrub`, and the grid is left for reduced motion and no script. The chips are smaller on a phone (three rows, not four).
+- **Glitches fixed.**
+  - In Low Power Mode nothing plays by itself, and the app's window went black when a tab moved a recording that hadn't loaded (setting its time hides its poster). Now only a loaded one is moved, and every video also shows its poster as its background.
+  - The phone strip clipped the phones' shadows into a line; it now has room for them.
+  - The highlight no longer breaks a word at a line's end.
+  - The pale gaps around the dusk band on a phone are smaller.
+  - The strip opens on the feed. A `scrollBy` of a fraction of a pixel made it snap on to the next phone; it now scrolls to a place.
+- **A Social tab** after Earn, in raspberry (`--c-social`, 5.7:1 with white), with a new recording (`social-feed`: Live now, the feed, then the leaderboard). Its words are mine and were flagged to the owner: "Better with friends." / "See who's studying right now, post your timelapses, and find out where you land on the leaderboard." On a phone the five tabs are one even row.
+- **The hero's opening scene** on a computer.
+  - The hero holds the screen for 60% of a screen's scroll (`.hero-stage` sticky, the room from `.hero::after`).
+  - At the top the headline sits in the middle of the window, with the stickers beside it and the laptop and phone out of sight below.
+  - Scrolling flies the stickers off their sides, brings the laptop up and the phone just after it, then moves the headline up into its place. The page then scrolls on as before.
+  - The nav holds with it: it moved into the stage, with `role="banner"`.
+  - The settle treats the scene's end as the hero's resting place.
+  - `.hero-stage` is `flow-root`. The hero's height used to depend on the laptop's hanging margin collapsing out of it, which made the hold a different length at each window size.
+  - Phones keep the hero as it was.
+  - `scripts/og.mjs` shows the scene's end. Its "motion off" never took, because its init script runs before `<html>` exists. og.jpg was not retaken.

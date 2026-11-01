@@ -16,10 +16,13 @@ const out = fileURLToPath(new URL('../public/og.jpg', import.meta.url));
 const CSS = `
   .site-nav-links, .site-nav-actions, .lede, .cta-row { display: none !important; }
   .site-nav { margin-top: 30px; width: 1200px; padding: 0 44px; box-sizing: border-box; }
-  .hero { min-height: 0; padding-top: 96px; }
+  .hero-stage { padding-top: 96px; }
   .hero-photo { inset: 0; mask-image: none; }
   .hero h1 { font-size: 72px; }
   .devices { margin-top: 40px; width: 1040px; }
+  /* The hero scene's end: the headline in its place, the laptop and phone in. */
+  .hero::after { display: none; }
+  .hero-text, .devices, .devices .phone { translate: none !important; }
   body { overflow: hidden; }
 `;
 

@@ -1262,22 +1262,26 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   timelapse); both must go or the shot shows a dialog. Convert the PNGs to webp with sharp.
 - Images pasted into the chat never reach the disk. Ask the owner to save files into the
   folder (the PSD mockups and reference shots live in `apps/site/design`, gitignored).
-- **Short and calm (2026-10-28, reworked on 10-29 and twice on 10-30):** the owner's rules are
+- **Short and calm (2026-10-28, reworked on 10-29, twice on 10-30 and on 10-31):** the owner's rules are
   "make the site feel interactive but not intimidating" and "fluid beautiful and professional",
   and a long scroll made the app look like more than it is: about seven screens, the
   timelapses pinned. The hero (laptop playing the 10-23 exam-morning timelapse, phone on the
-  dashboard, two real crops tilted at the sides as stickers, nothing about the rolls), Record
+  dashboard, two real crops tilted at the sides as stickers, nothing about the rolls; on a
+  computer it opens with the headline centred and the devices hidden, then a short held scroll
+  flies the stickers off, raises the devices and moves the headline up), Record
   (the timelapses falling past the words, pinned), On your phone (five still phones in a hand:
   the picked one moves left and plays, its words beside it, the rest drop low; no popup, no
-  pins), the app (Start, Plan, Track, Earn as tabs over one window, each a recording beside a
-  card in its colour), Make it yours (the drum on a deep card with chips, not pinned, draggable), a
+  pins; on a phone a strip whose middle phone is the picked one, no tap needed), the app
+  (Start, Plan, Track, Earn, Social as tabs over one window, each a recording beside a card in
+  its colour), Make it yours (the drum on a deep card with chips, not pinned, draggable), a
   sky closing; clouds and mist drawn like the visualizer's cloud mist. On a computer a scroll that stops near a part eases onto it (no CSS snapping: too forceful). No side pills, no Jack mode. The words are
   the owner's own (2026-10-30): keep them verbatim. Never show the same thing twice. Every
   phone is the owner's iPhone frame (`.device`, `public/phone-frame.webp`); phone shots and
   recordings are taken at 393 x 852 with an iPhone 14 Pro's safe areas. Recordings are
   frame-stepped (`scripts/record-*.mjs`) so they never stutter. Keep every claim true to the
   app (panels are styled, not arranged). No small labels over headings. On a phone (under
-  641px wide or 501px tall) nothing pins and the page is flat; that query is in both
-  `main.js` and `styles.css`, so change them together.
+  641px wide or 501px tall) nothing pins and the page is flat, except the drum, which still
+  turns; that query is in both `main.js` and `styles.css`, so change them together. Test
+  phones with autoplay blocked (an iPhone in Low Power Mode plays nothing by itself).
   `.rail` is border-box: a padded
   full-width box without it runs past the screen's edge and stops being centred.

@@ -21,7 +21,13 @@ pnpm build      # static output in dist/
   floating and leaning away from the pointer. Every phone on the page is the owner's iPhone
   (`.device`: a screenshot or recording under `public/phone-frame.webp`, cut out of their
   mockup by `scripts/cut-phone.mjs`); phone shots are taken at 393 x 852, an iPhone 14 Pro's
-  screen, with its safe areas. Below the hero the page is ruled (hairlines down the sides of
+  screen, with its safe areas. On a computer the hero opens on a short scene (the owner,
+  2026-10-31): it holds the screen for 60% of a screen's scroll (`.hero-stage` is sticky, the
+  room is `.hero::after`), the headline starting in the middle of the window with the stickers
+  beside it and the devices out of sight below; scrolling flies the stickers off their sides,
+  brings the laptop up and the phone just after it, and moves the headline up into its place
+  (`heroScene` in `main.js`). The nav sits in the stage and holds with it. Phones keep the
+  hero still. Below the hero the page is ruled (hairlines down the sides of
   the content and across between sections, like aside.com). The words are the owner's own
   (2026-10-30).
 - **Short and calm** (the owner, 2026-10-30: the long scroll made the app look like more than
@@ -45,12 +51,16 @@ pnpm build      # static output in dist/
     plays its screen, its words come out beside it (`.hand-text`), and the rest drop to the
     foot of the rail like cards held low, cut off by it, the one pointed at peeking up.
     Another phone swaps; the X or Escape fans them out again and stills them. On a phone the
-    row is a strip to swipe and the words show under it. Only the phones take the pointer:
+    row is a strip to swipe and nothing needs a tap (the owner, 2026-10-31): the phone in the
+    middle is the picked one, its words always under the strip (cross-fading in one place, so
+    nothing below jumps) and its dot lit (`.hand-dots`); tapping a phone or a dot brings it to
+    the middle. There "Pick a phone to take a closer look." is hidden (`.pick-hint`). Only the phones take the pointer:
     an item's own box stays where its phone stood at rest.
-  - **The app** (`#app`): Start, Plan, Track and Earn as plain pill tabs over one window, the
-    picked one in its part's colour. Each part's words are on a card in its colour
-    (Elespacio-like, with a paperclip), beside a real recording (`focus-start`, `plan-week`,
-    `analytics-scroll`, `xp-buy`); the calendar's phone joins Plan. Each recording plays
+  - **The app** (`#app`): Start, Plan, Track, Earn and Social as plain pill tabs over one
+    window, the picked one in its part's colour (one even row on a phone). Each part's words
+    are on a card in its colour (Elespacio-like, with a paperclip), beside a real recording
+    (`focus-start`, `plan-week`, `analytics-scroll`, `xp-buy`, `social-feed`); the
+    calendar's phone joins Plan. Each recording plays
     through and the next tab comes up by itself while the window is on screen, the picked tab
     filling along its foot; the tabs and the card's button pick one by hand, and the window's
     pause holds it. Keep Earn's words true to the app if the shop changes.
@@ -58,7 +68,8 @@ pnpm build      # static output in dist/
     its pin off). Sixteen screens in other photos, colours, themes and panels turn across it
     on the inside of a drum, fanning out as the card comes up and pushed by the scroll; it
     can be dragged round with the mouse and thrown (touch drags sideways, so the page still
-    scrolls). What can be changed sits as chips bobbing around the heading (in a row under it
+    scrolls). It turns on phones too, in a shorter strip (the owner, 2026-10-31): its CSS hangs
+    on `.looks.is-live`, set while `main.js` turns it, not on `has-scrub`. What can be changed sits as chips bobbing around the heading (in a row under it
     below 1024px). The last line names calm, bright and cozy, and marks each in turn like a
     highlighter every few seconds.
   - **The closing**: a card of sky, blue into the page's lilac, with mist along its foot.
@@ -72,14 +83,19 @@ pnpm build      # static output in dist/
   go with enough scroll", then "too aggressive, make it smoother"): on a computer, when a
   scroll comes to rest within about a fifth of a screen of a part (`NEAR` in `main.js`), the
   page waits a moment and eases onto it over 0.7 s; anywhere else it stays where it stopped.
-  The hero, the timelapses and the phones settle at their top, the app, the looks and the
-  closing in the middle of the screen. Any scroll, key, touch or click stops the ease. No CSS
+  The hero settles where its opening scene ends, the timelapses and the phones at their top,
+  the app, the looks and the closing in the middle of the screen. Any scroll, key, touch or click stops the ease. No CSS
   scroll snapping (it was too forceful). Phones scroll freely.
 - **On a phone the page is flat** (the owner, 2026-10-28): under 641px wide, or under 501px
   tall (a phone held sideways), `main.js` leaves the scenes off and the CSS under the same
   query lays each section out as its words, then its pictures: four clips in a grid on the
-  dusk, six looks in a grid on the card. A window dragged across the line switches as it
-  goes (`apply` in `main.js` stops each scene and clears what it wrote).
+  dusk. The drum is the one scene a phone keeps (it pins nothing). A window dragged across
+  the line switches as it goes (`apply` in `main.js` stops each scene and clears what it
+  wrote).
+- **Low Power Mode** on an iPhone plays nothing by itself. Every video shows its poster behind
+  it as well (`main.js` sets it as the video's background), because a browser hides the poster
+  while it loads a video, and the app's tabs only move a recording back to its start once it
+  has loaded.
 - `.rail` is `box-sizing: border-box`. Without it every padded rail was its width plus its
   padding, so on any window under about 1330px it ran past the right edge and sat off
   centre.
@@ -99,8 +115,9 @@ pnpm build      # static output in dist/
   day, written from the commits, and only changes when the owner asks. It shows only the last
   three days (counted from the reader's today; `maxAgeDays` in `src/changelog-page.js`):
   older days stay in the content file and in the sidebar, greyed, and their links do nothing.
-- `src/main.js`: the entrance motion, the stickers, the two pinned scenes (`[data-scrub]`,
-  told how far each has come up the screen, through it and through its pin), the hand of
+- `src/main.js`: the entrance motion, the stickers, the scenes (`[data-scrub]`: the hero's
+  opening, the pinned timelapses and the drum, told how far each has come up the screen,
+  through it and through its pin), the hand of
   phones and the app's tabs; everything moves by transform and opacity. With reduced motion
   (or without the script) nothing pins and the scenes lay out flat: the timelapses and the
   looks as grids, the app's recording on its poster with controls, a picked phone's words
@@ -150,14 +167,15 @@ slow software-drawn Chrome still makes a smooth video (`scripts/record-lib.mjs`)
 against the same seeded sandbox as the screenshots.
 
 - `scripts/record-focus.mjs`: `focus-start`. It starts and ends one real Pomodoro.
-- `scripts/record-takes.mjs [take ...]`: `plan-week`, `analytics-scroll`, `xp-buy` (computer,
-  1600 x 1000) and the hand's `phone-pomodoro`, `phone-tasks`, `phone-feed`,
+- `scripts/record-takes.mjs [take ...]`: `plan-week`, `analytics-scroll`, `xp-buy`,
+  `social-feed` (computer, 1600 x 1000) and the hand's `phone-pomodoro`, `phone-tasks`, `phone-feed`,
   `phone-together`, `phone-profile` (786 x 1704); every take when none is named. (It also
   still has `phone-groups`, `phone-jams` and `phone-board`, which the page no longer uses.)
   Each sets its own look and puts Jerry's theme back. `xp-buy` buys a real streak freeze, so
   with two held already run it with `REHEARSE=1`, which answers the purchase in the browser.
   `phone-pomodoro` starts and ends real sessions; `phone-tasks` tags a few tasks if Jerry has
-  no tags.
+  no tags. `social-feed` answers Live now in the browser with the seed's two people mid-session
+  (the sandbox drops them from live ten minutes after seeding).
 
 Both need `CAPTURE_DEPS` (as above) and `FFMPEG`, an ffmpeg with `h264_nvenc`. They write
 `public/clips/<name>.mp4` and its webp poster (`CLIPS_OUT` for a trial run elsewhere), and

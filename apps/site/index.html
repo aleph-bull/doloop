@@ -69,61 +69,65 @@
     <script type="module" src="/src/main.js"></script>
   </head>
   <body>
-    <header class="site-nav">
-      <a class="site-brand" href="#top" aria-label="Komodon home">
-        <img class="site-brand-mark" src="/logo-small.png" alt="" width="28" height="28" />
-        <span class="site-wordmark">Komodon</span>
-      </a>
-      <nav class="site-nav-links" aria-label="Main">
-        <a href="#timelapse">Timelapse</a>
-        <a href="#phone">On your phone</a>
-        <a href="#app" data-tab="plan">Planner</a>
-      </nav>
-      <div class="site-nav-actions">
-        <a
-          class="cta cta-ghost cta-sm cta-discord"
-          href="https://discord.gg/bUkqd58FF5"
-          target="_blank"
-          rel="noopener"
-          aria-label="Join Discord"
-        >
-          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" /></svg>
-          <span class="cta-discord-label">Join Discord</span>
-        </a>
-        <a class="cta cta-dark cta-sm" href="https://komogon.app">Open the app</a>
-      </div>
-    </header>
-
     <main id="top">
       <!-- Hero: the app's default photograph, fading out at the bottom, with one of the owner's
-           timelapses playing on a laptop and the dashboard on a phone hanging over the edge. -->
-      <section class="hero">
-        <div class="stage-photo hero-photo" aria-hidden="true"></div>
-        <div class="hero-text">
-          <h1 class="rise">Your study sessions,<br />on record.<span class="rec-mark" aria-hidden="true"></span></h1>
-          <p class="lede rise" style="--d: 140ms">
-            Everything you need to stay on top of your studies. Plan your week, focus on what matters, and see your progress add up.
-          </p>
-          <div class="cta-row rise" style="--d: 280ms">
-            <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
-            <a class="cta cta-ghost" href="#timelapse">See how it works</a>
-          </div>
-        </div>
-        <!-- Two real pieces of the app tilted at the sides like stickers, leaning with the pointer. -->
-        <div class="stickers" aria-hidden="true">
-          <img class="sticker sticker-live" src="/shots/sticker-live.webp" alt="" width="600" height="226" />
-          <img class="sticker sticker-week" src="/shots/sticker-week.webp" alt="" width="520" height="251" />
-        </div>
-        <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
-          <div class="laptop">
-            <div class="laptop-screen">
-              <span class="laptop-notch"></span>
-              <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: a morning before an exam, the screen in the corner and the focus time counting up"></video>
+           timelapses playing on a laptop and the dashboard on a phone hanging over the edge.
+           On a computer it holds the screen for a short scroll (main.js): the headline starts in
+           the middle with the stickers beside it, the stickers fly off, the laptop and phone
+           rise in, and the headline moves up into its place. The nav holds with it. -->
+      <section class="hero" data-scrub="hero">
+        <div class="hero-stage">
+          <header class="site-nav" role="banner">
+            <a class="site-brand" href="#top" aria-label="Komodon home">
+              <img class="site-brand-mark" src="/logo-small.png" alt="" width="28" height="28" />
+              <span class="site-wordmark">Komodon</span>
+            </a>
+            <nav class="site-nav-links" aria-label="Main">
+              <a href="#timelapse">Timelapse</a>
+              <a href="#phone">On your phone</a>
+              <a href="#app" data-tab="plan">Planner</a>
+            </nav>
+            <div class="site-nav-actions">
+              <a
+                class="cta cta-ghost cta-sm cta-discord"
+                href="https://discord.gg/bUkqd58FF5"
+                target="_blank"
+                rel="noopener"
+                aria-label="Join Discord"
+              >
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" /></svg>
+                <span class="cta-discord-label">Join Discord</span>
+              </a>
+              <a class="cta cta-dark cta-sm" href="https://komogon.app">Open the app</a>
             </div>
-            <div class="laptop-base"><span class="laptop-lip"></span></div>
+          </header>
+          <div class="stage-photo hero-photo" aria-hidden="true"></div>
+          <div class="hero-text">
+            <h1 class="rise">Your study sessions,<br />on record.<span class="rec-mark" aria-hidden="true"></span></h1>
+            <p class="lede rise" style="--d: 140ms">
+              Everything you need to stay on top of your studies. Plan your week, focus on what matters, and see your progress add up.
+            </p>
+            <div class="cta-row rise" style="--d: 280ms">
+              <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
+              <a class="cta cta-ghost" href="#timelapse">See how it works</a>
+            </div>
           </div>
-          <div class="phone">
-            <span class="device"><img class="device-screen" src="/shots/today-phone.webp" alt="The Komodon dashboard on a phone: the streak and what's most pressing today" width="1179" height="2556" fetchpriority="high" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+          <!-- Two real pieces of the app tilted at the sides like stickers, leaning with the pointer. -->
+          <div class="stickers" aria-hidden="true">
+            <img class="sticker sticker-live" src="/shots/sticker-live.webp" alt="" width="600" height="226" />
+            <img class="sticker sticker-week" src="/shots/sticker-week.webp" alt="" width="520" height="251" />
+          </div>
+          <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
+            <div class="laptop">
+              <div class="laptop-screen">
+                <span class="laptop-notch"></span>
+                <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: a morning before an exam, the screen in the corner and the focus time counting up"></video>
+              </div>
+              <div class="laptop-base"><span class="laptop-lip"></span></div>
+            </div>
+            <div class="phone">
+              <span class="device"><img class="device-screen" src="/shots/today-phone.webp" alt="The Komodon dashboard on a phone: the streak and what's most pressing today" width="1179" height="2556" fetchpriority="high" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+            </div>
           </div>
         </div>
       </section>
@@ -183,7 +187,7 @@
           <div class="feature-head rise">
             <h2>On your phone, too.</h2>
             <p class="lede-sm">
-              Your timer, tasks, friends, and streaks, wherever you study. Pick a phone to take a closer look.
+              Your timer, tasks, friends, and streaks, wherever you study. <span class="pick-hint">Pick a phone to take a closer look.</span>
             </p>
           </div>
         </div>
@@ -215,7 +219,16 @@
               </button>
             </li>
           </ul>
-          <!-- What the picked phone shows, beside it. -->
+          <!-- On a phone: a dot for each phone, the one in the middle lit (main.js). -->
+          <div class="hand-dots" aria-label="Phones">
+            <button type="button" aria-label="Pomodoro"></button>
+            <button type="button" aria-label="Tasks and courses"></button>
+            <button type="button" aria-label="The feed"></button>
+            <button type="button" aria-label="Jams and groups"></button>
+            <button type="button" aria-label="Streaks and your profile"></button>
+          </div>
+          <!-- What the picked phone shows, beside it; on a phone, under the strip for the one in
+               the middle. -->
           <div class="hand-text" id="hand-text">
             <button class="hand-close" type="button" aria-label="Close">
               <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
@@ -235,7 +248,7 @@
                 <li>Due dates on your calendar.</li>
               </ul>
             </article>
-            <article class="hand-card" data-i="2" aria-labelledby="hand-title-2">
+            <article class="hand-card is-on" data-i="2" aria-labelledby="hand-title-2">
               <h3 id="hand-title-2">See what your friends got done.</h3>
               <p>Share your study sessions, check out what your friends are working on, and give kudos or leave a comment.</p>
               <ul class="hand-facts">
@@ -274,6 +287,7 @@
             <button class="pill app-tab" type="button" role="tab" id="tab-plan" aria-controls="panel-plan" aria-selected="false" tabindex="-1" data-tab="plan" style="--c: var(--c-plan)">Plan</button>
             <button class="pill app-tab" type="button" role="tab" id="tab-track" aria-controls="panel-track" aria-selected="false" tabindex="-1" data-tab="track" style="--c: var(--c-track)">Track</button>
             <button class="pill app-tab" type="button" role="tab" id="tab-xp" aria-controls="panel-xp" aria-selected="false" tabindex="-1" data-tab="xp" style="--c: var(--c-xp)">Earn</button>
+            <button class="pill app-tab" type="button" role="tab" id="tab-social" aria-controls="panel-social" aria-selected="false" tabindex="-1" data-tab="social" style="--c: var(--c-social)">Social</button>
           </div>
           <div class="app-stage rise" style="--d: 120ms" data-tab="start">
             <div class="app-card">
@@ -303,6 +317,12 @@
                     Earn XP as you study. Spend it on backgrounds, streak freezes, and other rewards, or try your luck in Komodon's RNG minigame.
                   </p>
                 </div>
+                <div class="app-panel" id="panel-social" role="tabpanel" aria-labelledby="tab-social" data-tab="social">
+                  <h2>Better with friends.</h2>
+                  <p>
+                    See who's studying right now, post your timelapses, and find out where you land on the leaderboard.
+                  </p>
+                </div>
               </div>
               <button class="app-next" type="button">
                 <span class="app-next-label">Plan</span>
@@ -315,6 +335,7 @@
                 <video class="app-clip" data-tab="plan" src="/clips/plan-week.mp4" poster="/clips/plan-week.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="The Komodon calendar: the week with its classes, then Plan my week's suggestions, then the week with them added"></video>
                 <video class="app-clip" data-tab="track" src="/clips/analytics-scroll.mp4" poster="/clips/analytics-scroll.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komodon Analytics: hours this week beside last week and the goal, then each day, where the time went, and the streaks"></video>
                 <video class="app-clip" data-tab="xp" src="/clips/xp-buy.mp4" poster="/clips/xp-buy.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Achievements: lifetime XP and what is left to spend, buying a streak freeze as the XP coins fly into it, then the RNG Rolls rarities"></video>
+                <video class="app-clip" data-tab="social" src="/clips/social-feed.mp4" poster="/clips/social-feed.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komodon Social: friends studying right now, then the feed of their sessions and timelapses, then the leaderboard"></video>
               </div>
               <div class="app-phone">
                 <span class="device"><img class="device-screen" src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>

@@ -25,12 +25,13 @@
   --site-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* How far the laptop and phone hang below the hero, over the page. */
   --hang: clamp(100px, 18vw, 220px);
-  /* Each of the app's parts has a colour, for its tab and its card; white reads on all four
+  /* Each of the app's parts has a colour, for its tab and its card; white reads on all five
      (4.5:1 or better). */
   --c-start: #6450dc;
   --c-plan: #3a74b8;
   --c-track: #bb511c;
   --c-xp: #2e6b50;
+  --c-social: #b03a6e;
 }
 html {
   font-family: var(--site-sans);
@@ -243,6 +244,13 @@ main {
 .hero {
   position: relative;
   color: #fff;
+}
+/* flow-root keeps the devices' hang inside the stage, so the hero is as tall as the stage (and
+   on a computer the room for its scene) whatever the window's height. */
+.hero-stage {
+  position: relative;
+  display: flow-root;
+  box-sizing: border-box;
   padding: 150px 20px 0;
   min-height: 100vh;
 }
@@ -307,8 +315,13 @@ main {
   height: auto;
   border-radius: 18px;
   box-shadow: 0 30px 60px -24px rgb(20 10 40 / 0.55);
-  transform: translate3d(calc(var(--mx, 0) * var(--depth)), calc(var(--my, 0) * var(--depth)), 0)
-    rotate(var(--rot));
+  /* --fly (0 to 1, from the hero scene in main.js) sends each off its own side. */
+  transform: translate3d(
+      calc(var(--mx, 0) * var(--depth) + var(--fly, 0) * var(--away)),
+      calc(var(--my, 0) * var(--depth)),
+      0
+    )
+    rotate(calc(var(--rot) + var(--fly, 0) * var(--spin)));
   animation:
     sticker-in 1100ms var(--pop-ease) var(--in) backwards,
     sticker-float 7s ease-in-out var(--in) infinite alternate;
@@ -316,6 +329,8 @@ main {
 .sticker-live {
   --rot: -8deg;
   --depth: -16px;
+  --away: -46vw;
+  --spin: -14deg;
   --in: 420ms;
   left: -6px;
   top: 300px;
@@ -324,6 +339,8 @@ main {
 .sticker-week {
   --rot: 7deg;
   --depth: 12px;
+  --away: 46vw;
+  --spin: 12deg;
   --in: 560ms;
   right: -14px;
   top: 220px;
@@ -743,6 +760,7 @@ main {
    mark is a shadow, not padding, so the line never shifts as it moves. */
 .cycle-word {
   border-radius: 6px;
+  white-space: nowrap;
   transition:
     color 400ms,
     background-color 400ms,
@@ -1283,6 +1301,40 @@ main {
   outline: 2px solid var(--site-accent);
   outline-offset: 2px;
 }
+/* On a phone, a dot for each phone under the strip, the one in the middle lit and long. Each is
+   a 28px target around an 8px dot. */
+.hand-dots {
+  display: none;
+}
+.hand-dots button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.hand-dots button::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(40 28 70 / 0.22);
+  transition:
+    width 300ms var(--site-ease),
+    background 300ms;
+}
+.hand-dots button[aria-current='true']::before {
+  width: 22px;
+  background: var(--site-accent);
+}
+.hand-dots button:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: -4px;
+  border-radius: 999px;
+}
 /* Without the springs: the words under the row, the phones where they stand. */
 html:not(.has-motion) .hand-text {
   position: relative;
@@ -1296,6 +1348,31 @@ html:not(.has-motion) .hand-text {
 }
 html:not(.has-motion) .phones-rail[data-picked] .hand-text {
   display: block;
+}
+/*
+ * On a computer the hero holds the screen for 60% of a screen's scroll (the room is its
+ * ::after): the headline starts in the middle of the window with the stickers beside it and the
+ * laptop and phone out of sight below. main.js (the hero scene) flies the stickers off (--fly),
+ * brings the devices up (--dy, the phone just after the laptop by --py) and moves the
+ * headline up into its place (--ty). Then the page scrolls on as it always did.
+ */
+html.has-scrub .hero::after {
+  content: '';
+  display: block;
+  height: 60vh;
+}
+html.has-scrub .hero-stage {
+  position: sticky;
+  top: 0;
+}
+html.has-scrub .hero-text {
+  translate: 0 var(--ty, 0px);
+}
+html.has-scrub .devices {
+  translate: 0 var(--dy, 0px);
+}
+html.has-scrub .devices .phone {
+  translate: 0 var(--py, 0px);
 }
 /*
  * The timelapse band holds the screen while the timelapses fall past the words; they fade in
@@ -1314,8 +1391,9 @@ html.has-scrub .floaters {
   mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
 }
 /* The ring: every card is placed by main.js around the middle of its strip of the card, and
-   the strip can be dragged to turn it (sideways only, so a touch still scrolls the page). */
-html.has-scrub .ring-view {
+   the strip can be dragged to turn it (sideways only, so a touch still scrolls the page). It
+   runs on phones too, so it hangs on .is-live (set while main.js turns it), not has-scrub. */
+.looks.is-live .ring-view {
   position: relative;
   z-index: 1;
   cursor: grab;
@@ -1324,7 +1402,7 @@ html.has-scrub .ring-view {
   height: clamp(300px, 30vw, 400px);
   padding: 0;
 }
-html.has-scrub .ring {
+.looks.is-live .ring {
   display: block;
   position: absolute;
   left: 50%;
@@ -1332,10 +1410,10 @@ html.has-scrub .ring {
   width: 0;
   height: 0;
 }
-html.has-scrub .ring-view.is-dragging {
+.looks.is-live .ring-view.is-dragging {
   cursor: grabbing;
 }
-html.has-scrub .ring-card {
+.looks.is-live .ring-card {
   position: absolute;
   -webkit-user-drag: none;
   width: var(--cw, 340px);
@@ -1442,7 +1520,7 @@ html.has-motion .devices.rise.is-in {
 /* ---------- The app, a part at a time ---------- */
 
 /*
- * The four tabs, then the words on a card in the part's colour beside a recording of it.
+ * The five tabs, then the words on a card in the part's colour beside a recording of it.
  * main.js sets data-tab on the stage, .is-on on the tab, panel and clip, and --prog (0 to 1)
  * on the tab as its recording plays.
  */
@@ -1492,6 +1570,9 @@ html.has-motion .devices.rise.is-in {
 .app-stage[data-tab='xp'] {
   --c: var(--c-xp);
 }
+.app-stage[data-tab='social'] {
+  --c: var(--c-social);
+}
 .app-card {
   position: relative;
   display: flex;
@@ -1504,7 +1585,7 @@ html.has-motion .devices.rise.is-in {
   color: #fff;
   transition: background-color 600ms var(--site-ease);
 }
-/* The four panels share one place; the picked one rises in as the last one fades. */
+/* The five panels share one place; the picked one rises in as the last one fades. */
 .app-panels {
   display: grid;
 }
@@ -1695,7 +1776,7 @@ html.has-motion .devices.rise.is-in {
   .site-nav-links {
     display: none;
   }
-  .hero {
+  .hero-stage {
     padding-top: 120px;
     min-height: 0;
   }
@@ -1742,20 +1823,20 @@ html.has-motion .devices.rise.is-in {
     padding-bottom: 28px;
   }
   .fall-band {
-    margin-block: 16vh;
+    margin-block: 10vh;
   }
   .hero + .fall-band {
-    margin-top: calc(var(--hang) + 16vh);
+    margin-top: calc(var(--hang) + 10vh);
   }
   .fall-edge {
-    height: 28vh;
+    height: 22vh;
   }
-  /* Still solid where the band begins (the shorter fade is solid for 9vh). */
+  /* Still solid where the band begins (the shorter fade is solid for 7vh). */
   .fall-edge-bottom {
-    top: calc(100% - 7vh);
+    top: calc(100% - 6vh);
   }
   .fall-edge-top {
-    bottom: calc(100% - 7vh);
+    bottom: calc(100% - 6vh);
   }
   .closing-inner {
     padding: 72px 20px 88px;
@@ -1774,7 +1855,9 @@ html.has-motion .devices.rise.is-in {
     box-sizing: border-box;
     justify-content: flex-start;
     width: 100%;
-    padding: 28px 19vw 44px;
+    /* The shadow under each phone runs about 100px down; the room for it is pulled back. */
+    margin-bottom: -56px;
+    padding: 28px 19vw 100px;
     overflow-x: auto;
     overscroll-behavior-x: contain;
     scroll-snap-type: x mandatory;
@@ -1793,25 +1876,80 @@ html.has-motion .devices.rise.is-in {
     --r: 0deg;
     --y: 0px;
   }
-  /* Picking one: its words under the strip. */
-  .hand-text {
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    display: none;
-    margin: 0 20px;
-    translate: none;
+  /* The words of the phone in the middle, always there with nothing to tap: they cross-fade
+     in one place as the strip moves, so nothing under them jumps. A dot for each phone. */
+  .hand-dots {
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    margin: -14px 0 18px;
   }
-  .phones-rail[data-picked] .hand-text {
+  html .phones-rail .hand-text {
+    position: relative;
+    inset: auto;
+    display: grid;
+    width: auto;
+    margin: 0 24px;
+    opacity: 1;
+    visibility: visible;
+    translate: none;
+    transition: none;
+    text-align: center;
+  }
+  .hand-close,
+  .pick-hint {
+    display: none;
+  }
+  .hand-card {
     display: block;
+    grid-area: 1 / 1;
+    width: 100%;
+    max-width: 30rem;
+    margin-inline: auto;
+    opacity: 0;
+    visibility: hidden;
+    translate: 0 8px;
+    transition:
+      opacity 200ms,
+      translate 300ms var(--rise-ease),
+      visibility 0s 300ms;
+  }
+  .hand-card.is-on {
+    opacity: 1;
+    visibility: visible;
+    translate: none;
+    animation: none;
+    transition:
+      opacity 380ms 60ms,
+      translate 520ms var(--rise-ease) 60ms,
+      visibility 0s;
   }
   .hand-card h3 {
-    font-size: 26px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    padding-right: 0;
+    font-size: 28px;
   }
   .hand-card p {
+    margin-inline: auto;
     font-size: 16px;
+  }
+  .hand-facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .hand-facts li {
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.72);
+    box-shadow: inset 0 0 0 1px var(--site-line);
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  .hand-facts li::before {
+    display: none;
   }
 }
 /*
@@ -1852,20 +1990,24 @@ html.has-motion .devices.rise.is-in {
   .floater:nth-child(n + 5) {
     display: none;
   }
-  /* The looks: six of them in a grid on the card. */
-  .ring-view {
+  /* The looks without the script (or with reduced motion): six of them in a grid. */
+  .looks:not(.is-live) .ring-view {
     padding: 28px 16px 24px;
   }
-  .ring {
+  .looks:not(.is-live) .ring {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
     gap: 10px;
     width: min(100%, 560px);
   }
-  .ring-card {
+  .looks:not(.is-live) .ring-card {
     box-shadow: 0 20px 40px -24px rgb(10 5 40 / 0.6);
   }
-  .ring-card:nth-child(n + 7) {
+  .looks:not(.is-live) .ring-card:nth-child(n + 7) {
     display: none;
+  }
+  /* The drum on a phone: a shorter strip. */
+  .looks.is-live .ring-view {
+    height: 250px;
   }
 }
 /* On a phone the Discord button is just the mark. */
@@ -1910,8 +2052,17 @@ html.has-motion .devices.rise.is-in {
   .app-rail {
     padding: 48px 16px 64px;
   }
+  /* The five tabs in one even row, so none wraps onto a second line. */
   .app-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
     margin-bottom: 40px;
+  }
+  .app-tab {
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 13px;
   }
   .app-card {
     padding: 28px 22px 22px;
@@ -1953,6 +2104,24 @@ html.has-motion .devices.rise.is-in {
     position: static;
     rotate: none;
     animation: none;
+  }
+}
+/* On a phone they're smaller, three rows rather than four. */
+@media (max-width: 640px) {
+  .chips {
+    gap: 6px;
+    padding: 20px 14px 0;
+  }
+  .chip {
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px 0 9px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .chip svg {
+    width: 15px;
+    height: 15px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

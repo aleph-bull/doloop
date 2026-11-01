@@ -2,7 +2,7 @@
 // app leaning away from the pointer, and each section rises as it scrolls into view. Two scenes
 // hold the screen while the page scrolls ([data-scrub]): the timelapses falling past the words,
 // and the drum of looks turning. The phones move on springs and open like a hand of cards, the
-// picked one playing its screen, and the app's four parts play one after another in one window.
+// picked one playing its screen, and the app's five parts play one after another in one window.
 // Nothing here is needed to read the page; without it everything lays out flat, and on a phone
 // it stays flat on purpose.
 
@@ -89,7 +89,7 @@ function ringScene(scene) {
     W = view.clientWidth || window.innerWidth;
     const phone = W < 640;
     spread = phone ? 0.5 : 0.6;
-    grow = phone ? [0.42, 0.8] : [0.36, 1.45];
+    grow = phone ? [0.52, 0.7] : [0.36, 1.45];
     scene.style.setProperty('--cw', `${phone ? W * 0.6 : Math.max(150, W * 0.19)}px`);
   };
 
@@ -175,10 +175,12 @@ function ringScene(scene) {
     },
     start() {
       live = true;
+      scene.classList.add('is-live');
       if (onScreen && !raf) raf = requestAnimationFrame(tick);
     },
     stop() {
       live = false;
+      scene.classList.remove('is-live');
       cancelAnimationFrame(raf);
       raf = 0;
       last = 0;
@@ -266,8 +268,46 @@ function fallScene(scene) {
   };
 }
 
+/*
+ * The hero on a computer, holding the screen for a short scroll (the CSS gives it the room). At
+ * the top the headline sits in the middle of the window with the stickers beside it, and the
+ * laptop and phone are out of sight below. Scrolling flies the stickers off to the sides, brings
+ * the laptop up and the phone just after it, and moves the headline up into its place, where
+ * the page then scrolls on as before (the owner, 2026-10-31).
+ */
+function heroScene(scene) {
+  const stage = scene.querySelector('.hero-stage');
+  const text = scene.querySelector('.hero-text');
+  const devices = scene.querySelector('.devices');
+  let shift = 0;
+  let rise = 0;
+  let run = 1;
+  const measure = () => {
+    const vh = window.innerHeight;
+    // From the middle of the window to its own place, and far enough down to be out of sight.
+    shift = Math.max(0, vh / 2 - (text.offsetTop + text.offsetHeight / 2));
+    rise = Math.max(0, vh - devices.offsetTop + 80);
+    run = Math.max(1, scene.offsetHeight - stage.offsetHeight);
+  };
+  return {
+    measure,
+    update(enter, through, p, r) {
+      const q = clamp(-r.top / run);
+      const fly = ease(range(q, 0, 0.55));
+      const up = ease(range(q, 0.15, 0.7));
+      const phone = ease(range(q, 0.3, 0.85));
+      const move = ease(range(q, 0.4, 1));
+      const s = scene.style;
+      s.setProperty('--fly', fly.toFixed(4));
+      s.setProperty('--ty', `${(shift * (1 - move)).toFixed(1)}px`);
+      s.setProperty('--dy', `${(shift * (1 - move) + rise * (1 - up)).toFixed(1)}px`);
+      s.setProperty('--py', `${(160 * (1 - phone)).toFixed(1)}px`);
+    },
+  };
+}
+
 // Everything a scene writes on its own element; cleared when the scenes turn off.
-const SCENE_VARS = ['--cw'];
+const SCENE_VARS = ['--cw', '--fly', '--ty', '--dy', '--py'];
 
 if (!still) {
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
@@ -275,16 +315,16 @@ if (!still) {
     const scene = { el, kind };
     if (kind === 'looks') Object.assign(scene, ringScene(el));
     else if (kind === 'fall') Object.assign(scene, fallScene(el));
+    else if (kind === 'hero') Object.assign(scene, heroScene(el));
     return scene;
   });
 
   let queued = false;
-  let on = false;
   const frame = () => {
     queued = false;
-    if (!on) return;
     const vh = window.innerHeight;
     for (const s of scenes) {
+      if (!s.running) continue;
       const r = s.el.getBoundingClientRect();
       if (r.bottom < -vh || r.top > vh * 2) continue;
       // enter: 0 to 1 as it comes up the screen; through: 0 to 1 from its top reaching the
@@ -292,7 +332,7 @@ if (!still) {
       const enter = clamp((vh - r.top) / vh);
       const through = clamp((vh - r.top) / (vh + r.height));
       const p = clamp(-r.top / Math.max(1, r.height - vh));
-      s.update?.(enter, through, p);
+      s.update?.(enter, through, p, r);
     }
   };
   const queue = () => {
@@ -301,31 +341,31 @@ if (!still) {
     requestAnimationFrame(frame);
   };
   const measure = () => {
-    if (!on) return;
-    for (const s of scenes) s.measure?.();
+    for (const s of scenes) if (s.running) s.measure?.();
     queue();
   };
 
   // A phone gets the page flat (the owner, 2026-10-28): nothing pins, and each section is its
   // words then its pictures, laid out by the CSS under the same query (change both together).
-  // A window dragged across the line switches between the two as it goes.
+  // The drum is the one scene a phone keeps (the owner, 2026-10-31): it pins nothing, and a
+  // thumb turns it. A window dragged across the line switches between the two as it goes.
   const flat = window.matchMedia('(max-width: 640px), (max-height: 500px)');
   const apply = () => {
-    if (on === !flat.matches) return;
-    on = !flat.matches;
-    root.classList.toggle('has-scrub', on);
+    const wide = !flat.matches;
+    root.classList.toggle('has-scrub', wide);
     for (const s of scenes) {
-      if (on) {
+      const run = wide || s.kind === 'looks';
+      if (run === Boolean(s.running)) continue;
+      s.running = run;
+      if (run) {
         s.start?.();
         continue;
       }
       s.stop?.();
       for (const name of SCENE_VARS) s.el.style.removeProperty(name);
     }
-    if (on) {
-      measure();
-      frame();
-    }
+    measure();
+    frame();
   };
   apply();
   flat.addEventListener('change', apply);
@@ -365,7 +405,7 @@ if (!still && stickers && window.matchMedia('(hover: hover)').matches) {
 
 // The timelapses play while they're on screen and pause off it, so they load only when someone
 // gets that far. With reduced motion they wait on their poster with controls. The phones'
-// screens play only when picked, and the app's four recordings one at a time (below).
+// screens play only when picked, and the app's five recordings one at a time (below).
 const clips = [...document.querySelectorAll('video.clip')];
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   for (const v of clips) if (!v.closest('button')) v.controls = true;
@@ -382,6 +422,13 @@ if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   for (const v of clips) watch.observe(v);
 } else {
   for (const v of clips) v.play().catch(() => {});
+}
+
+// A recording that can't start on its own (an iPhone in Low Power Mode) shows its poster, and
+// keeps showing it behind the video when the browser hides the poster to load it.
+for (const v of document.querySelectorAll('video[poster]')) {
+  const at = getComputedStyle(v).objectPosition;
+  v.style.background = `#1d1a25 url("${v.getAttribute('poster')}") ${at} / cover no-repeat`;
 }
 
 // No picture-in-picture. The attribute covers Chrome and Edge; Safari ignores it, so any
@@ -626,7 +673,8 @@ if (!still) for (const row of document.querySelectorAll('.phones')) phoneRow(row
  * Picking a phone: it marks the rail (data-picked), which the springs above follow, its screen
  * plays and its words come out beside it; the others stay still, back at their first frame.
  * Picking another swaps them; the close button or Escape fans the hand out again. On a phone
- * the picked one is brought to the middle of the strip and its words show under it.
+ * nothing needs a tap: whichever phone is in the middle of the strip is the picked one, its
+ * words under the strip and its dot lit, and tapping a phone or a dot brings it to the middle.
  */
 for (const rail of document.querySelectorAll('.phones-rail')) {
   const row = rail.querySelector('.phones');
@@ -634,6 +682,7 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
   const items = phones.map((p) => p.closest('.phones-item'));
   const screens = phones.map((p) => p.querySelector('.hand-clip'));
   const cards = [...rail.querySelectorAll('.hand-card')];
+  const dots = [...rail.querySelectorAll('.hand-dots button')];
   const swipe = window.matchMedia('(max-width: 640px)');
   let at = -1;
   let onScreen = true;
@@ -649,12 +698,14 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
     });
   };
   const pick = (i) => {
+    if (i === at) return;
     at = i;
     if (i < 0) delete rail.dataset.picked;
     else rail.dataset.picked = String(i);
     items.forEach((li, k) => li.classList.toggle('is-picked', k === i));
     phones.forEach((p, k) => p.setAttribute('aria-expanded', String(k === i)));
     cards.forEach((c, k) => c.classList.toggle('is-on', k === i));
+    dots.forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
     play();
   };
   if ('IntersectionObserver' in window) {
@@ -663,6 +714,52 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
       play();
     }).observe(rail);
   }
+
+  // The strip on a phone: the one nearest its middle, and bringing one there.
+  const centred = () => {
+    const box = row.getBoundingClientRect();
+    const middle = box.left + box.width / 2;
+    let best = 0;
+    let gap = Infinity;
+    items.forEach((li, k) => {
+      const b = li.getBoundingClientRect();
+      const d = Math.abs(b.left + b.width / 2 - middle);
+      if (d < gap) {
+        gap = d;
+        best = k;
+      }
+    });
+    return best;
+  };
+  const centre = (i, smooth = true) => {
+    const b = items[i].getBoundingClientRect();
+    const box = row.getBoundingClientRect();
+    const by = b.left + b.width / 2 - (box.left + box.width / 2);
+    // To a place, not by an amount: the strip snaps, and a nudge by a sliver of a pixel would
+    // carry it on to the next phone.
+    if (Math.abs(by) < 1) return;
+    row.scrollTo({ left: row.scrollLeft + by, behavior: smooth && !still ? 'smooth' : 'instant' });
+  };
+  let queued = false;
+  row.addEventListener(
+    'scroll',
+    () => {
+      if (!swipe.matches || queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        pick(centred());
+      });
+    },
+    { passive: true },
+  );
+  const settle = () => {
+    if (swipe.matches) {
+      centre(at >= 0 ? at : Math.floor(items.length / 2), false);
+      pick(centred());
+    } else pick(-1);
+  };
+
   const close = () => {
     const was = at;
     pick(-1);
@@ -670,32 +767,27 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
   };
   phones.forEach((p, i) =>
     p.addEventListener('click', () => {
-      if (at === i) return;
-      pick(i);
-      if (swipe.matches) {
-        const b = items[i].getBoundingClientRect();
-        const box = row.getBoundingClientRect();
-        row.scrollBy({
-          left: b.left + b.width / 2 - (box.left + box.width / 2),
-          behavior: 'smooth',
-        });
-      }
+      if (swipe.matches) centre(i);
+      else if (at !== i) pick(i);
     }),
   );
+  dots.forEach((d, i) => d.addEventListener('click', () => centre(i)));
   rail.querySelector('.hand-close')?.addEventListener('click', close);
   rail.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && at >= 0) close();
+    if (e.key === 'Escape' && at >= 0 && !swipe.matches) close();
   });
+  swipe.addEventListener('change', settle);
+  if (swipe.matches) settle();
 }
 
 // ---------- The app, a part at a time ----------
 
 /*
- * One window, four recordings: Start, Plan, Track and Earn. The picked one plays through while
- * the window is on screen, then the next comes up by itself, round and round, its tab filling
- * along the foot as it plays. The tabs (and the arrow keys on them) and the card's button pick
- * one by hand, and the window's pause holds it. With reduced motion nothing plays by itself:
- * the picked recording has controls.
+ * One window, five recordings: Start, Plan, Track, Earn and Social. The picked one plays
+ * through while the window is on screen, then the next comes up by itself, round and round, its
+ * tab filling along the foot as it plays. The tabs (and the arrow keys on them) and the card's
+ * button pick one by hand, and the window's pause holds it. With reduced motion nothing plays
+ * by itself: the picked recording has controls.
  */
 function appTabs(section) {
   const stage = section.querySelector('.app-stage');
@@ -758,11 +850,8 @@ function appTabs(section) {
       if (quiet) v.controls = on;
       if (!on) v.pause();
     });
-    try {
-      clips[at].currentTime = 0;
-    } catch {
-      // Not loaded yet: it starts from the beginning anyway.
-    }
+    // Not loaded yet, it starts from the beginning anyway (and moving it would hide its poster).
+    if (clips[at].readyState > 0) clips[at].currentTime = 0;
     nextLabel.textContent = tabs[(at + 1) % tabs.length].textContent;
     play();
   };
@@ -831,7 +920,7 @@ for (const a of document.querySelectorAll('a[data-tab]')) {
 if (!still) {
   const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
   const parts = [
-    ['.hero', 'top'],
+    ['.hero', 'held'],
     ['.fall-band', 'top'],
     ['#phone', 'top'],
     ['#app', 'middle'],
@@ -873,7 +962,10 @@ if (!still) {
     for (const [el, at] of parts) {
       const r = el.getBoundingClientRect();
       const top = r.top + y;
-      const to = Math.min(max, Math.max(0, at === 'top' ? top : top + r.height / 2 - vh / 2));
+      // held: where the hero's scene ends and the page scrolls on (its top on a phone).
+      const held = at === 'held' && top + r.height - el.firstElementChild.offsetHeight;
+      const goal = held || (at === 'top' ? top : top + r.height / 2 - vh / 2);
+      const to = Math.min(max, Math.max(0, goal));
       const d = Math.abs(to - y);
       if (d > 2 && d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
     }
