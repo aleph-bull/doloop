@@ -1,7 +1,6 @@
-// Motion for the homepage. The hero lifts in on load, devices and all, with two stickers of the
-// app leaning away from the pointer, and each section rises as it scrolls into view. Two scenes
-// hold the screen while the page scrolls ([data-scrub]): the timelapses falling past the words,
-// and the drum of looks turning. The phones move on springs and open like a hand of cards, the
+// Motion for the homepage. The hero lifts in on load, and each section rises as it scrolls into
+// view. Scenes follow the scroll ([data-scrub]): the hero's opening, the timelapses falling past
+// the words while the band holds the screen, and the drum of looks turning. The phones move on springs and open like a hand of cards, the
 // picked one playing its screen, and the app's five parts play one after another in one window.
 // Nothing here is needed to read the page; without it everything lays out flat, and on a phone
 // it stays flat on purpose.
@@ -270,10 +269,9 @@ function fallScene(scene) {
 
 /*
  * The hero on a computer, holding the screen for a short scroll (the CSS gives it the room). At
- * the top the headline sits in the middle of the window with the stickers beside it, and the
- * laptop and phone are out of sight below. Scrolling flies the stickers off to the sides, brings
- * the laptop up and the phone just after it, and moves the headline up into its place, where
- * the page then scrolls on as before (the owner, 2026-10-31).
+ * the top the headline sits in the middle of the window, and the laptop and phone are out of
+ * sight below. Scrolling brings the laptop up and the phone just after it, and moves the
+ * headline up into its place, where the page then scrolls on as before (the owner, 2026-10-31).
  */
 function heroScene(scene) {
   const stage = scene.querySelector('.hero-stage');
@@ -293,12 +291,10 @@ function heroScene(scene) {
     measure,
     update(enter, through, p, r) {
       const q = clamp(-r.top / run);
-      const fly = ease(range(q, 0, 0.55));
       const up = ease(range(q, 0.15, 0.7));
       const phone = ease(range(q, 0.3, 0.85));
       const move = ease(range(q, 0.4, 1));
       const s = scene.style;
-      s.setProperty('--fly', fly.toFixed(4));
       s.setProperty('--ty', `${(shift * (1 - move)).toFixed(1)}px`);
       s.setProperty('--dy', `${(shift * (1 - move) + rise * (1 - up)).toFixed(1)}px`);
       s.setProperty('--py', `${(160 * (1 - phone)).toFixed(1)}px`);
@@ -307,7 +303,7 @@ function heroScene(scene) {
 }
 
 // Everything a scene writes on its own element; cleared when the scenes turn off.
-const SCENE_VARS = ['--cw', '--fly', '--ty', '--dy', '--py'];
+const SCENE_VARS = ['--cw', '--ty', '--dy', '--py'];
 
 if (!still) {
   const scenes = [...document.querySelectorAll('[data-scrub]')].map((el) => {
@@ -371,34 +367,6 @@ if (!still) {
   flat.addEventListener('change', apply);
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', measure);
-}
-
-// ---------- The hero's stickers ----------
-
-// They lean away from the pointer, a beat behind it.
-const stickers = document.querySelector('.stickers');
-if (!still && stickers && window.matchMedia('(hover: hover)').matches) {
-  const hero = stickers.closest('.hero');
-  let to = [0, 0];
-  let at = [0, 0];
-  let raf = 0;
-  const step = () => {
-    raf = 0;
-    at = [at[0] + (to[0] - at[0]) * 0.08, at[1] + (to[1] - at[1]) * 0.08];
-    stickers.style.setProperty('--mx', at[0].toFixed(3));
-    stickers.style.setProperty('--my', at[1].toFixed(3));
-    if (Math.abs(to[0] - at[0]) + Math.abs(to[1] - at[1]) > 0.002) {
-      raf = requestAnimationFrame(step);
-    }
-  };
-  const aim = (x, y) => {
-    to = [x, y];
-    if (!raf) raf = requestAnimationFrame(step);
-  };
-  hero.addEventListener('pointermove', (e) =>
-    aim((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1),
-  );
-  hero.addEventListener('pointerleave', () => aim(0, 0));
 }
 
 // ---------- Timelapses ----------

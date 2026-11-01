@@ -2982,3 +2982,10 @@ The owner sent five screenshots of the site on their iPhone in Low Power Mode: "
   - `.hero-stage` is `flow-root`. The hero's height used to depend on the laptop's hanging margin collapsing out of it, which made the hold a different length at each window size.
   - Phones keep the hero as it was.
   - `scripts/og.mjs` shows the scene's end. Its "motion off" never took, because its init script runs before `<html>` exists. og.jpg was not retaken.
+
+## The hero runs into the dusk band, 2026-11-01 (owner request)
+
+"the blend of colours between the timelapse computer and then the timelapse dark sky is odd", with a screenshot of the strip between them, then "remove the floating panels".
+
+- **No pale page between the hero and the dusk band.** The hero's photo faded into the light page, and the band's top edge faded back out of it, so a pale stripe sat between two dusky parts, with grey where the photo met the page. Now, under the photo's fade, the hero stage carries the band's own colours (`.hero-stage::before`: a dusky mauve darkening into the band's ink) on down under the laptop to the band. The brightness falls steadily from the photo into the band with no dip. The band's top edge (its waves and rose glow) is gone, because over dusk it made a lighter stripe; the bottom edge, into the light page, stays. `--band-gap` (22vh, 10vh on a phone) is the room from the laptop to the band, used by both.
+- **The floating panels are gone**: the two tilted stickers beside the headline (Live now and the week's hours). The hero's opening scene keeps the rest: the headline starts centred, the laptop and phone rise in, and the headline moves up. Their images (`shots/sticker-*.webp`) were removed.

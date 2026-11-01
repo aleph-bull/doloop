@@ -1266,9 +1266,10 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   "make the site feel interactive but not intimidating" and "fluid beautiful and professional",
   and a long scroll made the app look like more than it is: about seven screens, the
   timelapses pinned. The hero (laptop playing the 10-23 exam-morning timelapse, phone on the
-  dashboard, two real crops tilted at the sides as stickers, nothing about the rolls; on a
-  computer it opens with the headline centred and the devices hidden, then a short held scroll
-  flies the stickers off, raises the devices and moves the headline up), Record
+  dashboard, nothing floating beside the headline, nothing about the rolls; on a computer it
+  opens with the headline centred and the devices hidden, then a short held scroll raises the
+  devices and moves the headline up; its photo runs straight into the dusk band, no pale page
+  between), Record
   (the timelapses falling past the words, pinned), On your phone (five still phones in a hand:
   the picked one moves left and plays, its words beside it, the rest drop low; no popup, no
   pins; on a phone a strip whose middle phone is the picked one, no tap needed), the app

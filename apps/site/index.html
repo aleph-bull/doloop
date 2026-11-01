@@ -73,8 +73,9 @@
       <!-- Hero: the app's default photograph, fading out at the bottom, with one of the owner's
            timelapses playing on a laptop and the dashboard on a phone hanging over the edge.
            On a computer it holds the screen for a short scroll (main.js): the headline starts in
-           the middle with the stickers beside it, the stickers fly off, the laptop and phone
-           rise in, and the headline moves up into its place. The nav holds with it. -->
+           the middle, the laptop and phone rise in, and the headline moves up into its place.
+           The nav holds with it. Under the photo's fade the band's dusk carries on down to the
+           timelapses. -->
       <section class="hero" data-scrub="hero">
         <div class="hero-stage">
           <header class="site-nav" role="banner">
@@ -111,11 +112,6 @@
               <a class="cta cta-primary" href="https://komogon.app">Start for free</a>
               <a class="cta cta-ghost" href="#timelapse">See how it works</a>
             </div>
-          </div>
-          <!-- Two real pieces of the app tilted at the sides like stickers, leaning with the pointer. -->
-          <div class="stickers" aria-hidden="true">
-            <img class="sticker sticker-live" src="/shots/sticker-live.webp" alt="" width="600" height="226" />
-            <img class="sticker sticker-week" src="/shots/sticker-week.webp" alt="" width="520" height="251" />
           </div>
           <div class="devices rise rise-pop" aria-label="Komodon on a laptop and a phone">
             <div class="laptop">
@@ -158,11 +154,6 @@
               <video class="floater clip" style="--x: 41%; --y: 76; --v: 44; --w: 230px; --r: -3deg; --dr: 4deg" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session over three hours long"></video>
             </div>
           </div>
-        </div>
-        <div class="fall-edge fall-edge-top" aria-hidden="true">
-          <svg class="edge-wave edge-pink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 247.7 L2840 242.7 L2800 237.5 L2760 232.3 L2720 227.2 L2680 222.3 L2640 217.9 L2600 214.0 L2560 210.8 L2520 208.4 L2480 206.8 L2440 206.0 L2400 206.2 L2360 207.3 L2320 209.3 L2280 212.1 L2240 215.6 L2200 219.7 L2160 224.3 L2120 229.3 L2080 234.5 L2040 239.7 L2000 244.8 L1960 249.7 L1920 254.1 L1880 258.0 L1840 261.2 L1800 263.6 L1760 265.2 L1720 266.0 L1680 265.8 L1640 264.7 L1600 262.7 L1560 259.9 L1520 256.4 L1480 252.3 L1440 247.7 L1400 242.7 L1360 237.5 L1320 232.3 L1280 227.2 L1240 222.3 L1200 217.9 L1160 214.0 L1120 210.8 L1080 208.4 L1040 206.8 L1000 206.0 L960 206.2 L920 207.3 L880 209.3 L840 212.1 L800 215.6 L760 219.7 L720 224.3 L680 229.3 L640 234.5 L600 239.7 L560 244.8 L520 249.7 L480 254.1 L440 258.0 L400 261.2 L360 263.6 L320 265.2 L280 266.0 L240 265.8 L200 264.7 L160 262.7 L120 259.9 L80 256.4 L40 252.3 L0 247.7 Z" /></svg>
-          <svg class="edge-wave edge-plum" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 195.8 L2840 195.3 L2800 191.6 L2760 185.0 L2720 176.4 L2680 166.7 L2640 157.2 L2600 149.0 L2560 143.1 L2520 140.2 L2480 140.7 L2440 144.4 L2400 151.0 L2360 159.6 L2320 169.3 L2280 178.8 L2240 187.0 L2200 192.9 L2160 195.8 L2120 195.3 L2080 191.6 L2040 185.0 L2000 176.4 L1960 166.7 L1920 157.2 L1880 149.0 L1840 143.1 L1800 140.2 L1760 140.7 L1720 144.4 L1680 151.0 L1640 159.6 L1600 169.3 L1560 178.8 L1520 187.0 L1480 192.9 L1440 195.8 L1400 195.3 L1360 191.6 L1320 185.0 L1280 176.4 L1240 166.7 L1200 157.2 L1160 149.0 L1120 143.1 L1080 140.2 L1040 140.7 L1000 144.4 L960 151.0 L920 159.6 L880 169.3 L840 178.8 L800 187.0 L760 192.9 L720 195.8 L680 195.3 L640 191.6 L600 185.0 L560 176.4 L520 166.7 L480 157.2 L440 149.0 L400 143.1 L360 140.2 L320 140.7 L280 144.4 L240 151.0 L200 159.6 L160 169.3 L120 178.8 L80 187.0 L40 192.9 L0 195.8 Z" /></svg>
-          <svg class="edge-wave edge-ink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 101.3 L2840 104.9 L2800 108.3 L2760 111.2 L2720 113.8 L2680 115.7 L2640 117.1 L2600 117.9 L2560 118.0 L2520 117.4 L2480 116.1 L2440 114.3 L2400 111.9 L2360 109.0 L2320 105.7 L2280 102.1 L2240 98.4 L2200 94.5 L2160 90.7 L2120 87.1 L2080 83.7 L2040 80.8 L2000 78.2 L1960 76.3 L1920 74.9 L1880 74.1 L1840 74.0 L1800 74.6 L1760 75.9 L1720 77.7 L1680 80.1 L1640 83.0 L1600 86.3 L1560 89.9 L1520 93.6 L1480 97.5 L1440 101.3 L1400 104.9 L1360 108.3 L1320 111.2 L1280 113.8 L1240 115.7 L1200 117.1 L1160 117.9 L1120 118.0 L1080 117.4 L1040 116.1 L1000 114.3 L960 111.9 L920 109.0 L880 105.7 L840 102.1 L800 98.4 L760 94.5 L720 90.7 L680 87.1 L640 83.7 L600 80.8 L560 78.2 L520 76.3 L480 74.9 L440 74.1 L400 74.0 L360 74.6 L320 75.9 L280 77.7 L240 80.1 L200 83.0 L160 86.3 L120 89.9 L80 93.6 L40 97.5 L0 101.3 Z" /></svg>
         </div>
         <div class="fall-edge fall-edge-bottom" aria-hidden="true">
           <svg class="edge-wave edge-pink" viewBox="0 0 2880 320" preserveAspectRatio="none"><path d="M0 0 L2880 0 L2880 247.7 L2840 242.7 L2800 237.5 L2760 232.3 L2720 227.2 L2680 222.3 L2640 217.9 L2600 214.0 L2560 210.8 L2520 208.4 L2480 206.8 L2440 206.0 L2400 206.2 L2360 207.3 L2320 209.3 L2280 212.1 L2240 215.6 L2200 219.7 L2160 224.3 L2120 229.3 L2080 234.5 L2040 239.7 L2000 244.8 L1960 249.7 L1920 254.1 L1880 258.0 L1840 261.2 L1800 263.6 L1760 265.2 L1720 266.0 L1680 265.8 L1640 264.7 L1600 262.7 L1560 259.9 L1520 256.4 L1480 252.3 L1440 247.7 L1400 242.7 L1360 237.5 L1320 232.3 L1280 227.2 L1240 222.3 L1200 217.9 L1160 214.0 L1120 210.8 L1080 208.4 L1040 206.8 L1000 206.0 L960 206.2 L920 207.3 L880 209.3 L840 212.1 L800 215.6 L760 219.7 L720 224.3 L680 229.3 L640 234.5 L600 239.7 L560 244.8 L520 249.7 L480 254.1 L440 258.0 L400 261.2 L360 263.6 L320 265.2 L280 266.0 L240 265.8 L200 264.7 L160 262.7 L120 259.9 L80 256.4 L40 252.3 L0 247.7 Z" /></svg>

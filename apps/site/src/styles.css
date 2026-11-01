@@ -25,6 +25,8 @@
   --site-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* How far the laptop and phone hang below the hero, over the page. */
   --hang: clamp(100px, 18vw, 220px);
+  /* From under the laptop to the dusk band. */
+  --band-gap: 22vh;
   /* Each of the app's parts has a colour, for its tab and its card; white reads on all five
      (4.5:1 or better). */
   --c-start: #6450dc;
@@ -254,6 +256,20 @@ main {
   padding: 150px 20px 0;
   min-height: 100vh;
 }
+/* Under the photo's fade and on down to the timelapses, the dusk band's own colours, ending in
+   its ink, so the photo runs straight into the band with no pale page between (the owner: the
+   blend "is odd"). It belongs to the stage, so it holds with the hero's scene. */
+.hero-stage::before {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  left: 0;
+  right: 0;
+  top: 50%;
+  bottom: calc(-1 * (var(--hang) + var(--band-gap)));
+  background: linear-gradient(180deg, #6d5872 0%, #5e4a65 45%, #43324a 100%);
+  pointer-events: none;
+}
 /* The hero's photo is wider than the content and fades out well before the page edge. */
 .hero-photo {
   inset: -60px 0 0;
@@ -292,71 +308,6 @@ main {
   background: #ef4444;
   vertical-align: 0.2em;
   animation: rec-blink 1.6s ease-in-out infinite;
-}
-/*
- * Two real pieces of the app at the hero's sides, tilted like stickers and cut off by the
- * window's edge. They float a little on their own and lean away from the pointer (main.js sets
- * --mx and --my, -1 to 1). Only where there's room beside the headline.
- */
-.stickers {
-  display: none;
-}
-@media (min-width: 1300px) and (min-height: 640px) {
-  .stickers {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-  }
-}
-.sticker {
-  position: absolute;
-  height: auto;
-  border-radius: 18px;
-  box-shadow: 0 30px 60px -24px rgb(20 10 40 / 0.55);
-  /* --fly (0 to 1, from the hero scene in main.js) sends each off its own side. */
-  transform: translate3d(
-      calc(var(--mx, 0) * var(--depth) + var(--fly, 0) * var(--away)),
-      calc(var(--my, 0) * var(--depth)),
-      0
-    )
-    rotate(calc(var(--rot) + var(--fly, 0) * var(--spin)));
-  animation:
-    sticker-in 1100ms var(--pop-ease) var(--in) backwards,
-    sticker-float 7s ease-in-out var(--in) infinite alternate;
-}
-.sticker-live {
-  --rot: -8deg;
-  --depth: -16px;
-  --away: -46vw;
-  --spin: -14deg;
-  --in: 420ms;
-  left: -6px;
-  top: 300px;
-  width: clamp(230px, 18vw, 300px);
-}
-.sticker-week {
-  --rot: 7deg;
-  --depth: 12px;
-  --away: 46vw;
-  --spin: 12deg;
-  --in: 560ms;
-  right: -14px;
-  top: 220px;
-  width: clamp(230px, 18vw, 300px);
-  animation-duration: 1100ms, 8s;
-}
-@keyframes sticker-in {
-  from {
-    opacity: 0;
-    scale: 0.8;
-  }
-}
-@keyframes sticker-float {
-  to {
-    translate: 0 -12px;
-  }
 }
 
 /* ---------- Devices ---------- */
@@ -547,15 +498,15 @@ main {
   /* The dusk photo's own tone, so the way in never dips darker than the band itself. */
   --fall-ink: #43324a;
 }
-/* Straight after the hero: below the laptop hanging over the page. */
+/* Straight after the hero: below the laptop, the hero's dusk already at the band's ink. */
 .hero + .fall-band {
-  margin-top: calc(var(--hang) + 22vh);
+  margin-top: calc(var(--hang) + var(--band-gap));
 }
 /*
- * The way in and out: one long gradient from the band's ink to nothing, eased so it has no
- * steps, with three soft waves (ink, plum and a rose bloom) drifting sideways over it, each
- * at its own pace, blurred well into it so they never read as stripes. The top edge is the
- * bottom one turned over. They hang in the band's margins and reach a little into the band.
+ * The way out: one long gradient from the band's ink to nothing, eased so it has no steps,
+ * with three soft waves (ink, plum and a rose bloom) drifting sideways over it, each at its
+ * own pace, blurred well into it so they never read as stripes. It hangs in the band's margin
+ * and reaches a little into the band. The way in needs none: the hero's dusk ends in the ink.
  */
 .fall-edge {
   position: absolute;
@@ -581,14 +532,10 @@ main {
 .fall-band + .band {
   border-top: 0;
 }
-/* Each reaches 10vh into the band and is solid for a while either side of the band's edge, so
+/* It reaches 10vh into the band and is solid for a while either side of the band's edge, so
    the page and the band never show through it differently (that made a line). */
 .fall-edge-bottom {
   top: calc(100% - 10vh);
-}
-.fall-edge-top {
-  bottom: calc(100% - 10vh);
-  transform: scaleY(-1);
 }
 .edge-wave {
   position: absolute;
@@ -1351,10 +1298,10 @@ html:not(.has-motion) .phones-rail[data-picked] .hand-text {
 }
 /*
  * On a computer the hero holds the screen for 60% of a screen's scroll (the room is its
- * ::after): the headline starts in the middle of the window with the stickers beside it and the
- * laptop and phone out of sight below. main.js (the hero scene) flies the stickers off (--fly),
- * brings the devices up (--dy, the phone just after the laptop by --py) and moves the
- * headline up into its place (--ty). Then the page scrolls on as it always did.
+ * ::after): the headline starts in the middle of the window with the laptop and phone out of
+ * sight below. main.js (the hero scene) brings the devices up (--dy, the phone just after the
+ * laptop by --py) and moves the headline up into its place (--ty). Then the page scrolls on as
+ * it always did.
  */
 html.has-scrub .hero::after {
   content: '';
@@ -1822,11 +1769,11 @@ html.has-motion .devices.rise.is-in {
     padding-top: 56px;
     padding-bottom: 28px;
   }
+  :root {
+    --band-gap: 10vh;
+  }
   .fall-band {
     margin-block: 10vh;
-  }
-  .hero + .fall-band {
-    margin-top: calc(var(--hang) + 10vh);
   }
   .fall-edge {
     height: 22vh;
@@ -1834,9 +1781,6 @@ html.has-motion .devices.rise.is-in {
   /* Still solid where the band begins (the shorter fade is solid for 7vh). */
   .fall-edge-bottom {
     top: calc(100% - 6vh);
-  }
-  .fall-edge-top {
-    bottom: calc(100% - 6vh);
   }
   .closing-inner {
     padding: 72px 20px 88px;
@@ -2125,8 +2069,7 @@ html.has-motion .devices.rise.is-in {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chip,
-  .sticker {
+  .chip {
     animation: none;
   }
 }

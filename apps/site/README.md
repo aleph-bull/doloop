@@ -12,20 +12,20 @@ pnpm build      # static output in dist/
 ## Page
 
 - `index.html` and `src/styles.css`: the app's default photograph (Cotton Candy, frostroomhead
-  on Pexels) runs edge to edge behind the hero and fades out at the bottom into a light
-  gradient page. One of the owner's timelapses (`clips/morning-exam.mp4`, their 10-23
+  on Pexels) runs edge to edge behind the hero and fades at the bottom into the dusk band's
+  own colours, which carry on under the laptop down to the timelapses (`.hero-stage::before`,
+  ending in the band's ink, so there is no pale page between; the owner, 2026-11-01: the blend
+  "is odd"). One of the owner's timelapses (`clips/morning-exam.mp4`, their 10-23
   morning before an exam, 2x speed, its first 5 s cut at their word) plays on a CSS laptop, and the dashboard (`today-phone`)
-  is on a phone hanging in front of it. Two real pieces of the app sit tilted at the hero's
-  sides like stickers (`sticker-live`, Live now from the feed; `sticker-week`, the week's
-  hours from Analytics; nothing about the rolls, at the owner's word), from 1300px wide,
-  floating and leaning away from the pointer. Every phone on the page is the owner's iPhone
+  is on a phone hanging in front of it. Nothing floats beside the headline (the stickers there
+  were taken off on 2026-11-01). Every phone on the page is the owner's iPhone
   (`.device`: a screenshot or recording under `public/phone-frame.webp`, cut out of their
   mockup by `scripts/cut-phone.mjs`); phone shots are taken at 393 x 852, an iPhone 14 Pro's
   screen, with its safe areas. On a computer the hero opens on a short scene (the owner,
   2026-10-31): it holds the screen for 60% of a screen's scroll (`.hero-stage` is sticky, the
-  room is `.hero::after`), the headline starting in the middle of the window with the stickers
-  beside it and the devices out of sight below; scrolling flies the stickers off their sides,
-  brings the laptop up and the phone just after it, and moves the headline up into its place
+  room is `.hero::after`), the headline starting in the middle of the window and the devices
+  out of sight below; scrolling brings the laptop up and the phone just after it, and moves the
+  headline up into its place
   (`heroScene` in `main.js`). The nav sits in the stage and holds with it. Phones keep the
   hero still. Below the hero the page is ruled (hairlines down the sides of
   the content and across between sections, like aside.com). The words are the owner's own
@@ -38,10 +38,11 @@ pnpm build      # static output in dist/
     screen of scrolling. Seven timelapses fall past "See what you got done." with the app's
     Recording pill, fading in and out at the stage's top and bottom rather than being cut off
     by its edge. `fallScene` in `main.js` moves them: each drifts toward where the scroll puts
-    it a beat behind and sways and tilts on its own. The way in and out is one long eased gradient
-    from the page into the band (`.fall-edge`), with three soft waves (ink, plum, a rose
-    bloom) drifting sideways over it; the band's own colour is the dusk photo's tone, so the
-    way in never dips darker than the band (the owner: "make this line more seamless").
+    it a beat behind and sways and tilts on its own. The way in is the hero's dusk, already at
+    the band's ink. The way out is one long eased gradient from the band into the page
+    (`.fall-edge`), with three soft waves (ink, plum, a rose bloom) drifting sideways over it;
+    the band's own colour is the dusk photo's tone, so it never dips darker than the band (the
+    owner: "make this line more seamless").
   - **On your phone** (`#phone`): a hand of five phones (`.phones`: Pomodoro, Tasks and
     courses, the feed in the middle, Jams and groups, Streaks and profile), each in another
     theme and each a still of its screen, with clouds drifting behind (`.sky`). `phoneRow` in
@@ -115,7 +116,7 @@ pnpm build      # static output in dist/
   day, written from the commits, and only changes when the owner asks. It shows only the last
   three days (counted from the reader's today; `maxAgeDays` in `src/changelog-page.js`):
   older days stay in the content file and in the sidebar, greyed, and their links do nothing.
-- `src/main.js`: the entrance motion, the stickers, the scenes (`[data-scrub]`: the hero's
+- `src/main.js`: the entrance motion, the scenes (`[data-scrub]`: the hero's
   opening, the pinned timelapses and the drum, told how far each has come up the screen,
   through it and through its pin), the hand of
   phones and the app's tabs; everything moves by transform and opacity. With reduced motion
@@ -124,7 +125,7 @@ pnpm build      # static output in dist/
   under the row.
 - `public/fonts`: Satoshi for headings and the wordmark. Inter loads from rsms.me like the app.
 - `public/shots`: screenshots of the portal from a seeded sandbox account (Jerry): the hero's
-  phone and stickers, the calendar phone, and `looks/`, the drum's sixteen.
+  phone, the calendar phone, and `looks/`, the drum's sixteen.
   Replacing a file with the same name is all the page needs; a new crop's shape goes in its
   `width`/`height` in `index.html`.
 - `public/clips`: the recordings (below), and ten-second timelapses, 720 px wide, H.264 with
