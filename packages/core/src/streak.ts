@@ -165,50 +165,105 @@ export interface EvaluateWeekStreakInput {
   today: ISODate;
   timezone: string;
   dayStartHour?: number;
+  /** Freezes held once the daily streak has had its turn; absent means none. */
+  freezesHeld?: number;
+  /** Days a freeze was already spent on (by either streak); a week ending there reuses it. */
+  frozenDays?: Set<ISODate>;
 }
+
+export interface WeekStreakEvaluation {
+  state: WeekStreakState;
+  /** Freezes left after this evaluation. */
+  freezesHeld: number;
+  /** Freezes the weekly streak spent itself, on days the daily one hadn't. */
+  events: StreakEvent[];
+}
+
+/** A week can borrow at most this many days of the next one, leaving it its Sunday. */
+const MAX_WEEK_EXTENSION = 6;
 
 /**
  * The weekly streak: Monday-to-Sunday weeks in a row with at least `daysPerWeek` streak
  * days, the days judged exactly as the daily streak judges them. Lazy and idempotent like
  * evaluateStreak: `lastCountedWeek` (a Monday) advances through every judged week. This week
- * counts as soon as it has enough days and is otherwise left open until it ends. Freezes are
- * the daily streak's; a week short of its days ends the weekly one.
+ * counts as soon as it has enough days and is otherwise left open until it ends.
+ *
+ * A week that ends short while the weekly streak is running spends a streak freeze on its
+ * last day and gets one more day (`extended`), again and again while freezes last. The same
+ * freeze covers both streaks: a day the daily streak already froze costs nothing more. The
+ * days a counted week borrowed are its own, so the next week starts after them
+ * (`borrowed`). A week still short with no freeze ends the weekly streak.
  */
-export function evaluateWeekStreak(input: EvaluateWeekStreakInput): WeekStreakState {
+export function evaluateWeekStreak(input: EvaluateWeekStreakInput): WeekStreakEvaluation {
   const days = qualifyingDays(
     input.sessions,
     input.minMinutes,
     input.timezone,
     input.dayStartHour ?? 0,
   );
-  const state: WeekStreakState = { ...(input.state ?? emptyWeekStreak()) };
+  const {
+    borrowed: savedBorrowed,
+    extended: savedExtended,
+    ...saved
+  } = input.state ?? emptyWeekStreak();
+  const state: WeekStreakState = { ...saved };
+  const frozen = new Set(input.frozenDays ?? []);
+  const events: StreakEvent[] = [];
+  let freezesHeld = input.freezesHeld ?? 0;
   const need = Math.min(WEEK_STREAK_DAYS.MAX, Math.max(WEEK_STREAK_DAYS.MIN, input.daysPerWeek));
   const thisWeek = startOfWeekMonday(input.today);
+  let borrowed = savedBorrowed ?? 0;
+  let extended = savedExtended ?? 0;
+  const done = (): WeekStreakEvaluation => {
+    if (borrowed > 0) state.borrowed = borrowed;
+    if (extended > 0) state.extended = extended;
+    return { state, freezesHeld, events };
+  };
 
   let week: ISODate;
   if (state.lastCountedWeek === null) {
     let earliest: ISODate | null = null;
     for (const d of days) if (earliest === null || d < earliest) earliest = d;
-    if (earliest === null) return state;
+    if (earliest === null) return done();
     week = startOfWeekMonday(earliest);
   } else {
     week = addDays(state.lastCountedWeek, 7);
   }
 
-  for (; week <= thisWeek; week = addDays(week, 7)) {
+  while (week <= thisWeek) {
+    const end = addDays(week, 6 + extended);
     let studied = 0;
-    for (const d of eachDay(week, addDays(week, 6))) if (days.has(d)) studied += 1;
+    for (const d of eachDay(addDays(week, borrowed), end)) if (days.has(d)) studied += 1;
     if (studied >= need) {
       state.current += 1;
       state.longest = Math.max(state.longest, state.current);
       state.lastCountedWeek = week;
+      borrowed = extended;
+      extended = 0;
+      week = addDays(week, 7);
       continue;
     }
-    if (week === thisWeek) break; // the week is not over
+    if (end >= input.today) break; // the week is not over
+    if (state.current > 0 && extended < MAX_WEEK_EXTENSION) {
+      if (frozen.has(end)) {
+        extended += 1;
+        continue;
+      }
+      if (freezesHeld > 0) {
+        freezesHeld -= 1;
+        frozen.add(end);
+        events.push({ type: 'freeze-used', date: end });
+        extended += 1;
+        continue;
+      }
+    }
     state.current = 0;
     state.lastCountedWeek = week;
+    borrowed = 0;
+    extended = 0;
+    week = addDays(week, 7);
   }
-  return state;
+  return done();
 }
 
 /** True if `count` is exactly a milestone value. */

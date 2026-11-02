@@ -196,7 +196,20 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
     timezone: row.timezone,
     dayStartHour,
   });
-  result.state.weeks = evaluateWeekStreak({
+  // Days a freeze already covered: a week ending on one gets its extra day from that freeze.
+  const spent = await db
+    .select({ date: streakEvents.date })
+    .from(streakEvents)
+    .where(
+      and(
+        eq(streakEvents.userId, row.id),
+        eq(streakEvents.type, 'freeze-used'),
+        from ? gte(streakEvents.date, from) : undefined,
+      ),
+    );
+  const frozenDays = new Set(spent.map((e) => e.date));
+  for (const e of result.events) if (e.type === 'freeze-used') frozenDays.add(e.date);
+  const weekly = evaluateWeekStreak({
     state: weeks,
     sessions: sess,
     minMinutes: settings.streak.minMinutes,
@@ -204,7 +217,12 @@ export async function syncStreak(db: Db, row: UserRow, now: string): Promise<Str
     today,
     timezone: row.timezone,
     dayStartHour,
+    freezesHeld: result.state.freezesHeld,
+    frozenDays,
   });
+  result.state.weeks = weekly.state;
+  result.state.freezesHeld = weekly.freezesHeld;
+  result.events.push(...weekly.events);
   if (JSON.stringify(result.state) !== JSON.stringify(row.streak)) {
     await db.update(users).set({ streak: result.state }).where(eq(users.id, row.id));
     row.streak = result.state;

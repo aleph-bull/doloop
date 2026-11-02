@@ -457,6 +457,10 @@ export interface WeekStreakState {
   longest: number;
   /** Monday of the last week judged (counted or ended), or null. */
   lastCountedWeek: ISODate | null;
+  /** Days at the start of the next week that the last one borrowed with freezes. */
+  borrowed?: number;
+  /** Days freezes have added to the next week, still being judged. */
+  extended?: number;
 }
 
 export interface User {

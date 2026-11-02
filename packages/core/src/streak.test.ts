@@ -46,7 +46,7 @@ const run = (over: Partial<EvaluateStreakInput>) =>
     ...over,
   });
 
-const runWeeks = (over: Partial<EvaluateWeekStreakInput>) =>
+const runWeeksFull = (over: Partial<EvaluateWeekStreakInput>) =>
   evaluateWeekStreak({
     state: undefined,
     sessions: [],
@@ -56,6 +56,7 @@ const runWeeks = (over: Partial<EvaluateWeekStreakInput>) =>
     timezone: TZ,
     ...over,
   });
+const runWeeks = (over: Partial<EvaluateWeekStreakInput>) => runWeeksFull(over).state;
 
 describe('qualifyingDays', () => {
   it('credits a session to the local day it started, honouring the minimum', () => {
@@ -285,5 +286,123 @@ describe('evaluateWeekStreak', () => {
     const sessions = [s(noon('2026-09-07'), 20), s(noon('2026-09-15'), 20)];
     const first = runWeeks({ sessions, today: '2026-09-16' });
     expect(runWeeks({ state: first, sessions, today: '2026-09-17' })).toEqual(first);
+  });
+
+  describe('freezes', () => {
+    // Weeks of 08-31 and 09-07 counted; the week of 09-14 has nothing in it.
+    const before = [s(noon('2026-09-01'), 20), s(noon('2026-09-08'), 20)];
+
+    it("gives a short week one more day for a freeze, and that day is the week's own", () => {
+      const r = runWeeksFull({
+        sessions: [...before, s(noon('2026-09-21'), 20)],
+        today: '2026-09-21',
+        freezesHeld: 1,
+      });
+      expect(r.state).toEqual({
+        current: 3,
+        longest: 3,
+        lastCountedWeek: '2026-09-14',
+        borrowed: 1,
+      });
+      expect(r.freezesHeld).toBe(0);
+      expect(r.events).toEqual([{ type: 'freeze-used', date: '2026-09-20' }]);
+    });
+
+    it('starts the next week after the borrowed day', () => {
+      const two = [
+        ...['2026-08-31', '2026-09-01', '2026-09-07', '2026-09-08'].map((d) => s(noon(d), 20)),
+        s(noon('2026-09-16'), 20),
+      ];
+      const monday = runWeeksFull({
+        daysPerWeek: 2,
+        sessions: [...two, s(noon('2026-09-21'), 20)],
+        today: '2026-09-21',
+        freezesHeld: 1,
+      });
+      expect(monday.state.current).toBe(3);
+      const tuesday = runWeeksFull({
+        state: monday.state,
+        daysPerWeek: 2,
+        sessions: [...two, s(noon('2026-09-21'), 20), s(noon('2026-09-22'), 20)],
+        today: '2026-09-22',
+        freezesHeld: monday.freezesHeld,
+      });
+      expect(tuesday.state).toEqual(monday.state);
+      const wednesday = runWeeks({
+        state: tuesday.state,
+        daysPerWeek: 2,
+        sessions: [
+          ...two,
+          ...['2026-09-21', '2026-09-22', '2026-09-23'].map((d) => s(noon(d), 20)),
+        ],
+        today: '2026-09-23',
+      });
+      expect(wednesday).toEqual({ current: 4, longest: 4, lastCountedWeek: '2026-09-21' });
+    });
+
+    it('waits on the extra day without spending again', () => {
+      const first = runWeeksFull({ sessions: before, today: '2026-09-21', freezesHeld: 2 });
+      expect(first.state).toEqual({
+        current: 2,
+        longest: 2,
+        lastCountedWeek: '2026-09-07',
+        extended: 1,
+      });
+      expect(first.freezesHeld).toBe(1);
+      const again = runWeeksFull({
+        state: first.state,
+        sessions: before,
+        today: '2026-09-21',
+        freezesHeld: first.freezesHeld,
+      });
+      expect(again).toEqual({ ...first, events: [] });
+    });
+
+    it('spends one freeze a day for as long as the week stays short', () => {
+      const r = runWeeksFull({
+        sessions: [...before, s(noon('2026-09-22'), 20)],
+        today: '2026-09-23',
+        freezesHeld: 3,
+      });
+      expect(r.state).toEqual({
+        current: 3,
+        longest: 3,
+        lastCountedWeek: '2026-09-14',
+        borrowed: 2,
+      });
+      expect(r.freezesHeld).toBe(1);
+      expect(r.events.map((e) => e.date)).toEqual(['2026-09-20', '2026-09-21']);
+    });
+
+    it('uses the freeze the daily streak already spent on that day', () => {
+      const r = runWeeksFull({
+        sessions: [...before, s(noon('2026-09-21'), 20)],
+        today: '2026-09-21',
+        frozenDays: new Set(['2026-09-20']),
+      });
+      expect(r.state.current).toBe(3);
+      expect(r.freezesHeld).toBe(0);
+      expect(r.events).toEqual([]);
+    });
+
+    it('ends the streak when the freezes run out, and the next week is whole again', () => {
+      const r = runWeeksFull({
+        sessions: [...before, s(noon('2026-09-22'), 20)],
+        today: '2026-09-22',
+        freezesHeld: 1,
+      });
+      expect(r.state).toEqual({ current: 1, longest: 2, lastCountedWeek: '2026-09-21' });
+      expect(r.freezesHeld).toBe(0);
+    });
+
+    it('spends nothing when there is no weekly streak to keep', () => {
+      const r = runWeeksFull({
+        state: { current: 0, longest: 2, lastCountedWeek: '2026-09-07' },
+        today: '2026-09-21',
+        freezesHeld: 2,
+      });
+      expect(r.state.current).toBe(0);
+      expect(r.freezesHeld).toBe(2);
+    });
   });
 });

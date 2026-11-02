@@ -474,8 +474,16 @@ days**. All the logic is in `packages/core/src/streak.ts`; the API only loads an
 - **Weekly streak** (`evaluateWeekStreak`): Monday-to-Sunday weeks in a row with at least
   `settings.streak.daysPerWeek` streak days (1 to 7, default 1, "Days a week for the weekly
   streak" in Settings › Pace and streaks). A week counts the moment it reaches its days; the
-  current week stays open until Sunday ends; a week that ends short resets the run. Freezes
-  are the daily streak's only. No milestones or banners for weeks.
+  current week stays open until Sunday ends; a week that ends short resets the run, unless a
+  freeze gives it one more day (2026-11-01, below). No milestones for weeks.
+- **Freezes and the weekly streak** (owner, 2026-11-01: "1 freeze to extend a week by 1
+  day"). A week that ends short while the weekly streak is above 0 spends a freeze on its
+  last day and runs one more day (`weeks.extended`), again for each freeze held; this goes
+  off even when the daily streak is 0 (owner). Both streaks share the freezes: a day the
+  daily streak already froze costs nothing more (`syncStreak` passes the `freeze-used`
+  days in as `frozenDays`). The days a counted week borrowed are its own, so the next week
+  starts after them (`weeks.borrowed`) and a Monday never counts for two weeks. Both
+  fields are left out when 0.
 - **Rest days don't protect either streak** (owner's choice, 2026-10-21, over removing rest
   days altogether). Weekly rest days, vacations and break days still shape the daily plan and
   pace (`pace.ts`, `scheduler.ts`), but a quiet rest day is missed like any other, and a
@@ -504,7 +512,7 @@ days**. All the logic is in `packages/core/src/streak.ts`; the API only loads an
   `streakBefore` in `finalize`.
 - **Settings changes** (minimum minutes, days per week) apply to days and weeks not yet
   judged. What already counted stays counted.
-- **Events.** Only the daily streak's freeze uses and resets are logged (`streak_events`),
+- **Events.** Freeze uses (by either streak) and daily resets are logged (`streak_events`),
   and `describeStreakEvents` turns them into the dashboard banner. Weekly resets are silent.
 - **Where they show:** the top bar flame and the sidebar pill (the day count; the tooltip
   names both), the dashboard's numbers (Daily streak beside Weekly streak), the Analytics

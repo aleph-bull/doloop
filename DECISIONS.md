@@ -3028,3 +3028,13 @@ The owner asked to "make the opening crates more satisfying similar to csgo's ro
 - **Courses stay courses**: a course moves only among courses, and a task goes anywhere under a course but never to the top level. A row can't be dropped into itself or anything under it (the API refuses that too).
 - Alt with up or down moves any row one place among its siblings; a finished row steps past the finished rows beside it in Done.
 - Only the moved row is written (its sort order, and its parent when that changed), so Ctrl+Z puts it back.
+
+## A streak freeze gives a short week one more day, 2026-11-01 (owner request)
+
+"i want 1 freeze to extend a week by 1 day", with the example: on a week 5 streak, a freeze on Sunday, then studying Monday gives week 6, and Monday and Tuesday still don't make it week 7. Asked first, the owner chose "one more day to finish" (over the freeze counting as a study day) and the same freezes as the daily streak. Then: "make sure the streak freeze goes off even at a daily streak of 0 as long as there is a weekly streak above 0". The 2026-10-21 rule that freezes are the daily streak's only no longer holds.
+
+- **One more day.** A week that ends short while the weekly streak is above 0 spends a freeze dated its last day (Sunday) and runs to the end of Monday. Still short then, another freeze gives it Tuesday, and so on while freezes last (two can be held), up to six days. With none left it ends the streak, as before.
+- **It goes off with no daily streak.** Only the weekly streak's own number decides.
+- **One freeze, both streaks.** A Sunday the daily streak already froze gives the week its Monday for nothing more. A freeze the weekly streak spends is logged like the daily one's (`freeze-used`), so the dashboard says a freeze covered the streak, and `rewindStreak` hands it back the same way.
+- **Borrowed days are the week's own.** The Monday that finished week 6 doesn't count again: the next week runs Tuesday to Sunday (`weeks.borrowed`). It still counts the moment it reaches its days, so with one day a week set, Tuesday alone makes it week 7; with two or more, Monday and Tuesday leave it at 6, as in the owner's example.
+- **Stored** in `users.streak.weeks`: `extended` (days freezes added to the week still being judged) and `borrowed`, both left out when 0. No migration.
