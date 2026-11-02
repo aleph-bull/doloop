@@ -3044,3 +3044,10 @@ The owner asked to "make the opening crates more satisfying similar to csgo's ro
 Owner: "when the screen is asking to record session pause the timer until its set". The focus screen already held the clock for "Record a timelapse?", the phone's horizontal or vertical question and the camera-link question. Now it also holds for "Record your screen this time?", the browser's screen picker after it, and the camera until it is on (the allow prompt included), so the clock picks up again once the recording is running or was refused.
 
 - **Only a real wait pauses.** The hold pauses the clock once it has lasted 400 ms (`HOLD_AFTER_MS`), so a camera that is already allowed and opens in a blink leaves no pause in the session. As before, it pauses only a running clock and resumes only what it paused.
+
+## Posting elsewhere opens the site before the download, 2026-11-02 (owner report)
+
+Owner: "post to social media (external) results in shut down of all of my browser tabs". On a computer, Instagram, TikTok and X downloaded the video and then opened the site's tab in the same click. In Vivaldi with downloads set to start by themselves (the owner's setting), that order crashes the whole browser: its own UI answers the download's permission (`webViewInternal.setPermission`) while the new tab is being made, and a check inside Vivaldi fails (crash reports of 10-22 and 11-02, the same signature). Reproduced in a separate Vivaldi with the owner's two download settings, on a test page and on the real focus screen.
+
+- **The tab first, then the download**, still in one click. Opening first, a tab one second later, or a link to click after all survived; only download-then-tab crashed. The swap is the smallest change and keeps the one click.
+- Phones are unchanged (the share sheet, or the app link after the download).

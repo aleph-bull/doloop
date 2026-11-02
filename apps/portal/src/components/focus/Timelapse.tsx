@@ -1217,16 +1217,21 @@ export function TimelapseExport({
     if (!video) return;
     const site = POST_PLATFORM_INFO[platform];
     if (shareSheet && (await shareVideo())) return;
-    const where = downloadOnce()
-      ? 'The video is in your downloads.'
-      : 'The video is already in your downloads.';
     if (os) {
+      const where = downloadOnce()
+        ? 'The video is in your downloads.'
+        : 'The video is already in your downloads.';
       // After the save has rendered, so the focus screen's "leave this page?" is gone first.
       window.setTimeout(() => (window.location.href = appLink(platform, os)), 0);
       toast(`${where} ${site.appNextStep}`, { durationMs: 8000 });
       return;
     }
+    // The site's tab opens before the download starts. The other way round, in one click,
+    // crashes the whole of Vivaldi when it saves downloads without asking (2026-11-02).
     window.open(site.uploadUrl, '_blank', 'noopener,noreferrer');
+    const where = downloadOnce()
+      ? 'The video is in your downloads.'
+      : 'The video is already in your downloads.';
     toast(`${where} ${site.nextStep}`, { durationMs: 8000 });
   };
 
