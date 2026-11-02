@@ -3019,3 +3019,12 @@ The owner asked to "make the opening crates more satisfying similar to csgo's ro
   - The scene writes its three translates straight onto the headline, the devices and the phone. The scenes now read every rectangle before writing anything.
 - **The band's foot on a phone** showed a line where the band ends: the fade's 30px blur, on the phone's shorter fade, left it see-through there (the brightness jumped 22 at the edge, against 3 on a computer). On a phone it is blurred 14px; the biggest jump is now the fade's own slope. A longer fade was tried and washed over "On your phone, too.".
 - **The drum on a phone is spread out**: its cards sit further apart round the arc (about seven at a time, not thirteen) and evenly across instead of bunched in the middle, the middle ones a little smaller, in a 220px strip. It still turns about a card every second and a half. The computer's drum is unchanged.
+
+## Every task drags, not just courses, 2026-11-01 (owner request)
+
+"add ability to drag and re order and rearange all sorts of tasks not just parents". The 2026-09-29 note that only courses drag no longer holds.
+
+- **Every row has the grip** at its own depth (a lone course still has none). Drop near the top or bottom of a row to go above or below it, among its siblings; drop on its middle to go inside it, as its last child (a folded row opens so the moved one stays in sight). Below an open row with children, the bottom goes in as its first child, matching where the line is drawn.
+- **Courses stay courses**: a course moves only among courses, and a task goes anywhere under a course but never to the top level. A row can't be dropped into itself or anything under it (the API refuses that too).
+- Alt with up or down moves any row one place among its siblings; a finished row steps past the finished rows beside it in Done.
+- Only the moved row is written (its sort order, and its parent when that changed), so Ctrl+Z puts it back.

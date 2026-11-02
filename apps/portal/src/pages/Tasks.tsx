@@ -11,10 +11,12 @@ import {
   Tag as TagIcon,
 } from 'lucide-react';
 import {
+  createContext,
   useCallback,
+  useContext,
   useMemo,
   useState,
-  type HTMLAttributes,
+  type DragEvent,
   type ReactNode,
   type CSSProperties,
 } from 'react';
@@ -41,11 +43,31 @@ interface RowProps {
   onTemplate: (n: StudyNode) => void;
   /** Open the tag menu for `n`, beside `anchor`. */
   onTag: (n: StudyNode, anchor: HTMLElement) => void;
-  /** The drag grip, for a course. */
-  grip?: ReactNode;
-  /** Drop handling and drag state for a course's whole item, subtree included. */
-  itemProps?: HTMLAttributes<HTMLLIElement>;
 }
+
+/**
+ * Where a dragged row lands, against the row under the pointer: above it, below it, as its
+ * last child, or (below an open row with children) as its first child.
+ */
+type DropZone = 'before' | 'after' | 'inside' | 'first';
+
+/** Dragging rows: shared by every row in the tree, courses and tasks alike. */
+interface TreeDrag {
+  dragId: string | null;
+  drop: { id: string; zone: DropZone } | null;
+  /** Whether `id` has a grip at all (a lone course has nowhere to go). */
+  movable: (id: string) => boolean;
+  /** The zone a drag would use at `frac` (0 top, 1 bottom) of `target`'s row, or null. */
+  zoneAt: (target: StudyNode, frac: number, open: boolean) => DropZone | null;
+  start: (id: string) => void;
+  end: () => void;
+  setDrop: (d: { id: string; zone: DropZone } | null) => void;
+  dropOn: (targetId: string, zone: DropZone) => void;
+  /** Alt with up or down: one place among its siblings. */
+  nudge: (id: string, dir: -1 | 1) => Promise<void>;
+}
+
+const TreeDragContext = createContext<TreeDrag | null>(null);
 
 /** Status words for the table's Status column: a dot and a word, no pill. */
 const STATUS_WORD: Record<NodePace['status'], string> = {
@@ -74,10 +96,9 @@ function Row({
   onToggleDone,
   onTemplate,
   onTag,
-  grip,
-  itemProps,
 }: RowProps) {
   const [open, setOpen] = useState(false);
+  const drag = useContext(TreeDragContext);
   const kids = childrenOf.get(node.id) ?? [];
   const p = pace[node.id];
   const done = !!node.completedAt;
@@ -124,16 +145,78 @@ function Row({
     p?.requiredPerDay != null && !done ? `Need ${fmtPerDay(p.requiredPerDay)}/day` : null;
   const status = p && node.kind !== 'course' && !done ? p.status : null;
 
+  const zoneOf = (e: DragEvent<HTMLDivElement>) => {
+    if (!drag) return null;
+    const box = e.currentTarget.getBoundingClientRect();
+    return drag.zoneAt(node, (e.clientY - box.top) / box.height, open && kids.length > 0);
+  };
+  const dropHere = drag?.drop?.id === node.id ? drag.drop.zone : null;
+
+  const grip = drag?.movable(node.id) ? (
+    <button
+      type="button"
+      className="tree-grip"
+      draggable
+      aria-label={`Move ${node.title}. Drag, or press Alt with the up or down arrow.`}
+      title="Drag to move"
+      onDragStart={(e) => {
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', node.id);
+        const row = e.currentTarget.closest('.tree-row');
+        if (row instanceof HTMLElement) e.dataTransfer.setDragImage(row, 24, 20);
+        drag.start(node.id);
+      }}
+      onDragEnd={() => drag.end()}
+      onKeyDown={(e) => {
+        if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const target = e.currentTarget;
+        void drag.nudge(node.id, e.key === 'ArrowUp' ? -1 : 1).then(() =>
+          // Keep focus on the grip that moved, so the keys can keep moving it.
+          window.requestAnimationFrame(() => target.focus()),
+        );
+      }}
+    >
+      <GripVertical size={14} aria-hidden />
+    </button>
+  ) : null;
+
   return (
     <li
-      {...itemProps}
       className={
-        [depth === 0 ? 'tree-root' : '', itemProps?.className ?? ''].join(' ').trim() || undefined
+        [depth === 0 ? 'tree-root' : '', drag?.dragId === node.id ? 'is-dragging' : '']
+          .join(' ')
+          .trim() || undefined
       }
     >
       <div
-        className={`tree-row${depth === 0 ? ' is-root' : ''}${done ? ' is-done' : ''}`}
+        className={`tree-row${depth === 0 ? ' is-root' : ''}${done ? ' is-done' : ''}${
+          dropHere ? ` is-drop-${dropHere}` : ''
+        }`}
         style={{ '--depth': depth } as CSSProperties}
+        onDragOver={(e) => {
+          const zone = zoneOf(e);
+          if (!drag || !zone) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (drag.drop?.id !== node.id || drag.drop.zone !== zone)
+            drag.setDrop({ id: node.id, zone });
+        }}
+        onDragLeave={(e) => {
+          if (drag?.drop?.id !== node.id) return;
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) drag.setDrop(null);
+        }}
+        onDrop={(e) => {
+          const zone = zoneOf(e);
+          if (!drag || !zone) return;
+          e.preventDefault();
+          // Dropped inside a folded row: open it, so the moved row stays in sight.
+          if (zone === 'inside') setOpen(true);
+          drag.dropOn(node.id, zone);
+          drag.end();
+        }}
       >
         <div className="tt-name">
           {grip}
@@ -368,14 +451,21 @@ export function Tasks() {
     [tags.data],
   );
   const [paste, setPaste] = useState(false);
-  // Dragging courses: which is being dragged, where it would land, and the new order shown
-  // until the server's copy catches up. The optimistic order is tied to the data it was
-  // made from, so fresh data replaces it without an effect.
+  // Dragging rows: which is being dragged, where it would land, and each moved row's new
+  // place shown until the server's copy catches up. The optimistic places are tied to the
+  // data they were made from, so fresh data replaces them without an effect.
   const [dragId, setDragId] = useState<string | null>(null);
-  const [drop, setDrop] = useState<{ id: string; before: boolean } | null>(null);
-  const [optimistic, setOptimistic] = useState<{ ids: string[]; basis: unknown } | null>(null);
+  const [drop, setDrop] = useState<{ id: string; zone: DropZone } | null>(null);
+  const [optimistic, setOptimistic] = useState<{
+    moves: Record<string, { parentId: string | null; sortOrder: number }>;
+    basis: unknown;
+  } | null>(null);
 
-  const list = useMemo(() => nodes.data?.nodes ?? [], [nodes.data]);
+  const list = useMemo(() => {
+    const raw = nodes.data?.nodes ?? [];
+    if (!optimistic || optimistic.basis !== nodes.data) return raw;
+    return raw.map((n) => (optimistic.moves[n.id] ? { ...n, ...optimistic.moves[n.id] } : n));
+  }, [nodes.data, optimistic]);
   const childrenOf = useMemo(() => {
     const m = new Map<string, StudyNode[]>();
     for (const n of list) {
@@ -387,18 +477,26 @@ export function Tasks() {
     for (const arr of m.values()) arr.sort((a, b) => a.sortOrder - b.sortOrder);
     return m;
   }, [list]);
-  const sortedRoots = list
-    .filter((n) => !n.parentId || !list.some((x) => x.id === n.parentId))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-  const roots =
-    optimistic && optimistic.basis === nodes.data
-      ? [
-          ...optimistic.ids
-            .map((id) => sortedRoots.find((r) => r.id === id))
-            .filter((r): r is StudyNode => !!r),
-          ...sortedRoots.filter((r) => !optimistic.ids.includes(r.id)),
-        ]
-      : sortedRoots;
+  const roots = useMemo(
+    () =>
+      list
+        .filter((n) => !n.parentId || !list.some((x) => x.id === n.parentId))
+        .sort((a, b) => a.sortOrder - b.sortOrder),
+    [list],
+  );
+  const isRoot = useCallback((id: string) => roots.some((r) => r.id === id), [roots]);
+  // The dragged row and everything under it: nowhere it can be dropped.
+  const dragged = useMemo(() => {
+    const out = new Set<string>();
+    if (!dragId) return out;
+    const stack = [dragId];
+    while (stack.length) {
+      const id = stack.pop()!;
+      out.add(id);
+      for (const k of childrenOf.get(id) ?? []) stack.push(k.id);
+    }
+    return out;
+  }, [dragId, childrenOf]);
   const taggingNode = tagging ? list.find((n) => n.id === tagging.id) : undefined;
 
   if (nodes.isError)
@@ -427,19 +525,27 @@ export function Tasks() {
     }
   };
 
+  /** The rows under `parentId` (null: the courses), in order, leaving out `skip`. */
+  const siblingsOf = (parentId: string | null, skip: string) =>
+    (parentId ? (childrenOf.get(parentId) ?? []) : roots).filter((n) => n.id !== skip);
+
   /**
-   * Put course `id` at `to` in the list of courses. Its sort order becomes the midpoint of
-   * its new neighbours, so only the moved course is written, and Ctrl+Z moves it back.
+   * Put row `id` under `parentId` at `index` among the rows already there. Its sort order
+   * becomes the midpoint of its new neighbours, so only the moved row is written, and Ctrl+Z
+   * moves it back.
    */
-  const moveCourse = async (id: string, to: number) => {
-    const from = roots.findIndex((r) => r.id === id);
-    if (from < 0) return;
-    const target = Math.max(0, Math.min(roots.length - 1, to));
-    if (target === from) return;
-    const next = roots.filter((r) => r.id !== id);
-    next.splice(target, 0, roots[from]!);
-    const before = next[target - 1];
-    const after = next[target + 1];
+  const moveRow = async (id: string, parentId: string | null, index: number) => {
+    const node = list.find((n) => n.id === id);
+    if (!node) return;
+    const sibs = siblingsOf(parentId, id);
+    const at = Math.max(0, Math.min(sibs.length, index));
+    const before = sibs[at - 1];
+    const after = sibs[at];
+    const oldParent = isRoot(id) ? null : node.parentId;
+    if (oldParent === parentId) {
+      const now = siblingsOf(parentId, '').findIndex((n) => n.id === id);
+      if (now === at) return;
+    }
     const sortOrder =
       before && after
         ? (before.sortOrder + after.sortOrder) / 2
@@ -448,82 +554,75 @@ export function Tasks() {
           : after
             ? after.sortOrder - 1
             : 0;
-    setOptimistic({ ids: next.map((r) => r.id), basis: nodes.data });
+    const prev = optimistic && optimistic.basis === nodes.data ? optimistic.moves : {};
+    setOptimistic({ moves: { ...prev, [id]: { parentId, sortOrder } }, basis: nodes.data });
     try {
-      await update.mutateAsync({ id, patch: { sortOrder } });
+      await update.mutateAsync({
+        id,
+        patch: oldParent === parentId ? { sortOrder } : { parentId, sortOrder },
+      });
     } catch (err) {
       setOptimistic(null);
-      toast(err instanceof Error ? err.message : 'Could not move that course');
+      toast(err instanceof Error ? err.message : 'Could not move that');
     }
   };
 
-  const dropOn = (targetId: string, before: boolean) => {
-    if (!dragId || dragId === targetId) return;
-    const from = roots.findIndex((r) => r.id === dragId);
-    let to = roots.findIndex((r) => r.id === targetId) + (before ? 0 : 1);
-    if (from < to) to -= 1;
-    void moveCourse(dragId, to);
+  const zoneAt = (target: StudyNode, frac: number, open: boolean): DropZone | null => {
+    if (!dragId || dragged.has(target.id)) return null;
+    const draggingCourse = isRoot(dragId);
+    // Courses move among courses; everything else can go anywhere under a course.
+    if (draggingCourse) return isRoot(target.id) ? (frac < 0.5 ? 'before' : 'after') : null;
+    if (isRoot(target.id)) return open && frac >= 0.5 ? 'first' : 'inside';
+    if (frac < 0.3) return 'before';
+    if (frac > 0.7) return open ? 'first' : 'after';
+    return 'inside';
   };
 
-  const courseGrip = (r: StudyNode, index: number) => (
-    <button
-      type="button"
-      className="tree-grip"
-      draggable
-      aria-label={`Move ${r.title}. Drag, or press Alt with the up or down arrow.`}
-      title="Drag to reorder"
-      onDragStart={(e) => {
-        e.dataTransfer.effectAllowed = 'move';
-        e.dataTransfer.setData('text/plain', r.id);
-        const item = e.currentTarget.closest('li');
-        if (item) e.dataTransfer.setDragImage(item, 24, 20);
-        setDragId(r.id);
-      }}
-      onDragEnd={() => {
-        setDragId(null);
-        setDrop(null);
-      }}
-      onKeyDown={(e) => {
-        if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const target = e.currentTarget;
-        void moveCourse(r.id, index + (e.key === 'ArrowUp' ? -1 : 1)).then(() =>
-          // Keep focus on the grip that moved, so the keys can keep moving it.
-          window.requestAnimationFrame(() => target.focus()),
-        );
-      }}
-    >
-      <GripVertical size={14} aria-hidden />
-    </button>
-  );
+  const dropOn = (targetId: string, zone: DropZone) => {
+    const target = list.find((n) => n.id === targetId);
+    if (!dragId || !target || dragged.has(targetId)) return;
+    if (zone === 'inside') void moveRow(dragId, targetId, siblingsOf(targetId, dragId).length);
+    else if (zone === 'first') void moveRow(dragId, targetId, 0);
+    else {
+      const parentId = isRoot(targetId) ? null : target.parentId;
+      const i = siblingsOf(parentId, dragId).findIndex((n) => n.id === targetId);
+      void moveRow(dragId, parentId, i + (zone === 'after' ? 1 : 0));
+    }
+  };
 
-  const courseItemProps = (r: StudyNode): HTMLAttributes<HTMLLIElement> => ({
-    className: [
-      dragId === r.id ? 'is-dragging' : '',
-      drop?.id === r.id ? (drop.before ? 'is-drop-before' : 'is-drop-after') : '',
-    ]
-      .join(' ')
-      .trim(),
-    onDragOver: (e) => {
-      if (!dragId || dragId === r.id) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const box = e.currentTarget.getBoundingClientRect();
-      const before = e.clientY < box.top + box.height / 2;
-      if (drop?.id !== r.id || drop.before !== before) setDrop({ id: r.id, before });
-    },
-    onDragLeave: (e) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrop(null);
-    },
-    onDrop: (e) => {
-      e.preventDefault();
-      const box = e.currentTarget.getBoundingClientRect();
-      dropOn(r.id, e.clientY < box.top + box.height / 2);
-      setDrop(null);
+  const nudge = async (id: string, dir: -1 | 1) => {
+    const node = list.find((n) => n.id === id);
+    if (!node) return;
+    const parentId = isRoot(id) ? null : node.parentId;
+    // Finished rows sit in their own group, so a row steps past rows shown beside it.
+    const all = siblingsOf(parentId, '');
+    const shown = all.filter((n) => !n.completedAt === !node.completedAt || parentId === null);
+    const i = shown.findIndex((n) => n.id === id);
+    const next = shown[i + dir];
+    if (!next) return;
+    // Its index among the others is where this row goes: just before it going up, just after
+    // it going down (this row's own place drops out below it).
+    await moveRow(
+      id,
+      parentId,
+      all.findIndex((n) => n.id === next.id),
+    );
+  };
+
+  const treeDrag: TreeDrag = {
+    dragId,
+    drop,
+    movable: (id) => !isRoot(id) || roots.length > 1,
+    zoneAt,
+    start: setDragId,
+    end: () => {
       setDragId(null);
+      setDrop(null);
     },
-  });
+    setDrop,
+    dropOn,
+    nudge,
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -587,26 +686,26 @@ export function Tasks() {
                 }
               }}
             >
-              {roots.map((r, i) => (
-                <Row
-                  key={r.id}
-                  node={r}
-                  depth={0}
-                  grip={roots.length > 1 ? courseGrip(r, i) : undefined}
-                  itemProps={courseItemProps(r)}
-                  childrenOf={childrenOf}
-                  pace={pace.data?.pace ?? {}}
-                  tagsById={tagsById}
-                  onEdit={(n) => setDialog({ node: n })}
-                  onAdd={(parentId) => setDialog({ parentId })}
-                  onStart={setStart}
-                  onToggleDone={toggleDone}
-                  onTemplate={setTemplate}
-                  onTag={(n, anchor) =>
-                    setTagging((t) => (t?.anchor === anchor ? null : { id: n.id, anchor }))
-                  }
-                />
-              ))}
+              <TreeDragContext.Provider value={treeDrag}>
+                {roots.map((r) => (
+                  <Row
+                    key={r.id}
+                    node={r}
+                    depth={0}
+                    childrenOf={childrenOf}
+                    pace={pace.data?.pace ?? {}}
+                    tagsById={tagsById}
+                    onEdit={(n) => setDialog({ node: n })}
+                    onAdd={(parentId) => setDialog({ parentId })}
+                    onStart={setStart}
+                    onToggleDone={toggleDone}
+                    onTemplate={setTemplate}
+                    onTag={(n, anchor) =>
+                      setTagging((t) => (t?.anchor === anchor ? null : { id: n.id, anchor }))
+                    }
+                  />
+                ))}
+              </TreeDragContext.Provider>
             </ul>
           </>
         )}

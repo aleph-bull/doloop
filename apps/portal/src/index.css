@@ -1904,10 +1904,10 @@
     opacity: 1;
   }
 }
-/* The grip that drags a course: in the row's left margin, shown on hover or focus. */
+/* The grip that drags a row: in its left margin, shown on hover or focus. */
 .tree-grip {
   position: absolute;
-  left: 0;
+  left: calc(var(--depth, 0) * 24px);
   top: 50%;
   transform: translateY(-50%);
   display: grid;
@@ -1939,18 +1939,19 @@
     opacity: 1;
   }
 }
-.tree-root {
-  position: relative;
-}
-.tree-root.is-dragging {
+li.is-dragging > .tree-row {
   opacity: 0.45;
 }
-/* Where a dragged course will land: an accent line above or below the course under it. */
-.tree-root.is-drop-before::before,
-.tree-root.is-drop-after::after {
+/*
+ * Where a dragged row will land: an accent line above or below the row under it (indented
+ * a step when it goes in first), or the row tinted when it goes inside.
+ */
+.tree-row.is-drop-before::before,
+.tree-row.is-drop-after::after,
+.tree-row.is-drop-first::after {
   content: '';
   position: absolute;
-  left: 8px;
+  left: calc(8px + var(--depth, 0) * 24px);
   right: 8px;
   height: 2px;
   border-radius: 2px;
@@ -1958,11 +1959,19 @@
   z-index: 1;
   pointer-events: none;
 }
-.tree-root.is-drop-before::before {
+.tree-row.is-drop-before::before {
   top: -1px;
 }
-.tree-root.is-drop-after::after {
+.tree-row.is-drop-after::after,
+.tree-row.is-drop-first::after {
   bottom: -1px;
+}
+.tree-row.is-drop-first::after {
+  left: calc(32px + var(--depth, 0) * 24px);
+}
+.tree-row.is-drop-inside {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
 }
 /*
  * Narrower than the columns fit: the columns fold into one quiet line under the title, and
