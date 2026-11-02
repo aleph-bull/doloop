@@ -98,19 +98,97 @@ main {
 
 /* ---------- Site nav ---------- */
 
+/*
+ * The header: over the hero's photo at the top of the page, as it always was; from the first
+ * scroll a compact bar in the portal's glass that stays put (the owner, 2026-11-02: "shrink a
+ * taller hero header into a compact bar once scrolling starts instead of hiding on scroll"),
+ * smoked over the hero and the dusk band, frosted white over the light page. main.js sets
+ * is-compact and the tone of the part under it.
+ */
 .site-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 20;
-  width: min(1120px, 100% - 40px);
-  margin: 20px auto 0;
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
   display: flex;
   align-items: center;
   gap: 28px;
   height: 56px;
+  padding: 20px max(20px, calc((100% - 1120px) / 2)) 0;
   color: #fff;
+  transition:
+    height 380ms var(--rise-ease),
+    padding 380ms var(--rise-ease),
+    color 300ms;
+}
+.site-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: rgb(22 24 36 / 0.5);
+  backdrop-filter: blur(17px) saturate(1.2);
+  box-shadow:
+    inset 0 -1px 0 rgb(255 255 255 / 0.1),
+    0 12px 32px -20px rgb(0 0 0 / 0.5);
+  opacity: 0;
+  transition:
+    opacity 300ms,
+    background-color 300ms,
+    box-shadow 300ms;
+}
+.site-nav .site-brand-mark {
+  transition:
+    width 380ms var(--rise-ease),
+    height 380ms var(--rise-ease);
+}
+.site-nav .site-wordmark {
+  transition: font-size 380ms var(--rise-ease);
+}
+.site-nav.is-compact {
+  height: 60px;
+  padding-top: 0;
+}
+.site-nav.is-compact::before {
+  opacity: 1;
+}
+.site-nav.is-compact .site-brand-mark {
+  width: 24px;
+  height: 24px;
+}
+.site-nav.is-compact .site-wordmark {
+  font-size: 17px;
+}
+.site-nav.is-compact[data-tone='light'] {
+  color: var(--site-ink);
+}
+.site-nav.is-compact[data-tone='light']::before {
+  background: rgb(255 255 255 / 0.55);
+  box-shadow:
+    inset 0 -1px 0 rgb(255 255 255 / 0.6),
+    0 12px 32px -20px rgb(15 18 32 / 0.35);
+}
+/* On the white glass the buttons keep the accent, never a dark label. */
+.site-nav.is-compact[data-tone='light'] .cta-discord {
+  color: #3c35b5;
+  background: rgb(255 255 255 / 0.5);
+  border-color: rgb(27 26 43 / 0.12);
+}
+.site-nav.is-compact[data-tone='light'] .cta-dark {
+  background: var(--site-accent);
+  color: #fff;
+}
+@media (max-width: 640px) {
+  .site-nav.is-compact {
+    height: 58px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-nav,
+  .site-nav::before,
+  .site-nav .site-brand-mark,
+  .site-nav .site-wordmark {
+    transition: none;
+  }
 }
 .site-brand {
   display: inline-flex;
@@ -131,24 +209,6 @@ main {
 }
 .site-wordmark-sm {
   font-size: 15px;
-}
-.site-nav-links {
-  display: flex;
-  gap: 4px;
-  margin-right: auto;
-}
-.site-nav-links a {
-  padding: 8px 12px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgb(255 255 255 / 0.85);
-  text-decoration: none;
-  transition: background 200ms;
-}
-.site-nav-links a:hover {
-  background: rgb(255 255 255 / 0.16);
-  color: #fff;
 }
 .site-nav-actions {
   display: flex;
@@ -1716,9 +1776,6 @@ html.has-motion .devices.rise.is-in {
   :root {
     --hang: clamp(60px, 20vw, 120px);
   }
-  .site-nav-links {
-    display: none;
-  }
   .hero-stage {
     padding-top: 120px;
     min-height: 0;
@@ -2070,5 +2127,130 @@ html.has-motion .devices.rise.is-in {
 @media (prefers-reduced-motion: reduce) {
   .chip {
     animation: none;
+  }
+}
+
+/*
+ * The hand's foot (the owner, 2026-11-02: "add back the blurs"): the cards held low and the
+ * phones' shadows sink into the page through a soft blur and fade, instead of being cut on a
+ * line by the rail's edge, with more room under the phones so their shadows end inside it. The
+ * fade's colour is the page's at that depth. Computers only: a phone's strip holds no cards low.
+ */
+@media (min-width: 641px) and (min-height: 501px) {
+  .phones-rail {
+    padding-bottom: 112px;
+  }
+  .phones-rail::after {
+    content: '';
+    position: absolute;
+    z-index: 8;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 96px;
+    background: linear-gradient(
+      180deg,
+      rgb(229 220 238 / 0) 0%,
+      rgb(229 220 238 / 0.85) 70%,
+      #e5dcee 100%
+    );
+    backdrop-filter: blur(6px);
+    mask-image: linear-gradient(180deg, transparent 0%, #000 60%);
+    pointer-events: none;
+  }
+}
+
+/*
+ * The phones higher on a computer (the owner, 2026-11-02: "phones not visible bump them up"),
+ * so a picked phone and its words fit in the window under the header: less room round the
+ * heading and over the phones.
+ */
+@media (min-width: 641px) and (min-height: 501px) {
+  #phone .rail-pad {
+    padding-top: 64px;
+    padding-bottom: 32px;
+  }
+  .phones-rail {
+    padding-top: 24px;
+  }
+  .hand-text {
+    top: 48px;
+  }
+}
+
+/*
+ * Reading through the phones (the owner, 2026-11-02: "make it more obvious that there is a
+ * progression and the user is supposed to read through the different phone"): under the
+ * picked phone's words, a pip for each phone (this one long, the ones already read tinted) and
+ * Next, which picks the one after (Start over on the last). A phone's strip has its own dots.
+ */
+.hand-step {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 30px;
+}
+.hand-pips {
+  display: flex;
+  gap: 6px;
+}
+.hand-pips span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(40 28 70 / 0.18);
+  transition:
+    width 300ms var(--site-ease),
+    background 300ms;
+}
+.hand-pips span.is-seen {
+  background: rgb(91 79 224 / 0.4);
+}
+.hand-pips span.is-on {
+  width: 24px;
+  background: var(--site-accent);
+}
+.hand-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -12px rgb(91 85 235 / 0.7);
+  transition: transform 200ms var(--site-ease);
+}
+.hand-next:hover {
+  transform: translateX(3px);
+}
+.hand-next:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 3px;
+}
+.hand-next svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (max-width: 640px) {
+  .hand-step {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hand-pips span,
+  .hand-next {
+    transition: none;
   }
 }

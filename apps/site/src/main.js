@@ -689,6 +689,9 @@ if (!still) for (const row of document.querySelectorAll('.phones')) phoneRow(row
  * Picking another swaps them; the close button or Escape fans the hand out again. On a phone
  * nothing needs a tap: whichever phone is in the middle of the strip is the picked one, its
  * words under the strip and its dot lit, and tapping a phone or a dot brings it to the middle.
+ * On a computer the words end with where the phone is in the five (the ones already read
+ * tinted) and Next, so the hand reads as something to go through in order (the owner,
+ * 2026-11-02); the arrow keys step through too.
  */
 for (const rail of document.querySelectorAll('.phones-rail')) {
   const row = rail.querySelector('.phones');
@@ -697,6 +700,10 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
   const screens = phones.map((p) => p.querySelector('.hand-clip'));
   const cards = [...rail.querySelectorAll('.hand-card')];
   const dots = [...rail.querySelectorAll('.hand-dots button')];
+  const pips = [...rail.querySelectorAll('.hand-pips span')];
+  const next = rail.querySelector('.hand-next');
+  const nextLabel = rail.querySelector('.hand-next-label');
+  const seen = new Set();
   const swipe = window.matchMedia('(max-width: 640px)');
   let at = -1;
   let onScreen = true;
@@ -720,6 +727,19 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
     phones.forEach((p, k) => p.setAttribute('aria-expanded', String(k === i)));
     cards.forEach((c, k) => c.classList.toggle('is-on', k === i));
     dots.forEach((d, k) => d.setAttribute('aria-current', String(k === i)));
+    if (i >= 0) seen.add(i);
+    pips.forEach((p, k) => {
+      p.classList.toggle('is-on', k === i);
+      p.classList.toggle('is-seen', seen.has(k));
+    });
+    if (next && i >= 0) {
+      const end = i === phones.length - 1;
+      nextLabel.textContent = end ? 'Start over' : 'Next';
+      next.setAttribute(
+        'aria-label',
+        `${end ? 'Start over' : 'Next'}: ${phones[end ? 0 : i + 1].getAttribute('aria-label')}`,
+      );
+    }
     play();
   };
   if ('IntersectionObserver' in window) {
@@ -787,8 +807,14 @@ for (const rail of document.querySelectorAll('.phones-rail')) {
   );
   dots.forEach((d, i) => d.addEventListener('click', () => centre(i)));
   rail.querySelector('.hand-close')?.addEventListener('click', close);
+  next?.addEventListener('click', () => pick((at + 1) % phones.length));
   rail.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && at >= 0 && !swipe.matches) close();
+    if (at < 0 || swipe.matches) return;
+    if (e.key === 'Escape') close();
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (!step || e.target.closest('.phones')) return;
+    e.preventDefault();
+    pick((at + step + phones.length) % phones.length);
   });
   swipe.addEventListener('change', settle);
   if (swipe.matches) settle();
@@ -978,7 +1004,9 @@ if (!still) {
       const top = r.top + y;
       const to = Math.min(max, Math.max(0, at === 'top' ? top : top + r.height / 2 - vh / 2));
       const d = Math.abs(to - y);
-      if (d > 2 && d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
+      // Already resting on a part: stay, rather than be pulled on to the next one.
+      if (d <= 2) return;
+      if (d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
     }
     if (best !== null) glide(best);
   };
@@ -1002,3 +1030,46 @@ if (!still) {
     );
   }
 }
+
+// ---------- The header ----------
+
+/*
+ * The header over the hero's photo at the top, as it always was; from the first scroll a
+ * compact bar in the portal's glass that stays put (the owner, 2026-11-02: "shrink a taller
+ * hero header into a compact bar once scrolling starts instead of hiding on scroll"). Smoked
+ * glass over the dusk, from the hero's top through the band and half way down its fade into the
+ * page (the dusk under the laptop belongs to neither: the owner saw it turn white there),
+ * frosted white over the light page.
+ */
+function siteHeader(head) {
+  const hero = document.querySelector('.hero');
+  const band = document.querySelector('.fall-band');
+  const fade = document.querySelector('.fall-edge-bottom');
+  // The compact bar's middle, where the part under it is read.
+  const PROBE = 30;
+  let queued = false;
+  const frame = () => {
+    queued = false;
+    head.classList.toggle('is-compact', window.scrollY > 8);
+    const top = (hero ?? band)?.getBoundingClientRect().top ?? 0;
+    const edge = fade?.getBoundingClientRect();
+    const foot = edge
+      ? edge.top + edge.height / 2
+      : ((band ?? hero)?.getBoundingClientRect().bottom ?? 0);
+    const tone = top <= PROBE && foot > PROBE ? 'dark' : 'light';
+    if (head.dataset.tone !== tone) head.dataset.tone = tone;
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(frame);
+    },
+    { passive: true },
+  );
+  frame();
+}
+
+const siteHead = document.querySelector('.site-nav');
+if (siteHead) siteHeader(siteHead);

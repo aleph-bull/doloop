@@ -1296,3 +1296,9 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   phones with autoplay blocked (an iPhone in Low Power Mode plays nothing by itself).
   `.rail` is border-box: a padded
   full-width box without it runs past the screen's edge and stops being centred.
+- **2026-11-02**: a day of redesigns was set aside ("the pushed site is better than the rebuilt
+  one"; kept unpushed on branch `site-overhaul`). Only two things were added to the pushed
+  page: one fixed header, compact glass from the first scroll and without the nav links, and
+  a blur and fade at the foot of the hand of phones on computers. Then, asked for: the phones
+  higher, and Next with a pip per phone under a picked phone's words. Don't bring back the
+  rest unasked.

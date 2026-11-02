@@ -3058,3 +3058,11 @@ Owner: "disable screen darkening for desktop entirely". The 2026-10-21 rule that
 
 - **A computer never darkens.** `restingDim` in Focus.tsx is 0 unless the focus screen is on a phone, so the resting layer (`FocusWake`) still takes the first click, but never shades the screen.
 - **No slider for it.** "Dim the screen while recording" and the "Tap the screen to brighten it." tip show only in the phone preset. The computer preset's stored `dim` is kept, unused, so no migration and the API is unchanged.
+
+## The homepage: the pushed page stays, with a header and a softer hand, 2026-11-02 (owner request)
+
+A day of work on the homepage (a full redesign, then the original restored with many of the owner's own picks on top) was set aside: "i think the pushed site is better than the rebuilt one. add the phone blur and nav bar those are the only two genuine improvements we made today". That work is kept, unpushed, on the branch `site-overhaul` (90487cb) in case any of it is wanted later.
+
+- **The header:** the hero's nav is the one header, fixed: over the photo at the top as before, a compact glass bar from the first scroll that stays, smoked over the hero and the dusk band, frosted white over the light page. Its three links (Timelapse, On your phone, Planner) are gone; the owner called them useless.
+- **The phones' foot:** on a computer the phones held low and their shadows sink into the page through a soft blur and fade instead of being cut on a line by the rail's edge.
+- **Then:** "nav bar incorrectly turns white here" (the dusk under the laptop): the bar stays smoked from the hero's top through the band and half way down its fade. "phones not visible bump them up": the phones sit higher on a computer, so a picked phone fits under the header. "make it more obvious that there is a progression and the user is supposed to read through the different phone": a picked phone's words end with a pip for each phone (the ones read tinted) and Next, Start over on the last; the arrow keys step too.

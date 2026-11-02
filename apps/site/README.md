@@ -11,6 +11,25 @@ pnpm build      # static output in dist/
 
 ## Page
 
+- **2026-11-02**: a day of redesigns on this page was set aside (the owner: "the pushed site is
+  better than the rebuilt one"; that work is on the unpushed branch `site-overhaul`, commit
+  90487cb). Only two things from it were kept, at the owner's word:
+  - **The header** (`.site-nav`, now outside `<main>` and fixed): over the hero's photo at the
+    top as before, and from the first scroll a compact 60px bar in the portal's glass that
+    stays (`siteHeader` in `main.js`), smoked over the hero and the dusk band, frosted white
+    with the accent buttons over the light page, smoked from the hero's top through the band and
+    half way down its fade (the dusk under the laptop counts as dark: "nav bar incorrectly turns
+    white here"). Its Timelapse, On your phone and Planner links are gone ("these are useless").
+  - **The hand's foot** (`.phones-rail::after`, computers only): the phones' shadows and the
+    cards held low sink into the page through a soft blur and fade instead of stopping on a
+    line, with more room under the phones; the fade's colour is the page's there (#e5dcee).
+  - Added after, at the owner's word: **the phones higher** on a computer ("phones not visible
+    bump them up": less room round the heading and over the phones, so a picked phone fits under
+    the header), the settle staying on a part it already rests on, and **the phones as a
+    sequence** ("make it more obvious that there is a progression"): under a picked phone's
+    words, a pip for each phone (this one long, the ones read tinted) and Next (Start over on the
+    last), the arrow keys stepping too (`.hand-step`; phones keep their strip's dots).
+
 - `index.html` and `src/styles.css`: the app's default photograph (Cotton Candy, frostroomhead
   on Pexels) runs edge to edge behind the hero and fades at the bottom into the dusk band's
   own colours, which carry on under the laptop down to the timelapses (`.hero-stage::before`,
@@ -27,7 +46,7 @@ pnpm build      # static output in dist/
   out of sight below; scrolling brings the laptop up and the phone just after it, and moves the
   headline up into its place (`heroScene` in `main.js`). Each part eases in and out over its
   own stretch, and the whole scene trails the scroll a beat, so a wheel's steps glide (the
-  owner, 2026-11-01: "its janky"). The nav sits in the stage and holds with it. Phones keep the
+  owner, 2026-11-01: "its janky"). The nav is outside the stage now (2026-11-02, below). Phones keep the
   hero still. Below the hero the page is ruled (hairlines down the sides of
   the content and across between sections, like aside.com). The words are the owner's own
   (2026-10-30).
