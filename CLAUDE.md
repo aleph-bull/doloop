@@ -1303,8 +1303,11 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   higher, and Next with a pip per phone under a picked phone's words. Don't bring back the
   rest unasked.
 - **2026-11-02 evening, pushed (the owner: "page looks great push it")**: a second overhaul,
-  built from the owner's brief and many rounds of their notes; DECISIONS.md "one sky through a
-  study day" has each step and apps/site/README.md the mechanics. What to keep: **one fixed
+  built from the owner's brief and many rounds of their notes. **Read
+  [apps/site/DESIGN.md](apps/site/DESIGN.md) before changing the homepage's look or motion**:
+  every deliberate choice with the owner's reason, the sky's colours, the performance rules and
+  what was tried and turned down. DECISIONS.md "one sky through a study day" has each step and
+  apps/site/README.md the mechanics. What to keep: **one fixed
   sky** behind the page (`.sky`), the Cotton Candy photo for the hero only ("the rest cannot"
   have it) and the same gradient-and-horizon-light recipe in each other part's colours, faded
   with the scroll (`skyAndHeader`) through a sunrise/lilac/blue hour between dark and light;

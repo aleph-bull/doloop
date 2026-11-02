@@ -11,6 +11,9 @@ pnpm build      # static output in dist/
 
 ## Page
 
+The design decisions behind the page as it is now, with the owner's reasons and what was turned
+down, are in [DESIGN.md](DESIGN.md). Read it before changing how the page looks or moves.
+
 - **2026-11-02 evening, pushed: one sky through a study day.** The
   owner's overhaul brief, built around everything they had chosen. The page is one continuous
   sky: the hero's photo fades into night (`.record`, the timelapses), sunrise into paper
