@@ -587,7 +587,7 @@ export function TimelapseSettings({
       {device === 'phone' && (
         <OrientationChoice value={settings.timelapsePhone.orientation} onChange={onChange} />
       )}
-      <DimField value={value.dim} onChange={(dim) => set({ dim })} />
+      {device === 'phone' && <DimField value={value.dim} onChange={(dim) => set({ dim })} />}
       <TimelapseTips device={device} linkToLayout={linkToLayout} />
       {linkToLayout && <QuickLooks settings={settings} device={device} onChange={onChange} />}
       <LengthFields
@@ -658,7 +658,7 @@ function TimelapseTips({
       </button>
       <Reveal open={open}>
         <ul className="tl-tips-list">
-          <li>Tap the screen to brighten it.</li>
+          {device === 'phone' && <li>Tap the screen to brighten it.</li>}
           <li>
             {device === 'phone' ? 'Live clip' : 'Live clip (L)'} films at normal speed, up to{' '}
             {LIVE_CLIP_MAX_SECONDS} s.

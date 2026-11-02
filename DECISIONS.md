@@ -3051,3 +3051,10 @@ Owner: "post to social media (external) results in shut down of all of my browse
 
 - **The tab first, then the download**, still in one click. Opening first, a tab one second later, or a link to click after all survived; only download-then-tab crashed. The swap is the smallest change and keeps the one click.
 - Phones are unchanged (the share sheet, or the app link after the download).
+
+## A computer's focus screen never dims, 2026-11-02 (owner request)
+
+Owner: "disable screen darkening for desktop entirely". The 2026-10-21 rule that the screen dims while it records now holds on a phone only.
+
+- **A computer never darkens.** `restingDim` in Focus.tsx is 0 unless the focus screen is on a phone, so the resting layer (`FocusWake`) still takes the first click, but never shades the screen.
+- **No slider for it.** "Dim the screen while recording" and the "Tap the screen to brighten it." tip show only in the phone preset. The computer preset's stored `dim` is kept, unused, so no migration and the API is unchanged.

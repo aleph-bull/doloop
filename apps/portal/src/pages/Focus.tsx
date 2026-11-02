@@ -692,8 +692,8 @@ export function Focus() {
   useEffect(() => {
     if (recording) wake();
   }, [recording, inFocus, wake]);
-  /** How dark the resting screen goes: the preset's dim while a timelapse is recording. */
-  const restingDim = cameraOn && recorder.live ? (preset?.dim ?? 0) : 0;
+  /** How dark the resting screen goes: the preset's dim while a phone records. A computer never dims. */
+  const restingDim = phone && cameraOn && recorder.live ? (preset?.dim ?? 0) : 0;
 
   // Unsaved stills live only in this tab: ask before it closes.
   useEffect(() => {
