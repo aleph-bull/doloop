@@ -821,7 +821,9 @@ export function StartSessionDialog({
                   trigger={
                     <>
                       <Timer size={15} aria-hidden />
-                      {style === 'pomodoro' ? 'Pomodoro' : 'Continuous'}
+                      <span className="start-pill-label">
+                        {style === 'pomodoro' ? 'Pomodoro' : 'Continuous'}
+                      </span>
                       <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
                     </>
                   }
@@ -871,7 +873,7 @@ export function StartSessionDialog({
                   trigger={
                     <>
                       <Hourglass size={15} aria-hidden />
-                      {lengthLabel}
+                      <span className="start-pill-label">{lengthLabel}</span>
                       <ChevronDown size={14} aria-hidden className="start-pill-chevron" />
                     </>
                   }
@@ -930,7 +932,9 @@ export function StartSessionDialog({
                   onClick={() => setShowTimer(!showTimer)}
                 >
                   {showTimer ? <Eye size={15} aria-hidden /> : <EyeOff size={15} aria-hidden />}
-                  {showTimer ? 'Timer shown' : 'Timer hidden'}
+                  <span className="start-pill-label">
+                    {showTimer ? 'Timer shown' : 'Timer hidden'}
+                  </span>
                 </button>
               </div>
 

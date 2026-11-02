@@ -2337,6 +2337,21 @@ button.start-subject:hover {
 .start-pill.is-off {
   color: var(--fg-muted);
 }
+/* One line on a computer: the labels give up a little width before the row would wrap. */
+@media (min-width: 768px) {
+  .start-pills {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .start-pills > .start-pill {
+    min-width: 0;
+  }
+  .start-pill-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
 /* What pops out: in the top layer over the card, placed by Popout. */
 .glass.start-pop {
   position: fixed;
