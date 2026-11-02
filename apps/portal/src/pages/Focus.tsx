@@ -125,6 +125,8 @@ function linkedPost(list: CoveredSession[]) {
 const STILL_SECONDS = 4;
 /** How long after the timer appears the audio prompt shows, so it never lands on a blank screen. */
 const PROMPT_DELAY_MS = 900;
+/** How long the clock is held for a question or a camera starting before it pauses. */
+const HOLD_AFTER_MS = 400;
 
 /** The controls' sections that fold away from their heading. */
 type SheetPart = 'timelapse' | 'visualizer';
@@ -708,9 +710,20 @@ export function Focus() {
   /**
    * While a question or the browser's picker is up, the clock waits: choosing a window to
    * share, or whether to film, is not studying. Released the moment it closes, however it went.
+   * A recording holds it until it is set: the camera and the screen until they are on (or
+   * refused), so the allow prompt and the screen picker count as the question too.
    */
+  const recordingSetUp =
+    (cameraOn && (recorder.status === 'off' || recorder.status === 'starting')) ||
+    screenAskOpen ||
+    recorder.screenStatus === 'starting';
   const holdTimer =
-    askOpen || tlAskOpen || orientAskOpen || linkAskOpen || audio.state === 'requesting';
+    askOpen ||
+    tlAskOpen ||
+    orientAskOpen ||
+    linkAskOpen ||
+    recordingSetUp ||
+    audio.state === 'requesting';
   /** The "try again" line after a share that fell short. Closed with its x for this visit. */
   const [retryClosed, setRetryClosed] = useState(false);
   useEffect(() => {
@@ -1251,7 +1264,8 @@ function FocusSession({
   // The hold pauses only a running clock and resumes only what it paused: a pause the
   // user chose before the question came up is theirs to end. The resume waits for the
   // pause to land, since a picker can be dismissed before the server has answered; a
-  // resume on a clock that is not paused is a no-op there.
+  // resume on a clock that is not paused is a no-op there. It pauses only once the hold has
+  // lasted a moment, so a camera already allowed, on in a blink, leaves no pause behind.
   const held = useRef<Promise<unknown> | null>(null);
   const ctlRef = useRef(ctl);
   useEffect(() => {
@@ -1259,15 +1273,19 @@ function FocusSession({
   });
   useEffect(() => {
     if (holdTimer) {
-      if (ctl.canPause && !held.current) held.current = ctl.send({ type: 'pause' });
-    } else if (held.current) {
+      const id = window.setTimeout(() => {
+        const c = ctlRef.current;
+        if (c.canPause && !held.current) held.current = c.send({ type: 'pause' });
+      }, HOLD_AFTER_MS);
+      return () => window.clearTimeout(id);
+    }
+    if (held.current) {
       const pausing = held.current;
       held.current = null;
       void pausing.then(() => {
         if (ctlRef.current.timer.phase !== 'ended') void ctlRef.current.send({ type: 'resume' });
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [holdTimer]);
 
   // Space pauses and resumes, H hides and shows the clock. Not while typing, with a

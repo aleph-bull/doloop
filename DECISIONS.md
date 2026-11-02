@@ -3038,3 +3038,9 @@ The owner asked to "make the opening crates more satisfying similar to csgo's ro
 - **One freeze, both streaks.** A Sunday the daily streak already froze gives the week its Monday for nothing more. A freeze the weekly streak spends is logged like the daily one's (`freeze-used`), so the dashboard says a freeze covered the streak, and `rewindStreak` hands it back the same way.
 - **Borrowed days are the week's own.** The Monday that finished week 6 doesn't count again: the next week runs Tuesday to Sunday (`weeks.borrowed`). It still counts the moment it reaches its days, so with one day a week set, Tuesday alone makes it week 7; with two or more, Monday and Tuesday leave it at 6, as in the owner's example.
 - **Stored** in `users.streak.weeks`: `extended` (days freezes added to the week still being judged) and `borrowed`, both left out when 0. No migration.
+
+## The clock waits while a recording is set up, 2026-11-02 (owner request)
+
+Owner: "when the screen is asking to record session pause the timer until its set". The focus screen already held the clock for "Record a timelapse?", the phone's horizontal or vertical question and the camera-link question. Now it also holds for "Record your screen this time?", the browser's screen picker after it, and the camera until it is on (the allow prompt included), so the clock picks up again once the recording is running or was refused.
+
+- **Only a real wait pauses.** The hold pauses the clock once it has lasted 400 ms (`HOLD_AFTER_MS`), so a camera that is already allowed and opens in a blink leaves no pause in the session. As before, it pauses only a running clock and resumes only what it paused.
