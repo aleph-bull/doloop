@@ -11,6 +11,33 @@ pnpm build      # static output in dist/
 
 ## Page
 
+- **2026-11-02 evening, pushed: one sky through a study day.** The
+  owner's overhaul brief, built around everything they had chosen. The page is one continuous
+  sky: the hero's photo fades into night (`.record`, the timelapses), sunrise into paper
+  (`.dawn`, the phones, with the clouds), daylight (`.day`, the app), dusk into an indigo night
+  (`.evening`, the looks) and a morning sky (`.morning`, the closing, mist along its foot, the
+  footer on the mist). Each part's sky is a gradient sized in `vh` at its top (`--dawn`,
+  `--dusk`), so it doesn't stretch with the part's content; `--grain` (an SVG noise tile) lies
+  over it. The header reads its tone from `data-tone` on each part and the `.tone-mark`s where a
+  part's sky turns (`siteHeader`). The hero shows the laptop (CSS, sized in `cqw` from its own
+  width) and the phone from the start; `heroScene` now only tilts the laptop's screen up
+  (`--tilt`) and lifts the phone (`--lift`) with the scroll, on every size. The app's tabs are
+  a segmented switch (`.app-thumb`, placed by `appTabs`). On a phone the timelapses are two
+  rows sliding past each other (`--slide`, `fallScene` in rows mode). **The background is
+  one fixed sky** (`.sky`, rebuilt after the owner's "rethink the entire background ... the
+  background style should be consistent but not necessarily the same colour"): the Cotton
+  Candy photo as it is behind the hero only ("hero can have the cloud image but the rest
+  cannot"), and for every other part the same recipe in its own colours: a vertical gradient
+  (`--top`, `--mid`, `--foot`) under a wide, slow-fading light on its horizon (`--glow`,
+  `--glow-y`), on `.sky-layer[data-sky=…]`, with the grain over all of it. The parts themselves have no background; each names its light (`data-sky`) and
+  `skyAndHeader` in `main.js` fades the sky to it as the part's top comes up the window, through
+  a third light between a dark part and a light one (`BETWEEN`: sunrise, lilac, blue hour) so
+  the fade never goes grey. The header's tone and the page colour behind overscroll follow the
+  sky. **No pins** (owner, same evening): on a computer opened at the top the headline sits
+  alone in the middle (`hero-waiting`, `--shift`) and the first scroll reveals the devices right
+  under it (`heroWait`); `heroScene` only tilts the laptop and lifts the phone; the timelapse
+  band scrolls by and `fallScene` drives the clips from its `through`. The rest of
+  this list describes the page before it.
 - **2026-11-02**: a day of redesigns on this page was set aside (the owner: "the pushed site is
   better than the rebuilt one"; that work is on the unpushed branch `site-overhaul`, commit
   90487cb). Only two things from it were kept, at the owner's word:

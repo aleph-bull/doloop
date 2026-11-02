@@ -1302,3 +1302,17 @@ the server, which komogon.app doesn't have, so their rows now hide until it does
   a blur and fade at the foot of the hand of phones on computers. Then, asked for: the phones
   higher, and Next with a pip per phone under a picked phone's words. Don't bring back the
   rest unasked.
+- **2026-11-02 evening, pushed (the owner: "page looks great push it")**: a second overhaul,
+  built from the owner's brief and many rounds of their notes; DECISIONS.md "one sky through a
+  study day" has each step and apps/site/README.md the mechanics. What to keep: **one fixed
+  sky** behind the page (`.sky`), the Cotton Candy photo for the hero only ("the rest cannot"
+  have it) and the same gradient-and-horizon-light recipe in each other part's colours, faded
+  with the scroll (`skyAndHeader`) through a sunrise/lilac/blue hour between dark and light;
+  parts have no background of their own (owner: edges and bands look bad; no peach). **No
+  pins**: at the very top on a computer the headline sits centred with the devices hidden, and
+  scrolling glides it up while the laptop rises and its lid opens (`heroWait`); the timelapses
+  scroll by with their clips still drifting. A resting scroll between two parts always eases
+  onto the nearer. Phones sit above their words with a dark inside under each frame; the drum
+  ignores the scroll and bursts out once; its pills are the portal's dark glass panel. Keep
+  per-frame work low (positions measured on layout changes, not on scroll; loops that rest
+  when still): the owner noticed dropped frames.

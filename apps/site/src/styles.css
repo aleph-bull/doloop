@@ -1,8 +1,9 @@
 /*
- * The marketing page around the portal's own UI. The app's stylesheet (portal.css) loads
- * first and owns every component inside a stage or window; these rules own the page: a light
- * gradient, the Cotton Candy photograph feathered into it, and the copy. Site-only class names
- * carry a `site-`, `cta` or `stage` prefix so nothing collides with the app's.
+ * The Komodon homepage. One sky runs down the whole page, through a study day: the app's own
+ * evening photograph behind the hero, the night of the timelapses, sunrise into daylight for
+ * the phones and the app, evening again for the looks, and a clear morning to close. Each part
+ * begins in the colour the one before it ends in, so nothing sits on the page as a panel dropped
+ * into another colour. Satoshi sets the headings, Inter everything else.
  */
 @font-face {
   font-family: 'Satoshi';
@@ -10,38 +11,57 @@
   font-weight: 300 900;
   font-display: swap;
 }
+
+/* ---------- Tokens ---------- */
+
 :root {
-  --site-sans:
-    'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --site-brand-font: 'Satoshi', var(--site-sans);
-  --site-accent: #5b55eb;
-  --site-accent-strong: #4a44d6;
-  --site-ink: #1b1a2b;
-  --site-muted: rgb(27 26 43 / 0.7);
-  --site-subtle: rgb(27 26 43 / 0.5);
-  --site-line: rgb(27 26 43 / 0.08);
-  --site-page: #f7f3fa;
-  --site-radius: 28px;
-  --site-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
-  /* How far the laptop and phone hang below the hero, over the page. */
-  --hang: clamp(100px, 18vw, 220px);
-  /* From under the laptop to the dusk band. */
-  --band-gap: 22vh;
-  /* Each of the app's parts has a colour, for its tab and its card; white reads on all five
+  --sans: 'Inter', 'InterVariable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --display: 'Satoshi', var(--sans);
+
+  /* One accent, the app's own; matte, never glowing. */
+  --accent: #5b55eb;
+  --accent-deep: #4943d4;
+  --accent-text: #3d37c2;
+
+  /* Text on the light parts. */
+  --ink: #1a1622;
+  --ink-2: rgb(26 22 34 / 0.68);
+  --ink-3: rgb(26 22 34 / 0.5);
+  --line: rgb(26 22 34 / 0.09);
+
+  --gutter: clamp(20px, 5vw, 64px);
+  --wrap: 1200px;
+  --radius-card: 28px;
+  --radius-window: 18px;
+  --radius-clip: 12px;
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --rise-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pop-ease: cubic-bezier(0.2, 1.15, 0.3, 1);
+
+  /* Each of the app's parts has a colour, for the switch and its card; white reads on all five
      (4.5:1 or better). */
   --c-start: #6450dc;
   --c-plan: #3a74b8;
   --c-track: #bb511c;
   --c-xp: #2e6b50;
   --c-social: #b03a6e;
+
+  /* A fine grain laid over the sky, so the long gradients never band and the dark parts read
+     like a photograph rather than a fill. Drawn once by the browser and tiled. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='table' tableValues='0 0.075'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
+
+/* ---------- Page ---------- */
+
 html {
-  font-family: var(--site-sans);
-  color: var(--site-ink);
-  background: var(--site-page);
+  font-family: var(--sans);
+  color: var(--ink);
+  background: #3a2c42;
   scroll-behavior: smooth;
   /* A phone's own tap highlight comes out as an oval on a pill; the buttons press in instead. */
   -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 body {
   margin: 0;
@@ -49,71 +69,213 @@ body {
   font-size: 16px;
   line-height: 1.55;
   letter-spacing: -0.006em;
-  color: var(--site-ink);
-  /* The page is a quiet gradient rather than a flat sheet. */
-  background: linear-gradient(180deg, #faf8fc 0%, #ece5f3 40%, #ddd2e8 100%);
+  color: var(--ink);
+  font-feature-settings: 'cv11';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 /* Sideways overflow is clipped here, not on html or body: a hidden overflow there makes body
-   a scroll box, and the pinned scenes below would stop sticking. */
+   a scroll box, and the pinned timelapses would stop sticking. */
 main {
   overflow-x: clip;
 }
-.hero h1,
-.feature-head h2,
-.closing h2 {
-  margin: 0;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+img,
+video {
+  max-width: 100%;
 }
-.container {
-  width: min(1120px, 100% - 40px);
+.wrap {
+  box-sizing: border-box;
+  width: min(var(--wrap), 100% - 2 * var(--gutter));
   margin-inline: auto;
 }
-.site-muted {
-  color: var(--site-subtle);
-  font-size: 13px;
-}
 
-/* ---------- Photograph stages ---------- */
+/* ---------- The sky ---------- */
 
-/* The app's background photo, feathered into the page on every side. */
-.stage-photo {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: url('/backgrounds/cotton-candy.webp') center 40% / cover no-repeat;
-  mask-image: linear-gradient(180deg, #000 0%, #000 62%, transparent 100%);
+/*
+ * One sky behind the whole page that never scrolls. The hero has the app's own photograph;
+ * every other part has the same light in its own colours (the owner, 2026-11-02: "hero can have
+ * the cloud image but the rest cannot", after "the background style should be consistent but
+ * not necessarily the same colour"): a smooth fall of colour down the window with a wide, soft
+ * light on its horizon (below the dark parts, above the light ones) that fades out so slowly it
+ * has no edge. Each part names its light (data-sky), and main.js fades the sky from one to the
+ * next as the page moves between them, so no part has an edge of its own.
+ */
+.sky {
+  position: fixed;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 100vh;
+  height: 100lvh;
   pointer-events: none;
 }
-/* The same wash the app paints over a photo in dark mode, so the glass reads. */
-.stage-photo::after {
+.sky-layer {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      150% 85% at 50% var(--glow-y, 108%),
+      var(--glow) 0%,
+      color-mix(in srgb, var(--glow) 62%, transparent) 30%,
+      color-mix(in srgb, var(--glow) 28%, transparent) 52%,
+      color-mix(in srgb, var(--glow) 8%, transparent) 70%,
+      transparent 85%
+    ),
+    linear-gradient(180deg, var(--top) 0%, var(--mid) 55%, var(--foot) 100%);
+  opacity: 0;
+  visibility: hidden;
+}
+/* Only the lights showing get a layer of their own, so a fade costs nothing to draw. */
+.sky-layer.is-on {
+  visibility: visible;
+  will-change: opacity;
+}
+/* Before the script (or without it) the hero's sky shows. */
+html:not(.has-sky) .sky-layer[data-sky='dusk'] {
+  opacity: 1;
+  visibility: visible;
+}
+/* The hero: the photo under the wash the app lays over it in dark mode, heavier at the top for
+   the header. */
+.sky-layer[data-sky='dusk'] {
+  background:
+    linear-gradient(
+      180deg,
+      rgb(14 9 22 / 0.5) 0%,
+      rgb(14 9 22 / 0.24) 30%,
+      rgb(14 9 22 / 0.3) 70%,
+      rgb(14 9 22 / 0.46) 100%
+    ),
+    url('/backgrounds/cotton-candy.webp') center / cover no-repeat;
+}
+/* The timelapses: night, a plum light low on the horizon. */
+.sky-layer[data-sky='night'] {
+  --top: #150e1b;
+  --mid: #201627;
+  --foot: #2b1e34;
+  --glow: rgb(104 66 118 / 0.6);
+}
+/* The phones: a soft lavender morning, the light from above. */
+.sky-layer[data-sky='dawn'] {
+  --top: #f6f4fa;
+  --mid: #eeeaf5;
+  --foot: #e4deef;
+  --glow: rgb(255 251 248 / 0.95);
+  --glow-y: -8%;
+}
+/* The app: cool daylight, a touch bluer than the morning. */
+.sky-layer[data-sky='day'] {
+  --top: #f5f6fa;
+  --mid: #eceff5;
+  --foot: #e2e7f0;
+  --glow: rgb(255 255 255 / 0.95);
+  --glow-y: -8%;
+}
+/* The looks: an indigo evening, violet on the horizon. */
+.sky-layer[data-sky='evening'] {
+  --top: #110d2c;
+  --mid: #1a1442;
+  --foot: #261d5a;
+  --glow: rgb(92 70 178 / 0.55);
+}
+/* The closing and the footer: a clear morning blue, white on the horizon. */
+.sky-layer[data-sky='morning'] {
+  --top: #a2baef;
+  --mid: #bfd0f6;
+  --foot: #dee7fb;
+  --glow: rgb(255 255 255 / 0.85);
+}
+/* Passed through between a dark part and a light one (main.js), so the fade is a sunrise or a
+   dusk rather than a grey mix of the two. */
+.sky-layer[data-sky='sunrise'] {
+  --top: #2c2140;
+  --mid: #5b4a7d;
+  --foot: #9a8bbd;
+  --glow: rgb(198 186 232 / 0.6);
+}
+.sky-layer[data-sky='lilac'] {
+  --top: #d7cce8;
+  --mid: #a493c8;
+  --foot: #7362a3;
+  --glow: rgb(198 180 232 / 0.6);
+}
+.sky-layer[data-sky='bluehour'] {
+  --top: #1b2156;
+  --mid: #2f4494;
+  --foot: #587ac9;
+  --glow: rgb(150 178 238 / 0.6);
+}
+/* A fine grain over all of it, so the long gradients never band. */
+.sky::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgb(6 7 10 / 0.32) 0%, rgb(6 7 10 / 0.46) 100%);
+  background: var(--grain);
 }
 
-/* ---------- Site nav ---------- */
+/* ---------- Type ---------- */
 
 /*
- * The header: over the hero's photo at the top of the page, as it always was; from the first
- * scroll a compact bar in the portal's glass that stays put (the owner, 2026-11-02: "shrink a
- * taller hero header into a compact bar once scrolling starts instead of hiding on scroll"),
- * smoked over the hero and the dusk band, frosted white over the light page. main.js sets
- * is-compact and the tone of the part under it.
+ * Three heading sizes and two text sizes, nothing between: the hero's line, each part's
+ * heading, and the smaller headings inside a part (the phones' and the app's words).
+ */
+.display,
+.title,
+.hand-card h3,
+.app-panel h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  text-wrap: balance;
+}
+.display {
+  font-size: clamp(42px, 6.3vw, 94px);
+  line-height: 0.98;
+  letter-spacing: -0.042em;
+}
+.title {
+  font-size: clamp(36px, 4.5vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.036em;
+}
+.lede {
+  margin: 0;
+  max-width: 54ch;
+  font-size: clamp(16.5px, 1.3vw, 19px);
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+.lede-sm {
+  margin: 0;
+  max-width: 48ch;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+.site-muted {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+/* ---------- Header ---------- */
+
+/*
+ * Clear over the hero's photo at the top of the page; from the first scroll a compact bar in
+ * the portal's glass that stays put (the owner, 2026-11-02), smoked over the dark parts of the
+ * sky and frosted white over the light ones. main.js sets is-compact and the tone.
  */
 .site-nav {
   position: fixed;
   inset: 0 0 auto;
   z-index: 60;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 28px;
-  height: 56px;
-  padding: 20px max(20px, calc((100% - 1120px) / 2)) 0;
+  height: 76px;
+  padding: 20px max(var(--gutter), calc((100% - var(--wrap)) / 2)) 0;
   color: #fff;
   transition:
     height 380ms var(--rise-ease),
@@ -125,11 +287,11 @@ main {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background: rgb(22 24 36 / 0.5);
-  backdrop-filter: blur(17px) saturate(1.2);
+  background: rgb(24 18 32 / 0.5);
+  backdrop-filter: blur(18px) saturate(1.25);
   box-shadow:
-    inset 0 -1px 0 rgb(255 255 255 / 0.1),
-    0 12px 32px -20px rgb(0 0 0 / 0.5);
+    inset 0 -1px 0 rgb(255 255 255 / 0.08),
+    0 12px 32px -22px rgb(0 0 0 / 0.55);
   opacity: 0;
   transition:
     opacity 300ms,
@@ -159,36 +321,23 @@ main {
   font-size: 17px;
 }
 .site-nav.is-compact[data-tone='light'] {
-  color: var(--site-ink);
+  color: var(--ink);
 }
 .site-nav.is-compact[data-tone='light']::before {
-  background: rgb(255 255 255 / 0.55);
+  background: rgb(255 255 255 / 0.62);
   box-shadow:
-    inset 0 -1px 0 rgb(255 255 255 / 0.6),
-    0 12px 32px -20px rgb(15 18 32 / 0.35);
+    inset 0 -1px 0 rgb(26 22 34 / 0.06),
+    0 12px 32px -22px rgb(15 18 32 / 0.35);
 }
 /* On the white glass the buttons keep the accent, never a dark label. */
 .site-nav.is-compact[data-tone='light'] .cta-discord {
-  color: #3c35b5;
-  background: rgb(255 255 255 / 0.5);
-  border-color: rgb(27 26 43 / 0.12);
+  color: var(--accent-text);
+  background: rgb(255 255 255 / 0.6);
+  box-shadow: inset 0 0 0 1px rgb(26 22 34 / 0.1);
 }
-.site-nav.is-compact[data-tone='light'] .cta-dark {
-  background: var(--site-accent);
+.site-nav.is-compact[data-tone='light'] .cta-light {
+  background: var(--accent);
   color: #fff;
-}
-@media (max-width: 640px) {
-  .site-nav.is-compact {
-    height: 58px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .site-nav,
-  .site-nav::before,
-  .site-nav .site-brand-mark,
-  .site-nav .site-wordmark {
-    transition: none;
-  }
 }
 .site-brand {
   display: inline-flex;
@@ -201,14 +350,14 @@ main {
   border-radius: 7px;
 }
 .site-wordmark {
-  font-family: var(--site-brand-font);
+  font-family: var(--display);
   font-weight: 600;
   font-size: 19px;
   letter-spacing: -0.02em;
   font-feature-settings: 'ss01', 'ss02', 'ss03';
 }
 .site-wordmark-sm {
-  font-size: 15px;
+  font-size: 16px;
 }
 .site-nav-actions {
   display: flex;
@@ -216,26 +365,32 @@ main {
   margin-left: auto;
 }
 .cta-discord {
-  box-sizing: border-box;
   gap: 8px;
 }
 
 /* ---------- Buttons ---------- */
 
 .cta {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  height: 50px;
   padding: 0 24px;
+  border: 0;
   border-radius: 999px;
+  font: inherit;
   font-size: 15px;
   font-weight: 500;
+  letter-spacing: -0.005em;
   white-space: nowrap;
   text-decoration: none;
+  cursor: pointer;
   transition:
-    transform 200ms var(--site-ease),
-    background 200ms;
+    transform 220ms var(--ease),
+    background-color 220ms,
+    color 220ms,
+    box-shadow 220ms;
 }
 .cta:hover {
   text-decoration: none;
@@ -243,42 +398,57 @@ main {
 .cta:active {
   transform: scale(0.97);
 }
+.cta:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
 .cta-sm {
   height: 38px;
   padding: 0 16px;
   font-size: 14px;
 }
+.cta-lg {
+  height: 56px;
+  padding: 0 32px;
+  font-size: 16px;
+}
+/* Matte: a flat fill with a hairline of light along its top and a plain shadow under it. */
 .cta-primary {
-  background: var(--site-accent);
+  background: var(--accent);
   color: #fff;
-  box-shadow: 0 10px 30px -10px rgb(91 85 235 / 0.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 10px 24px -14px rgb(20 14 60 / 0.6);
 }
 .cta-primary:hover {
-  background: var(--site-accent-strong);
+  background: var(--accent-deep);
 }
-.cta-dark {
+.cta-primary:focus-visible {
+  outline-color: var(--accent);
+}
+.cta-light {
   background: #fff;
-  color: #1b1a2b;
+  color: var(--accent-text);
 }
-.cta-dark:hover {
-  background: #f2f0f6;
+.cta-light:hover {
+  background: #f1eff8;
 }
-.cta-ghost {
-  background: rgb(255 255 255 / 0.18);
-  border: 1px solid rgb(255 255 255 / 0.45);
+.cta-glass {
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.34);
   color: #fff;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(14px);
 }
-.cta-ghost:hover {
-  background: rgb(255 255 255 / 0.28);
+.cta-glass:hover {
+  background: rgb(255 255 255 / 0.2);
 }
 /* Greyed out until it ships: no hover, no press. */
 .cta-soon {
   gap: 10px;
   padding-right: 8px;
-  background: rgb(27 26 43 / 0.05);
-  border: 1px solid rgb(27 26 43 / 0.1);
-  color: var(--site-subtle);
+  background: rgb(255 255 255 / 0.4);
+  box-shadow: inset 0 0 0 1px rgb(26 22 34 / 0.1);
+  color: var(--ink-3);
   cursor: not-allowed;
   user-select: none;
 }
@@ -288,112 +458,165 @@ main {
 .soon-tag {
   padding: 5px 11px;
   border-radius: 999px;
-  background: rgb(27 26 43 / 0.07);
+  background: rgb(26 22 34 / 0.07);
   font-size: 12.5px;
   font-weight: 500;
-  color: var(--site-muted);
+  color: var(--ink-2);
 }
 .cta-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
-  margin-top: 6px;
 }
 
 /* ---------- Hero ---------- */
 
 .hero {
   position: relative;
+  z-index: 1;
+  padding-top: calc(76px + clamp(44px, 8vh, 92px));
   color: #fff;
 }
-/* flow-root keeps the devices' hang inside the stage, so the hero is as tall as the stage (and
-   on a computer the room for its scene) whatever the window's height. */
-.hero-stage {
+.hero-copy {
   position: relative;
-  display: flow-root;
-  box-sizing: border-box;
-  padding: 150px 20px 0;
-  min-height: 100vh;
-}
-/* Under the photo's fade and on down to the timelapses, the dusk band's own colours, ending in
-   its ink, so the photo runs straight into the band with no pale page between (the owner: the
-   blend "is odd"). It belongs to the stage, so it holds with the hero's scene. */
-.hero-stage::before {
-  content: '';
-  position: absolute;
-  z-index: 0;
-  left: 0;
-  right: 0;
-  top: 50%;
-  bottom: calc(-1 * (var(--hang) + var(--band-gap)));
-  background: linear-gradient(180deg, #6d5872 0%, #5e4a65 45%, #43324a 100%);
-  pointer-events: none;
-}
-/* The hero's photo is wider than the content and fades out well before the page edge. */
-.hero-photo {
-  inset: -60px 0 0;
-  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
-}
-.hero-text {
-  position: relative;
-  z-index: 1;
-  width: min(900px, 100%);
+  width: min(980px, 100% - 2 * var(--gutter));
   margin: 0 auto;
   display: grid;
   justify-items: center;
   text-align: center;
-  gap: 22px;
 }
-.hero h1 {
-  font-size: clamp(40px, 6.6vw, 84px);
-  text-shadow: 0 2px 30px rgb(40 25 60 / 0.25);
-  text-wrap: balance;
+.hero .display {
+  text-shadow: 0 2px 40px rgb(30 14 44 / 0.28);
 }
-.lede {
-  max-width: 56ch;
-  font-size: clamp(17px, 1.6vw, 19px);
-  line-height: 1.5;
-  color: rgb(255 255 255 / 0.9);
-  text-wrap: pretty;
-  margin: 0;
+.hero .lede {
+  margin-top: 24px;
+  color: rgb(255 255 255 / 0.86);
+}
+.hero .cta-row {
+  margin-top: 36px;
 }
 /* The recording dot after the headline, blinking like the app's own. */
 .rec-mark {
   display: inline-block;
-  width: 0.19em;
-  height: 0.19em;
-  margin-left: 0.2em;
+  width: 0.17em;
+  height: 0.17em;
+  margin-left: 0.16em;
   border-radius: 50%;
   background: #ef4444;
   vertical-align: 0.2em;
   animation: rec-blink 1.6s ease-in-out infinite;
 }
+@keyframes rec-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
 
-/* ---------- Devices ---------- */
+/* ---------- The laptop and the phone ---------- */
 
-.devices {
+/*
+ * The laptop sits a little right of centre with the phone standing in front of its left
+ * corner. The laptop's screen leans back on arrival and comes up to face you as the page
+ * scrolls (--tilt, main.js), and the phone rises a touch faster (--lift).
+ */
+.hero-devices {
   position: relative;
-  z-index: 2;
-  width: min(1120px, 100%);
-  margin: 64px auto 0;
-  perspective: 2200px;
-  perspective-origin: 50% 20%;
-  /* The devices hang below the photo's fade, over the page. */
-  margin-bottom: calc(-1 * var(--hang));
+  width: min(1120px, 100% - 2 * var(--gutter));
+  margin: clamp(52px, 8vh, 84px) auto 0;
+  padding-bottom: clamp(96px, 15vh, 168px);
+  perspective: 2400px;
+  perspective-origin: 50% 0%;
 }
-.devices .laptop {
-  margin-left: 12%;
-  transform-style: preserve-3d;
-  transform: rotateX(7deg) rotateY(-11deg) rotateZ(1deg);
-}
-.devices .phone {
-  position: absolute;
-  left: 0;
-  top: 15%;
-  width: clamp(130px, 21%, 236px);
-  transform: rotateY(14deg) rotateZ(-4deg);
+.laptop {
+  position: relative;
+  container-type: inline-size;
+  width: 82%;
+  margin-left: auto;
+  margin-right: 3.5%;
+  transform: rotateX(var(--tilt, 0deg));
   transform-origin: 50% 100%;
+}
+.laptop-lid {
+  position: relative;
+  padding: 1.45cqw 1.45cqw 2.05cqw;
+  border-radius: 2.5cqw 2.5cqw 0.8cqw 0.8cqw;
+  background: #0b0a10;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.16),
+    inset 0 0 0 0.3cqw #17151d,
+    0 60px 110px -50px rgb(6 2 14 / 0.75);
+}
+.laptop-cam {
+  position: absolute;
+  top: 0.52cqw;
+  left: 50%;
+  width: 0.46cqw;
+  height: 0.46cqw;
+  translate: -50% 0;
+  border-radius: 50%;
+  background: #1e1c27;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+.laptop-lid video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.55cqw;
+  object-fit: cover;
+  background: #1d1a25;
+}
+/* The base: brushed aluminium seen edge on, a shade of the evening on it. */
+.laptop-base {
+  position: relative;
+  height: 1.85cqw;
+  margin: 0 -7%;
+  border-radius: 0 0 2.4cqw 2.4cqw / 0 0 1.5cqw 1.5cqw;
+  background: linear-gradient(180deg, #f2eff6 0%, #dcd6e2 16%, #b9b2c3 52%, #857d90 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.85),
+    0 1.6cqw 2.6cqw -1.2cqw rgb(6 2 14 / 0.7);
+}
+.laptop-base::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 6.5%;
+  right: 6.5%;
+  height: 0.32cqw;
+  background: linear-gradient(180deg, rgb(20 14 28 / 0.35), transparent);
+}
+.laptop-notch {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 11%;
+  height: 0.5cqw;
+  translate: -50% 0;
+  border-radius: 0 0 0.6cqw 0.6cqw;
+  background: linear-gradient(180deg, #9a93a6, #c4bdcd);
+}
+/* Where it rests: a soft shadow on the dark under it. */
+.laptop::after {
+  content: '';
+  position: absolute;
+  left: -4%;
+  right: -4%;
+  bottom: -3.4cqw;
+  height: 4.4cqw;
+  background: radial-gradient(closest-side, rgb(8 4 14 / 0.62), transparent);
+  pointer-events: none;
+  z-index: -1;
+}
+.hero-phone {
+  position: absolute;
+  z-index: 2;
+  left: 1%;
+  top: 17%;
+  width: 21%;
+  translate: 0 var(--lift, 0px);
+  rotate: -3deg;
 }
 /*
  * A phone: the owner's iPhone (cut out of their mockup by scripts/cut-phone.mjs) over a
@@ -404,7 +627,21 @@ main {
   position: relative;
   display: block;
   aspect-ratio: 640 / 1276;
-  filter: drop-shadow(0 28px 34px rgb(20 10 40 / 0.32));
+}
+/* The phone's shadow, drawn once under the frame's rounded body: a filter on the whole phone
+   would be worked out again for every frame of the video playing on its screen. It is also the
+   phone's dark inside, so where the frame's soft inner rim and the screen don't meet exactly,
+   dark shows through rather than the page (the owner: "the phones have white edges"). */
+.device::before {
+  content: '';
+  position: absolute;
+  inset: 1.5% 3% 1%;
+  border-radius: 13% / 6.5%;
+  background: #0b0a10;
+  box-shadow:
+    0 30px 38px -10px rgb(20 10 40 / 0.36),
+    0 8px 14px -6px rgb(20 10 40 / 0.2);
+  pointer-events: none;
 }
 .device-screen {
   position: absolute;
@@ -425,229 +662,22 @@ main {
   pointer-events: none;
 }
 
-/* ---------- The laptop ---------- */
-
-/* A CSS laptop around a playing video: the timelapse a session makes. */
-.laptop {
-  position: relative;
-  transform-origin: 50% 100%;
-}
-.laptop-screen {
-  position: relative;
-  background: #0d0d12;
-  border-radius: 22px 22px 6px 6px;
-  padding: 14px 14px 18px;
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.12) inset,
-    0 40px 90px -30px rgb(5 2 12 / 0.7);
-}
-.laptop-screen video {
-  display: block;
-  border-radius: 10px;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-  background: #1d1a25;
-}
-.laptop-notch {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 11%;
-  height: 14px;
-  transform: translateX(-50%);
-  background: #0d0d12;
-  border-radius: 0 0 8px 8px;
-  z-index: 1;
-}
-.laptop-base {
-  height: 16px;
-  margin: 0 -2.5%;
-  background: linear-gradient(180deg, #d9d8e0, #b9b7c4);
-  border-radius: 4px 4px 14px 14px;
-  position: relative;
-}
-.laptop-lip {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 14%;
-  height: 5px;
-  transform: translateX(-50%);
-  background: rgb(0 0 0 / 0.12);
-  border-radius: 0 0 6px 6px;
-}
-
-/* ---------- The ruled body ---------- */
+/* ---------- Record: the night ---------- */
 
 /*
- * Below the hero the page is ruled: hairlines down both sides of the content (`.rail`) and
- * across between sections (`.band`), like aside.com. Screenshots sit straight on the page.
+ * The night, and real timelapses floating round the words. On a computer the part holds the screen while they fall past (main.js drifts each
+ * toward where the scroll puts it, a beat behind, swaying on its own clock); the small ones are
+ * a little dimmer, as if farther off.
  */
-/* Padding goes inside the width, or a padded rail runs past the screen's edge and stops being
-   centred (it did, on every window under about 1330px). */
-.rail {
+.record {
   position: relative;
-  box-sizing: border-box;
-  width: min(1200px, 100% - 40px);
-  margin-inline: auto;
-  border-inline: 1px solid var(--site-line);
-}
-.rail-pad {
-  padding: 104px clamp(20px, 5vw, 64px) 56px;
-}
-.rail-pad-top0 {
-  padding-top: 0;
-  padding-bottom: 104px;
-}
-.band {
-  position: relative;
-  border-top: 1px solid var(--site-line);
-}
-.feature-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-  gap: 20px 64px;
-  align-items: end;
-}
-.feature-head h2,
-.feature-head > h3,
-.feature-title h3,
-.looks-head h2 {
-  margin: 0;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
-  text-wrap: balance;
-}
-.feature-head h2,
-.feature-head > h3,
-.feature-title h3 {
-  font-size: clamp(34px, 4.4vw, 54px);
-}
-.feature-head .lede-sm {
-  justify-self: end;
-  max-width: 46ch;
-}
-.lede-sm {
-  max-width: 56ch;
-  margin: 0;
-  font-size: 17px;
-  line-height: 1.55;
-  color: var(--site-muted);
-  text-wrap: pretty;
-}
-
-/* ---------- Timelapses: the dusk interlude ---------- */
-
-/*
- * The page fades into the app's own photograph at dusk, and real timelapses float down
- * around the words. main.js moves them: each drifts toward where the scroll puts it, a beat
- * behind, and sways and turns a little on its own. The fades in and out sit in the band's
- * margins, so they never darken the screens either side.
- */
-.fall-band {
-  position: relative;
-  z-index: 3;
-  margin-block: 22vh;
-  background: var(--fall-ink);
+  z-index: 2;
   color: #fff;
-  /* The dusk photo's own tone, so the way in never dips darker than the band itself. */
-  --fall-ink: #43324a;
 }
-/* Straight after the hero: below the laptop, the hero's dusk already at the band's ink. */
-.hero + .fall-band {
-  margin-top: calc(var(--hang) + var(--band-gap));
-}
-/*
- * The way out: one long gradient from the band's ink to nothing, eased so it has no steps,
- * with three soft waves (ink, plum and a rose bloom) drifting sideways over it, each at its
- * own pace, blurred well into it so they never read as stripes. It hangs in the band's margin
- * and reaches a little into the band. The way in needs none: the hero's dusk ends in the ink.
- */
-.fall-edge {
-  position: absolute;
-  left: -6%;
-  right: -6%;
-  height: 40vh;
-  pointer-events: none;
-  filter: blur(30px);
-  background: linear-gradient(
-    180deg,
-    var(--fall-ink) 0%,
-    var(--fall-ink) 32%,
-    rgb(82 56 88 / 0.9) 42%,
-    rgb(104 66 106 / 0.74) 52%,
-    rgb(132 86 128 / 0.52) 63%,
-    rgb(176 122 166 / 0.3) 74%,
-    rgb(222 178 208 / 0.12) 86%,
-    rgb(240 210 228 / 0.03) 94%,
-    transparent 100%
-  );
-}
-/* The waves stand in for the hairline between these sections. */
-.fall-band + .band {
-  border-top: 0;
-}
-/* It reaches 10vh into the band and is solid for a while either side of the band's edge, so
-   the page and the band never show through it differently (that made a line). */
-.fall-edge-bottom {
-  top: calc(100% - 10vh);
-}
-.edge-wave {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 200%;
-  height: 100%;
-  animation: edge-drift 46s linear infinite;
-}
-.edge-wave path {
-  fill: currentColor;
-}
-.edge-pink {
-  color: #e9a8c9;
-  opacity: 0.3;
-  animation-duration: 58s;
-}
-.edge-plum {
-  color: #6b3866;
-  opacity: 0.45;
-  animation-duration: 38s;
-  animation-direction: reverse;
-}
-.edge-ink {
-  color: var(--fall-ink);
-  opacity: 0.7;
-}
-@keyframes edge-drift {
-  to {
-    transform: translateX(-50%);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .edge-wave {
-    animation: none;
-  }
-}
-/* Without the pin (below) the stage is about a screen tall and scrolls by like the rest. */
 .fall-stage {
   position: relative;
   height: clamp(560px, 92vh, 860px);
   overflow: hidden;
-}
-/* Cotton Candy under a dusk wash, melting into the ink at the top and bottom. */
-.fall-stage::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgb(28 21 38 / 0.5) 0%, rgb(28 21 38 / 0.72) 100%),
-    url('/backgrounds/cotton-candy.webp') center 35% / cover no-repeat;
-  mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 66%, transparent 100%);
 }
 .fall-copy {
   position: absolute;
@@ -656,28 +686,21 @@ main {
   display: grid;
   place-content: center;
   justify-items: center;
-  gap: 18px;
+  gap: 20px;
   padding: 0 24px;
   text-align: center;
   pointer-events: none;
 }
-.fall-copy h2 {
-  margin: 0;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+.fall-copy .title {
   max-width: 11ch;
-  font-size: clamp(36px, 4.4vw, 62px);
-  text-wrap: balance;
-  text-shadow: 0 2px 30px rgb(20 10 30 / 0.35);
+  font-size: clamp(38px, 4.8vw, 70px);
+  text-shadow: 0 2px 30px rgb(16 8 26 / 0.45);
 }
 .fall-copy p {
   margin: 0;
   max-width: 40ch;
-  font-size: clamp(16px, 1.4vw, 18px);
-  line-height: 1.55;
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.6;
   color: rgb(255 255 255 / 0.74);
   text-wrap: pretty;
 }
@@ -689,8 +712,8 @@ main {
   height: 32px;
   padding: 0 14px 0 12px;
   border-radius: 999px;
-  background: rgb(10 12 24 / 0.45);
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.14) inset;
+  background: rgb(10 8 20 / 0.45);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
   font-size: 14px;
   font-weight: 500;
   color: rgb(255 255 255 / 0.92);
@@ -701,11 +724,6 @@ main {
   border-radius: 50%;
   background: #ef4444;
   animation: rec-blink 1.6s ease-in-out infinite;
-}
-@keyframes rec-blink {
-  50% {
-    opacity: 0.35;
-  }
 }
 .floaters {
   position: absolute;
@@ -722,328 +740,60 @@ main {
   height: auto;
   aspect-ratio: 16 / 9;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: var(--radius-clip);
   background: #1d1a25;
-  box-shadow: 0 40px 80px -30px rgb(10 5 20 / 0.75);
+  outline: 1px solid rgb(255 255 255 / 0.1);
+  outline-offset: -1px;
+  box-shadow: 0 40px 80px -30px rgb(8 4 16 / 0.8);
   transform: translateY(calc((var(--y) + 0.4 * var(--v)) * 1vh)) rotate(var(--r));
   will-change: transform;
 }
-
-/* ---------- Make it yours: the drum on a deep card ---------- */
-
-/*
- * A deep card, night blue into violet, with the looks turning across it and what can be
- * changed as chips drifting around the heading. The card clips the drum's big side cards.
- */
-.looks-rail {
-  padding: 56px clamp(12px, 2vw, 24px) 72px;
+.floater.is-far {
+  opacity: 0.68;
 }
-.looks-card {
+
+/* ---------- On your phone: sunrise ---------- */
+
+.dawn {
   position: relative;
-  overflow: hidden;
-  display: grid;
-  border-radius: 32px;
-  padding: 72px 0 40px;
-  color: #fff;
-  background:
-    radial-gradient(60% 70% at 85% 0%, rgb(155 92 230 / 0.55), transparent 70%),
-    radial-gradient(55% 60% at 10% 100%, rgb(76 110 245 / 0.5), transparent 70%),
-    linear-gradient(160deg, #15123a 0%, #2a1f6b 55%, #4a2a86 100%);
-  box-shadow: 0 50px 100px -50px rgb(40 20 90 / 0.6);
+  z-index: 1;
+  padding-top: clamp(120px, 20vh, 200px);
 }
-.looks-head {
+.section-head {
   position: relative;
-  z-index: 2;
-  text-align: center;
-  padding: 0 20px;
-}
-.looks-head h2 {
-  font-size: clamp(40px, 5.2vw, 72px);
-}
-.looks-card .accent-word {
-  color: #c9b6ff;
-}
-/* calm, bright, cozy: the one lit is marked like a highlighter, in the heading's colour. The
-   mark is a shadow, not padding, so the line never shifts as it moves. */
-.cycle-word {
-  border-radius: 6px;
-  white-space: nowrap;
-  transition:
-    color 400ms,
-    background-color 400ms,
-    box-shadow 400ms;
-}
-.cycle-word.is-lit {
-  color: #1d1442;
-  background-color: #c9b6ff;
-  box-shadow: 0 0 0 4px #c9b6ff;
-}
-.looks-note {
-  position: relative;
-  z-index: 2;
-  margin: 0 auto;
-  text-align: center;
-  max-width: 40ch;
-  padding: 0 20px;
-  font-size: 17px;
-  line-height: 1.55;
-  color: rgb(255 255 255 / 0.72);
-}
-/* The chips: white labels with an icon, each bobbing on its own clock. */
-.chips {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  pointer-events: none;
-}
-.chip {
-  position: absolute;
-  left: var(--cx);
-  top: var(--cy);
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 38px;
-  padding: 0 14px 0 11px;
-  border-radius: 12px;
-  background: rgb(255 255 255 / 0.94);
-  color: var(--site-ink);
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 16px 34px -14px rgb(10 5 40 / 0.6);
-  rotate: var(--r);
-  animation: chip-bob var(--t) ease-in-out infinite alternate;
-}
-/* The ones on the right are placed from the right edge, so they never run off the card. */
-.chip-r {
-  left: auto;
-  right: var(--cx);
-}
-.chip svg {
-  width: 17px;
-  height: 17px;
-  fill: none;
-  stroke: var(--site-accent);
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-@keyframes chip-bob {
-  from {
-    translate: 0 -6px;
-  }
-  to {
-    translate: 0 8px;
-  }
-}
-/* Without the script the screens are a plain grid. */
-.ring-view {
-  padding: 48px 20px;
-}
-.ring {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
-  width: min(1200px, 100%);
-  margin: 0 auto;
-}
-.ring-card {
-  display: block;
-  width: 100%;
-  height: auto;
-  border-radius: 12px;
-  background: #3b3045;
-}
-.looks-band {
-  padding: 0;
-}
-
-/* ---------- The mist ---------- */
-
-/*
- * A bank of cloud along the foot of a section, made the way the app's audio visualizer makes
- * its cloud mist (`public/sky`, drawn by script from the same noise): two layers that tile
- * sideways, the back one wider, fainter and slower, drifting right to left without end.
- * Each layer is two tiles wide and moves one tile, so the loop has no seam.
- */
-.mist {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: clamp(170px, 26vw, 360px);
-  overflow: hidden;
-  pointer-events: none;
-}
-/* A faint bank of light along the foot for the cloud to sit in, as the visualizer has. */
-.mist::before {
-  content: '';
-  position: absolute;
-  inset: 30% 0 0;
-  background: linear-gradient(180deg, rgb(255 255 255 / 0), rgb(255 255 255 / 0.6));
-}
-.mist span {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  background-repeat: repeat-x;
-  background-position: 0 100%;
-  background-size: 50% 100%;
-  animation: mist-drift linear infinite;
-}
-.mist-back {
-  width: 320%;
-  height: 100%;
-  background-image: url('/sky/mist-back.webp');
-  opacity: 0.9;
-  animation-duration: 150s;
-}
-.mist-front {
-  width: 220%;
-  height: 74%;
-  background-image: url('/sky/mist-front.webp');
-  animation-duration: 95s;
-}
-@keyframes mist-drift {
-  to {
-    translate: -50% 0;
-  }
-}
-/*
- * Behind the phones, single clouds drawn the same way (the visualizer's noise and shading,
- * gathered into an oval), drifting slowly across right to left, each at its own height, size
- * and pace.
- */
-.sky {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.cloud {
-  position: absolute;
-  left: 100%;
-  top: var(--top);
-  width: var(--w);
-  height: auto;
-  animation: cloud-drift var(--t) linear var(--at) infinite;
-}
-@keyframes cloud-drift {
-  to {
-    translate: calc(-100vw - 100% - 200px) 0;
-  }
-}
-@media (max-width: 640px) {
-  .cloud {
-    width: min(var(--w), 70vw);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mist span {
-    animation: none;
-  }
-  .cloud {
-    animation: none;
-    left: auto;
-    right: 6%;
-  }
-}
-
-/* ---------- Recordings ---------- */
-
-/* A real recording of the app in a plain window; it plays while it's on screen. */
-.window {
-  position: relative;
-  overflow: hidden;
-  border-radius: 18px;
-  background: #1d1a25;
-  box-shadow:
-    0 0 0 1px rgb(27 26 43 / 0.08),
-    0 50px 100px -40px rgb(40 20 70 / 0.55);
-}
-.window video {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-}
-/* Pause and play, in the corner: it shows when the window is pointed at, and stays while
-   paused. The icon is drawn: two bars, or a triangle once paused. */
-.window-toggle {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(10 12 24 / 0.55);
-  box-shadow: 0 0 0 1px rgb(255 255 255 / 0.16) inset;
-  color: #fff;
-  cursor: pointer;
-  opacity: 0;
-  transition:
-    opacity 250ms,
-    transform 200ms var(--site-ease);
-}
-.window-toggle::before {
-  content: '';
-  width: 10px;
-  height: 12px;
-  border-inline: 3.5px solid currentColor;
+  z-index: 1;
   box-sizing: border-box;
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  width: min(760px, 100% - 2 * var(--gutter));
+  margin: 0 auto;
+  text-align: center;
 }
-.window-toggle.is-held::before {
-  width: 0;
-  height: 0;
-  margin-left: 3px;
-  border-block: 7px solid transparent;
-  border-inline: 11px solid currentColor;
-  border-right-width: 0;
-}
-.window:hover .window-toggle,
-.window-toggle:focus-visible,
-.window-toggle.is-held {
-  opacity: 1;
-}
-.window-toggle:active {
-  transform: scale(0.94);
-}
-.window-toggle:focus-visible {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-@media (hover: none) {
-  .window-toggle {
-    opacity: 0.85;
-  }
+.section-head .lede-sm {
+  text-wrap: balance;
 }
 
-/* ---------- Social: the row of phones ---------- */
+/* ---------- The hand of phones ---------- */
 
 /*
  * Five phones, the middle one biggest, each a part of the app in another look. main.js moves
  * them on springs: they fan out from a stack as the row comes in, the row leans toward the
- * pointer, and the phone pointed at rises while its neighbours make room. Picking one plays
- * the hand (below). Without the script they stand in a gentle arc.
+ * pointer, and the phone pointed at rises while its neighbours make room. Without the script
+ * they stand in a gentle arc.
  */
 .phones-rail {
-  padding: 56px 0 104px;
-  border-top: 1px solid var(--site-line);
+  position: relative;
+  padding: 36px 0 112px;
+  overflow-x: visible;
+  overflow-y: clip;
 }
 .phones {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  width: min(1000px, 100% - 40px);
+  /* Never taller than a short window leaves under the heading, so the phones' feet show. */
+  width: min(1160px, 100% - 40px, (100vh - 290px) * 2);
   margin: 0 auto;
   padding: 0;
   list-style: none;
@@ -1101,110 +851,45 @@ main {
   outline: none;
 }
 .phones-phone:focus-visible .device-screen {
-  outline: 3px solid var(--site-accent);
+  outline: 3px solid var(--accent);
   outline-offset: 4px;
 }
-
-/* ---------- Closing ---------- */
-
-.closing {
-  padding: 0;
+/* The cards held low and the phones' shadows sink away at the rail's foot through a soft blur
+   and fade (the owner, 2026-11-02: "add back the blurs"), rather than stopping on a line. The
+   fade is a mask, so they fade into whatever sky is behind; the mask also makes the rail the
+   blur's backdrop, so it blurs the phones alone. */
+.phones-rail {
+  mask-image: linear-gradient(180deg, #000 calc(100% - 110px), transparent);
 }
-/* A card of sky, blue at the top into the page's lilac, with mist drifting along its foot. */
-.closing-rail {
-  padding: 56px clamp(12px, 2vw, 24px) 72px;
+.phones-rail::after {
+  content: '';
+  position: absolute;
+  z-index: 8;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 110px;
+  backdrop-filter: blur(6px);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 70%);
+  pointer-events: none;
 }
-.closing-card {
-  position: relative;
-  overflow: hidden;
-  border-radius: 32px;
-  background: linear-gradient(180deg, #9fbaf3 0%, #b6c6f5 55%, #cdd6f7 100%);
-  box-shadow: 0 50px 100px -60px rgb(40 50 120 / 0.5);
-}
-.closing-inner {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  text-align: center;
-  gap: 18px;
-  padding: 104px 20px 112px;
-}
-.closing-mark {
-  margin-bottom: 6px;
-}
-.closing h2 {
-  margin: 0;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
-  font-size: clamp(40px, 5.4vw, 68px);
-  max-width: 15ch;
-  text-wrap: balance;
-}
-.closing-small {
-  margin: 0;
-  font-size: 14px;
-  color: var(--site-subtle);
-}
-.cta-lg {
-  height: 56px;
-  padding: 0 32px;
-  font-size: 16px;
-}
-/* Footer */
-.site-footer {
-  padding: 28px 0 40px;
-  border-top: 1px solid var(--site-line);
-}
-.site-footer-inner {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-.site-footer .site-brand {
-  color: var(--site-ink);
-}
-.site-footer .site-brand img {
-  border-radius: 6px;
-}
-.site-footer-inner p {
-  margin: 0 auto;
-}
-.site-footer-links {
-  display: flex;
-  gap: 18px;
-  font-size: 14px;
-  color: var(--site-muted);
-}
-.site-footer-links a {
-  color: inherit;
-  text-decoration: none;
-}
-.site-footer-links a:hover {
-  color: var(--site-ink);
-}
-
-/* ---------- The hand of phones, one picked ---------- */
 
 /*
  * Picking a phone: main.js puts data-picked on the rail and moves the phones (the picked one
  * to the left, playing its screen, the rest down like cards held low, cut off by the rail's
- * foot), and its words come out beside it. Without the springs (a phone, reduced motion, no
- * script) the words sit under the row instead.
+ * foot), and its words come out beside it. Without the springs (reduced motion, no script) the
+ * words sit under the row instead.
  */
-.phones-rail {
-  overflow-x: visible;
-  overflow-y: clip;
-}
+/* The five phones' words share one place, so the area is always as tall as the longest and
+   what follows them (the pips and Next) never moves from phone to phone (the owner, 2026-11-02:
+   "should never bounce around and it should only remain in 1 area"). */
 .hand-text {
   position: absolute;
   z-index: 7;
-  top: 80px;
+  top: 24px;
   left: 42%;
-  right: 4%;
+  display: grid;
+  width: min(560px, 54%);
   opacity: 0;
   visibility: hidden;
   translate: 28px 0;
@@ -1223,11 +908,12 @@ main {
     visibility 0s;
 }
 .hand-card {
-  display: none;
-  max-width: 520px;
+  grid-area: 1 / 1;
+  max-width: 500px;
+  visibility: hidden;
 }
 .hand-card.is-on {
-  display: block;
+  visibility: visible;
   animation: hand-in 600ms var(--rise-ease);
 }
 @keyframes hand-in {
@@ -1239,26 +925,22 @@ main {
 .hand-card h3 {
   margin: 0 0 16px;
   padding-right: 56px;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  font-size: clamp(30px, 3.2vw, 44px);
-  letter-spacing: -0.03em;
-  line-height: 1.06;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
-  text-wrap: balance;
+  font-size: clamp(30px, 3.1vw, 44px);
+  line-height: 1.04;
+  letter-spacing: -0.032em;
 }
 .hand-card p {
   margin: 0;
   max-width: 44ch;
   font-size: 17px;
-  line-height: 1.55;
-  color: var(--site-muted);
+  line-height: 1.6;
+  color: var(--ink-2);
   text-wrap: pretty;
 }
 .hand-facts {
   display: grid;
   gap: 10px;
-  margin: 22px 0 0;
+  margin: 24px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -1276,7 +958,7 @@ main {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--site-accent);
+  background: var(--accent);
 }
 .hand-close {
   position: absolute;
@@ -1291,22 +973,91 @@ main {
   border: 0;
   border-radius: 50%;
   background: #fff;
-  color: var(--site-ink);
-  box-shadow: 0 10px 24px -12px rgb(30 20 60 / 0.45);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 10px 24px -14px rgb(30 20 60 / 0.45);
   cursor: pointer;
   transition:
-    transform 200ms var(--site-ease),
-    background 200ms;
+    transform 200ms var(--ease),
+    background-color 200ms;
 }
 .hand-close:hover {
-  background: #f2eef7;
+  background: #f3eff7;
 }
 .hand-close:active {
   transform: scale(0.94);
 }
 .hand-close:focus-visible {
-  outline: 2px solid var(--site-accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+/* Reading through the phones (the owner, 2026-11-02): a pip for each phone under the picked
+   one's words (this one long, the ones already read tinted) and Next, Start over on the last. */
+.hand-step {
+  grid-area: 2 / 1;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 26px;
+}
+.hand-pips {
+  display: flex;
+  gap: 6px;
+}
+.hand-pips span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgb(40 28 70 / 0.16);
+  transition:
+    width 300ms var(--ease),
+    background-color 300ms;
+}
+.hand-pips span.is-seen {
+  background: rgb(91 85 235 / 0.4);
+}
+.hand-pips span.is-on {
+  width: 24px;
+  background: var(--accent);
+}
+.hand-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 16px 0 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.16),
+    0 10px 22px -14px rgb(20 14 60 / 0.6);
+  transition:
+    transform 220ms var(--ease),
+    background-color 220ms;
+}
+.hand-next:hover {
+  background: var(--accent-deep);
+  transform: translateX(3px);
+}
+.hand-next:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.hand-next svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 /* On a phone, a dot for each phone under the strip, the one in the middle lit and long. Each is
    a 28px target around an 8px dot. */
@@ -1328,17 +1079,17 @@ main {
   width: 8px;
   height: 8px;
   border-radius: 999px;
-  background: rgb(40 28 70 / 0.22);
+  background: rgb(40 28 70 / 0.2);
   transition:
-    width 300ms var(--site-ease),
-    background 300ms;
+    width 300ms var(--ease),
+    background-color 300ms;
 }
 .hand-dots button[aria-current='true']::before {
   width: 22px;
-  background: var(--site-accent);
+  background: var(--accent);
 }
 .hand-dots button:focus-visible {
-  outline: 2px solid var(--site-accent);
+  outline: 2px solid var(--accent);
   outline-offset: -4px;
   border-radius: 999px;
 }
@@ -1354,227 +1105,111 @@ html:not(.has-motion) .hand-text {
   translate: none;
 }
 html:not(.has-motion) .phones-rail[data-picked] .hand-text {
-  display: block;
+  display: grid;
 }
+
+/* ---------- The app: daylight ---------- */
+
 /*
- * On a computer the hero holds the screen for 60% of a screen's scroll (the room is its
- * ::after): the headline starts in the middle of the window with the laptop and phone out of
- * sight below. main.js (the hero scene) brings the devices up, the phone just after the laptop,
- * and moves the headline up into its place, writing each one's translate a beat behind the
- * scroll so it glides. Then the page scrolls on as it always did.
+ * A segmented switch over the five parts, its thumb sliding to the one picked in that part's
+ * colour and filling along its foot as the recording plays; then the words on a card in the
+ * same colour beside one window, the recording itself. main.js sets data-tab on the part.
  */
-html.has-scrub .hero::after {
-  content: '';
-  display: block;
-  height: 60vh;
-}
-html.has-scrub .hero-stage {
-  position: sticky;
-  top: 0;
-}
-html.has-scrub .hero-text,
-html.has-scrub .devices,
-html.has-scrub .devices .phone {
-  will-change: translate, transform;
-}
-/*
- * The timelapse band holds the screen while the timelapses fall past the words; they fade in
- * and out at the stage's top and bottom rather than being cut off by its edge.
- */
-html.has-scrub .fall {
-  height: 200vh;
-}
-html.has-scrub .fall-stage {
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  height: 100svh;
-}
-html.has-scrub .floaters {
-  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
-}
-/* The ring: every card is placed by main.js around the middle of its strip of the card, and
-   the strip can be dragged to turn it (sideways only, so a touch still scrolls the page). It
-   runs on phones too, so it hangs on .is-live (set while main.js turns it), not has-scrub. */
-.looks.is-live .ring-view {
+.day {
+  --c: var(--c-start);
   position: relative;
   z-index: 1;
-  cursor: grab;
-  touch-action: pan-y;
-  user-select: none;
-  height: clamp(300px, 30vw, 400px);
-  padding: 0;
+  padding: clamp(8px, 2vh, 24px) 0 clamp(120px, 18vh, 200px);
 }
-.looks.is-live .ring {
-  display: block;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
+.day[data-tab='plan'] {
+  --c: var(--c-plan);
 }
-.looks.is-live .ring-view.is-dragging {
-  cursor: grabbing;
+.day[data-tab='track'] {
+  --c: var(--c-track);
 }
-.looks.is-live .ring-card {
-  position: absolute;
-  -webkit-user-drag: none;
-  width: var(--cw, 340px);
-  height: calc(var(--cw, 340px) * 0.625);
-  left: calc(var(--cw, 340px) / -2);
-  top: calc(var(--cw, 340px) * -0.3125);
-  object-fit: cover;
-  border-radius: 12px;
-  box-shadow: 0 30px 60px -30px rgb(10 5 40 / 0.6);
-  will-change: transform, opacity;
+.day[data-tab='xp'] {
+  --c: var(--c-xp);
 }
-
-/* ---------- Entrance motion ---------- */
-
-/*
- * Everything with .rise starts just below its place and lifts into it; .rise-pop also scales
- * up a touch. main.js adds .is-in on load for the hero (the devices with the headline) and
- * as each section scrolls into view. Without the script, or with reduced motion, everything
- * is simply there.
- */
-:root {
-  --rise-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --pop-ease: cubic-bezier(0.2, 1.15, 0.3, 1);
+.day[data-tab='social'] {
+  --c: var(--c-social);
 }
-html.has-motion .rise {
-  opacity: 0;
-  transform: translateY(22px);
-  transition:
-    opacity 900ms var(--rise-ease) var(--d, 0ms),
-    transform 1000ms var(--rise-ease) var(--d, 0ms);
-  will-change: opacity, transform;
-}
-html.has-motion .rise-pop {
-  transform: translateY(36px) scale(0.955);
-  transition:
-    opacity 800ms var(--rise-ease) var(--d, 0ms),
-    transform 1100ms var(--pop-ease) var(--d, 0ms);
-}
-html.has-motion .rise.is-in {
-  opacity: 1;
-  transform: none;
-}
-/* The devices keep their 3D stage; the rise lands on the wrapper, so the tilt is untouched. */
-html.has-motion .devices.rise {
-  transform: translateY(60px) scale(0.94);
-}
-html.has-motion .devices.rise.is-in {
-  transform: none;
-}
-@media (prefers-reduced-motion: reduce) {
-  html.has-motion .rise,
-  html.has-motion .rise-pop,
-  html.has-motion .devices.rise {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
-/* ---------- Pills ---------- */
-
-/* A pill: plain, filled in its part's colour (--c) when it's the one picked. */
-.pill {
-  --on: #fff;
-  display: inline-flex;
-  align-items: center;
-  height: 34px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.72);
-  box-shadow: 0 0 0 1px var(--site-line) inset;
-  color: var(--site-muted);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1;
-  white-space: nowrap;
-  text-decoration: none;
-  cursor: pointer;
-  transition:
-    background-color 300ms,
-    color 300ms,
-    box-shadow 300ms,
-    width 300ms var(--site-ease),
-    height 300ms var(--site-ease);
-}
-.pill:hover {
-  background: #fff;
-  color: var(--site-ink);
-}
-.pill.is-on {
-  background: var(--c);
-  color: var(--on);
-}
-.pill.is-on {
-  box-shadow: 0 10px 22px -12px var(--c);
-}
-.pill:focus-visible {
-  outline: 2px solid var(--c);
-  outline-offset: 3px;
-}
-
-/* ---------- The app, a part at a time ---------- */
-
-/*
- * The five tabs, then the words on a card in the part's colour beside a recording of it.
- * main.js sets data-tab on the stage, .is-on on the tab, panel and clip, and --prog (0 to 1)
- * on the tab as its recording plays.
- */
-.app-band {
-  scroll-margin-top: 16px;
-}
-.app-rail {
-  padding: 72px clamp(20px, 4vw, 48px) 96px;
-}
-.app-tabs {
+.app-switch {
   display: flex;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 28px;
+  margin-bottom: 40px;
+}
+.app-tabs {
+  position: relative;
+  display: inline-flex;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.74);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    0 14px 30px -22px rgb(40 30 60 / 0.35);
 }
 .app-tab {
   position: relative;
-  overflow: hidden;
+  z-index: 1;
+  height: 40px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 300ms;
 }
-/* How far through its recording the picked tab is: a line along its foot. */
-.app-tab::after {
+.app-tab:hover {
+  color: var(--ink);
+}
+.app-tab.is-on {
+  color: #fff;
+}
+.app-tab:focus-visible {
+  outline: 2px solid var(--c);
+  outline-offset: 2px;
+}
+.app-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 5px;
+  bottom: 5px;
+  left: 0;
+  width: var(--tw, 0px);
+  translate: var(--tx, 0px) 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--c);
+  transition:
+    translate 520ms var(--rise-ease),
+    width 520ms var(--rise-ease),
+    background-color 520ms;
+}
+/* How far through its recording the picked part is: a line along the thumb's foot. */
+.app-thumb::after {
   content: '';
   position: absolute;
   left: 0;
   bottom: 0;
   width: calc(var(--prog, 0) * 100%);
-  height: 3px;
+  height: 2px;
   background: rgb(255 255 255 / 0.6);
-  opacity: 0;
 }
-.app-tab.is-on::after {
-  opacity: 1;
+/* Before the script measures the thumb (or without it), the picked tab carries its own fill. */
+html:not(.has-thumb) .app-tab.is-on {
+  background: var(--c);
 }
 .app-stage {
-  --c: var(--c-start);
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 2.1fr);
-  gap: 20px;
-}
-.app-stage[data-tab='plan'] {
-  --c: var(--c-plan);
-}
-.app-stage[data-tab='track'] {
-  --c: var(--c-track);
-}
-.app-stage[data-tab='xp'] {
-  --c: var(--c-xp);
-}
-.app-stage[data-tab='social'] {
-  --c: var(--c-social);
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 2.14fr);
+  gap: 24px;
+  align-items: stretch;
 }
 .app-card {
   position: relative;
@@ -1582,11 +1217,11 @@ html.has-motion .devices.rise.is-in {
   flex-direction: column;
   justify-content: space-between;
   gap: 28px;
-  padding: 40px 32px 28px;
-  border-radius: 28px;
+  padding: 40px 34px 30px;
+  border-radius: var(--radius-card);
   background: var(--c);
   color: #fff;
-  transition: background-color 600ms var(--site-ease);
+  transition: background-color 600ms var(--ease);
 }
 /* The five panels share one place; the picked one rises in as the last one fades. */
 .app-panels {
@@ -1613,19 +1248,15 @@ html.has-motion .devices.rise.is-in {
 }
 .app-panel h2 {
   margin: 0 0 16px;
-  font-family: var(--site-brand-font);
-  font-weight: 600;
-  letter-spacing: -0.03em;
+  font-size: clamp(28px, 2.5vw, 38px);
   line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
-  font-size: clamp(28px, 2.6vw, 38px);
-  text-wrap: balance;
+  letter-spacing: -0.03em;
 }
 .app-panel p {
   margin: 0;
   font-size: 16px;
-  line-height: 1.55;
-  color: rgb(255 255 255 / 0.9);
+  line-height: 1.6;
+  color: rgb(255 255 255 / 0.88);
   text-wrap: pretty;
 }
 .app-next {
@@ -1638,12 +1269,12 @@ html.has-motion .devices.rise.is-in {
   border: 0;
   border-radius: 999px;
   background: #fff;
-  color: var(--site-ink);
+  color: var(--ink);
   font: inherit;
   font-size: 14.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: transform 200ms var(--site-ease);
+  transition: transform 200ms var(--ease);
 }
 .app-next:active {
   transform: scale(0.97);
@@ -1658,9 +1289,11 @@ html.has-motion .devices.rise.is-in {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--site-ink);
+  background: var(--c);
   color: #fff;
-  transition: translate 250ms var(--site-ease);
+  transition:
+    translate 250ms var(--ease),
+    background-color 600ms var(--ease);
 }
 .app-next:hover .app-next-arrow {
   translate: 3px 0;
@@ -1686,6 +1319,25 @@ html.has-motion .devices.rise.is-in {
   stroke: #f1f2f7;
   stroke-width: 0.8;
 }
+/* A real recording of the app in a plain window. */
+.window {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-window);
+  background: #1d1a25;
+  box-shadow:
+    0 0 0 1px rgb(26 22 34 / 0.1),
+    0 2px 6px rgb(26 22 34 / 0.05),
+    0 34px 70px -34px rgb(40 26 64 / 0.5),
+    0 70px 130px -70px rgb(40 26 64 / 0.4);
+}
+.window video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
 /* The window: the first recording sets its size, the others lie over it. */
 .app-view {
   position: relative;
@@ -1707,10 +1359,59 @@ html.has-motion .devices.rise.is-in {
     opacity 500ms,
     visibility 0s 500ms;
 }
-/* Pause sits top right here: the calendar's phone covers the bottom corner. */
-.app-window .window-toggle {
+/* Pause and play, in the corner: it shows when the window is pointed at, and stays while
+   paused. The icon is drawn: two bars, or a triangle once paused. */
+.window-toggle {
+  position: absolute;
   top: 14px;
-  bottom: auto;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(10 12 24 / 0.55);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 250ms,
+    transform 200ms var(--ease);
+}
+.window-toggle::before {
+  content: '';
+  width: 10px;
+  height: 12px;
+  border-inline: 3.5px solid currentColor;
+  box-sizing: border-box;
+}
+.window-toggle.is-held::before {
+  width: 0;
+  height: 0;
+  margin-left: 3px;
+  border-block: 7px solid transparent;
+  border-inline: 11px solid currentColor;
+  border-right-width: 0;
+}
+.window:hover .window-toggle,
+.window-toggle:focus-visible,
+.window-toggle.is-held {
+  opacity: 1;
+}
+.window-toggle:active {
+  transform: scale(0.94);
+}
+.window-toggle:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+@media (hover: none) {
+  .window-toggle {
+    opacity: 0.85;
+  }
 }
 /* The phone's day view, in front of the calendar's corner while Plan is up. */
 .app-phone {
@@ -1727,135 +1428,602 @@ html.has-motion .devices.rise.is-in {
     opacity 400ms,
     translate 800ms var(--pop-ease);
 }
-.app-stage[data-tab='plan'] .app-phone {
+.day[data-tab='plan'] .app-phone {
   opacity: 1;
   translate: none;
 }
-/* Share: the phones are bigger than the other pictures, and each plays its screen. */
-.phones {
-  width: min(1160px, 100% - 40px);
+
+/* ---------- Make it yours: evening ---------- */
+
+/*
+ * Evening: the looks turn across an indigo sky like the inside of a drum, what can be changed
+ * hanging round the heading.
+ */
+.evening {
+  position: relative;
+  z-index: 1;
+  padding: clamp(120px, 20vh, 200px) 0 clamp(120px, 18vh, 200px);
+  color: #fff;
+}
+.looks {
+  position: relative;
+  z-index: 1;
+}
+.looks-top {
+  position: relative;
+  z-index: 2;
+  width: min(1120px, 100% - 2 * var(--gutter));
+  margin: 0 auto;
+}
+.looks-title {
+  margin: 0 auto;
+  max-width: 11ch;
+  text-align: center;
+  font-size: clamp(40px, 5.2vw, 76px);
+}
+.accent-word {
+  color: #c9b6ff;
+}
+/* The chips: white labels with an icon, each bobbing on its own clock, hung round the heading
+   where there is room for them, in a row under it where there isn't. */
+.chips {
+  position: absolute;
+  inset: -12px 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+.chip {
+  position: absolute;
+  top: var(--cy);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 42px;
+  padding: 0 16px 0 13px;
+  /* The portal's own dark glass panel, as the app draws its cards on a photo: its fill, rim,
+     inner line, shadow and blur, with the app's small-tile corner (the owner, 2026-11-02:
+     "make the pills look like the panels on the actual app portal"). */
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: 14px;
+  background: rgb(22 24 36 / 0.5);
+  backdrop-filter: blur(11px);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.04),
+    inset 0 1px 0 rgb(255 255 255 / 0.1),
+    0 1px 2px rgb(0 0 0 / 0.25),
+    0 24px 60px -20px rgb(0 0 0 / 0.7);
+  color: #f4f5f9;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  translate: 0 -50%;
+  rotate: var(--r);
+  animation: chip-bob var(--t) ease-in-out infinite alternate;
+}
+.chip-l {
+  left: var(--cx);
+}
+.chip-r {
+  right: var(--cx);
+}
+.chip svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@keyframes chip-bob {
+  from {
+    translate: 0 calc(-50% - 6px);
+  }
+  to {
+    translate: 0 calc(-50% + 8px);
+  }
+}
+/* Without the script the screens are a plain grid. */
+.ring-view {
+  padding: 48px var(--gutter);
+}
+.ring {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  width: min(1200px, 100%);
+  margin: 0 auto;
+}
+.ring-card {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-clip);
+  background: #2c2552;
+}
+/* The ring: every card is placed by main.js around the middle of its strip, and the strip can
+   be dragged to turn it (sideways only, so a touch still scrolls the page). It runs on phones
+   too, so it hangs on .is-live (set while main.js turns it). */
+.looks.is-live .ring-view {
+  position: relative;
+  z-index: 1;
+  max-width: 1720px;
+  margin: clamp(28px, 4vh, 48px) auto clamp(20px, 3vh, 36px);
+  height: clamp(280px, min(29vw, 46vh), 440px);
+  padding: 0;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+}
+.looks.is-live .ring {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+}
+.looks.is-live .ring-view.is-dragging {
+  cursor: grabbing;
+}
+.looks.is-live .ring-card {
+  position: absolute;
+  -webkit-user-drag: none;
+  max-width: none;
+  width: var(--cw, 340px);
+  height: calc(var(--cw, 340px) * 0.625);
+  left: calc(var(--cw, 340px) / -2);
+  top: calc(var(--cw, 340px) * -0.3125);
+  object-fit: cover;
+  box-shadow: 0 30px 60px -30px rgb(4 2 24 / 0.7);
+  will-change: transform, opacity;
+}
+.looks-note {
+  position: relative;
+  z-index: 2;
+  margin: 0 auto;
+  max-width: 40ch;
+  padding: 0 20px;
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.6;
+  color: rgb(255 255 255 / 0.72);
+}
+/* calm, bright, cozy: the one lit is marked like a highlighter, in the heading's colour. The
+   mark is a shadow, not padding, so the line never shifts as it moves. */
+.cycle-word {
+  border-radius: 6px;
+  white-space: nowrap;
+  transition:
+    color 400ms,
+    background-color 400ms,
+    box-shadow 400ms;
+}
+.cycle-word.is-lit {
+  color: #1d1442;
+  background-color: #c9b6ff;
+  box-shadow: 0 0 0 4px #c9b6ff;
 }
 
-/* ---------- Smaller screens ---------- */
+/* ---------- Closing: morning ---------- */
 
-/* Under the full width the tilted laptop's far corner and the phone's edge would run past the
-   screen's sides; a little room each side keeps both in. */
-@media (max-width: 1180px) {
-  .devices {
-    box-sizing: border-box;
-    padding-inline: 2.5%;
+/* A clear morning sky, and the way in. */
+.morning {
+  position: relative;
+  z-index: 1;
+  padding: clamp(140px, 22vh, 240px) var(--gutter) clamp(140px, 22vh, 240px);
+  color: var(--ink);
+}
+.closing-inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  text-align: center;
+}
+.closing-mark {
+  margin-bottom: 4px;
+  border-radius: 16px;
+  box-shadow: 0 18px 36px -18px rgb(20 30 90 / 0.55);
+}
+.closing .title {
+  max-width: 14ch;
+  font-size: clamp(38px, 5.2vw, 72px);
+}
+.closing .lede-sm {
+  color: rgb(26 22 34 / 0.72);
+}
+.closing .cta-row {
+  margin-top: 12px;
+}
+.closing-small {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgb(26 22 34 / 0.56);
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  position: relative;
+  z-index: 1;
+  padding: 0 0 40px;
+}
+.site-footer-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px 40px;
+  flex-wrap: wrap;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+}
+.site-footer-brand {
+  display: grid;
+  gap: 10px;
+}
+.site-footer .site-brand {
+  color: var(--ink);
+}
+.site-footer .site-brand img {
+  border-radius: 6px;
+}
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  font-size: 14px;
+}
+.site-footer-links a {
+  color: var(--ink-2);
+  text-decoration: none;
+  transition: color 200ms;
+}
+.site-footer-links a:hover {
+  color: var(--accent-text);
+}
+
+/* ---------- Entrance motion ---------- */
+
+/*
+ * Everything with .rise starts just below its place and lifts into it; .rise-pop also scales up
+ * a touch. main.js adds .is-in on load for the hero and as each part scrolls into view. Without
+ * the script, or with reduced motion, everything is simply there.
+ */
+html.has-motion .rise {
+  opacity: 0;
+  transform: translateY(22px);
+  transition:
+    opacity 900ms var(--rise-ease) var(--d, 0ms),
+    transform 1000ms var(--rise-ease) var(--d, 0ms);
+}
+html.has-motion .rise-pop {
+  transform: translateY(48px) scale(0.96);
+  transition:
+    opacity 900ms var(--rise-ease) var(--d, 0ms),
+    transform 1300ms var(--rise-ease) var(--d, 0ms);
+}
+html.has-motion .rise.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ---------- Scroll scenes on a computer ---------- */
+
+/*
+ * Nothing holds the screen (the owner, 2026-11-02: "remove the screen pin"), and the hero stays
+ * short: the laptop sits right under the words. A computer that opens at the top of the page
+ * shows the headline alone in the middle of the window, the devices hidden; the first scroll
+ * glides it up into its place and the laptop and phone appear under it (main.js; "it should
+ * appear instead of just being there").
+ */
+html.has-motion .hero-copy {
+  transition: translate 1000ms var(--rise-ease);
+}
+html.hero-waiting .hero-copy {
+  translate: 0 var(--shift, 0px);
+}
+/* The laptop opens as it comes up (the owner, 2026-11-02: "make the laptop do a opening
+   animation on the scroll down"): at the top its lid lies shut over the base with the screen
+   off; it lifts open on its hinge, and then the screen wakes. Back at the top it shuts again. */
+html.has-motion .laptop-lid {
+  transform-origin: 50% 100%;
+  transition: transform 1300ms cubic-bezier(0.2, 0.85, 0.25, 1) 260ms;
+}
+html.hero-waiting .laptop-lid {
+  transform: perspective(1400px) rotateX(-86deg);
+  transition-delay: 0ms;
+  transition-duration: 500ms;
+}
+/* The screen while it's off: pure black, a pixel past the picture on every side so no edge of
+   it shows (the owner: "fix the weird line on the pc screen make it pure black when its off"). */
+.laptop-lid::after {
+  content: '';
+  position: absolute;
+  inset: calc(1.45cqw - 1px) calc(1.45cqw - 1px) calc(2.05cqw - 1px);
+  border-radius: calc(0.55cqw + 1px);
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+html.has-motion .laptop-lid::after {
+  transition: opacity 700ms ease 1100ms;
+}
+html.hero-waiting .laptop-lid::after {
+  opacity: 1;
+  transition-delay: 0ms;
+  transition-duration: 200ms;
+}
+/* The timelapses: a screen tall, falling past the words as the band goes by; they fade in and
+   out at the stage's top and bottom rather than being cut off by its edge. */
+html.has-scrub .fall-stage {
+  height: max(640px, 100vh);
+}
+html.has-scrub .floaters {
+  mask-image: linear-gradient(180deg, transparent 0%, #000 18%, #000 82%, transparent 100%);
+}
+
+/*
+ * The phones on a computer: the rail reaches up over the heading, so a phone pointed at (which
+ * rises) is never cut off by its edge, and the phones pass in front of the words rather than
+ * under them (the owner, 2026-11-02: "cut off glitches, send text to behind the phones"). Only
+ * the phones and their words take the pointer, so the heading under the rail stays selectable.
+ */
+@media (min-width: 641px) and (min-height: 501px) {
+  /* Room under the phones, so the fade and blur at the foot only ever reach the cards held
+     low, never a phone standing in the row or the one picked. */
+  .phones-rail {
+    z-index: 2;
+    margin-top: -120px;
+    padding-top: 156px;
+    padding-bottom: 180px;
+    pointer-events: none;
   }
-  .devices .phone {
-    left: 2.5%;
+  /* Above everything else in the rail, the words included (the owner: "the phones should be
+     above every other element"); only the blur at the foot lies over the cards held low. On a
+     phone the strip stays under its dots, which its padding overlaps. */
+  .phones {
+    position: relative;
+    z-index: 8;
+  }
+  /* With a phone picked, the line under the heading fades out (the owner, 2026-11-02: "when you
+     click a phone the [line] should fade out"); it keeps its room, so nothing moves. On a phone
+     the strip always has one picked, so this stays on computers. */
+  .phones-head .lede-sm {
+    transition: opacity 400ms var(--ease);
+  }
+  #phone:has(.phones-rail[data-picked]) .phones-head .lede-sm {
+    opacity: 0;
+  }
+  .hand-text {
+    top: 144px;
+    pointer-events: auto;
+  }
+}
+
+/* ---------- Narrower computers and tablets ---------- */
+
+/* Round the heading the chips need about 1180px; under it they sit in a row below, still. */
+@media (max-width: 1179px), (max-height: 500px) {
+  .chips {
+    position: relative;
+    inset: auto;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    max-width: 720px;
+    margin: 28px auto 0;
+  }
+  .chip {
+    position: static;
+    translate: none;
+    rotate: none;
+    animation: none;
+  }
+}
+@media (max-width: 1099px) {
+  .app-stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .app-card {
+    gap: 22px;
+    padding: 32px 28px 24px;
+  }
+  .app-panel p {
+    max-width: 60ch;
+  }
+  .app-phone {
+    right: 1%;
+    bottom: -8%;
+    width: 20%;
   }
 }
 @media (max-width: 899px) {
-  .feature-head {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  .feature-head .lede-sm {
-    justify-self: start;
-  }
-  .rail-pad {
-    padding-top: 72px;
-    padding-bottom: 36px;
-  }
-  .rail-pad-top0 {
-    padding-top: 0;
-    padding-bottom: 72px;
-  }
-  .phones-rail {
-    padding-block: 40px 72px;
-  }
   .floaters {
-    --fs: 0.62;
+    --fs: 0.66;
+  }
+  .hand-text {
+    top: 24px;
   }
 }
-@media (max-width: 760px) {
-  :root {
-    --hang: clamp(60px, 20vw, 120px);
-  }
-  .hero-stage {
-    padding-top: 120px;
-    min-height: 0;
-  }
-  .devices {
-    margin-top: 40px;
-  }
-  .devices .laptop {
-    margin-left: 10%;
-    transform: rotateX(5deg) rotateY(-6deg);
-  }
-  .devices .phone {
-    top: 20%;
-    width: 25%;
-  }
-  .laptop-screen {
-    padding: 8px 8px 10px;
-    border-radius: 14px 14px 4px 4px;
-  }
-  .laptop-screen video {
-    border-radius: 6px;
-  }
-  .site-footer-inner p {
-    margin: 0;
-    width: 100%;
-  }
-}
-/* On a phone everything is centred. */
+
+/* ---------- Phones ---------- */
+
+/*
+ * The phone is its own composition, not the computer's squeezed: the headline over a laptop
+ * that runs off the edge with the phone big in front of it, the timelapses as two rows that
+ * slide past each other with the scroll, the phones as a strip to swipe, the app's switch as one
+ * even row, and buttons a thumb can reach. Nothing pins (the owner, 2026-10-28); the drum still
+ * turns. The query matches FLAT in main.js; change the two together.
+ */
 @media (max-width: 640px) {
-  .feature-head,
-  .site-footer-inner {
-    text-align: center;
+  :root {
+    --gutter: 20px;
+  }
+  body {
+    font-size: 15.5px;
   }
   .lede-sm {
-    text-wrap: balance;
+    font-size: 16px;
   }
-  .feature-head {
-    justify-items: center;
+
+  /* The header */
+  .site-nav {
+    height: 64px;
+    gap: 12px;
+    padding: 12px 16px 0;
+    padding-top: max(12px, env(safe-area-inset-top));
   }
-  .feature-head .lede-sm {
-    justify-self: center;
+  .site-nav.is-compact {
+    height: 56px;
+    padding-top: 0;
   }
-  .rail-pad {
-    padding-top: 56px;
-    padding-bottom: 28px;
+  .site-wordmark {
+    font-size: 18px;
   }
-  :root {
-    --band-gap: 10vh;
+  .site-nav .cta-sm {
+    height: 40px;
   }
-  .fall-band {
-    margin-block: 10vh;
+  .cta-discord {
+    width: 40px;
+    padding: 0;
   }
-  /* A softer blur: the full one, on this shorter fade, thinned it where the band ends and drew
-     a line there. */
-  .fall-edge {
-    height: 22vh;
-    filter: blur(14px);
+  .cta-discord-label {
+    display: none;
   }
-  /* Still solid where the band ends (the shorter fade is solid for 7vh). */
-  .fall-edge-bottom {
-    top: calc(100% - 6vh);
+
+  /* The hero */
+  .hero {
+    padding-top: calc(64px + 40px);
   }
-  .closing-inner {
-    padding: 72px 20px 88px;
+  .display {
+    font-size: clamp(38px, 11vw, 48px);
+    line-height: 1;
+    letter-spacing: -0.04em;
   }
-  .site-footer-inner {
-    justify-content: center;
+  .hero .lede {
+    margin-top: 18px;
+    max-width: 34ch;
+    font-size: 16.5px;
+  }
+  .hero .cta-row {
+    flex-wrap: nowrap;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 28px;
+    gap: 10px;
+  }
+  .hero .cta-row .cta {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 52px;
+    padding: 0 14px;
+  }
+  /* The computer's composition, smaller: the whole laptop inside the margins, the phone in
+     front of its lower left corner (the owner, 2026-11-02: the laptop running off the edge
+     under a big phone "looks bad"). */
+  .hero-devices {
+    width: calc(100% - 2 * var(--gutter));
+    margin-top: 40px;
+    padding-bottom: 64px;
+  }
+  .laptop {
+    width: 84%;
+    margin-left: auto;
+    margin-right: 6%;
+  }
+  .laptop-lid {
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 0.16),
+      inset 0 0 0 0.3cqw #17151d,
+      0 40px 70px -36px rgb(6 2 14 / 0.75);
+  }
+  .hero-phone {
+    left: 0;
+    top: 26%;
+    width: 30%;
+    rotate: -4deg;
+  }
+
+  /* The timelapses: the words, then two rows sliding past each other */
+  .fall-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    height: auto;
+    padding: 76px 0 92px;
+    overflow: hidden;
+  }
+  .fall-copy {
+    position: relative;
+    inset: auto;
+    gap: 16px;
+    padding: 0 var(--gutter);
+  }
+  .fall-copy .title {
+    font-size: clamp(36px, 10.4vw, 44px);
+  }
+  .floaters {
+    position: relative;
+    inset: auto;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: auto auto;
+    grid-auto-columns: 60vw;
+    gap: 14px;
+    justify-self: start;
+    width: max-content;
+    margin-left: 50%;
+    translate: -50% 0;
+  }
+  .floater {
+    position: static;
+    width: 100%;
+    transform: none;
+    will-change: auto;
+    rotate: var(--r);
+    scale: 0.94;
+  }
+  /* Odd ones are the top row, even ones the bottom, half a card along. */
+  .floater:nth-child(odd) {
+    translate: calc(var(--slide, 0) * -1px) 0;
+  }
+  .floater:nth-child(even) {
+    translate: calc(var(--slide, 0) * 1px + 30vw) 0;
+  }
+  .floater.is-far {
+    opacity: 0.8;
+  }
+
+  /* The sunrise and the phones */
+  .dawn {
+    padding-top: 112px;
+  }
+  .section-head {
+    gap: 14px;
+  }
+  .phones-rail {
+    width: 100%;
+    padding: 4px 0 40px;
+  }
+  .phones-rail,
+  .phones-rail::after {
+    mask-image: none;
+  }
+  .phones-rail::after {
+    display: none;
   }
   /* The phones are a row to swipe through, centred on the feed; main.js makes the one in the
      middle the biggest. Room above and below for the shadows, which the scroller would clip. */
-  .phones-rail {
-    width: 100%;
-    padding-block: 8px 32px;
-    border-inline: 0;
-  }
   .phones {
     box-sizing: border-box;
     justify-content: flex-start;
     width: 100%;
-    /* The shadow under each phone runs about 100px down; the room for it is pulled back. */
     margin-bottom: -56px;
     padding: 28px 19vw 100px;
     overflow-x: auto;
@@ -1876,20 +2044,20 @@ html.has-motion .devices.rise.is-in {
     --r: 0deg;
     --y: 0px;
   }
-  /* The words of the phone in the middle, always there with nothing to tap: they cross-fade
-     in one place as the strip moves, so nothing under them jumps. A dot for each phone. */
   .hand-dots {
     display: flex;
     justify-content: center;
     gap: 2px;
-    margin: -14px 0 18px;
+    margin: -12px 0 20px;
   }
+  /* The words of the phone in the middle, always there with nothing to tap: they cross-fade in
+     one place as the strip moves, so nothing under them jumps. */
   html .phones-rail .hand-text {
     position: relative;
     inset: auto;
     display: grid;
     width: auto;
-    margin: 0 24px;
+    margin: 0 var(--gutter);
     opacity: 1;
     visibility: visible;
     translate: none;
@@ -1897,7 +2065,8 @@ html.has-motion .devices.rise.is-in {
     text-align: center;
   }
   .hand-close,
-  .pick-hint {
+  .pick-hint,
+  .hand-step {
     display: none;
   }
   .hand-card {
@@ -1944,26 +2113,177 @@ html.has-motion .devices.rise.is-in {
     padding: 7px 14px;
     border-radius: 999px;
     background: rgb(255 255 255 / 0.72);
-    box-shadow: inset 0 0 0 1px var(--site-line);
+    box-shadow: inset 0 0 0 1px var(--line);
     font-size: 14px;
     line-height: 1.35;
   }
   .hand-facts li::before {
     display: none;
   }
+
+  /* The app */
+  .day {
+    padding: 72px 0 104px;
+  }
+  .app-wrap {
+    width: calc(100% - 24px);
+  }
+  .app-switch {
+    margin-bottom: 44px;
+  }
+  .app-tabs {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    width: 100%;
+    gap: 0;
+    padding: 4px;
+  }
+  .app-thumb {
+    top: 4px;
+    bottom: 4px;
+  }
+  .app-tab {
+    height: 40px;
+    padding: 0 4px;
+    font-size: 13.5px;
+  }
+  /* The recording first, edge to edge on a band in the part's colour, and the words plainly
+     under it, centred: no card, paperclip or Next (the switch above does that). */
+  .app-stage {
+    gap: 0;
+  }
+  .app-view {
+    order: -1;
+    box-sizing: border-box;
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: 12px;
+    background: var(--c);
+    transition: background-color 600ms var(--ease);
+  }
+  .window {
+    border-radius: 8px;
+    box-shadow:
+      0 30px 60px -30px rgb(10 4 20 / 0.6),
+      0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+  .window-toggle {
+    top: 12px;
+    right: 12px;
+    width: 44px;
+    height: 44px;
+  }
+  .app-phone {
+    right: 3%;
+    bottom: -7%;
+    width: 22%;
+  }
+  .app-card {
+    margin-top: 24px;
+    padding: 0 8px;
+    border-radius: 0;
+    background: none;
+    color: var(--ink);
+    text-align: center;
+  }
+  .paperclip,
+  .app-next {
+    display: none;
+  }
+  .app-panel h2 {
+    margin-bottom: 10px;
+    font-size: 26px;
+    line-height: 1.1;
+  }
+  .app-panel p {
+    max-width: 34rem;
+    margin-inline: auto;
+    font-size: 16.5px;
+    color: var(--ink-2);
+  }
+
+  /* The looks */
+  .evening {
+    padding: 112px 0 104px;
+  }
+  .looks-title {
+    font-size: clamp(38px, 10.6vw, 46px);
+  }
+  .chips {
+    gap: 6px;
+    margin-top: 22px;
+  }
+  .chip {
+    gap: 6px;
+    height: 32px;
+    padding: 0 11px 0 9px;
+    border-radius: 10px;
+    font-size: 13px;
+  }
+  .chip svg {
+    width: 15px;
+    height: 15px;
+  }
+  .looks:not(.is-live) .ring-view {
+    padding: 28px 16px 24px;
+  }
+  .looks:not(.is-live) .ring {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .looks:not(.is-live) .ring-card:nth-child(n + 7) {
+    display: none;
+  }
+  .looks.is-live .ring-view {
+    height: 230px;
+    margin: 20px auto 16px;
+  }
+  .looks-note {
+    font-size: 16px;
+  }
+
+  /* The closing: the button full width, the extension under it */
+  .morning {
+    padding: 120px var(--gutter) 128px;
+  }
+  .closing .title {
+    font-size: clamp(36px, 10vw, 44px);
+  }
+  .closing .cta-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    max-width: 340px;
+  }
+  .closing .cta-lg {
+    height: 54px;
+  }
+  .cta-soon {
+    justify-content: center;
+  }
+
+  /* The footer: the brand, then the links in two columns */
+  .site-footer {
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+  }
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 22px;
+  }
+  .site-footer-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+    font-size: 15px;
+  }
 }
-/*
- * Phones get the page flat (the owner, 2026-10-28): main.js leaves the scroll scenes off on a
- * narrow or short screen (FLAT there; change the two together), so nothing pins and each
- * section is its words, then its clips or pictures.
- */
-@media (max-width: 640px), (max-height: 500px) {
-  /* The timelapses: the words, then four clips in a grid on the dusk. */
+/* A phone held sideways, or any short window, is flat too. */
+@media (max-height: 500px) and (min-width: 641px) {
   .fall-stage {
     display: grid;
     gap: 36px;
     height: auto;
-    min-height: 0;
     padding: 64px 20px 72px;
   }
   .fall-copy {
@@ -1977,280 +2297,45 @@ html.has-motion .devices.rise.is-in {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
-    width: min(100%, 720px);
+    width: min(100%, 760px);
     margin-inline: auto;
   }
   .floater {
     position: static;
     width: 100%;
-    border-radius: 12px;
     transform: none;
     will-change: auto;
   }
   .floater:nth-child(n + 5) {
     display: none;
   }
-  /* The looks without the script (or with reduced motion): six of them in a grid. */
-  .looks:not(.is-live) .ring-view {
-    padding: 28px 16px 24px;
-  }
-  .looks:not(.is-live) .ring {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-    width: min(100%, 560px);
-  }
-  .looks:not(.is-live) .ring-card {
-    box-shadow: 0 20px 40px -24px rgb(10 5 40 / 0.6);
-  }
-  .looks:not(.is-live) .ring-card:nth-child(n + 7) {
-    display: none;
-  }
-  /* The drum on a phone: a shorter strip, its cards spread further apart (main.js). */
-  .looks.is-live .ring-view {
-    height: 220px;
-  }
 }
-/* On a phone the Discord button is just the mark. */
-@media (max-width: 480px) {
-  .cta-discord {
-    width: 38px;
-    padding: 0;
-  }
-  .cta-discord-label {
-    display: none;
-  }
-}
+
+/* ---------- Reduced motion ---------- */
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
-  .rec-mark,
-  .hand-card.is-on {
-    animation: none;
-  }
-}
-
-/* The app, the looks and the closing on narrower screens: the card above the window. */
-@media (max-width: 1099px) {
-  .app-stage {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .app-card {
-    gap: 22px;
-    padding: 32px 28px 24px;
-  }
-  .app-panel p {
-    max-width: 60ch;
-  }
-  .app-phone {
-    right: 1%;
-    bottom: -8%;
-    width: 20%;
-  }
-}
-@media (max-width: 640px) {
-  .app-rail {
-    padding: 48px 16px 64px;
-  }
-  /* The five tabs in one even row, so none wraps onto a second line. */
-  .app-tabs {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 5px;
-    margin-bottom: 40px;
-  }
-  .app-tab {
-    justify-content: center;
-    padding: 0 4px;
-    font-size: 13px;
-  }
-  .app-card {
-    padding: 28px 22px 22px;
-    border-radius: 24px;
-  }
-  .paperclip {
-    top: -18px;
-    right: 22px;
-    width: 46px;
-    height: 46px;
-  }
-  .app-phone {
-    width: 26%;
-  }
-  .looks-rail,
-  .closing-rail {
-    padding: 40px 10px 48px;
-  }
-  .looks-card {
-    padding: 48px 0 28px;
-    border-radius: 24px;
-  }
-  .closing-card {
-    border-radius: 24px;
-  }
-}
-/* Without room around the heading the chips sit in a row under it, still. */
-@media (max-width: 1023px), (max-height: 500px) {
-  .chips {
-    position: relative;
-    inset: auto;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    padding: 22px 16px 0;
-  }
-  .chip {
-    position: static;
-    rotate: none;
-    animation: none;
-  }
-}
-/* On a phone they're smaller, three rows rather than four. */
-@media (max-width: 640px) {
-  .chips {
-    gap: 6px;
-    padding: 20px 14px 0;
-  }
-  .chip {
-    gap: 6px;
-    height: 32px;
-    padding: 0 11px 0 9px;
-    border-radius: 10px;
-    font-size: 13px;
-  }
-  .chip svg {
-    width: 15px;
-    height: 15px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chip {
-    animation: none;
-  }
-}
-
-/*
- * The hand's foot (the owner, 2026-11-02: "add back the blurs"): the cards held low and the
- * phones' shadows sink into the page through a soft blur and fade, instead of being cut on a
- * line by the rail's edge, with more room under the phones so their shadows end inside it. The
- * fade's colour is the page's at that depth. Computers only: a phone's strip holds no cards low.
- */
-@media (min-width: 641px) and (min-height: 501px) {
-  .phones-rail {
-    padding-bottom: 112px;
-  }
-  .phones-rail::after {
-    content: '';
-    position: absolute;
-    z-index: 8;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 96px;
-    background: linear-gradient(
-      180deg,
-      rgb(229 220 238 / 0) 0%,
-      rgb(229 220 238 / 0.85) 70%,
-      #e5dcee 100%
-    );
-    backdrop-filter: blur(6px);
-    mask-image: linear-gradient(180deg, transparent 0%, #000 60%);
-    pointer-events: none;
-  }
-}
-
-/*
- * The phones higher on a computer (the owner, 2026-11-02: "phones not visible bump them up"),
- * so a picked phone and its words fit in the window under the header: less room round the
- * heading and over the phones.
- */
-@media (min-width: 641px) and (min-height: 501px) {
-  #phone .rail-pad {
-    padding-top: 64px;
-    padding-bottom: 32px;
-  }
-  .phones-rail {
-    padding-top: 24px;
-  }
-  .hand-text {
-    top: 48px;
-  }
-}
-
-/*
- * Reading through the phones (the owner, 2026-11-02: "make it more obvious that there is a
- * progression and the user is supposed to read through the different phone"): under the
- * picked phone's words, a pip for each phone (this one long, the ones already read tinted) and
- * Next, which picks the one after (Start over on the last). A phone's strip has its own dots.
- */
-.hand-step {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-top: 30px;
-}
-.hand-pips {
-  display: flex;
-  gap: 6px;
-}
-.hand-pips span {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: rgb(40 28 70 / 0.18);
-  transition:
-    width 300ms var(--site-ease),
-    background 300ms;
-}
-.hand-pips span.is-seen {
-  background: rgb(91 79 224 / 0.4);
-}
-.hand-pips span.is-on {
-  width: 24px;
-  background: var(--site-accent);
-}
-.hand-next {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 42px;
-  padding: 0 16px 0 20px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--site-accent);
-  color: #fff;
-  font: inherit;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  box-shadow: 0 10px 24px -12px rgb(91 85 235 / 0.7);
-  transition: transform 200ms var(--site-ease);
-}
-.hand-next:hover {
-  transform: translateX(3px);
-}
-.hand-next:focus-visible {
-  outline: 2px solid var(--site-accent);
-  outline-offset: 3px;
-}
-.hand-next svg {
-  width: 17px;
-  height: 17px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-@media (max-width: 640px) {
-  .hand-step {
-    display: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
+  .site-nav,
+  .site-nav::before,
+  .site-nav .site-brand-mark,
+  .site-nav .site-wordmark,
+  .app-thumb,
   .hand-pips span,
   .hand-next {
     transition: none;
+  }
+  html.has-motion .rise,
+  html.has-motion .rise-pop {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+  .rec-mark,
+  .rec-dot,
+  .hand-card.is-on,
+  .chip {
+    animation: none;
   }
 }

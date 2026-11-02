@@ -1,9 +1,10 @@
-// Motion for the homepage. The hero lifts in on load, and each section rises as it scrolls into
-// view. Scenes follow the scroll ([data-scrub]): the hero's opening, the timelapses falling past
-// the words while the band holds the screen, and the drum of looks turning. The phones move on springs and open like a hand of cards, the
-// picked one playing its screen, and the app's five parts play one after another in one window.
-// Nothing here is needed to read the page; without it everything lays out flat, and on a phone
-// it stays flat on purpose.
+// Motion for the homepage. The hero lifts in on load, and each part rises as it scrolls into
+// view. Scenes follow the scroll ([data-scrub]): the laptop's screen coming up to face you, the
+// timelapses falling past the words while the night holds the screen (on a phone, two rows
+// sliding past each other), and the drum of looks turning. The phones move on springs and open
+// like a hand of cards, the picked one playing its screen, and the app's five parts play one
+// after another in one window. Nothing here is needed to read the page; without it everything
+// lays out flat.
 
 const root = document.documentElement;
 const still =
@@ -20,11 +21,14 @@ if (!still && 'IntersectionObserver' in window) {
   root.classList.add('has-motion');
   const items = [...document.querySelectorAll('.rise')];
   const inHero = (el) => el.closest('.hero') !== null;
+  // The laptop and phone come and go with the top of the page (heroWait, below).
+  const devices = document.querySelector('.hero-devices');
 
   // Above the fold: everything comes in on load, each with its own delay.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
-      for (const el of items) if (inHero(el)) el.classList.add('is-in');
+      for (const el of items) if (inHero(el) && el !== devices) el.classList.add('is-in');
+      if (devices) heroWait(devices);
     }),
   );
 
@@ -42,6 +46,47 @@ if (!still && 'IntersectionObserver' in window) {
   for (const el of items) if (!inHero(el)) io.observe(el);
 }
 
+/*
+ * The hero on a computer (the owner, 2026-11-02: "hide the computer and centre the text until
+ * scroll", "there shouldnt be a big gap between the text and the computer it should appear
+ * instead of just being there", then "i should not see the computer and phone when i am on the
+ * very top of the page"): whenever the page is at its very top, the words sit in the middle of
+ * the window and the laptop and phone are hidden. Any scroll away from the top glides the words
+ * up into their place and brings the devices up under them; back at the top they go again.
+ * Nothing holds the scroll. A phone shows everything all the time.
+ */
+function heroWait(devices) {
+  const copy = document.querySelector('.hero-copy');
+  const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
+  // From where the words sit to the middle of the window (offsetTop ignores the move).
+  const place = () => {
+    const centre = copy.offsetTop + copy.offsetHeight / 2;
+    copy.style.setProperty(
+      '--shift',
+      `${Math.max(0, window.innerHeight / 2 - centre).toFixed(1)}px`,
+    );
+  };
+  let hidden = null;
+  const set = () => {
+    const hide = roomy.matches && window.scrollY <= 4;
+    if (hide === hidden) return;
+    hidden = hide;
+    if (hide) place();
+    root.classList.toggle('hero-waiting', hide);
+    devices.classList.toggle('is-in', !hide);
+  };
+  devices.style.setProperty('--d', '120ms');
+  set();
+  // The headline's height can change once the fonts arrive; keep it in the middle.
+  document.fonts?.ready.then(() => hidden && place());
+  window.addEventListener('scroll', set, { passive: true });
+  window.addEventListener('resize', () => {
+    place();
+    set();
+  });
+  roomy.addEventListener('change', set);
+}
+
 // ---------- Scroll scenes ----------
 
 /** The words in the looks' last line (calm, bright, cozy), lit one after another. */
@@ -55,9 +100,10 @@ function cycler(words) {
  * growing and turning to face inward as they reach the sides. Each card sits at a place `u`
  * along the arc (-1 at the left edge, 0 in the middle, 1 at the right). The drum turns on
  * its own while it's on screen, right to left, and those leaving one side come back on the
- * other; scrolling gives it a push that eases off, and it can be dragged round by hand and
- * thrown. The cards fan out from the middle as the card comes up the screen, and the last
- * line lights its next word every few seconds.
+ * other, and it can be dragged round by hand and thrown. Scrolling leaves it alone (the owner,
+ * 2026-11-02: "make scrolling not affect the drum only on entry should it do that fast
+ * explosion thing"): the first time it comes up the window the cards burst out from a stack in
+ * the middle, quickly, once. The last line lights its next word every few seconds.
  */
 function ringScene(scene) {
   const view = scene.querySelector('.ring-view');
@@ -76,9 +122,11 @@ function ringScene(scene) {
   let even = 1.4;
   let grow = [0.36, 1.45];
   let fan = 0.06;
+  // When the burst out from the middle began (on the clock rAF hands the tick), once.
+  let burst = null;
+  const BURST_MS = 850;
   let slide = 0;
   let push = 0;
-  let lastThrough = null;
   let wordClock = 0;
   let wordAt = 0;
   let raf = 0;
@@ -133,6 +181,13 @@ function ringScene(scene) {
       wordAt = (wordAt + 1) % word.count;
       word.to(wordAt);
     }
+    if (burst !== null && fan < 1) {
+      // A quick start and a long, soft landing, a touch past its place and back.
+      const k = clamp((now - burst) / BURST_MS);
+      const out = 1 - (1 - k) ** 4;
+      fan = 0.06 + 0.94 * (out + Math.sin(k * Math.PI) * 0.04 * (1 - k));
+      if (k >= 1) fan = 1;
+    }
     draw();
     if (live && onScreen) raf = requestAnimationFrame(tick);
     else last = 0;
@@ -175,10 +230,13 @@ function ringScene(scene) {
 
   return {
     measure,
-    update(enter, through) {
-      fan = 0.06 + 0.94 * ease(range(enter, 0.3, 0.95));
-      if (lastThrough !== null) push = clamp(push + (through - lastThrough) * 12, -1.2, 1.2);
-      lastThrough = through;
+    update(enter) {
+      // The burst starts once a good third of the drum's part is up the window; after that the
+      // scroll has nothing to do with it.
+      if (burst === null && enter > 0.4) {
+        burst = performance.now();
+        if (live && onScreen && !raf) raf = requestAnimationFrame(tick);
+      }
       if (!onScreen) draw();
     },
     start() {
@@ -192,7 +250,8 @@ function ringScene(scene) {
       cancelAnimationFrame(raf);
       raf = 0;
       last = 0;
-      lastThrough = null;
+      burst = null;
+      fan = 0.06;
       push = 0;
       held = null;
       view.classList.remove('is-dragging');
@@ -210,12 +269,15 @@ function ringScene(scene) {
 
 /*
  * The floating timelapses. Each card has a place the scroll gives it (from --y, falling by
- * --v, in vh, turning by --dr, while the band holds the screen) but doesn't snap there: it
+ * --v, in vh, turning by --dr, as the band passes through the window; nothing holds the screen,
+ * the owner, 2026-11-02: "remove the screen pin but keep the reactive falling"), so they sink
+ * through the band slower than the page and seem farther off. A card doesn't snap there: it
  * drifts toward it a beat behind, like something settling in water, and sways, bobs and tilts
  * a little on its own clock, so it keeps moving when the page stops. The loop runs only while
  * it's on screen.
  */
 function fallScene(scene) {
+  const floaters = scene.querySelector('.floaters');
   const cards = [...scene.querySelectorAll('.floater')].map((el, i) => {
     const css = getComputedStyle(el);
     const num = (name) => parseFloat(css.getPropertyValue(name)) || 0;
@@ -236,6 +298,9 @@ function fallScene(scene) {
   let raf = 0;
   let onScreen = false;
   let live = false;
+  // On a phone the clips are two rows instead, sliding past each other as the night goes by:
+  // `--slide` (px) moves the top row left and the bottom one right.
+  let rows = false;
   const tick = (now) => {
     raf = 0;
     const t = now / 1000;
@@ -258,16 +323,25 @@ function fallScene(scene) {
   }).observe(scene);
   return {
     update(enter, through, p) {
-      target = p;
+      if (rows) {
+        const slide = (through - 0.5) * window.innerWidth * 0.5;
+        floaters.style.setProperty('--slide', slide.toFixed(1));
+        return;
+      }
+      target = through;
     },
-    start() {
+    start(flat) {
+      rows = flat;
+      if (rows) return;
       live = true;
       if (onScreen && !raf) raf = requestAnimationFrame(tick);
     },
     stop() {
       live = false;
+      rows = false;
       cancelAnimationFrame(raf);
       raf = 0;
+      floaters.style.removeProperty('--slide');
       for (const c of cards) {
         c.at = null;
         c.el.style.removeProperty('transform');
@@ -277,37 +351,29 @@ function fallScene(scene) {
 }
 
 /*
- * The hero on a computer, holding the screen for a short scroll (the CSS gives it the room). At
- * the top the headline sits in the middle of the window, and the laptop and phone are out of
- * sight below. Scrolling brings the laptop up and the phone just after it, and moves the
- * headline up into its place, where the page then scrolls on as before (the owner, 2026-10-31).
+ * The laptop and phone in the hero, once they're shown: the laptop's screen leans back a little
+ * and comes up to face you as the devices rise up the window, and the phone in front climbs a
+ * touch faster than the page, so the two part in depth. It trails the scroll a beat, so a
+ * wheel's steps glide.
  */
 function heroScene(scene) {
-  const stage = scene.querySelector('.hero-stage');
-  const text = scene.querySelector('.hero-text');
-  const devices = scene.querySelector('.devices');
-  const phone = devices.querySelector('.phone');
-  let shift = 0;
-  let rise = 0;
-  let run = 1;
+  const devices = scene.querySelector('.hero-devices');
+  const laptop = scene.querySelector('.laptop');
+  const phone = scene.querySelector('.hero-phone');
+  let tilt = 14;
+  let lift = 56;
+  // The devices' top within the hero, measured with the layout, not on every frame.
+  let devTop = 0;
   // Where the scroll puts the scene (0 to 1) and where it is drawn, a beat behind.
   let target = 0;
   let at = null;
   let raf = 0;
   let last = 0;
-  // Each part eases in and out over its own stretch, overlapping the next, so nothing starts
-  // or stops with a jolt.
   const draw = (q) => {
-    const up = smooth(range(q, 0.05, 0.7));
-    const late = smooth(range(q, 0.2, 0.85));
-    const move = smooth(range(q, 0.3, 1));
-    const ty = shift * (1 - move);
-    text.style.translate = `0 ${ty.toFixed(1)}px`;
-    devices.style.translate = `0 ${(ty + rise * (1 - up)).toFixed(1)}px`;
-    phone.style.translate = `0 ${(160 * (1 - late)).toFixed(1)}px`;
+    const s = smooth(q);
+    laptop.style.setProperty('--tilt', `${(tilt * (1 - s)).toFixed(2)}deg`);
+    phone.style.setProperty('--lift', `${(lift * (0.5 - s)).toFixed(1)}px`);
   };
-  // A wheel scrolls in steps; each frame closes most of the way to the scroll's place, so the
-  // steps glide.
   const tick = (now) => {
     raf = 0;
     const dt = last ? Math.min(0.05, (now - last) / 1000) : 1 / 60;
@@ -319,18 +385,20 @@ function heroScene(scene) {
     else last = 0;
   };
   const measure = () => {
-    const vh = window.innerHeight;
-    // From the middle of the window to its own place, and far enough down to be out of sight.
-    shift = Math.max(0, vh / 2 - (text.offsetTop + text.offsetHeight / 2));
-    rise = Math.max(0, vh - devices.offsetTop + 80);
-    run = Math.max(1, scene.offsetHeight - stage.offsetHeight);
+    const phoneSized = window.innerWidth < 641;
+    tilt = phoneSized ? 9 : 14;
+    lift = phoneSized ? 36 : 56;
+    devTop = devices.offsetTop;
     if (at !== null) draw(at);
   };
   return {
     measure,
     update(enter, through, p, r) {
-      target = clamp(-r.top / run);
-      // The first time it is drawn where it belongs at once, before anything shows.
+      // How far the devices' top has come up the window (0 at its foot): upright once it nears
+      // the top.
+      const vh = window.innerHeight;
+      const rise = (vh - (r.top + devTop)) / vh;
+      target = range(rise, 0.3, 1);
       if (at === null) {
         at = target;
         draw(at);
@@ -341,7 +409,8 @@ function heroScene(scene) {
       raf = 0;
       last = 0;
       at = null;
-      for (const el of [text, devices, phone]) el.style.removeProperty('translate');
+      laptop.style.removeProperty('--tilt');
+      phone.style.removeProperty('--lift');
     },
   };
 }
@@ -359,16 +428,27 @@ if (!still) {
     return scene;
   });
 
+  // Each scene's place on the page, measured when the layout changes rather than on every frame,
+  // so a scroll only does arithmetic: reading a rectangle after the last frame's writes would
+  // lay the whole page out again each time.
+  const place = () => {
+    const y = window.scrollY;
+    for (const s of scenes) {
+      const r = s.el.getBoundingClientRect();
+      s.top = r.top + y;
+      s.height = r.height;
+    }
+  };
   let queued = false;
   const frame = () => {
     queued = false;
     const vh = window.innerHeight;
-    // Every rectangle first, then the writes, so no scene's writes make the next one's read
-    // lay the page out again.
-    const boxes = scenes.map((s) => s.running && s.el.getBoundingClientRect());
-    scenes.forEach((s, i) => {
-      const r = boxes[i];
-      if (!r || r.bottom < -vh || r.top > vh * 2) return;
+    const y = window.scrollY;
+    scenes.forEach((s) => {
+      if (!s.running) return;
+      const top = s.top - y;
+      const r = { top, height: s.height, bottom: top + s.height };
+      if (r.bottom < -vh || r.top > vh * 2) return;
       // enter: 0 to 1 as it comes up the screen; through: 0 to 1 from its top reaching the
       // bottom to its bottom leaving the top; p: 0 to 1 while it holds the screen.
       const enter = clamp((vh - r.top) / vh);
@@ -384,27 +464,30 @@ if (!still) {
   };
   const measure = () => {
     for (const s of scenes) if (s.running) s.measure?.();
+    place();
     queue();
   };
 
-  // A phone gets the page flat (the owner, 2026-10-28): nothing pins, and each section is its
+  // A phone gets the page flat (the owner, 2026-10-28): nothing pins, and each part is its
   // words then its pictures, laid out by the CSS under the same query (change both together).
-  // The drum is the one scene a phone keeps (the owner, 2026-10-31): it pins nothing, and a
-  // thumb turns it. A window dragged across the line switches between the two as it goes.
+  // A phone keeps the scenes that pin nothing: the laptop coming up, the drum a thumb turns
+  // (the owner, 2026-10-31) and the timelapses as two sliding rows. A window dragged across the
+  // line switches between the two as it goes.
   const flat = window.matchMedia('(max-width: 640px), (max-height: 500px)');
+  const rowsQuery = window.matchMedia('(max-width: 640px)');
   const apply = () => {
     const wide = !flat.matches;
     root.classList.toggle('has-scrub', wide);
     for (const s of scenes) {
-      const run = wide || s.kind === 'looks';
-      if (run === Boolean(s.running)) continue;
-      s.running = run;
-      if (run) {
-        s.start?.();
-        continue;
+      // The timelapses change how they move across the line, so they start again in the new way.
+      const mode = s.kind === 'fall' ? (wide ? 'float' : rowsQuery.matches ? 'rows' : '') : 'on';
+      if (mode === (s.running || '')) continue;
+      if (s.running) {
+        s.stop?.();
+        for (const name of SCENE_VARS) s.el.style.removeProperty(name);
       }
-      s.stop?.();
-      for (const name of SCENE_VARS) s.el.style.removeProperty(name);
+      s.running = mode;
+      if (mode) s.start?.(mode === 'rows');
     }
     measure();
     frame();
@@ -413,6 +496,10 @@ if (!still) {
   flat.addEventListener('change', apply);
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', measure);
+  window.addEventListener('load', measure);
+  document.fonts?.ready.then(measure);
+  if ('ResizeObserver' in window)
+    new ResizeObserver(measure).observe(document.querySelector('main'));
 }
 
 // ---------- Timelapses ----------
@@ -483,6 +570,8 @@ function phoneRow(row) {
   let rest = phones.map(() => ({ cx: 0, top: 0, w: 1, h: 1 }));
   let W = 1;
   let foot = 0;
+  // The row's top on the page, so a frame works out where it is from the scroll alone.
+  let rowTop = 0;
   let hover = -1;
   let lean = [0, 0];
   let leanTo = [0, 0];
@@ -491,6 +580,11 @@ function phoneRow(row) {
   let fresh = true;
   let onScreen = false;
   let mode = '';
+  const words = rail.querySelector('.hand-text');
+  /** The pick the cards held low were placed for, and the bounds they were placed in. */
+  let lowFor = -2;
+  let lowFloor = -Infinity;
+  let lowView = Infinity;
 
   const picked = () => (rail.dataset.picked === undefined ? -1 : Number(rail.dataset.picked));
   const put = (i, x, y, r, s) => {
@@ -508,7 +602,9 @@ function phoneRow(row) {
     const box = row.getBoundingClientRect();
     const centre = box.left + box.width / 2;
     W = box.width;
+    rowTop = box.top + window.scrollY;
     foot = rail.getBoundingClientRect().bottom - box.top;
+    lowFor = -2;
     rest = items.map((li) => {
       const b = li.getBoundingClientRect();
       return { cx: b.left + b.width / 2 - centre, top: b.top - box.top, w: b.width, h: b.height };
@@ -525,12 +621,16 @@ function phoneRow(row) {
       const [x, y] = move(-W * 0.3, -12, s);
       return { x, y, r: -2, s };
     }
-    // The rest, in their order, fanned at the foot under the words.
+    // The rest, in their order, fanned under the words. They peek up from the rail's foot, but
+    // never lower than half a card above the window's foot, so they stay in view in a short
+    // window (the owner, 2026-11-02: "bump up the phones at the bottom not visible"); and never
+    // over the words.
     const d = (i < k ? i : i - 1) - 1.5;
     const s = (W * 0.16) / p.w;
     const h = p.h * s;
     const up = hover === i ? h * 0.2 : 0;
-    const [x, y] = move(W * 0.2 + d * W * 0.105, foot - h * 0.42 + d * d * 8 - up, s);
+    const top = Math.max(lowFloor, Math.min(foot - h * 0.42, lowView - h * 0.5));
+    const [x, y] = move(W * 0.2 + d * W * 0.105, top + d * d * 8 - up, s);
     return { x, y, r: d * 6, s };
   };
 
@@ -538,13 +638,24 @@ function phoneRow(row) {
     raf = 0;
     const dt = last ? Math.min(0.034, (now - last) / 1000) : 1 / 60;
     last = now;
-    const t = now / 1000;
-    const box = row.getBoundingClientRect();
+    const top = rowTop - window.scrollY;
     // 0 while the row is still low on the screen, stacked; 1 once it's well up, spread out.
-    const fan = ease(range((window.innerHeight - box.top) / window.innerHeight, 0.15, 0.8));
+    const fan = ease(range((window.innerHeight - top) / window.innerHeight, 0.15, 0.8));
     const k = picked();
+    // Where the words end and where the window ends, read once for each pick (so the cards
+    // don't follow the scroll), from the row's top.
+    if (k !== lowFor) {
+      lowFor = k;
+      if (k >= 0 && words) {
+        lowFloor = words.getBoundingClientRect().bottom - top + 20;
+        lowView = window.innerHeight - top;
+      }
+    }
     const lk = 1 - Math.exp(-dt * 6);
     lean = [lean[0] + (leanTo[0] - lean[0]) * lk, lean[1] + (leanTo[1] - lean[1]) * lk];
+    // Still moving: a spring short of its place or a lean not caught up. Once nothing is, the
+    // loop rests until a scroll, the pointer or a pick wakes it.
+    let moving = Math.abs(leanTo[0] - lean[0]) + Math.abs(leanTo[1] - lean[1]) > 0.002;
     phones.forEach((_, i) => {
       const d = i - mid;
       const depth = 1 - Math.abs(d) * 0.18;
@@ -555,13 +666,14 @@ function phoneRow(row) {
       if (k >= 0) {
         ({ x, y, r, s } = handPlace(i, k));
         x += lean[0] * 6;
-        y += Math.sin(t * 1.1 + i * 1.7) * 3;
       } else {
         x = -(1 - fan) * rest[i].cx * 0.88 + lean[0] * 14 * depth;
         y = Math.abs(d) ** 1.6 * 6 * fan + (1 - fan) * (30 + Math.abs(d) * 12);
-        r = d * 3 * fan + (1 - fan) * d * 6 + lean[0] * 1.6;
+        // The fan stays even: the pointer slides the row a little, it never turns it, or the
+        // phones on one side tip over further than the other (the owner: "is tilted").
+        r = d * 3 * fan + (1 - fan) * d * 6;
         s = 1 - (1 - fan) * 0.05 * Math.abs(d);
-        y += lean[1] * 8 * depth + Math.sin(t * 1.1 + i * 1.7) * 4;
+        y += lean[1] * 8 * depth;
         if (hover === i) {
           y -= 34;
           s *= 1.06;
@@ -584,12 +696,15 @@ function phoneRow(row) {
         }
         v[1] += (K * (to[key] - v[0]) - C * v[1]) * dt;
         v[0] += v[1] * dt;
+        const still = key === 's' ? 0.0005 : 0.05;
+        if (Math.abs(to[key] - v[0]) > still || Math.abs(v[1]) > still * 4) moving = true;
       }
       put(i, sp.x[0], sp.y[0], sp.r[0], sp.s[0]);
-      items[i].style.zIndex = k === i ? '7' : hover === i ? '6' : '';
+      const z = k === i ? '7' : hover === i ? '6' : '';
+      if (items[i].style.zIndex !== z) items[i].style.zIndex = z;
     });
     fresh = false;
-    if (onScreen && mode === 'springs') raf = requestAnimationFrame(tick);
+    if (onScreen && mode === 'springs' && moving) raf = requestAnimationFrame(tick);
     else last = 0;
   };
 
@@ -643,17 +758,25 @@ function phoneRow(row) {
   phones.forEach((p, i) => {
     p.addEventListener('pointerenter', (e) => {
       if (e.pointerType === 'mouse') hover = i;
+      start();
     });
     p.addEventListener('pointerleave', () => {
       if (hover === i) hover = -1;
+      start();
     });
     p.addEventListener('focus', () => {
       hover = i;
+      start();
     });
     p.addEventListener('blur', () => {
       if (hover === i) hover = -1;
+      start();
     });
   });
+  // A pick (a phone, Next, the close button, the arrow keys) moves the hand.
+  rail.addEventListener('click', () => start());
+  rail.addEventListener('keydown', () => start());
+  window.addEventListener('scroll', () => start(), { passive: true });
   const section = row.closest('section') ?? row;
   section.addEventListener('pointermove', (e) => {
     if (e.pointerType !== 'mouse') return;
@@ -662,9 +785,11 @@ function phoneRow(row) {
       clamp((e.clientX - b.left) / b.width) * 2 - 1,
       clamp((e.clientY - b.top) / b.height) * 2 - 1,
     ];
+    start();
   });
   section.addEventListener('pointerleave', () => {
     leanTo = [0, 0];
+    start();
   });
   new IntersectionObserver(
     ([e]) => {
@@ -674,9 +799,17 @@ function phoneRow(row) {
     { rootMargin: '200px 0px' },
   ).observe(row);
   window.addEventListener('resize', () => {
-    if (mode === 'springs') measure();
-    else strip();
+    if (mode === 'springs') {
+      measure();
+      start();
+    } else strip();
   });
+  // Anything that moves the row on the page (a font, a video's size arriving) re-measures it.
+  if ('ResizeObserver' in window) {
+    new ResizeObserver(() => {
+      if (mode === 'springs') measure();
+    }).observe(document.querySelector('main'));
+  }
   swipe.addEventListener('change', apply);
   apply();
 }
@@ -837,11 +970,22 @@ function appTabs(section) {
   const clips = names.map((n) => section.querySelector(`.app-clip[data-tab="${n}"]`));
   const win = section.querySelector('.app-window');
   const nextLabel = section.querySelector('.app-next-label');
+  const thumb = section.querySelector('.app-thumb');
   const quiet = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let at = 0;
   let onScreen = false;
   let held = false;
   let raf = 0;
+
+  // The switch's thumb sits under the picked tab, measured from the tab itself so it fits
+  // whatever the font and the width.
+  const place = () => {
+    const tab = tabs[at];
+    if (!thumb || !tab.offsetWidth) return;
+    thumb.style.setProperty('--tx', `${tab.offsetLeft}px`);
+    thumb.style.setProperty('--tw', `${tab.offsetWidth}px`);
+    root.classList.add('has-thumb');
+  };
 
   // Pause and play, in the window's corner.
   const toggle = document.createElement('button');
@@ -856,7 +1000,7 @@ function appTabs(section) {
     raf = 0;
     const v = clips[at];
     const p = v.duration ? v.currentTime / v.duration : 0;
-    tabs[at].style.setProperty('--prog', p.toFixed(4));
+    thumb?.style.setProperty('--prog', p.toFixed(4));
     if (!v.paused) raf = requestAnimationFrame(progress);
   };
   const play = () => {
@@ -876,13 +1020,15 @@ function appTabs(section) {
   const show = (i) => {
     at = (i + names.length) % names.length;
     stage.dataset.tab = names[at];
+    section.dataset.tab = names[at];
     tabs.forEach((t, k) => {
       const on = k === at;
       t.classList.toggle('is-on', on);
       t.setAttribute('aria-selected', String(on));
       t.tabIndex = on ? 0 : -1;
-      t.style.setProperty('--prog', '0');
     });
+    thumb?.style.setProperty('--prog', '0');
+    place();
     panels.forEach((p, k) => p.classList.toggle('is-on', k === at));
     clips.forEach((v, k) => {
       const on = k === at;
@@ -935,6 +1081,9 @@ function appTabs(section) {
     ).observe(win);
   }
   if (quiet) clips[at].controls = true;
+  place();
+  window.addEventListener('resize', place);
+  document.fonts?.ready.then(place);
   return {
     pick: (name) => choose(Math.max(0, names.indexOf(name))),
   };
@@ -950,28 +1099,30 @@ for (const a of document.querySelectorAll('a[data-tab]')) {
 // ---------- Settling on each part ----------
 
 /*
- * On a computer, when a scroll comes to rest close to the start of a part, the page eases
- * onto it, slowly, and anywhere else it stays where it stopped (the owner: "make the screen
- * stick to sections and then go with enough scroll", then "too aggressive, make it
- * smoother"). The timelapses and the phones settle at their top; the app, the looks and the
+ * On a computer, when a scroll comes to rest between two parts, the page eases onto whichever
+ * is nearer, so the screen never stands half way between them (the owner, 2026-11-02: "it goes
+ * to one or the other screen should never stand in the middle"; before that "make the screen
+ * stick to sections and then go with enough scroll", then "too aggressive, make it smoother",
+ * which is why it waits for the scroll to rest and eases rather than snapping). The timelapses and the phones settle at their top; the app, the looks and the
  * closing in the middle of the screen. The hero has none: its opening scene follows the scroll
  * by itself, and easing the page along inside it felt like a tug. Any new scroll, key, touch
  * or click stops the ease where it is.
  */
 if (!still) {
   const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
+  // The phones settle with their heading just under the header, the sunrise above them.
   const parts = [
-    ['.fall-band', 'top'],
-    ['#phone', 'top'],
-    ['#app', 'middle'],
-    ['#looks', 'middle'],
-    ['.closing', 'middle'],
+    ['.record', 'top', 0],
+    ['.phones-head', 'top', 92],
+    ['.app-wrap', 'middle', 0],
+    ['.looks', 'middle', 0],
+    ['.closing-inner', 'middle', 0],
   ]
-    .map(([q, at]) => [document.querySelector(q), at])
+    .map(([q, at, gap]) => [document.querySelector(q), at, gap])
     .filter(([el]) => el);
-  // How near a part a scroll must stop to be eased onto it, as a share of the screen.
+  // Above the first part or past the last, a scroll is eased onto it only this near (a share of
+  // the screen); between two it always goes to one.
   const NEAR = 0.22;
-  const MS = 700;
   const inOut = (t) => (t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2);
   let wait = 0;
   let raf = 0;
@@ -984,9 +1135,11 @@ if (!still) {
   const glide = (to) => {
     const from = window.scrollY;
     const start = performance.now();
+    // Longer for further, within limits, so a short hop isn't sluggish nor a long one abrupt.
+    const ms = Math.min(950, Math.max(480, 360 + Math.abs(to - from) * 0.6));
     gliding = true;
     const step = (now) => {
-      const t = Math.min(1, (now - start) / MS);
+      const t = Math.min(1, (now - start) / ms);
       window.scrollTo({ top: from + (to - from) * inOut(t), behavior: 'instant' });
       if (t < 1) raf = requestAnimationFrame(step);
       else halt();
@@ -998,15 +1151,27 @@ if (!still) {
     const y = window.scrollY;
     const vh = window.innerHeight;
     const max = document.documentElement.scrollHeight - vh;
+    // Scrolled right to the end, to the footer: stay there.
+    if (y >= max - 2) return;
+    const stops = parts
+      .map(([el, at, gap]) => {
+        const r = el.getBoundingClientRect();
+        const top = r.top + y;
+        // A part settles in the middle of what the header leaves, not of the window.
+        const mid = top + r.height / 2 - (vh + 60) / 2;
+        return Math.min(max, Math.max(0, at === 'top' ? top - gap : mid));
+      })
+      .sort((a, b) => a - b);
+    // Already resting on a part: stay, rather than be pulled on to the next one.
+    if (stops.some((s) => Math.abs(s - y) <= 2)) return;
     let best = null;
-    for (const [el, at] of parts) {
-      const r = el.getBoundingClientRect();
-      const top = r.top + y;
-      const to = Math.min(max, Math.max(0, at === 'top' ? top : top + r.height / 2 - vh / 2));
-      const d = Math.abs(to - y);
-      // Already resting on a part: stay, rather than be pulled on to the next one.
-      if (d <= 2) return;
-      if (d < vh * NEAR && (best === null || d < Math.abs(best - y))) best = to;
+    for (let i = 0; i < stops.length - 1; i++) {
+      const [a, b] = [stops[i], stops[i + 1]];
+      if (y > a && y < b) best = y - a <= b - y ? a : b;
+    }
+    if (best === null) {
+      const near = stops.find((s) => Math.abs(s - y) < vh * NEAR);
+      if (near !== undefined) best = near;
     }
     if (best !== null) glide(best);
   };
@@ -1031,45 +1196,120 @@ if (!still) {
   }
 }
 
-// ---------- The header ----------
+// ---------- The sky and the header ----------
 
 /*
- * The header over the hero's photo at the top, as it always was; from the first scroll a
- * compact bar in the portal's glass that stays put (the owner, 2026-11-02: "shrink a taller
- * hero header into a compact bar once scrolling starts instead of hiding on scroll"). Smoked
- * glass over the dusk, from the hero's top through the band and half way down its fade into the
- * page (the dusk under the laptop belongs to neither: the owner saw it turn white there),
- * frosted white over the light page.
+ * One sky behind the page: the photograph for the hero, the same soft light in each other
+ * part's colours (the owner, 2026-11-02: "the background style should be consistent but not
+ * necessarily the same colour", "hero can have the cloud image but the rest cannot"). Each part
+ * names its light (data-sky). As a part's top comes up the window the sky fades to its light: none of
+ * it while the top is near the bottom of the window, half a little above the middle, all of it
+ * once the top nears the header. Only the light being left and the one coming are drawn.
+ *
+ * The header rides on it: clear at the very top, then from the first scroll a compact bar in the
+ * portal's glass that stays (the owner, 2026-11-02: "shrink a taller hero header into a compact
+ * bar once scrolling starts instead of hiding on scroll"), smoked while the sky is dark and
+ * frosted white while it's light.
  */
-function siteHeader(head) {
-  const hero = document.querySelector('.hero');
-  const band = document.querySelector('.fall-band');
-  const fade = document.querySelector('.fall-edge-bottom');
-  // The compact bar's middle, where the part under it is read.
-  const PROBE = 30;
+const LIGHTS = {
+  dusk: { tone: 'dark', base: '#3a2c42' },
+  night: { tone: 'dark', base: '#201627' },
+  dawn: { tone: 'light', base: '#eeeaf5' },
+  day: { tone: 'light', base: '#eceff5' },
+  evening: { tone: 'dark', base: '#1a1442' },
+  morning: { tone: 'light', base: '#dee7fb' },
+};
+// Between a dark part and a light one the sky passes through a third light, so the fade is a
+// sunrise or a dusk rather than a grey halfway mix of the two.
+const BETWEEN = { 'night>dawn': 'sunrise', 'day>evening': 'lilac', 'evening>morning': 'bluehour' };
+
+function skyAndHeader(head) {
+  const layers = [...document.querySelectorAll('.sky-layer')];
+  // Where the light changes: the first part of each run of parts sharing one.
+  const turns = [];
+  for (const el of document.querySelectorAll('main [data-sky]')) {
+    if (turns.at(-1)?.sky !== el.dataset.sky) turns.push({ el, sky: el.dataset.sky });
+  }
+  if (!turns.length) return;
+  root.classList.add('has-sky');
+  // Where each change sits on the page, measured only when the page's layout changes, so a
+  // scroll never has to lay the page out to read it. What was last written, so a frame writes
+  // only what changed.
+  let tops = [];
+  const measure = () => {
+    tops = turns.map((turn) => turn.el.getBoundingClientRect().top + window.scrollY);
+  };
+  const shown = new Map();
+  let base = '';
+  let compact = null;
   let queued = false;
   const frame = () => {
     queued = false;
-    head.classList.toggle('is-compact', window.scrollY > 8);
-    const top = (hero ?? band)?.getBoundingClientRect().top ?? 0;
-    const edge = fade?.getBoundingClientRect();
-    const foot = edge
-      ? edge.top + edge.height / 2
-      : ((band ?? hero)?.getBoundingClientRect().bottom ?? 0);
-    const tone = top <= PROBE && foot > PROBE ? 'dark' : 'light';
-    if (head.dataset.tone !== tone) head.dataset.tone = tone;
+    const vh = window.innerHeight;
+    const y = window.scrollY;
+    let from = turns[0].sky;
+    let to = '';
+    let t = 0;
+    for (let i = 1; i < turns.length; i++) {
+      const top = tops[i] - y;
+      const w = smooth(range(vh * 0.9 - top, 0, vh * 0.65));
+      if (w >= 1) {
+        from = turns[i].sky;
+        continue;
+      }
+      if (w > 0) {
+        to = turns[i].sky;
+        t = w;
+      }
+      break;
+    }
+    // With a light between, it comes in over the first half and the next over the second; the
+    // layers are in that order, so each lies over the one before.
+    const mid = BETWEEN[`${from}>${to}`];
+    for (const layer of layers) {
+      const name = layer.dataset.sky;
+      let o = 0;
+      if (name === from) o = 1;
+      else if (name === mid) o = clamp(t * 2);
+      else if (name === to) o = mid ? clamp(t * 2 - 1) : t;
+      const value = o.toFixed(3);
+      if (shown.get(layer) === value) continue;
+      shown.set(layer, value);
+      layer.style.opacity = value;
+      layer.classList.toggle('is-on', o > 0);
+    }
+    const now = LIGHTS[t > 0.5 ? to : from] ?? LIGHTS.dusk;
+    if (base !== now.base) {
+      base = now.base;
+      root.style.backgroundColor = base;
+    }
+    if (head) {
+      const small = y > 8;
+      if (compact !== small) {
+        compact = small;
+        head.classList.toggle('is-compact', small);
+      }
+      if (head.dataset.tone !== now.tone) head.dataset.tone = now.tone;
+    }
   };
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (queued) return;
-      queued = true;
-      requestAnimationFrame(frame);
-    },
-    { passive: true },
-  );
+  const queue = () => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(frame);
+  };
+  const remeasure = () => {
+    measure();
+    queue();
+  };
+  measure();
+  window.addEventListener('scroll', queue, { passive: true });
+  window.addEventListener('resize', remeasure);
+  window.addEventListener('load', remeasure);
+  document.fonts?.ready.then(remeasure);
+  // Anything that changes the page's height (a video's size arriving, a font) moves the changes.
+  if ('ResizeObserver' in window)
+    new ResizeObserver(remeasure).observe(document.querySelector('main'));
   frame();
 }
 
-const siteHead = document.querySelector('.site-nav');
-if (siteHead) siteHeader(siteHead);
+skyAndHeader(document.querySelector('.site-nav'));
