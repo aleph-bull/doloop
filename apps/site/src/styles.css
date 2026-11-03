@@ -2339,3 +2339,104 @@ html.has-scrub .floaters {
     animation: none;
   }
 }
+
+/* ---------- The sky on a phone ---------- */
+
+/*
+ * On a phone the sky stays still (the owner, 2026-11-03: "for mobile devices make the background
+ * just a still dont make it fade between colours, just section it off with normal gradients and
+ * fades"). The fixed sky is off and each part carries its own light, scrolling with it. Where two
+ * parts meet, the one above fades out to a shared colour (--out) and the one below fades in from
+ * it (--in); between a dark part and a light one that colour is the sunrise, lilac or blue hour
+ * the computer's sky passes through. Same query as main.js's `still`.
+ */
+@media (max-width: 640px), (max-height: 500px) {
+  .sky {
+    display: none;
+  }
+  html {
+    background: #dee7fb;
+  }
+  main > [data-sky] {
+    background:
+      var(--grain),
+      radial-gradient(
+        150% 85% at 50% var(--glow-y, 108%),
+        var(--glow) 0%,
+        color-mix(in srgb, var(--glow) 62%, transparent) 30%,
+        color-mix(in srgb, var(--glow) 28%, transparent) 52%,
+        color-mix(in srgb, var(--glow) 8%, transparent) 70%,
+        transparent 85%
+      ),
+      linear-gradient(
+        180deg,
+        var(--in, var(--top)) 0,
+        var(--top) var(--in-len, 0px),
+        var(--mid) 55%,
+        var(--foot) calc(100% - var(--out-len, 0px)),
+        var(--out, var(--foot)) 100%
+      );
+  }
+  /* The photo for the hero alone, under its wash, running down into the night. */
+  main > .hero[data-sky] {
+    background:
+      linear-gradient(180deg, transparent 0, transparent 68%, #150e1b 100%),
+      linear-gradient(
+        180deg,
+        rgb(14 9 22 / 0.5) 0%,
+        rgb(14 9 22 / 0.24) 30%,
+        rgb(14 9 22 / 0.3) 70%,
+        rgb(14 9 22 / 0.46) 100%
+      ),
+      url('/backgrounds/cotton-candy.webp') center / cover no-repeat;
+  }
+  main > .record[data-sky] {
+    --top: #150e1b;
+    --mid: #201627;
+    --foot: #2b1e34;
+    --glow: rgb(104 66 118 / 0.6);
+    --out: #5b4a7d;
+    --out-len: 64px;
+  }
+  main > .dawn[data-sky] {
+    --top: #f6f4fa;
+    --mid: #eeeaf5;
+    --foot: #e4deef;
+    --glow: rgb(255 251 248 / 0.95);
+    --glow-y: -8%;
+    --in: #5b4a7d;
+    --in-len: 88px;
+  }
+  main > .day[data-sky] {
+    --top: #f5f6fa;
+    --mid: #eceff5;
+    --foot: #e2e7f0;
+    --glow: rgb(255 255 255 / 0.95);
+    --glow-y: -8%;
+    --in: #e4deef;
+    --in-len: 64px;
+    --out: #a493c8;
+    --out-len: 64px;
+  }
+  main > .evening[data-sky] {
+    --top: #110d2c;
+    --mid: #1a1442;
+    --foot: #261d5a;
+    --glow: rgb(92 70 178 / 0.55);
+    --in: #a493c8;
+    --in-len: 88px;
+    --out: #2f4494;
+    --out-len: 64px;
+  }
+  main > .morning[data-sky] {
+    --top: #a2baef;
+    --mid: #bfd0f6;
+    --foot: #dee7fb;
+    --glow: rgb(255 255 255 / 0.85);
+    --in: #2f4494;
+    --in-len: 88px;
+  }
+  main > .site-footer[data-sky] {
+    background: #dee7fb;
+  }
+}

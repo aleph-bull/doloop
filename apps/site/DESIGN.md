@@ -45,7 +45,12 @@ DECISIONS.md, "The homepage: one sky through a study day".
    are content, so they keep moving.
 7. **Smooth is part of the design.** "Frames are suffering now please try to make the site
    smooth as possible." See the performance rules below; they are as binding as the colours.
-8. **A phone gets its own composition**, not the computer's shrunk: what is visible at once,
+8. **On a phone the sky is still.** "for mobile devices make the background just a still dont
+   make it fade between colours, just section it off with normal gradients and fades" (2026-11-03).
+   Under the phone query the fixed sky is off; each part carries its own light and scrolls with
+   it, and two parts meet in a short fade (`--in`/`--out`, through the in-between light where dark
+   meets light).
+9. **A phone gets its own composition**, not the computer's shrunk: what is visible at once,
    what is a strip to swipe, and what drops away (a picked phone's Next, the app card) is
    decided for the phone.
 

@@ -1232,6 +1232,8 @@ function skyAndHeader(head) {
   }
   if (!turns.length) return;
   root.classList.add('has-sky');
+  // On a phone each part carries its own still light (styles.css); only the header follows.
+  const still = window.matchMedia('(max-width: 640px), (max-height: 500px)');
   // Where each change sits on the page, measured only when the page's layout changes, so a
   // scroll never has to lay the page out to read it. What was last written, so a frame writes
   // only what changed.
@@ -1266,7 +1268,7 @@ function skyAndHeader(head) {
     // With a light between, it comes in over the first half and the next over the second; the
     // layers are in that order, so each lies over the one before.
     const mid = BETWEEN[`${from}>${to}`];
-    for (const layer of layers) {
+    for (const layer of still.matches ? [] : layers) {
       const name = layer.dataset.sky;
       let o = 0;
       if (name === from) o = 1;
@@ -1304,6 +1306,10 @@ function skyAndHeader(head) {
   measure();
   window.addEventListener('scroll', queue, { passive: true });
   window.addEventListener('resize', remeasure);
+  still.addEventListener('change', () => {
+    shown.clear();
+    remeasure();
+  });
   window.addEventListener('load', remeasure);
   document.fonts?.ready.then(remeasure);
   // Anything that changes the page's height (a video's size arriving, a font) moves the changes.

@@ -3087,3 +3087,8 @@ The owner pasted a full overhaul brief ("make this an exceptionally beautiful, e
 ## The homepage: benefits, not a feature list, 2026-11-03 (owner request, pushed at the owner's word)
 
 The owner asked for the homepage's text to be "less about listing off features but more about the benefits of such". The headings and buttons stay; every paragraph under them and the small lines under each phone now say what that part does for you (staying put while recording, nothing sneaking up, a reason to show up on slow days, each week a little better than the last), drawn from what the research on self-monitoring, planning and being observed supports, and never claiming a study proves the timelapse works. The Earn text no longer mentions the RNG minigame, so it stays about the benefit.
+
+
+## The homepage on a phone: a still sky, 2026-11-03 (owner request, pushed at the owner's word)
+
+The owner: "for mobile devices make the background just a still dont make it fade between colours, just section it off with normal gradients and fades". Under the phone query (`(max-width: 640px), (max-height: 500px)`, the same as main.js's `still`) the fixed `.sky` is hidden and each part draws its own light (the same top, middle, foot and horizon light as the computer's sky) and scrolls with the page. The hero keeps the photo, fading into the night at its foot. Where two parts meet, the one above fades out to a shared colour over its last 64px and the one below fades in from it over its first 64 to 88px; between a dark part and a light one that colour is the sunrise, lilac or blue hour. The header still turns smoked or frosted with the part under it. Computers keep the fading sky.
