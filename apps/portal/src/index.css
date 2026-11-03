@@ -4352,24 +4352,27 @@ button.start-subject:hover {
     background-size: 100% 1.5px;
   }
 }
-/* Fade and slide first, then close the gap; the -2px takes the list's gap with it. */
+/*
+ * Fade and slide first, then close the gap from the row's own height (--row-h, measured at
+ * the tick), so the fold is one even tween; the -2px takes the list's gap with it.
+ */
 @keyframes routine-leave {
   0% {
     opacity: 1;
     transform: none;
-    max-height: 3rem;
+    height: var(--row-h);
   }
   45% {
     opacity: 0;
     transform: translateX(14px);
-    max-height: 3rem;
+    height: var(--row-h);
     padding-block: 6px;
     margin-bottom: 0;
   }
   100% {
     opacity: 0;
     transform: translateX(14px);
-    max-height: 0;
+    height: 0;
     padding-block: 0;
     margin-bottom: -2px;
   }

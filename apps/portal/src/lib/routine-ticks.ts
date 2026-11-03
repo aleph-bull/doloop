@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
  * How long a ticked row stays in a due list: the check, the strike, then the fold. Covers
  * the `routine-*` keyframes in index.css, which run on multiples of `--dur-slow`.
  */
-const TICK_MS = 950;
+const TICK_MS = 1200;
 
 export const occurrenceKey = (o: RoutineOccurrence) => `${o.routineId}:${o.date}`;
 
@@ -47,7 +47,10 @@ export function useTickedRoutines(due: readonly RoutineOccurrence[]) {
       // Only a row of this list counts: the Routines week grid ticks through here too.
       if (rows.some((r) => occurrenceKey(r) === key)) {
         const emptied = rows.every((r) => occurrenceKey(r) === key || ticked.has(occurrenceKey(r)));
-        const height = from.closest('li')?.getBoundingClientRect().height ?? 0;
+        const li = from.closest('li');
+        const height = li?.getBoundingClientRect().height ?? 0;
+        // The fold in index.css tweens down from this exact height, not a guessed maximum.
+        li?.style.setProperty('--row-h', `${height}px`);
         setLast((l) => (emptied ? { key, height } : l?.key === key ? null : l));
       }
       setHold((h) => ({ rows: h?.rows ?? rows }));
