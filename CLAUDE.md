@@ -320,7 +320,8 @@ and never explain the difference on screen.
   Timer where a slot machine after each work block sets the break (0x to 3x of it in tenths,
   1x 30% of the time, average 0.9x), seeded in `timer.jack` so every client spins the same.
   The timer then waits for the lever (`jack.waiting`, ended by the `jack-pull` event, or by
-  resume or skip break). The result bursts into coins that fly into the break clock
+  resume or skip break); without a pull the break sound plays every 15 seconds and at a minute
+  the machine goes by itself. The result bursts into coins that fly into the break clock
   (`data-jack-target`), which waits at 0:00 and counts up as they land (`JackSlot.tsx`). Its badges show only to people
   using it, and its die emoji on the profile is the one emoji in the UI, at the owner's
   request. See DECISIONS.md.

@@ -19,15 +19,13 @@ import {
 } from '../slot/slot-kit';
 import { SlotLever, type SlotLeverHandle } from '../slot/SlotLever';
 
-/** The owner's voice line, played when the lever hasn't been pulled after NUDGE_MS. */
-const GO_BACK = 'sounds/go-back-to-focus.mp3';
-const NUDGE_MS = 7000;
-/** The voice line 3 dB over the other sounds (owner, 2026-10-25): 10^(3/20). */
-const GO_BACK_LEVEL = 1.413;
+/** With the lever not pulled: the break sound this often, until the machine goes by itself. */
+const NUDGE_EVERY_MS = 15_000;
+const AUTO_PULL_MS = 60_000;
 
 /** Decode the machine's sounds ahead of the first spin, so they play on time. */
 export function preloadJackSounds(): void {
-  preloadEffects([COIN_DROP, COIN_COLLECT, GO_BACK]);
+  preloadEffects([COIN_DROP, COIN_COLLECT]);
 }
 
 /** The two reels: whole breaks, then tenths. */
@@ -123,19 +121,29 @@ export interface JackSlotProps {
   remaining: () => number | null;
   /** What the break clock shows while the coins go in; null hands it back. */
   onCount: (seconds: number | null) => void;
+  /** The lever still isn't pulled: the break sound. */
+  onNudge: () => void;
   onDone: () => void;
 }
 
 /**
  * Jack mode's slot machine: when a work interval ends it waits for its lever, pulled by
- * dragging it down (or a click, Space or Enter); after seven seconds without a pull it says
- * so out loud. The reels spin and land on the multiplier the timer already used to set the
- * break. The result turns into the break it gives, which bursts into coins that fly into the
+ * dragging it down (or a click, Space or Enter); without a pull it plays the break sound every
+ * 15 seconds and at a minute goes by itself. The reels spin and land on the multiplier the
+ * timer already used to set the break. The result turns into the break it gives, which bursts into coins that fly into the
  * break clock, counting it up from 0:00 as each lands (or into the machine's own clock when
  * the timer isn't on screen). 0x drops its coins instead. Once pulled, a click or Escape puts
  * it away; Escape before the pull skips the show.
  */
-export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: JackSlotProps) {
+export function JackSlot({
+  roll,
+  waiting,
+  volume,
+  remaining,
+  onCount,
+  onNudge,
+  onDone,
+}: JackSlotProps) {
   const face = JACK_FACES[roll.face] ?? JACK_FACES[10]!;
   const tenths = roll.face;
   const bust = roll.breakMs === 0;
@@ -156,9 +164,9 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
   /** Set by the show once it is ready: pulls the lever from `dy` px down. */
   const pullRef = useRef<((dy: number) => void) | null>(null);
   const finishRef = useRef<(() => void) | null>(null);
-  const latest = useRef({ remaining, onCount, onDone, volume });
+  const latest = useRef({ remaining, onCount, onNudge, onDone, volume });
   useEffect(() => {
-    latest.current = { remaining, onCount, onDone, volume };
+    latest.current = { remaining, onCount, onNudge, onDone, volume };
   });
 
   // At rest the machine shows 1.0x, the usual break.
@@ -191,10 +199,26 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
     window.addEventListener('keydown', onKey);
     // The clock waits at 0:00 until the coins come in.
     l.onCount(0);
-    // Seven seconds without a pull: the owner's voice line, once.
-    const nudge = window.setTimeout(() => {
-      if (!started && !closed) playEffect(GO_BACK, latest.current.volume, 1, GO_BACK_LEVEL);
-    }, NUDGE_MS);
+    // No pull yet: the break sound every 15 seconds, then at a minute it goes by itself. All
+    // set now rather than chained, since a background tab holds chained timers back.
+    const idle: number[] = [];
+    for (let at = NUDGE_EVERY_MS; at < AUTO_PULL_MS; at += NUDGE_EVERY_MS) {
+      idle.push(
+        window.setTimeout(() => {
+          if (!started && !closed) latest.current.onNudge();
+        }, at),
+      );
+    }
+    idle.push(
+      window.setTimeout(() => {
+        if (started || closed) return;
+        setHolding(false);
+        // A hidden tab has no frames to play the show on, and the break mustn't wait for them.
+        if (document.hidden) finish();
+        else pullRef.current?.(0);
+      }, AUTO_PULL_MS),
+    );
+    const stopIdle = () => idle.forEach((id) => window.clearTimeout(id));
 
     if (stillMotion()) {
       // Straight to the result: the reels already on it, the clock as it is.
@@ -216,7 +240,7 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
       };
       return () => {
         window.clearTimeout(id);
-        window.clearTimeout(nudge);
+        stopIdle();
         window.removeEventListener('keydown', onKey);
       };
     }
@@ -368,7 +392,7 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
     pullRef.current = (dy: number) => {
       if (started) return;
       started = true;
-      window.clearTimeout(nudge);
+      stopIdle();
       leverRef.current?.swing(dy);
       playTick(sound(), 0.6, 1.6);
       enter('spin');
@@ -376,7 +400,7 @@ export function JackSlot({ roll, waiting, volume, remaining, onCount, onDone }: 
       frame = requestAnimationFrame(step);
     };
     return () => {
-      window.clearTimeout(nudge);
+      stopIdle();
       cancelAnimationFrame(frame);
       window.removeEventListener('keydown', onKey);
       for (const c of coins) c.el.remove();

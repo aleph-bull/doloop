@@ -2615,8 +2615,16 @@ The owner: "theres a blur that stays in the middle of the screen after the card 
 
 - **The break waits for the pull.** At the end of a work block in Jack mode the timer pauses (`timer.jack.waiting`, set in `advance()`), holding the spun break (or, after 0x, the next work block) whole; otherwise waiting at the machine would use up the break. The machine opens on "Pull the lever" with the reels resting on 1.0x and the clock at 0:00. When its show ends, the portal sends the new `jack-pull` event (core `applyEvent`, API `timerEventSchema`), and the timer carries on as it would have: the break starts with its full length, unless auto-start says to wait. Resume or Skip break from anywhere (the extension, another tab) also count as the pull; an unpulled machine then goes away. The machine shows on the surface that owns the alerts whenever the timer waits, so a reload brings it back; the old "seen" note in sessionStorage is gone.
 - **The lever** is a button: drag the knob down (it follows the pointer, clicks as it passes the point of no return, and springs back if let go early), or click it, or Space or Enter. A click on the dimmed page doesn't close it before the pull; Escape skips the show and starts the break. The card is a dialog, so the focus screen's Space (pause) stays out of it.
-- **The voice line**: seven seconds without a pull, the owner's "go back to your focus screen" plays once (`public/sounds/go-back-to-focus.mp3`, their .m4a with the quiet start trimmed), at the sound settings' volume, 3 dB over the other sounds (owner, later: "3 db louder"). It plays from a background tab too, which is the point when the focus screen is in another tab.
+- **The voice line** (gone since 2026-11-03, see below): seven seconds without a pull, the owner's "go back to your focus screen" plays once (`public/sounds/go-back-to-focus.mp3`, their .m4a with the quiet start trimmed), at the sound settings' volume, 3 dB over the other sounds (owner, later: "3 db louder"). It plays from a background tab too, which is the point when the focus screen is in another tab.
 - **The blur**: the card shrinking away left a patch of its glass blur over the clock. The card now drops its blur as it shrinks and is taken off the page 300 ms into the burst.
+
+### 2026-11-03: the break sound instead of the voice line, and the machine goes by itself at a minute
+
+The owner: "remove the person speaking sfx in jack mode when the user doesnt hit the slot, replace it with a break started sfx every 15 seconds until 60 seconds where the slot machine just goes off on its own".
+
+- The voice line and its file are gone. An unpulled machine plays the sound chosen for "When a break starts" at 15, 30 and 45 seconds, at the sound settings' volume, then at 60 seconds pulls its own lever and the show runs as usual.
+- The count starts when the machine opens, so a reload starts it again. Any pull, Escape or a resume elsewhere stops it.
+- In a hidden tab there are no frames for the show (it would wait for the tab to come back, and the break with it), so at 60 seconds a hidden machine skips the show and starts the break.
 
 ## Two new minimalist themes, Linen and Deep Sea, offered at setup, 2026-10-25 (owner request)
 

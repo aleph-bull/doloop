@@ -408,6 +408,7 @@ export function useSessionController({
           volume={settings.sounds.enabled ? settings.sounds.volume : 0}
           remaining={remainingBreak}
           onCount={setHeld}
+          onNudge={() => alert('breakStart')}
           onDone={closeSlot}
         />
       )}
