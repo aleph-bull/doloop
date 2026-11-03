@@ -155,7 +155,9 @@ top climbs from 90% to 25% of the window.
   inside a part. Tight tracking at display sizes.
 - **Accent:** one, the app's `#5b55eb`, matte. The main button has a plain shadow, never a
   coloured glow. The app's five part colours are unchanged.
-- **Copy:** unchanged throughout. Only the pills were removed, at the owner's word.
+- **Copy:** the owner's headings and buttons, unchanged. On 2026-11-03 the paragraphs and the
+  small lines under each phone were rewritten, at the owner's word, to say what each part does
+  for you rather than list what is in it; keep them that way.
 
 ## Performance rules (keep them)
 
