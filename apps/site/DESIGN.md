@@ -45,11 +45,14 @@ DECISIONS.md, "The homepage: one sky through a study day".
    are content, so they keep moving.
 7. **Smooth is part of the design.** "Frames are suffering now please try to make the site
    smooth as possible." See the performance rules below; they are as binding as the colours.
-8. **On a phone the sky is still.** "for mobile devices make the background just a still dont
-   make it fade between colours, just section it off with normal gradients and fades" (2026-11-03).
-   Under the phone query the fixed sky is off; each part carries its own light and scrolls with
-   it, and two parts meet in a short fade (`--in`/`--out`, through the in-between light where dark
-   meets light).
+8. **On a phone, flat and white.** "use gradient only for transition in the sky to the timelapses,
+   everywhere else is a cut with a drop shadow (unless theyre the same colour)", then "make it look
+   rounder and nicer", then the looks and the closing white too, "make them the same colour not
+   seperate" (2026-11-03). Principles 1 to 3 are for computers. Under the phone query the fixed sky
+   is off. The photo fades into the timelapses, the timelapses end in a 32px round foot with a
+   shadow, and everything from the phones to the footer is one plain white with no line. The looks
+   on white use dark words, the accent for 'yours' and the lit word, and pills like the phones'.
+   The recording's band is round too. The header takes the tone of the part under it.
 9. **A phone gets its own composition**, not the computer's shrunk: what is visible at once,
    what is a strip to swipe, and what drops away (a picked phone's Next, the app card) is
    decided for the phone.

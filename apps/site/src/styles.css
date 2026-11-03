@@ -2158,13 +2158,14 @@ html.has-scrub .floaters {
     width: 100vw;
     margin-left: calc(50% - 50vw);
     padding: 12px;
+    border-radius: var(--sheet);
     background: var(--c);
     transition: background-color 600ms var(--ease);
   }
   .window {
-    border-radius: 8px;
+    border-radius: 20px;
     box-shadow:
-      0 30px 60px -30px rgb(10 4 20 / 0.6),
+      0 8px 12px -10px rgb(10 4 20 / 0.6),
       0 0 0 1px rgb(255 255 255 / 0.08);
   }
   .window-toggle {
@@ -2343,44 +2344,31 @@ html.has-scrub .floaters {
 /* ---------- The sky on a phone ---------- */
 
 /*
- * On a phone the sky stays still (the owner, 2026-11-03: "for mobile devices make the background
- * just a still dont make it fade between colours, just section it off with normal gradients and
- * fades"). The fixed sky is off and each part carries its own light, scrolling with it. Where two
- * parts meet, the one above fades out to a shared colour (--out) and the one below fades in from
- * it (--in); between a dark part and a light one that colour is the sunrise, lilac or blue hour
- * the computer's sky passes through. Same query as main.js's `still`.
+ * On a phone the page is flat (the owner, 2026-11-03: "use gradient only for transition in the sky
+ * to the timelapses, everywhere else is a cut with a drop shadow (unless theyre the same colour)",
+ * then "make it look rounder and nicer", and white from the phones down). The fixed sky is off. The
+ * photo fades into the timelapses' colour, the timelapses end in a round foot with a shadow, and
+ * everything from the phones to the footer is one white with no line inside it. Same query as
+ * main.js's `still`.
  */
 @media (max-width: 640px), (max-height: 500px) {
   .sky {
     display: none;
   }
-  html {
-    background: #dee7fb;
+  main {
+    --sheet: 32px;
   }
-  main > [data-sky] {
+  /* Above the timelapses, so the phone standing at its foot isn't cut off by them. */
+  main > .hero[data-sky] {
+    z-index: 6;
     background:
-      var(--grain),
-      radial-gradient(
-        150% 85% at 50% var(--glow-y, 108%),
-        var(--glow) 0%,
-        color-mix(in srgb, var(--glow) 62%, transparent) 30%,
-        color-mix(in srgb, var(--glow) 28%, transparent) 52%,
-        color-mix(in srgb, var(--glow) 8%, transparent) 70%,
-        transparent 85%
-      ),
       linear-gradient(
         180deg,
-        var(--in, var(--top)) 0,
-        var(--top) var(--in-len, 0px),
-        var(--mid) 55%,
-        var(--foot) calc(100% - var(--out-len, 0px)),
-        var(--out, var(--foot)) 100%
-      );
-  }
-  /* The photo for the hero alone, under its wash, running down into the night. */
-  main > .hero[data-sky] {
-    background:
-      linear-gradient(180deg, transparent 0, transparent 68%, #150e1b 100%),
+        transparent 62%,
+        rgb(32 22 39 / 0.35) 78%,
+        rgb(32 22 39 / 0.8) 92%,
+        #201627 100%
+      ),
       linear-gradient(
         180deg,
         rgb(14 9 22 / 0.5) 0%,
@@ -2390,53 +2378,55 @@ html.has-scrub .floaters {
       ),
       url('/backgrounds/cotton-candy.webp') center / cover no-repeat;
   }
+  /* The round foot and its shadow. The hero hides the shadow's top edge. */
   main > .record[data-sky] {
-    --top: #150e1b;
-    --mid: #201627;
-    --foot: #2b1e34;
-    --glow: rgb(104 66 118 / 0.6);
-    --out: #5b4a7d;
-    --out-len: 64px;
+    z-index: 5;
+    border-radius: 0 0 var(--sheet) var(--sheet);
+    background: #201627;
+    box-shadow: 0 12px 30px rgb(12 8 24 / 0.26);
   }
-  main > .dawn[data-sky] {
-    --top: #f6f4fa;
-    --mid: #eeeaf5;
-    --foot: #e4deef;
-    --glow: rgb(255 251 248 / 0.95);
-    --glow-y: -8%;
-    --in: #5b4a7d;
-    --in-len: 88px;
-  }
-  main > .day[data-sky] {
-    --top: #f5f6fa;
-    --mid: #eceff5;
-    --foot: #e2e7f0;
-    --glow: rgb(255 255 255 / 0.95);
-    --glow-y: -8%;
-    --in: #e4deef;
-    --in-len: 64px;
-    --out: #a493c8;
-    --out-len: 64px;
+  main > .dawn[data-sky],
+  main > .day[data-sky],
+  main > .evening[data-sky],
+  main > .morning[data-sky],
+  main > .site-footer[data-sky] {
+    background: #fff;
   }
   main > .evening[data-sky] {
-    --top: #110d2c;
-    --mid: #1a1442;
-    --foot: #261d5a;
-    --glow: rgb(92 70 178 / 0.55);
-    --in: #a493c8;
-    --in-len: 88px;
-    --out: #2f4494;
-    --out-len: 64px;
+    padding-top: 40px;
+    color: var(--ink);
   }
   main > .morning[data-sky] {
-    --top: #a2baef;
-    --mid: #bfd0f6;
-    --foot: #dee7fb;
-    --glow: rgb(255 255 255 / 0.85);
-    --in: #2f4494;
-    --in-len: 88px;
+    padding-top: 40px;
   }
-  main > .site-footer[data-sky] {
-    background: #dee7fb;
+  /* The white runs on behind those corners; a border, so its content stays where it was. */
+  main > .dawn[data-sky] {
+    margin-top: calc(-1 * var(--sheet));
+    border-top: var(--sheet) solid transparent;
+  }
+  /* The looks on white: the same words and pills as the phones', the mark in the accent. */
+  .accent-word {
+    color: var(--accent);
+  }
+  .chip {
+    border-color: var(--line);
+    background: #fff;
+    backdrop-filter: none;
+    box-shadow: 0 1px 2px rgb(20 16 40 / 0.06);
+    color: var(--ink);
+  }
+  .ring-card {
+    background: #eceaf3;
+  }
+  .looks.is-live .ring-card {
+    box-shadow: 0 14px 28px -16px rgb(20 16 40 / 0.45);
+  }
+  .looks-note {
+    color: var(--ink-2);
+  }
+  .cycle-word.is-lit {
+    color: #fff;
+    background-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent);
   }
 }

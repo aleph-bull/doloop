@@ -1219,6 +1219,9 @@ const LIGHTS = {
   evening: { tone: 'dark', base: '#1a1442' },
   morning: { tone: 'light', base: '#dee7fb' },
 };
+// On a phone everything from the phones down is plain white (styles.css).
+const WHITE = { tone: 'light', base: '#fff' };
+const STILL_LIGHTS = { ...LIGHTS, dawn: WHITE, day: WHITE, evening: WHITE, morning: WHITE };
 // Between a dark part and a light one the sky passes through a third light, so the fade is a
 // sunrise or a dusk rather than a grey halfway mix of the two.
 const BETWEEN = { 'night>dawn': 'sunrise', 'day>evening': 'lilac', 'evening>morning': 'bluehour' };
@@ -1232,14 +1235,15 @@ function skyAndHeader(head) {
   }
   if (!turns.length) return;
   root.classList.add('has-sky');
-  // On a phone each part carries its own still light (styles.css); only the header follows.
+  // On a phone each part is its own flat colour (styles.css), so nothing fades and the header
+  // takes the tone of the part under it.
   const still = window.matchMedia('(max-width: 640px), (max-height: 500px)');
   // Where each change sits on the page, measured only when the page's layout changes, so a
   // scroll never has to lay the page out to read it. What was last written, so a frame writes
   // only what changed.
   let tops = [];
   const measure = () => {
-    tops = turns.map((turn) => turn.el.getBoundingClientRect().top + window.scrollY);
+    tops = turns.map((turn) => turn.el.getBoundingClientRect().top + turn.el.clientTop + window.scrollY);
   };
   const shown = new Map();
   let base = '';
@@ -1254,7 +1258,7 @@ function skyAndHeader(head) {
     let t = 0;
     for (let i = 1; i < turns.length; i++) {
       const top = tops[i] - y;
-      const w = smooth(range(vh * 0.9 - top, 0, vh * 0.65));
+      const w = still.matches ? Number(top <= 30) : smooth(range(vh * 0.9 - top, 0, vh * 0.65));
       if (w >= 1) {
         from = turns[i].sky;
         continue;
@@ -1280,7 +1284,7 @@ function skyAndHeader(head) {
       layer.style.opacity = value;
       layer.classList.toggle('is-on', o > 0);
     }
-    const now = LIGHTS[t > 0.5 ? to : from] ?? LIGHTS.dusk;
+    const now = (still.matches ? STILL_LIGHTS : LIGHTS)[t > 0.5 ? to : from] ?? LIGHTS.dusk;
     if (base !== now.base) {
       base = now.base;
       root.style.backgroundColor = base;
