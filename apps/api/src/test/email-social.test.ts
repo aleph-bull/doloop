@@ -19,7 +19,7 @@ const codeFor = (email: string) =>
   mailer
     .messages!.filter((m) => m.to === email)
     .at(-1)!
-    .text.slice(0, 6);
+    .text.match(/^\d{6}$/m)![0];
 const call = (
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   url: string,

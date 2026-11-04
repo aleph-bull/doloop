@@ -3,7 +3,7 @@ import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client';
 import { emailCodes, emailRateLimits } from '../db/schema';
 import { badRequest, HttpError } from '../errors';
-import type { Mailer } from './mailer';
+import { codeEmailText, type Mailer } from './mailer';
 
 type Purpose = typeof emailCodes.$inferInsert.purpose;
 export const normalEmail = (email: string) => email.trim().toLowerCase();
@@ -50,12 +50,13 @@ export async function requestLimits(
   await emailLimit(db, `recipient:${hash(secret, normalEmail(email))}`, 5, 60 * 60_000, now);
 }
 
+/** "Here's your code to …" */
 const descriptions: Record<Purpose, string> = {
-  signup: 'confirm your Komogon email address',
-  account: 'confirm your Komogon email address',
-  organization: 'verify your school or organization email',
-  'password-reset': 'reset your Komogon password',
-  'two-step': 'sign in to Komogon',
+  signup: 'confirm your email',
+  account: 'confirm your email',
+  organization: 'confirm your school email',
+  'password-reset': 'reset your password',
+  'two-step': 'sign in',
 };
 
 const subjects: Partial<Record<Purpose, string>> = {
@@ -92,7 +93,7 @@ export async function issueEmailCode(
     await mailer.send({
       to: email,
       subject: subjects[input.purpose] ?? 'Your Komogon verification code',
-      text: `${code}\n\nUse this code to ${descriptions[input.purpose]}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
+      text: codeEmailText({ for: descriptions[input.purpose], code, minutes: 10 }),
     });
   } catch (err) {
     await db

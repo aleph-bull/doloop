@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { Db } from '../db/client';
 import { universityVerifications, users, type UserRow } from '../db/schema';
 import { badRequest, HttpError } from '../errors';
-import type { Mailer } from '../services/mailer';
+import { codeEmailText, type Mailer } from '../services/mailer';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
 import { dt } from '../services/sessions-mapper';
 import { settingsOf } from '../services/users';
@@ -146,7 +146,11 @@ export function universityRoutes(
       await mailer.send({
         to: email,
         subject: `${code} is your Komogon code`,
-        text: `Enter this code in Komogon to put ${uni.name} on your profile: ${code}\n\nIt works for 15 minutes. If you didn't ask for it, you can ignore this email.`,
+        text: codeEmailText({
+          for: `add ${uni.name} to your profile`,
+          code,
+          minutes: CODE_TTL_MS / 60_000,
+        }),
       });
     } catch (err) {
       req.log.error(err, 'verification mail failed');

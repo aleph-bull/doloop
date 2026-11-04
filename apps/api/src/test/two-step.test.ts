@@ -20,7 +20,7 @@ const advance = (seconds = 61) => {
   now = new Date(Date.parse(now) + seconds * 1000).toISOString();
 };
 const lastMail = (email: string) => mailer.messages!.filter((m) => m.to === email).at(-1)!;
-const codeFor = (email: string) => lastMail(email).text.slice(0, 6);
+const codeFor = (email: string) => lastMail(email).text.match(/^\d{6}$/m)![0];
 const call = (method: 'GET' | 'POST', url: string, payload?: object, token?: string) =>
   app.inject({ method, url, payload, headers: token ? { authorization: `Bearer ${token}` } : {} });
 
@@ -108,6 +108,9 @@ it('asks for an emailed code after the password, and gives the token only for it
   expect(first.json().token).toBeUndefined();
   expect(first.json().twoStep).toBe(true);
   expect(lastMail(email).subject).toBe('Your Komogon sign-in code');
+  expect(lastMail(email).text).toMatch(
+    /^Hi,\n\nHere's your code to sign in:\n\n\d{6}\n\nIt works for 10 minutes\. If this wasn't you, you can ignore it\.\n\nKomogon$/,
+  );
   const { challengeId } = first.json();
 
   // A wrong password never sends a code.

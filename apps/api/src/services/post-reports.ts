@@ -40,7 +40,7 @@ function who(person: Person | undefined, email: string | null | undefined): stri
 
 const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
-/** The email a new report sends: the post's ID first, then who, why and what it says. */
+/** The email a new report sends: the post's ID first, then why, who and what it says. */
 export function reportMessage(input: {
   post: FeedPost;
   people: Record<string, Person>;
@@ -61,13 +61,11 @@ export function reportMessage(input: {
   ].filter(Boolean);
   const link = `${input.portalUrl.replace(/\/+$/, '')}/admin?post=${post.ref}`;
   const lines = [
-    `Post ${post.ref} was reported.`,
-    '',
+    `Post ID: ${post.ref}`,
     `Reason: ${input.reason || '(none given)'}`,
     `Reported by: ${who(input.people[input.reporterId], input.reporterEmail)}`,
-    ...(input.reports > 1 ? [`Reports on this post: ${input.reports}`] : []),
+    ...(input.reports > 1 ? [`Reports: ${input.reports}`] : []),
     '',
-    `Post ID: ${post.ref}`,
     `By: ${who(input.people[post.userId], input.authorEmail)}`,
     `Posted: ${post.createdAt.slice(0, 16).replace('T', ' ')} UTC`,
     ...(post.session
@@ -77,7 +75,7 @@ export function reportMessage(input: {
     ...(files.length ? [`Files: ${files.join(', ')}`] : []),
     ...(post.friendsOnly ? ['Friends only'] : []),
     '',
-    `Look at it or delete it: ${link}`,
+    `Open in Admin: ${link}`,
   ];
   return { subject: `Post ${post.ref} reported`, text: lines.join('\n') };
 }

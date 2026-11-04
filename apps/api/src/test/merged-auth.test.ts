@@ -14,7 +14,7 @@ let now = '2026-10-21T12:00:00.000Z';
 const post = (url: string, payload: object) => app.inject({ method: 'POST', url, payload });
 const me = (token: string) =>
   app.inject({ method: 'GET', url: '/api/me', headers: { authorization: `Bearer ${token}` } });
-const latestCode = () => mailer.messages!.at(-1)!.text.slice(0, 6);
+const latestCode = () => mailer.messages!.at(-1)!.text.match(/^\d{6}$/m)![0];
 
 beforeAll(async () => {
   pg = await createPgliteDb();

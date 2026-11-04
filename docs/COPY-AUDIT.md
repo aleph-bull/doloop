@@ -28,6 +28,8 @@ open. Pick it up when the owner asks; don't change any of it unasked.
   changed.
 - The Calendar items (the "commitment" line under the title, the "Could not suggest" toast)
   went with the calendar rebuild on 2026-10-21; that page's copy is new.
+- Every email's words were redone on 2026-11-04 (the university code is no longer
+  mid-sentence); DECISIONS.md, "Emails: less broodish, less explaining".
 - The owner **kept these on purpose**:
   - the start panel's "About 33 min across 1 item today"
   - the quirky greetings ("The timer missed you.", "Long time no see!", "Locked in.", "You
@@ -399,7 +401,6 @@ open. Pick it up when the owner asks; don't change any of it unasked.
 - university.ts:
   - "That address is not from an Ontario university we know…"
   - "That code is not right." / "…and it has now expired." (it actually ran out of tries)
-  - In the verification email, the code is buried mid-sentence.
 - Validation messages that mention "integers" and "0 (Sunday)", and "Repeat every 1 to 52
   periods."
 

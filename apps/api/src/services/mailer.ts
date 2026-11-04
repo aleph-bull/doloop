@@ -11,6 +11,24 @@ export interface Mailer {
   messages?: Array<MailMessage & { id: string; createdAt: string }>;
 }
 
+/**
+ * The words of every email with a code in it (owner, 2026-11-04: less broodish, less
+ * explaining): a hello, what it's for, the code on a line of its own, how long it works.
+ */
+export function codeEmailText(input: { for: string; code: string; minutes: number }) {
+  return [
+    'Hi,',
+    '',
+    `Here's your code to ${input.for}:`,
+    '',
+    input.code,
+    '',
+    `It works for ${input.minutes} minutes. If this wasn't you, you can ignore it.`,
+    '',
+    'Komogon',
+  ].join('\n');
+}
+
 export function createResendMailer(apiKey: string, from: string): Mailer {
   return {
     mode: 'resend',
