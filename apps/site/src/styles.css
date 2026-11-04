@@ -1758,6 +1758,33 @@ html.hero-waiting .laptop-lid::after {
   transition-delay: 0ms;
   transition-duration: 200ms;
 }
+/* On a phone, where the laptop is always there, the lid opens the same way as the page arrives
+   (shut until the devices come in), shuts as it scrolls off under the header and opens again
+   when it comes back (`is-shut`, main.js; the owner, 2026-11-04: "add laptop opening and
+   closing animation on mobile"). The query matches heroWait's, not roomy. Before the devices
+   come in the lid is shut at once, not closed: the page is often drawn before the script runs. */
+@media (max-width: 640px), (max-height: 500px) {
+  html.has-motion .hero-devices:not(.is-in) .laptop-lid,
+  html.has-motion .laptop.is-shut .laptop-lid {
+    transform: perspective(1400px) rotateX(-86deg);
+  }
+  html.has-motion .laptop.is-shut .laptop-lid {
+    transition-delay: 0ms;
+    transition-duration: 500ms;
+  }
+  html.has-motion .hero-devices:not(.is-in) .laptop-lid::after,
+  html.has-motion .laptop.is-shut .laptop-lid::after {
+    opacity: 1;
+  }
+  html.has-motion .laptop.is-shut .laptop-lid::after {
+    transition-delay: 0ms;
+    transition-duration: 200ms;
+  }
+  html.has-motion .hero-devices:not(.is-in) .laptop-lid,
+  html.has-motion .hero-devices:not(.is-in) .laptop-lid::after {
+    transition: none;
+  }
+}
 /* The timelapses: a screen tall, falling past the words as the band goes by; they fade in and
    out at the stage's top and bottom rather than being cut off by its edge. */
 html.has-scrub .fall-stage {

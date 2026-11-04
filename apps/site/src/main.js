@@ -53,11 +53,30 @@ if (!still && 'IntersectionObserver' in window) {
  * very top of the page"): whenever the page is at its very top, the words sit in the middle of
  * the window and the laptop and phone are hidden. Any scroll away from the top glides the words
  * up into their place and brings the devices up under them; back at the top they go again.
- * Nothing holds the scroll. A phone shows everything all the time.
+ * Nothing holds the scroll. A phone shows everything all the time, and its laptop opens and
+ * shuts instead (the owner, 2026-11-04: "add laptop opening and closing animation on mobile"):
+ * it opens as the page arrives (styles.css), shuts as it scrolls off under the header and opens
+ * again when it comes back (`is-shut`).
  */
 function heroWait(devices) {
   const copy = document.querySelector('.hero-copy');
+  const laptop = devices.querySelector('.laptop');
   const roomy = window.matchMedia('(min-width: 641px) and (min-height: 501px)');
+  // Shut once less than half of it is below the header.
+  const lid = new IntersectionObserver(
+    ([e]) => laptop.classList.toggle('is-shut', e.intersectionRatio < 0.5),
+    { rootMargin: '-60px 0px 0px 0px', threshold: 0.5 },
+  );
+  let watching = false;
+  const watch = () => {
+    if (!roomy.matches === watching) return;
+    watching = !roomy.matches;
+    if (watching) lid.observe(laptop);
+    else {
+      lid.unobserve(laptop);
+      laptop.classList.remove('is-shut');
+    }
+  };
   // From where the words sit to the middle of the window (offsetTop ignores the move).
   const place = () => {
     const centre = copy.offsetTop + copy.offsetHeight / 2;
@@ -77,6 +96,7 @@ function heroWait(devices) {
   };
   devices.style.setProperty('--d', '120ms');
   set();
+  watch();
   // The headline's height can change once the fonts arrive; keep it in the middle.
   document.fonts?.ready.then(() => hidden && place());
   window.addEventListener('scroll', set, { passive: true });
@@ -84,7 +104,10 @@ function heroWait(devices) {
     place();
     set();
   });
-  roomy.addEventListener('change', set);
+  roomy.addEventListener('change', () => {
+    set();
+    watch();
+  });
 }
 
 // ---------- Scroll scenes ----------
@@ -511,16 +534,31 @@ const clips = [...document.querySelectorAll('video.clip')];
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   for (const v of clips) if (!v.closest('button')) v.controls = true;
 } else if ('IntersectionObserver' in window) {
+  const run = (v, on) => {
+    if (on) v.play().catch(() => {});
+    else v.pause();
+  };
   const watch = new IntersectionObserver(
     (entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) e.target.play().catch(() => {});
-        else e.target.pause();
-      }
+      for (const e of entries) run(e.target, e.isIntersecting);
     },
     { threshold: 0.25 },
   );
-  for (const v of clips) watch.observe(v);
+  // The laptop's clip goes by the laptop, not its own picture, which folds flat while the lid
+  // is shut (on a computer at the top, below the window), and plays while any of the laptop is
+  // in or just below the window, so it is already playing when the lid opens (the owner,
+  // 2026-11-04: it "does not immediately play on site entry").
+  const near = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) run(e.target.querySelector('video.clip'), e.isIntersecting);
+    },
+    { rootMargin: '0px 0px 50% 0px' },
+  );
+  for (const v of clips) {
+    const laptop = v.closest('.laptop');
+    if (laptop) near.observe(laptop);
+    else watch.observe(v);
+  }
 } else {
   for (const v of clips) v.play().catch(() => {});
 }

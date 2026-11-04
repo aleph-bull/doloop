@@ -78,7 +78,10 @@ the pc screen, make it pure black when it's off"). As the page scrolls, the scre
 and comes up to face you, and the phone climbs a touch faster than the page. On a phone
 everything is shown at once: the whole laptop inside the margins with a smaller phone in front
 of its lower left corner ("HERO looks bad on phone": it had run off the edge under a big
-phone).
+phone). Its lid opens as the page arrives, shuts as it scrolls off under the header and opens
+again when it comes back ("add laptop opening and closing animation on mobile", 2026-11-04).
+The laptop's timelapse goes by the laptop, not its folded screen, so it is already playing
+when the lid opens ("does not immediately play on site entry").
 
 **Timelapses.** A screen tall on the night light, scrolling by ("remove the screen pin but
 keep the reactive falling"). The clips sink through it slower than the page, driven by how
