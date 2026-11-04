@@ -1,6 +1,6 @@
 // "Why it works" (/why-it-works/). The homepage's sky and header (a trimmed copy of main.js's
 // skyAndHeader, since main.js runs the homepage's scenes), its entrance motion, and the
-// timelapses in the first rows, which play only while they are on screen. Nothing here is
+// timelapse in the first row, which plays only while it is on screen. Nothing here is
 // needed to read the page.
 
 const root = document.documentElement;
