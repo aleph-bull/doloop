@@ -42,6 +42,14 @@ export interface SessionControllerProps {
   onEnded: (summary: EndSummary) => void;
   /** Hand the alert sounds to another surface (the focus tab) rather than play them here too. */
   muteAlerts?: boolean;
+  /**
+   * Another device owns this session and this one follows it: a phone filming for the
+   * computer (lib/camera-link.ts). It plays no sounds and no Jack mode machine, says nothing
+   * about sleep, and never ends the session by itself; the computer does all of that.
+   */
+  follow?: boolean;
+  /** Added to this device's clock, so it runs the timer on the same second as the one it follows. */
+  clockOffsetMs?: number;
 }
 
 export interface SessionController {
@@ -82,12 +90,16 @@ export function useSessionController({
   settings,
   nodes,
   onEnded,
-  muteAlerts = false,
+  muteAlerts: mutedHere = false,
+  follow = false,
+  clockOffsetMs = 0,
 }: SessionControllerProps): SessionController {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const muteAlerts = mutedHere || follow;
+  const offsetRef = useRef(clockOffsetMs);
   const [timer, setTimer] = useState<TimerState>(active.timer);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => Date.now() + clockOffsetMs);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [earlyOpen, setEarlyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -142,16 +154,26 @@ export function useSessionController({
       timer.phase === 'work' || timer.phase === 'short-break' || timer.phase === 'long-break';
   }, [timer.phase]);
   const sessionId = active.session.id;
+  // A new reading of the other device's clock shows at once, not at the next tick.
+  useEffect(() => {
+    if (offsetRef.current === clockOffsetMs) return;
+    offsetRef.current = clockOffsetMs;
+    const t = Date.now() + clockOffsetMs;
+    setNow(t);
+    setTimer((prev) => advance(prev, new Date(t).toISOString(), opts));
+  }, [clockOffsetMs, opts]);
   useEffect(() => {
     lastTick.current = Date.now();
     const id = window.setInterval(() => {
-      const t = Date.now();
-      const slept = t - lastTick.current;
+      // Sleep is measured on this device's own clock; the timer runs on the one it follows.
+      const raw = Date.now();
+      const t = raw + offsetRef.current;
+      const slept = raw - lastTick.current;
       const from = lastTick.current;
-      lastTick.current = t;
+      lastTick.current = raw;
       setNow(t);
       setTimer((prev) => advance(prev, new Date(t).toISOString(), opts));
-      if (slept >= SLEEP_MIN_MS && runningRef.current) {
+      if (slept >= SLEEP_MIN_MS && runningRef.current && !follow) {
         void api
           .sessionSleep(sessionId, {
             from: new Date(from).toISOString(),
@@ -162,7 +184,7 @@ export function useSessionController({
       }
     }, 1000);
     return () => window.clearInterval(id);
-  }, [opts, sessionId, qc]);
+  }, [opts, sessionId, qc, follow]);
 
   const nowIso = new Date(now).toISOString();
   const view = viewTimer(timer, nowIso);
@@ -213,6 +235,13 @@ export function useSessionController({
   useEffect(() => {
     if (jackOn) preloadJackSounds();
   }, [jackOn]);
+  // Handed to another surface mid-spin (a phone that starts following the computer): the
+  // machine goes from here at once, without pulling; the surface that owns it pulls.
+  useEffect(() => {
+    if (!muteAlerts) return;
+    setDice(null);
+    setHeld(null);
+  }, [muteAlerts]);
   useEffect(() => {
     if (!waiting || !lastRoll || muteAlerts) return;
     setHeld(0);
@@ -344,7 +373,9 @@ export function useSessionController({
   };
 
   // Scheduled auto-end: run the end flow with the review once the grace period elapses.
+  // A device following another leaves the end to that one.
   useEffect(() => {
+    if (follow) return;
     if (timer.phase === 'ended' && !reviewOpen && !endingRef.current) {
       if (reviews || asksTick) setReviewOpen(true);
       else void finish(null, false);
@@ -413,7 +444,7 @@ export function useSessionController({
         />
       )}
       <Modal
-        open={!!slept && !reviewOpen && !stopping}
+        open={!!slept && !follow && !reviewOpen && !stopping}
         onClose={() => {}}
         persistent
         title={`Your computer went to sleep at ${sleptAt}`}

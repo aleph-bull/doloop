@@ -781,7 +781,8 @@ export function useTimelapseRecorder({
   return {
     status,
     screenStatus,
-    live: (status === 'on' && !cameraMuted) || screenStatus === 'on',
+    // A phone holding its picture over a break (lib/camera-link.ts) is still the camera.
+    live: (status === 'on' && (!cameraMuted || !!remote)) || screenStatus === 'on',
     count,
     stream,
     remote: !!remote && status === 'on',

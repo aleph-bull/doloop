@@ -796,7 +796,14 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   video. A computer with no webcam carries on recording its screen. DECISIONS.md, "A phone
   films for the computer's timelapse". Testing: two headless Chrome pages with
   `--use-fake-device-for-media-stream`, one in a phone's shape (touch, 390 px); a real phone
-  needs HTTPS for its camera.
+  needs HTTPS for its camera. **While it films, the phone follows the computer** (2026-11-03):
+  the two hand each other the session over the link (newer by the API's `now` wins), the
+  phone runs its timer on the computer's clock (`clockOffsetMs`), and `follow` in
+  `useSessionController` keeps sounds, Jack mode's machine, sleep questions and the end on the
+  computer, from the moment the phone sees it recording. Nothing on a phone holds the clock
+  while a computer records the session, and while the computer isn't filming (a break, a pause,
+  the lever) the phone takes its picture off the link (`replaceTrack(null)`) and sends nothing
+  (2026-11-04: a phone joining on a break froze).
 - **One recording across sessions** (2026-10-29, Focus.tsx): a session that ends while
   recording hands it on to the next one started in the same tab while the video isn't saved
   or shared yet (`tlCarry`): the camera and screen come back on by themselves, and each

@@ -21,12 +21,17 @@ const ALARM_POLL = 'poll';
 const ALARM_TICK = 'tick';
 const POLL_MINUTES = 1;
 const BLOCK_RULE_BASE = 1000;
+/** The homepage, built in (`VITE_SITE_URL`): its /downloaded/ page greets a new install. */
+const SITE_URL = import.meta.env.VITE_SITE_URL ?? 'http://localhost:5190';
 
 /* ---------- Lifecycle ---------- */
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   void ensureAlarms();
   void poll();
+  // Once, when it is first added: not on an update or a browser update.
+  if (details.reason === 'install')
+    void chrome.tabs.create({ url: new URL('/downloaded/', SITE_URL).href });
 });
 chrome.runtime.onStartup.addListener(() => {
   void ensureAlarms();

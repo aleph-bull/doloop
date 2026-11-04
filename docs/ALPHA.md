@@ -93,8 +93,11 @@ string (`postgresql://…?sslmode=require`). It starts empty. Your own data and 
 the hosted ones:
 
 ```
-VITE_PORTAL_URL=https://<vercel address> VITE_API_URL=https://<api>.onrender.com pnpm --filter @komogon/extension build
+VITE_PORTAL_URL=https://komogon.app VITE_API_URL=https://<api>.onrender.com VITE_SITE_URL=https://app.komogon.app pnpm --filter @komogon/extension build
 ```
+
+`VITE_SITE_URL` is the homepage: the extension opens its "Thank you for installing Komogon!" page
+(`/downloaded/`) once, when it is first added.
 
 Then zip `apps/extension/dist`. Testers unzip it and add it at `chrome://extensions` ›
 Developer mode › Load unpacked. Then they open the portal once while signed in, and it

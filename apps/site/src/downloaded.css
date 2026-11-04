@@ -1,0 +1,72 @@
+/*
+ * "Thank you for installing Komogon!" (/downloaded/): the page the extension opens once it is
+ * added (owner, 2026-11-03). The homepage's hero as closely as it goes (owner, 2026-11-04:
+ * "mimic the marketing site as much as possible"): its header, its headline, line and buttons
+ * (.display, .lede, .cta from styles.css), centred over Dawn Skies' Cotton Candy photo.
+ */
+.got {
+  --fg: #f4f5f9;
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--sans);
+  color: var(--fg);
+  /* No background of its own: the photo sits behind the page (html keeps the dark under it). */
+}
+
+/* The photo the app shows behind Dawn Skies, under the wash it lays over it in dark mode. */
+.got-sky {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(
+      180deg,
+      rgb(14 9 22 / 0.5) 0%,
+      rgb(14 9 22 / 0.28) 34%,
+      rgb(14 9 22 / 0.34) 70%,
+      rgb(14 9 22 / 0.5) 100%
+    ),
+    url('/backgrounds/cotton-candy.webp') center / cover no-repeat;
+}
+
+/* The hero: everything centred, the headline first. */
+.got-hero {
+  box-sizing: border-box;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: calc(76px + clamp(20px, 4vh, 48px)) var(--gutter) clamp(40px, 7vh, 80px);
+  text-align: center;
+}
+.got-title {
+  max-width: 20ch;
+  text-shadow: 0 2px 40px rgb(30 14 44 / 0.28);
+  animation: got-rise 700ms var(--rise-ease) backwards;
+}
+.got-lede {
+  margin-top: 24px;
+  color: rgb(255 255 255 / 0.86);
+  animation: got-rise 700ms 100ms var(--rise-ease) backwards;
+}
+
+/* The site's own buttons (.cta-row, .cta-primary, .cta-glass). */
+.got-actions {
+  margin-top: 36px;
+  animation: got-rise 700ms 180ms var(--rise-ease) backwards;
+}
+
+@keyframes got-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .got-title,
+  .got-lede,
+  .got-actions {
+    animation: none;
+  }
+}

@@ -102,7 +102,11 @@ export function PhoneCamera({
     if (!recorder.stream) setShowing(false);
   }, [recorder.stream]);
 
-  const onBreak = timer.phase === 'short-break' || timer.phase === 'long-break';
+  // Jack mode's lever (played on the computer while filming for it) counts as the break.
+  const onBreak =
+    timer.phase === 'short-break' ||
+    timer.phase === 'long-break' ||
+    (timer.phase === 'paused' && !!timer.jack?.waiting);
   const stopped = recorder.status === 'ended';
   const mini = view === 'mini';
 

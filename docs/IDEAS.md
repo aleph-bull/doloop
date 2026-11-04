@@ -197,7 +197,10 @@ Built as "Saved looks" in Settings → Appearance: list in localStorage, an uplo
 - If the camera stops anyway, say so quietly on the focus screen rather than ending up with a short video and no explanation.
 - When building: the screen recording already listens for its track ending; the camera track doesn't (it should watch `ended` and `mute`). Check on a real iPhone, both in Safari and installed to the Home Screen, since older iOS versions had trouble with wake locks in installed web apps.
 
-## Phone and computer sync (logged 2026-11-03)
+## Phone and computer sync (logged 2026-11-03, built 2026-11-03)
+
+Built: the phone follows the computer from the moment it sees it recording (the session handed over the link, the computer's clock, no slot machine or sounds on the phone, nothing on the phone pauses the computer), and sends no picture while the computer isn't filming. The freeze (a phone joining on a break) wasn't reproduced (no real iPhone); see DECISIONS.md.
+
 
 - Sync between the phone and the computer is broken. It crashes the phone when the session is on a break.
 - Make the sync better. Whenever they sync:
@@ -205,7 +208,10 @@ Built as "Saved looks" in Settings → Appearance: list in localStorage, an uplo
   - The computer records its screen if screen recording is enabled.
 - How to sync: first make sure both ends are on the same state, then get the time from the phone or computer.
 
-## Launch the extension (logged 2026-11-03)
+## Launch the extension (logged 2026-11-03, page built 2026-11-03)
+
+Built: a "Thank you for installing Komogon!" page at app.komogon.app/downloaded/ (with confetti), opened by the extension once when it is added. Publishing to the Chrome Web Store, and the homepage's "Get the extension" button, are still to do.
+
 
 - Launch the extension.
 - It needs a "You have downloaded Komodon" page, shown when prompted after downloading.

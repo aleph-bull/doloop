@@ -717,13 +717,17 @@ export function Focus() {
     (cameraOn && (recorder.status === 'off' || recorder.status === 'starting')) ||
     screenAskOpen ||
     recorder.screenStatus === 'starting';
+  // A computer recording this session owns its clock: nothing asked on a phone holds it, or
+  // opening the phone would pause the computer's recording (and the two would disagree).
+  const computerOwns = phone && (cameraLink.host || linking);
   const holdTimer =
-    askOpen ||
-    tlAskOpen ||
-    orientAskOpen ||
-    linkAskOpen ||
-    recordingSetUp ||
-    audio.state === 'requesting';
+    !computerOwns &&
+    (askOpen ||
+      tlAskOpen ||
+      orientAskOpen ||
+      linkAskOpen ||
+      recordingSetUp ||
+      audio.state === 'requesting');
   /** The "try again" line after a share that fell short. Closed with its x for this visit. */
   const [retryClosed, setRetryClosed] = useState(false);
   useEffect(() => {
@@ -978,6 +982,8 @@ export function Focus() {
           nodes={nodes.data.nodes}
           chromeVisible={chromeVisible}
           holdTimer={holdTimer}
+          follow={computerOwns}
+          clockOffsetMs={linking ? cameraLink.clockOffsetMs : 0}
           camera={
             cameraScreen
               ? {
@@ -1231,6 +1237,14 @@ interface FocusSessionProps {
   chromeVisible: boolean;
   /** Pause the clock while true and resume it when it goes false, if this paused it. */
   holdTimer: boolean;
+  /**
+   * A phone on a session the computer is recording, filming for it or not yet: the computer
+   * owns the session and this follows it (no sounds, no slot machine, no end of its own; once
+   * filming, its state and its clock come over the link too).
+   */
+  follow: boolean;
+  /** How far the computer's clock is ahead of this phone's, while following it. */
+  clockOffsetMs: number;
   /** A phone recording a timelapse: the session is shown on the camera instead. */
   camera: {
     recorder: TimelapseRecorder;
@@ -1253,10 +1267,12 @@ function FocusSession({
   nodes,
   chromeVisible,
   holdTimer,
+  follow,
+  clockOffsetMs,
   camera,
   onEnded,
 }: FocusSessionProps) {
-  const ctl = useSessionController({ active, settings, nodes, onEnded });
+  const ctl = useSessionController({ active, settings, nodes, onEnded, follow, clockOffsetMs });
   const routines = useRoutines();
   const pace = usePace();
   const { timer, view } = ctl;
@@ -1339,15 +1355,18 @@ function FocusSession({
     progress.priorSeconds === 0
   );
 
-  const phase = ctl.spinning
-    ? 'Break'
-    : view.graceRemainingSeconds !== null
-      ? `Ends in ${view.graceRemainingSeconds} s`
-      : timer.mode === 'pomodoro' && timer.phase === 'work'
-        ? `${PHASE_LABEL.work} · cycle ${timer.cycle + 1}`
-        : timer.mode === 'scheduled' && timer.phase === 'work' && timer.plannedEndAt
-          ? `${PHASE_LABEL.work} · until ${fmtTime(timer.plannedEndAt)}`
-          : PHASE_LABEL[timer.phase];
+  // Jack mode's lever is a break too, whether the machine plays here or on the computer.
+  const pulling = ctl.timer.phase === 'paused' && !!ctl.timer.jack?.waiting;
+  const phase =
+    ctl.spinning || pulling
+      ? 'Break'
+      : view.graceRemainingSeconds !== null
+        ? `Ends in ${view.graceRemainingSeconds} s`
+        : timer.mode === 'pomodoro' && timer.phase === 'work'
+          ? `${PHASE_LABEL.work} · cycle ${timer.cycle + 1}`
+          : timer.mode === 'scheduled' && timer.phase === 'work' && timer.plannedEndAt
+            ? `${PHASE_LABEL.work} · until ${fmtTime(timer.plannedEndAt)}`
+            : PHASE_LABEL[timer.phase];
 
   // The same controller either way, so turning the camera on or off never touches the timer.
   if (camera)

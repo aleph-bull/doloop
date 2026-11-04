@@ -1,5 +1,7 @@
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { api, type CameraLinkMessage } from './api';
+import { api, type ActiveSession, type CameraLinkMessage } from './api';
+import { keys } from './queries';
 
 /**
  * A phone filming for a computer's timelapse. The computer recording a session is the host;
@@ -12,6 +14,13 @@ import { api, type CameraLinkMessage } from './api';
  * trickling), because the two sides only meet by asking the API every second or so.
  * Addresses come from the network itself and a public STUN server; there is no relay, so a
  * network that keeps its devices apart (some schools and offices) won't link.
+ *
+ * Once linked, the two keep the session the same (owner, 2026-11-03: "first make sure both
+ * ends are on the same state, then get the time"). Whichever end hears of a change first (its
+ * own pause, a refresh) hands the session to the other over the link, and the newer one wins
+ * (`relayActive`). The phone then reads the computer's clock (`ping`/`pong`) and runs its
+ * timer on it, so both show the same second. The phone only follows: the computer owns the
+ * session (its sounds, Jack mode's machine, its end), see `follow` in session-controller.
  */
 
 const ICE_SERVERS: RTCIceServer[] = [
@@ -35,9 +44,23 @@ const LOST_WAIT_MS = 6000;
 const CHECK_WAIT_MS = 2500;
 /** The most the phone's camera may send. Plenty for sharp stills over Wi-Fi. */
 const MAX_BITRATE = 4_000_000;
+/** How often a linked phone reads the computer's clock again. */
+const CLOCK_MS = 10_000;
+/** Clock readings kept; the one with the quickest round trip is the truest. */
+const CLOCK_SAMPLES = 6;
+/** A session bigger than this isn't sent over the link (a refresh brings it instead). */
+const MAX_NOTE_CHARS = 60_000;
+
+/** The running session as the API last told one end: `now` is the API's time of that answer. */
+type ActiveData = { now: string; active: ActiveSession | null };
 
 /** What the two say to each other once linked. */
-type Note = { t: 'state'; filming: boolean } | { t: 'bye' };
+type Note =
+  | { t: 'state'; filming: boolean }
+  | { t: 'bye' }
+  | { t: 'active'; data: ActiveData }
+  | { t: 'ping'; a: number }
+  | { t: 'pong'; a: number; b: number };
 
 type Outgoing = Omit<CameraLinkMessage, 'id'>;
 
@@ -51,14 +74,60 @@ function newLinkId(): string {
 function readNote(data: unknown): Note | null {
   if (typeof data !== 'string') return null;
   try {
-    const note = JSON.parse(data) as Partial<Note>;
+    const note = JSON.parse(data) as Partial<Note> & Record<string, unknown>;
     if (note.t === 'bye') return { t: 'bye' };
-    if (note.t === 'state')
-      return { t: 'state', filming: !!(note as { filming?: unknown }).filming };
+    if (note.t === 'state') return { t: 'state', filming: !!note.filming };
+    if (note.t === 'ping' && typeof note.a === 'number') return { t: 'ping', a: note.a };
+    if (note.t === 'pong' && typeof note.a === 'number' && typeof note.b === 'number')
+      return { t: 'pong', a: note.a, b: note.b };
+    if (note.t === 'active') {
+      const d = note.data as Partial<ActiveData> | undefined;
+      if (d && typeof d.now === 'string' && d.active !== undefined)
+        return { t: 'active', data: { now: d.now, active: d.active } };
+    }
   } catch {
     /* not one of ours */
   }
   return null;
+}
+
+/** Say something down an open channel; a closed one drops it. */
+function say(c: RTCDataChannel | null, note: Note) {
+  if (c?.readyState !== 'open') return;
+  const text = JSON.stringify(note);
+  if (text.length <= MAX_NOTE_CHARS) c.send(text);
+}
+
+const stampOf = (d: ActiveData) => Date.parse(d.now) || 0;
+const isActiveKey = (key: readonly unknown[]) =>
+  key.length === keys.active.length && key.every((k, i) => k === keys.active[i]);
+
+/**
+ * Keeps the running session the same on both ends of a link. What this end knows is sent on
+ * opening and whenever it changes (an event sent from here, a refresh); what the other end
+ * sends is taken when it is newer. The API's own time on each answer orders them, so the two
+ * clocks never have to agree for this. A session that ended is always taken.
+ */
+function relayActive(qc: QueryClient, channel: RTCDataChannel) {
+  let newest = 0;
+  const offer = (d: ActiveData | undefined) => {
+    if (!d || stampOf(d) <= newest) return;
+    newest = stampOf(d);
+    say(channel, { t: 'active', data: d });
+  };
+  const stop = qc.getQueryCache().subscribe((e) => {
+    if (e.type === 'updated' && isActiveKey(e.query.queryKey))
+      offer(e.query.state.data as ActiveData | undefined);
+  });
+  offer(qc.getQueryData<ActiveData>(keys.active));
+  return {
+    take: (d: ActiveData) => {
+      if (d.active && stampOf(d) <= newest) return;
+      newest = Math.max(newest, stampOf(d));
+      qc.setQueryData(keys.active, d);
+    },
+    stop,
+  };
 }
 
 /** Wait until every address is in the description, or long enough. */
@@ -140,13 +209,13 @@ function asker(run: () => Promise<number>) {
  * goes). `filming` is passed on so the phone can say whether stills are being taken.
  */
 export function useCameraHost(sessionId: string | null, filming: boolean): MediaStream | null {
+  const qc = useQueryClient();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const channel = useRef<RTCDataChannel | null>(null);
   const filmingRef = useRef(filming);
   useEffect(() => {
     filmingRef.current = filming;
-    const c = channel.current;
-    if (c?.readyState === 'open') c.send(JSON.stringify({ t: 'state', filming }));
+    say(channel.current, { t: 'state', filming });
   }, [filming]);
 
   useEffect(() => {
@@ -155,9 +224,12 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
     let after = 0;
     let pc: RTCPeerConnection | null = null;
     let link: string | null = null;
+    let relay: ReturnType<typeof relayActive> | null = null;
     const outbox: Outgoing[] = [];
 
     const drop = () => {
+      relay?.stop();
+      relay = null;
       channel.current = null;
       closeSoon(pc);
       pc = null;
@@ -180,9 +252,19 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
         if (conn !== pc) return;
         const c = e.channel;
         channel.current = c;
-        c.onopen = () => c.send(JSON.stringify({ t: 'state', filming: filmingRef.current }));
+        c.onopen = () => {
+          if (conn !== pc) return;
+          say(c, { t: 'state', filming: filmingRef.current });
+          relay?.stop();
+          relay = relayActive(qc, c);
+        };
         c.onmessage = (m) => {
-          if (conn === pc && readNote(m.data)?.t === 'bye') drop();
+          const note = readNote(m.data);
+          if (conn !== pc || !note) return;
+          if (note.t === 'bye') drop();
+          else if (note.t === 'active') relay?.take(note.data);
+          // The phone reads this computer's clock to run its timer on the same second.
+          else if (note.t === 'ping') say(c, { t: 'pong', a: note.a, b: Date.now() });
         };
       };
       conn.onconnectionstatechange = () => {
@@ -226,7 +308,10 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
       stopped = true;
       polls.stop();
       const c = channel.current;
-      if (c?.readyState === 'open') c.send(JSON.stringify({ t: 'bye' }));
+      // The session as it stands now (ended, if that is why), so the phone isn't left behind.
+      const last = qc.getQueryData<ActiveData>(keys.active);
+      if (last) say(c, { t: 'active', data: last });
+      say(c, { t: 'bye' });
       const was = link;
       drop();
       void api
@@ -238,7 +323,7 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
         })
         .catch(() => undefined);
     };
-  }, [sessionId]);
+  }, [sessionId, qc]);
 
   return stream;
 }
@@ -256,6 +341,11 @@ export interface CameraSender {
   status: CameraLinkStatus;
   /** The computer is taking stills right now: focus, not a break or a pause. */
   filming: boolean;
+  /**
+   * How far the computer's clock is ahead of this phone's, in ms, read over the link while it
+   * films; 0 until read. The phone runs the session's timer on it.
+   */
+  clockOffsetMs: number;
 }
 
 export interface CameraSenderArgs {
@@ -278,10 +368,12 @@ export function useCameraSender({
   stream,
   onHostGone,
 }: CameraSenderArgs): CameraSender {
+  const qc = useQueryClient();
   const [checkedFor, setCheckedFor] = useState<string | null>(null);
   const [hostFor, setHostFor] = useState<string | null>(null);
   const [status, setStatus] = useState<CameraLinkStatus>('connecting');
   const [filming, setFilming] = useState(false);
+  const [clockOffsetMs, setClockOffset] = useState(0);
   const streamRef = useRef(stream);
   const senderRef = useRef<RTCRtpSender | null>(null);
   const goneRef = useRef(onHostGone);
@@ -289,14 +381,21 @@ export function useCameraSender({
     goneRef.current = onHostGone;
   });
 
-  // A new camera (swapped, or started again after the screen locked) goes down the same link.
+  // The picture goes down the link only while the computer is taking stills. On a break, a
+  // pause or Jack mode's lever the camera stays on for the phone's own screen, but nothing is
+  // encoded or sent (owner, 2026-11-04: a phone joining on a break, filming while the computer
+  // wasn't, froze and the video had none of it); it is back the moment focus is. A new camera
+  // (swapped, or started again after the screen locked) goes down the same link.
+  const [linkedAt, setLinkedAt] = useState(0);
   useEffect(() => {
     streamRef.current = stream;
-    const track = stream?.getVideoTracks()[0];
-    if (!track || !senderRef.current) return;
-    track.contentHint = 'detail';
-    void senderRef.current.replaceTrack(track).catch(() => undefined);
-  }, [stream]);
+    const sender = senderRef.current;
+    if (!sender) return;
+    const track = filming ? (stream?.getVideoTracks()[0] ?? null) : null;
+    if (sender.track === track) return;
+    if (track) track.contentHint = 'detail';
+    void sender.replaceTrack(track).catch(() => undefined);
+  }, [stream, filming, linkedAt]);
 
   const looking = !!sessionId && (watch || film) && cameraLinkSupported();
   useEffect(() => {
@@ -311,14 +410,33 @@ export function useCameraSender({
     let lostAt = 0;
     /** Asks in a row with no computer there while not connected. */
     let missing = 0;
+    let relay: ReturnType<typeof relayActive> | null = null;
+    let clockTimer = 0;
+    /** Readings of the computer's clock: the round trip, and how far ahead it was. */
+    const readings: Array<{ trip: number; ahead: number }> = [];
     const outbox: Outgoing[] = [];
     const giveUp = window.setTimeout(() => setCheckedFor(sessionId), CHECK_WAIT_MS);
 
+    const readClock = () => say(channel, { t: 'ping', a: Date.now() });
+    const tookReading = (a: number, b: number) => {
+      const back = Date.now();
+      // Halfway through the round trip is when the computer read its clock.
+      readings.push({ trip: back - a, ahead: b - (a + back) / 2 });
+      if (readings.length > CLOCK_SAMPLES) readings.shift();
+      const best = readings.reduce((x, y) => (y.trip < x.trip ? y : x));
+      const ahead = Math.round(best.ahead);
+      // Small wobbles are left alone, so the clock never jitters by a second.
+      setClockOffset((was) => (Math.abs(was - ahead) < 150 ? was : ahead));
+    };
+
     const close = (sayBye: boolean) => {
       if (sayBye && link) {
-        if (channel?.readyState === 'open') channel.send(JSON.stringify({ t: 'bye' }));
+        say(channel, { t: 'bye' });
         outbox.push({ link, kind: 'bye' });
       }
+      relay?.stop();
+      relay = null;
+      window.clearInterval(clockTimer);
       closeSoon(pc);
       pc = null;
       channel = null;
@@ -347,11 +465,22 @@ export function useCameraSender({
       senderRef.current = conn.addTrack(track, s);
       const c = conn.createDataChannel('link');
       channel = c;
+      c.onopen = () => {
+        if (conn !== pc) return;
+        // The same session on both ends first, then the computer's time.
+        relay?.stop();
+        relay = relayActive(qc, c);
+        readClock();
+        window.clearInterval(clockTimer);
+        clockTimer = window.setInterval(readClock, CLOCK_MS);
+      };
       c.onmessage = (m) => {
         const note = readNote(m.data);
         if (conn !== pc || !note) return;
         if (note.t === 'state') setFilming(note.filming);
-        else gone();
+        else if (note.t === 'active') relay?.take(note.data);
+        else if (note.t === 'pong') tookReading(note.a, note.b);
+        else if (note.t === 'bye') gone();
       };
       conn.onconnectionstatechange = () => {
         if (conn !== pc) return;
@@ -361,6 +490,8 @@ export function useCameraSender({
           lostAt = 0;
           setStatus('on');
           void tuneSender(senderRef.current);
+          // A new link: send the picture or hold it, as the computer is filming or not.
+          setLinkedAt(Date.now());
         } else if (state === 'disconnected' || state === 'failed') {
           // Failed starts over at the next ask; a cut-off gets a few seconds to come back.
           lostAt = state === 'failed' ? Date.now() - LOST_WAIT_MS : Date.now();
@@ -427,15 +558,17 @@ export function useCameraSender({
       polls.stop();
       const had = !!link;
       close(film);
+      setClockOffset(0);
       if (had)
         void api.cameraLink({ sessionId, role: 'camera', send: outbox }).catch(() => undefined);
     };
-  }, [looking, sessionId, film]);
+  }, [looking, sessionId, film, qc]);
 
   return {
     checked: !looking || checkedFor === sessionId,
     host: hostFor !== null && hostFor === sessionId,
     status,
     filming,
+    clockOffsetMs: film ? clockOffsetMs : 0,
   };
 }
