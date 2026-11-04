@@ -333,9 +333,11 @@ and never explain the difference on screen.
   stay in the browser** (owner: "make sure custom background storage is local"): IndexedDB
   through `lib/local-backgrounds.ts`; the API only records an id and a fingerprint per
   background (`custom_backgrounds`, routes in `routes/assets.ts`) to count and charge. Never
-  send the pictures to the API or R2. Another browser shows "Not on this device", and the
-  extension can't show them. Uploads from before, kept in `user_assets`, are moved into the
-  browser on first sight (`adopt`). DECISIONS.md has the details.
+  send the pictures to the API or R2. Another browser shows "Not on this device". The
+  Chrome extension gets the one in use, and uploaded fonts in use, straight from the app in
+  the same browser (`useExtensionLook` in `lib/extension-bridge.ts`, 2026-11-04); it has no
+  look of its own, it is the portal's exactly. Uploads from before, kept in `user_assets`,
+  are moved into the browser on first sight (`adopt`). DECISIONS.md has the details.
 - Jack mode (2026-10-22, slot machine 2026-10-25): an opt-in Pomodoro mode in Settings ›
   Timer where a slot machine after each work block sets the break (0x to 3x of it in tenths,
   1x 30% of the time, average 0.9x), seeded in `timer.jack` so every client spins the same.

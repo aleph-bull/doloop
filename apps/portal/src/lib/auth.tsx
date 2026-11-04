@@ -408,6 +408,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       /* ignore */
     }
+    // The Chrome extension's bridge (apps/extension/src/content/bridge.ts) signs it out too.
+    window.postMessage({ type: 'komogon:signout' }, window.location.origin);
     setState({ status: 'signed-out', email: null });
   }, []);
 

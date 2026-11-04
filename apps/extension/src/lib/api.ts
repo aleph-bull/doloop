@@ -29,6 +29,34 @@ export interface ActiveSession {
   nodeTitle: string;
 }
 
+/** The parts of the end-of-session summary the popup shows (the portal's `EndSummary`). */
+export interface EndSummary {
+  session: Session;
+  xp: { total: number; withheld?: boolean };
+  xpTotal?: number;
+  /** Lifetime XP, for the level. */
+  xpEarned?: number;
+  leveledUp?: boolean;
+  levelAfter?: number;
+  phrase: { text: string } | null;
+  badges: string[];
+  streak: {
+    current: number;
+    longest: number;
+    message: string | null;
+    milestonesReached: number[];
+    weeks?: { current: number; longest: number };
+  };
+  nodeCompleted?: boolean;
+  routineTicked: boolean;
+}
+
+export interface CountSummary {
+  session: Session;
+  streak: { current: number; longest: number; weeks?: { current: number; longest: number } };
+  badgesRevoked: string[];
+}
+
 async function refreshIfNeeded(conn: Connection): Promise<Connection> {
   if (!conn.refreshToken || !conn.supabaseUrl || !conn.anonKey || !conn.expiresAt) return conn;
   const now = Math.floor(Date.now() / 1000);
@@ -76,8 +104,7 @@ export async function request<T>(method: string, path: string, body?: unknown): 
 }
 
 export const api = {
-  me: () => request<{ user: User; backgroundUpdatedAt: string | null }>('GET', '/api/me'),
-  background: () => request<{ dataUrl: string; updatedAt: string }>('GET', '/api/me/background'),
+  me: () => request<{ user: User }>('GET', '/api/me'),
   active: () =>
     request<{ now: string; active: ActiveSession | null }>('GET', '/api/sessions/active'),
   pace: () => request<{ pace: Record<string, NodePace>; plan: PlanItem[] }>('GET', '/api/pace'),
@@ -93,16 +120,12 @@ export const api = {
   event: (id: string, event: TimerEvent) =>
     request<{ now: string; active: ActiveSession }>('POST', `/api/sessions/${id}/events`, event),
   end: (id: string, body: { review?: Record<string, unknown> | null; markComplete?: boolean }) =>
-    request<{
-      summary: {
-        session: Session;
-        xp: { total: number };
-        phrase: { text: string } | null;
-        badges: string[];
-        streak: { current: number };
-        routineTicked: boolean;
-      };
-    }>('POST', `/api/sessions/${id}/end`, body),
+    request<{ summary: EndSummary }>('POST', `/api/sessions/${id}/end`, body),
+  /** "Don't count this session", or counting it again. */
+  count: (id: string, counted: boolean) =>
+    request<CountSummary>('PUT', `/api/sessions/${id}/counted`, { counted }),
+  /** Finished sessions that can still be posted on Social. */
+  postable: () => request<{ sessionIds: string[] }>('GET', '/api/social/postable'),
   quote: () =>
     request<{
       date: string;

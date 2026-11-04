@@ -56,13 +56,24 @@ export interface Snapshot {
 export interface Stored {
   connection?: Connection;
   snapshot?: Snapshot;
-  /** The six-hour quote slot (`quoteSlot().key`) last shown in the popup; a bare date before. */
-  quoteShownOn?: string;
+  /** The quote of the moment, kept for its six-hour slot (`quoteSlot().key`) so it shows at once. */
+  quote?: { slot: string; text: string; by: string; kind: 'quote' | 'tip' } | null;
   lastError?: string | null;
-  /** Cached uploaded background, keyed by the API's updatedAt. */
-  customBackground?: { dataUrl: string; updatedAt: string } | null;
+  /**
+   * Their own background's picture and their own fonts, which live only in the app's browser
+   * storage: the app hands them over through the bridge (`komogon:look`) while one is in use.
+   */
+  ownBackground?: { id: string; dataUrl: string } | null;
+  /** Uploaded fonts in use, by id, as base64. */
+  ownFonts?: Record<string, string>;
   /** The popup tab to reopen on, so a glance at routines is not undone by closing it. */
   tab?: 'focus' | 'routines' | 'rewards';
+  /** The last start's choices, so the next start opens on them (the portal's `komogon.start.last`). */
+  startLast?: {
+    style: 'pomodoro' | 'continuous';
+    duration: 'unlimited' | 'for' | 'until';
+    minutes: number;
+  };
 }
 
 export async function get<K extends keyof Stored>(key: K): Promise<Stored[K]> {

@@ -418,24 +418,3 @@ export function logoColor(
   if (contrastRatio(accent, worst) >= LOGO_MIN_CONTRAST) return null;
   return theme === 'dark' ? '#ffffff' : readableAccent(hsl, worst, LOGO_MIN_CONTRAST, true);
 }
-
-export interface ExtensionBackdropChoice {
-  backgroundId: string;
-  customImageUrl: string | null;
-}
-
-/**
- * Which background the extension shows: the portal's (preset or custom image), the uploaded
- * image, or a preset of its own. `uploadedDataUrl` is the cached upload, if any.
- */
-export function resolveExtensionBackdrop(
-  theme: { backgroundId: string; customBackgroundUrl: string | null; extensionBackground: string },
-  uploadedDataUrl: string | null,
-): ExtensionBackdropChoice {
-  const choice = theme.extensionBackground || 'same';
-  if (choice === 'upload')
-    return { backgroundId: theme.backgroundId, customImageUrl: uploadedDataUrl };
-  if (choice !== 'same') return { backgroundId: choice, customImageUrl: null };
-  const custom = theme.customBackgroundUrl === 'upload' ? uploadedDataUrl : null;
-  return { backgroundId: theme.backgroundId, customImageUrl: custom };
-}

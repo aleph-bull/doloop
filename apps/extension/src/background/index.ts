@@ -7,7 +7,11 @@ import {
   type TimerEvent,
   type UserSettings,
 } from '@komogon/core';
+// The theme helpers alone: the package's index brings in React components and their CSS,
+// which have no place in a service worker.
+import { accentHexFor } from '../../../../packages/ui/src/theme';
 import { api, ApiError, type ActiveSession } from '../lib/api';
+import { blockOrigins } from '../lib/blocking';
 import { get, getAll, remove, set, type Connection, type Snapshot } from '../lib/storage';
 
 /**
@@ -38,6 +42,10 @@ chrome.runtime.onStartup.addListener(() => {
   void poll();
 });
 
+// Allowing the focus page on blocked sites changes their rules from Chrome's page to ours.
+chrome.permissions.onAdded.addListener(() => void tick());
+chrome.permissions.onRemoved.addListener(() => void tick());
+
 async function ensureAlarms() {
   const existing = await chrome.alarms.getAll();
   if (!existing.some((a) => a.name === ALARM_POLL))
@@ -59,7 +67,7 @@ type Msg =
   | { type: 'poll' }
   | {
       type: 'start';
-      /** A task, or one occurrence of a routine. */
+      /** A task, one occurrence of a routine, or neither (just the timer). */
       nodeId?: string;
       routineId?: string;
       routineDate?: string;
@@ -75,6 +83,8 @@ type Msg =
       /** Completes the task, or ticks off a routine session's occurrence. */
       markComplete?: boolean;
     }
+  | { type: 'count'; sessionId: string; counted: boolean }
+  | { type: 'postable' }
   | { type: 'quote' }
   | { type: 'tick-routine'; routineId: string; date: string }
   | { type: 'untick-routine'; routineId: string; date: string }
@@ -91,15 +101,17 @@ chrome.runtime.onMessage.addListener((msg: Msg, _sender, sendResponse) => {
 
 async function handle(msg: Msg): Promise<unknown> {
   switch (msg.type) {
-    case 'connect':
+    case 'connect': {
+      // Another account signing in starts from nothing, not from the last one's snapshot.
+      const before = await get('connection');
+      if (before && before.email !== msg.connection.email) await remove('snapshot');
       await set({ connection: msg.connection, lastError: null });
       await ensureAlarms();
       await poll();
       return true;
+    }
     case 'disconnect':
-      await remove('connection', 'snapshot');
-      await clearBlocking();
-      await chrome.action.setBadgeText({ text: '' });
+      await disconnect();
       return true;
     case 'poll':
       return poll();
@@ -107,7 +119,9 @@ async function handle(msg: Msg): Promise<unknown> {
       const res = await api.start({
         ...(msg.routineId
           ? { routineId: msg.routineId, routineDate: msg.routineDate }
-          : { nodeId: msg.nodeId }),
+          : msg.nodeId
+            ? { nodeId: msg.nodeId }
+            : {}),
         mode: msg.mode,
         plannedEndAt: msg.plannedEndAt ?? null,
         ...(msg.showTimer === undefined ? {} : { showTimer: msg.showTimer }),
@@ -130,6 +144,10 @@ async function handle(msg: Msg): Promise<unknown> {
       await poll();
       return res.summary;
     }
+    case 'count':
+      return api.count(msg.sessionId, msg.counted);
+    case 'postable':
+      return api.postable();
     case 'quote':
       return api.quote();
     case 'tick-routine': {
@@ -152,6 +170,17 @@ async function handle(msg: Msg): Promise<unknown> {
       return out;
     }
   }
+}
+
+/**
+ * Forget the account: signed out in the app, a token that stopped working, or Disconnect.
+ * Their own background's picture and fonts go with it.
+ */
+async function disconnect(reason: string | null = null) {
+  await remove('connection', 'snapshot', 'ownBackground', 'ownFonts', 'quote');
+  await set({ lastError: reason });
+  await clearBlocking();
+  await chrome.action.setBadgeText({ text: '' });
 }
 
 /* ---------- Polling ---------- */
@@ -202,32 +231,17 @@ async function poll(): Promise<Snapshot | null> {
       refreshRoutines(toLocalDate(active.now, me.user.timezone)),
       refreshRewards(),
     ]);
-    // Uploaded background: download once per change, drop when no longer in use.
-    const th = me.user.settings.theme;
-    const wantsUpload =
-      me.backgroundUpdatedAt &&
-      (th.extensionBackground === 'upload' ||
-        (th.extensionBackground === 'same' && th.customBackgroundUrl === 'upload'));
-    const cached = await get('customBackground');
-    if (!wantsUpload) {
-      if (cached) await set({ customBackground: null });
-    } else if (!cached || cached.updatedAt !== me.backgroundUpdatedAt) {
-      try {
-        const bg = await api.background();
-        await set({ customBackground: { dataUrl: bg.dataUrl, updatedAt: bg.updatedAt } });
-      } catch {
-        /* keep whatever we had */
-      }
-    }
     await tick();
     return snapshot;
   } catch (err) {
+    // Signed out elsewhere, the token ran out, or the account was suspended: the popup goes
+    // back to asking to open the app, which hands over a fresh sign-in.
+    if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+      await disconnect(err.status === 403 ? 'Account suspended' : 'Signed out');
+      return null;
+    }
     const message = err instanceof Error ? err.message : String(err);
     await set({ lastError: message });
-    if (err instanceof ApiError && err.status === 401) {
-      await chrome.action.setBadgeText({ text: '!' });
-      await chrome.action.setBadgeBackgroundColor({ color: '#ef4444' });
-    }
     return null;
   }
 }
@@ -300,6 +314,9 @@ function advanceOptions(
 
 /* ---------- Badge + blocking tick ---------- */
 
+const BREAK_BADGE = '#3f9f6b';
+const PAUSED_BADGE = '#7b8494';
+
 async function tick() {
   const { snapshot } = await getAll();
   const active = snapshot?.active ?? null;
@@ -322,17 +339,15 @@ async function tick() {
       : view.phaseRemainingSeconds !== null
         ? Math.ceil(view.phaseRemainingSeconds / 60)
         : Math.floor(view.phaseElapsedSeconds / 60);
-  const colors: Record<string, string> = {
-    work: '#6366f1',
-    'short-break': '#22c55e',
-    'long-break': '#22c55e',
-    paused: '#94a3b8',
-  };
-  await chrome.action.setBadgeBackgroundColor({ color: colors[timer.phase] ?? '#6366f1' });
+  const accent = accentHexFor(snapshot?.settings?.theme.accent ?? DEFAULT_SETTINGS.theme.accent);
+  const color =
+    timer.phase === 'work' ? accent : timer.phase === 'paused' ? PAUSED_BADGE : BREAK_BADGE;
+  await chrome.action.setBadgeBackgroundColor({ color });
   await chrome.action.setBadgeTextColor?.({ color: '#ffffff' });
-  await chrome.action.setBadgeText({
-    text: timer.phase === 'paused' ? '||' : String(Math.max(0, minutes)),
-  });
+  // A hidden timer stays hidden here too.
+  const text =
+    timer.phase === 'paused' ? '||' : timer.showTimer ? String(Math.max(0, minutes)) : ' ';
+  await chrome.action.setBadgeText({ text });
 
   const settings = snapshot?.settings;
   if (
@@ -348,27 +363,51 @@ async function tick() {
 
 /* ---------- Site blocking (declarativeNetRequest) ---------- */
 
+/**
+ * A site the extension may read goes to the focus page; any other is blocked outright with
+ * Chrome's own page, since Chrome ignores a redirect on a site it can't read (found
+ * 2026-11-04: blocking had never worked for that reason).
+ */
 async function applyBlocking(domains: string[], until: string | null) {
   const blocked = chrome.runtime.getURL('src/blocked/index.html');
-  const rules: chrome.declarativeNetRequest.Rule[] = domains.slice(0, 200).map((domain, i) => ({
+  const list = domains.slice(0, 200);
+  const allowed = await Promise.all(
+    list.map((d) => chrome.permissions.contains({ origins: blockOrigins(d) })),
+  );
+  const rules: chrome.declarativeNetRequest.Rule[] = list.map((domain, i) => ({
     id: BLOCK_RULE_BASE + i,
     priority: 1,
-    action: {
-      type: 'redirect' as chrome.declarativeNetRequest.RuleActionType,
-      redirect: {
-        url: `${blocked}?until=${encodeURIComponent(until ?? '')}&site=${encodeURIComponent(domain)}`,
-      },
-    },
+    action: allowed[i]
+      ? {
+          type: 'redirect' as chrome.declarativeNetRequest.RuleActionType,
+          redirect: {
+            url: `${blocked}?until=${encodeURIComponent(until ?? '')}&site=${encodeURIComponent(domain)}`,
+          },
+        }
+      : { type: 'block' as chrome.declarativeNetRequest.RuleActionType },
     condition: {
       urlFilter: `||${domain}`,
       resourceTypes: ['main_frame' as chrome.declarativeNetRequest.ResourceType],
     },
   }));
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  // Every minute's tick asks again; only a change is written.
+  if (JSON.stringify(sortRules(existing)) === JSON.stringify(sortRules(rules))) return;
   await chrome.declarativeNetRequest.updateDynamicRules({
     removeRuleIds: existing.map((r) => r.id),
     addRules: rules,
   });
+}
+
+function sortRules(rules: chrome.declarativeNetRequest.Rule[]) {
+  return [...rules]
+    .sort((a, b) => a.id - b.id)
+    .map((r) => ({
+      id: r.id,
+      action: r.action.type,
+      url: r.action.redirect?.url ?? null,
+      filter: r.condition.urlFilter,
+    }));
 }
 
 async function clearBlocking() {

@@ -45,7 +45,7 @@ import { useOnlineStatus } from '../lib/local-state';
 import { NARROW_QUERY, PHONE_QUERY, useMediaQuery } from '../lib/media';
 import { preloadPage, preloadPages } from '../lib/page-loaders';
 import { useActiveSession, useAvatar, useMe, useNodes } from '../lib/queries';
-import { useExtensionStatus } from '../lib/extension-bridge';
+import { useExtensionLook, useExtensionStatus } from '../lib/extension-bridge';
 import { useScrollEdges } from '../lib/scroll-edges';
 import { useTour } from '../lib/tour';
 import { useUndoShortcuts } from '../lib/undo';
@@ -414,6 +414,8 @@ export function AppShell() {
   const usernameAsking = useUsernameNoticeDue();
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
+  // Their own background's picture and fonts live only in this browser: the extension gets them too.
+  useExtensionLook(settings, appearance.customImageUrl);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
   // The profile is not a tab: it sits where Sign out used to, at the end of the nav, shown
   // as the person's picture once they have chosen one.

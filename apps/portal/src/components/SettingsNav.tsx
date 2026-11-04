@@ -251,7 +251,6 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
       'grain',
       'dots',
       'grid',
-      'extension background',
       'new tab',
       // Panels.
       'panel',

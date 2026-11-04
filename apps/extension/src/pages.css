@@ -1,0 +1,28 @@
+@import './base.css';
+
+/* Full-size extension pages (settings, the blocked-site page): one card, the background behind. */
+body {
+  min-height: 100vh;
+  background: transparent;
+}
+.options,
+.blocked {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  padding: 48px 16px;
+}
+.options {
+  align-items: flex-start;
+}
+.blocked {
+  align-items: center;
+}
+.options > .card,
+.blocked > .card {
+  width: 100%;
+  max-width: 440px;
+}
+.blocked .card h1 {
+  font-size: var(--text-2xl);
+}

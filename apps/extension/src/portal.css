@@ -1,0 +1,1087 @@
+/*
+ * The portal's own styles for the parts the popup shares, copied word for word from
+ * apps/portal/src/index.css on 2026-11-04 (owner: "make the extension look like the portal",
+ * "the extension and portal should be the exact same"). Change them there and here together;
+ * extension-only changes go in base.css.
+ */
+
+/* ---------- The dashboard card and its title ---------- */
+.dash-card {
+  padding: var(--card-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+/* The dashboard's Coming up and Routines cards: lighter, like the start panel above them. */
+.dash-card .card-title {
+  font-weight: 500;
+}
+
+/* ---------- Links beside a card title ---------- */
+.section-link {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* ---------- The running session (TimerCard) ---------- */
+/* ---------- The running session on the dashboard ---------- */
+.timer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: var(--card-pad);
+  overflow: hidden;
+}
+/* What the clock is doing, with a dot that breathes while it runs. */
+.timer-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 4px 11px 4px 9px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg);
+}
+.timer-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: timer-breathe 2s var(--ease-in-out) infinite;
+}
+.timer-live[data-phase='short-break'],
+.timer-live[data-phase='long-break'] {
+  background: color-mix(in srgb, var(--status-ok) 18%, transparent);
+}
+.timer-live[data-phase='short-break'] .timer-live-dot,
+.timer-live[data-phase='long-break'] .timer-live-dot {
+  background: var(--status-ok);
+}
+.timer-live[data-phase='paused'] {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.timer-live[data-phase='paused'] .timer-live-dot {
+  background: var(--fg-subtle);
+  animation: none;
+}
+@keyframes timer-breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
+:root[data-motion='off'] .timer-live-dot {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='on']) .timer-live-dot {
+    animation: none;
+  }
+}
+.timer-path {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timer-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.timer-readout {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.timer-digits {
+  font-family: var(--font-timer);
+  font-size: clamp(3.75rem, 11vw, 6.5rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  line-height: 0.95;
+}
+/* A timer font of their own: every figure one box wide (ClockDigits), so the clock holds still. */
+[data-timer-font] .clock-digit {
+  display: inline-block;
+  width: 1ch;
+  text-align: center;
+}
+.timer-focused {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.timer-controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ---------- Starting a session (StartSessionDialog) ---------- */
+.start-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.start-dialog .modal-actions {
+  margin-top: var(--space-5);
+}
+.btn.start-go {
+  width: 100%;
+}
+.start-go-icon {
+  fill: currentColor;
+}
+/* What to study: the card's main control. */
+.start-subject {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+button.start-subject:hover {
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+}
+.start-subject.is-locked {
+  cursor: default;
+}
+.start-subject-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.start-subject-title {
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+.start-subject.is-empty .start-subject-title {
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.start-subject-where {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.start-subject-chevron {
+  flex: none;
+  color: var(--fg-muted);
+}
+/* How it runs: a pill each, the icon and chevron quieter than the words. */
+.start-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.start-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 14px 0 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg);
+  font: inherit;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+.start-pill svg {
+  flex: none;
+  color: var(--fg-muted);
+}
+.start-pill:hover,
+.start-pill.is-open {
+  background: color-mix(in srgb, var(--fg) 12%, transparent);
+}
+.start-pill-chevron {
+  margin-right: -4px;
+}
+.start-pill.is-off {
+  color: var(--fg-muted);
+}
+
+/* ---------- Its menus ---------- */
+.start-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.start-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.start-option:hover,
+.start-option:focus-visible {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.start-option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.start-option-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.start-option-check {
+  flex: none;
+  color: var(--accent);
+}
+.start-menu-foot {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.start-option.is-link {
+  color: var(--fg-muted);
+}
+
+/* ---------- Its length field ---------- */
+.start-length-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 4px 4px;
+}
+.start-length .ss-stepper {
+  grid-template-columns: 38px 1fr 38px;
+  height: 46px;
+  margin-top: 0;
+  padding: 4px;
+}
+.start-length .ss-step {
+  width: 38px;
+  height: 38px;
+}
+.start-length .ss-step:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 15%, transparent);
+}
+.start-length .ss-step-input {
+  font-size: 1.125rem;
+}
+.start-length .input {
+  height: 42px;
+  text-align: center;
+}
+
+/* ---------- The subject picker (SubjectPicker) ---------- */
+/* The subject picker: search, then the task tree one page at a time. */
+.picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* Back, where you are, and the way back to the top, on one line above the list. */
+/* Search above the list: typing swaps the course pages for one flat list of matches. */
+.picker-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.picker-search-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--fg-subtle);
+  pointer-events: none;
+}
+.picker-search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 34px 0 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+}
+.picker-search-input::placeholder {
+  color: var(--fg-subtle);
+}
+.picker-search-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+}
+/* The browser's own clear button; ours sits in its place. */
+.picker-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+.picker-search-clear {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg-muted);
+  cursor: pointer;
+}
+.picker-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 0 2px;
+}
+.picker-bar > :last-child {
+  justify-self: end;
+}
+.picker-heading {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+}
+.picker-above {
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+.picker-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--accent);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.picker-nav:hover {
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+}
+.picker-list {
+  /* A fixed height, browsing or searching: the sheet never resizes under the cursor as
+     results come and go; a long list scrolls inside, a short one leaves calm space. */
+  height: 264px;
+  flex: none;
+  overflow: auto;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.picker-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.picker-row:hover,
+.picker-row:focus-visible {
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.picker-row.is-chosen,
+.picker-folder.is-chosen .picker-row {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.picker-row-icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.picker-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.picker-row-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-row-sub {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+.picker-count {
+  flex-shrink: 0;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+.picker-chevron,
+.picker-check {
+  flex-shrink: 0;
+  color: var(--fg-muted);
+}
+.picker-check {
+  color: var(--accent);
+}
+/* A folder is its row plus, at the right, the mark that studies it as a whole. */
+.picker-folder {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.picker-folder .picker-open {
+  flex: 1;
+  min-width: 0;
+}
+.picker-whole {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+.picker-whole:hover,
+.picker-whole:focus-visible {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.picker-whole[aria-pressed='true'] {
+  color: var(--accent);
+}
+.picker-empty {
+  padding: 12px;
+  text-align: center;
+  margin: auto 0;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* ---------- The minutes stepper ---------- */
+.ss-stepper {
+  display: grid;
+  grid-template-columns: 52px 1fr 52px;
+  align-items: center;
+  height: 56px;
+  margin-top: 4px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+}
+.ss-step {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 9%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.ss-step:active:not(:disabled) {
+  background: color-mix(in srgb, var(--fg) 18%, transparent);
+}
+.ss-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ss-step-value {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+.ss-step-input {
+  width: 4ch;
+  border: none;
+  background: none;
+  color: var(--fg);
+  font-size: 1.375rem;
+  font-weight: 600;
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.ss-step-input::-webkit-inner-spin-button,
+.ss-step-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.ss-step-input:focus-visible {
+  outline: none;
+  box-shadow: none;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-underline-offset: 6px;
+}
+.ss-step-unit {
+  margin-left: 0.3em;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* ---------- Your rewards (RewardShelf) ---------- */
+/* ---------- custom rewards ---------- */
+
+.reward-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--card-pad);
+}
+.reward-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.reward-card-glyph {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--fg-subtle);
+}
+.reward-card-tools {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.reward-card:hover .reward-card-tools,
+.reward-card:focus-within .reward-card-tools {
+  opacity: 1;
+}
+.reward-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+}
+
+/* ---------- Routines due (RoutinesDueCard) ---------- */
+/* ---------- recurring tasks ---------- */
+
+.routine-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.routine-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-radius: var(--radius-md);
+}
+.routine-row:hover {
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.routine-tick {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  color: var(--accent-fg);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
+}
+.routine-tick:active:not(:disabled) {
+  transform: scale(0.85);
+}
+.routine-tick[aria-checked='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+}
+.routine-tick:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+/* The check is always there, undrawn: 24 covers the length of lucide's check path. */
+.routine-tick path {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+}
+.routine-tick[aria-checked='true'] path {
+  stroke-dashoffset: 0;
+}
+/* The ring that pulses out of the box on a tick. */
+.routine-tick::after {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+/* An inline box, so the strike covers the words rather than the whole row. */
+.routine-title {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0 1.5px;
+  transition: color var(--dur-slow) var(--ease-out);
+}
+.routine-row.is-done .routine-title {
+  background-size: 100% 1.5px;
+  color: var(--fg-subtle);
+}
+
+/*
+ * Ticking one off: the box squashes and springs back, the ring pulses, the check draws
+ * itself, then the title is struck through. In a due list the row then slides away and the
+ * list closes up (useTickedRoutines holds it on screen for that). Every duration is a
+ * multiple of --dur-slow, so the motion setting and reduced motion jump straight to the end.
+ */
+.routine-row.is-ticked .routine-tick {
+  animation: routine-tick-pop calc(var(--dur-slow) * 1.8) var(--ease-out) both;
+}
+.routine-row.is-ticked .routine-tick::after {
+  animation: routine-tick-ring calc(var(--dur-slow) * 2) var(--ease-out) both;
+}
+.routine-row.is-ticked .routine-tick path {
+  animation: routine-check-draw calc(var(--dur-slow) * 1.2) var(--ease-out)
+    calc(var(--dur-slow) * 0.4) both;
+}
+.routine-row.is-ticked .routine-title {
+  animation: routine-strike calc(var(--dur-slow) * 1.4) var(--ease-out) calc(var(--dur-slow) * 0.8)
+    both;
+}
+.routine-row.is-leaving {
+  animation: routine-leave calc(var(--dur-slow) * 1.6) var(--ease-in-out) calc(var(--dur-slow) * 2)
+    both;
+}
+@keyframes routine-tick-pop {
+  /* From the pressed size, so the spring picks up where the click left off. */
+  0% {
+    transform: scale(0.85);
+  }
+  45% {
+    transform: scale(1.22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes routine-tick-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.3);
+  }
+}
+@keyframes routine-check-draw {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes routine-strike {
+  from {
+    background-size: 0 1.5px;
+  }
+  to {
+    background-size: 100% 1.5px;
+  }
+}
+/*
+ * Fade and slide first, then close the gap from the row's own height (--row-h, measured at
+ * the tick), so the fold is one even tween; the -2px takes the list's gap with it.
+ */
+@keyframes routine-leave {
+  0% {
+    opacity: 1;
+    transform: none;
+    height: var(--row-h);
+  }
+  45% {
+    opacity: 0;
+    transform: translateX(14px);
+    height: var(--row-h);
+    padding-block: 6px;
+    margin-bottom: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(14px);
+    height: 0;
+    padding-block: 0;
+    margin-bottom: -2px;
+  }
+}
+/*
+ * The last row out does not fold: it fades where it stands and the empty line fades in at
+ * its height (useTickedRoutines), so the card does not shrink and then grow back.
+ */
+.routine-row.is-leaving.is-last {
+  animation-name: routine-leave-last;
+}
+@keyframes routine-leave-last {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+}
+/* Centered in the height the last row left behind. */
+.routine-empty {
+  display: flex;
+  align-items: center;
+}
+.routine-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.routine-mins {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+/* ---------- The end of a session (SessionSummary) ---------- */
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.summary-reveal {
+  animation: summary-reveal 520ms var(--ease-spring) backwards;
+}
+@keyframes summary-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.summary-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-display);
+  text-wrap: balance;
+}
+/* The hero: the time you put in, as big as the sheet allows, and what it earned under it. */
+.summary-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px 22px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.summary-hero-label {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.summary-hero-figure {
+  font-family: var(--font-display);
+  font-size: clamp(3.25rem, 12vw, 4.75rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+}
+.summary-xp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 12px 5px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+  font-size: var(--text-sm);
+}
+.summary-xp strong {
+  font-weight: 600;
+}
+.summary-xp.is-withheld {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  color: var(--fg-muted);
+  box-shadow: none;
+}
+/* Where the score came from: a row of small tallies rather than a ledger. */
+.summary-bonuses {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--text-xs);
+}
+.summary-bonuses li {
+  display: inline-flex;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 7%, transparent);
+  color: var(--fg-muted);
+}
+.summary-bonuses li span:last-child {
+  color: var(--fg);
+  font-weight: 600;
+}
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+.summary-stats div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+}
+.summary-stats dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+.summary-stats dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.summary-stat-aside {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--fg-subtle);
+}
+.summary-section-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-muted);
+}
+.summary-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.summary-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.summary-badge-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent-fill);
+  color: var(--accent-fg);
+}
+
+/* ---------- Saving a session (ReviewDialog) ---------- */
+.save {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.save-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.save-kicker {
+  font-size: var(--text-sm);
+  color: var(--accent-text);
+}
+.save-title {
+  font-size: var(--text-2xl);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  overflow-wrap: anywhere;
+}
+.save-path {
+  font-size: var(--text-sm);
+  color: var(--fg-subtle);
+}
+.save-stats {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+}
+.save-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.save-stat dt {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.save-stat dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+.save-stat.is-main dd {
+  font-size: clamp(2.75rem, 9vw, 3.5rem);
+  letter-spacing: -0.01em;
+}
+.save-qs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.save-q {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.save-q-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.save-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.save-chip {
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--fg) 12%, transparent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--fg) 5%, transparent);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-base) var(--ease-spring);
+}
+.save-chip:hover {
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+.save-chip:active {
+  transform: scale(0.95);
+}
+.save-chip[aria-checked='true'] {
+  background: var(--accent-fill);
+  border-color: var(--accent-fill);
+  color: var(--accent-fg);
+}

@@ -156,7 +156,10 @@ export interface UserSettings {
     fontText: string;
     fontHeading: string;
     fontTimer: string;
-    /** Extension popup background: 'same' as the portal, 'upload', or a preset id. */
+    /**
+     * No longer used (2026-11-04): the extension has the portal's look exactly, background
+     * included. Kept so stored rows and older portals still validate.
+     */
     extensionBackground: string;
     /** The user's own accent colours ('custom:h,s,l'), kept beside the built-in ones. */
     savedAccents: string[];

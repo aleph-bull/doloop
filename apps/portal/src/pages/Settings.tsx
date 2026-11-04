@@ -54,7 +54,6 @@ import { PanelSettings } from '../components/PanelSettings';
 import { FontSettings } from '../components/FontSettings';
 import { useUploadedBackgrounds } from '../components/CustomBackgrounds';
 import { GlassSettings } from '../components/GlassSettings';
-import { ExtensionBackgroundPicker } from '../components/ExtensionBackgroundPicker';
 import { VisualizerSettings } from '../components/focus/VisualizerSettings';
 import { TimelapseRecordChoice } from '../components/focus/Timelapse';
 import { TimelapsePresets } from '../components/focus/TimelapsePresets';
@@ -644,13 +643,6 @@ export function Settings() {
                   />
                 </div>
               )}
-              <ExtensionBackgroundPicker
-                value={s.theme.extensionBackground}
-                level={level}
-                purchased={purchased}
-                theme={theme}
-                onChange={(v) => patch({ theme: { extensionBackground: v } })}
-              />
               <PanelSettings
                 panel={s.theme.panel}
                 panelColor={s.theme.panelColor}

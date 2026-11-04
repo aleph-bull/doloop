@@ -1,65 +1,38 @@
-import { useEffect, useState } from 'react';
-import {
-  applyUserTheme,
-  Backdrop,
-  Button,
-  DEFAULT_BACKGROUND_ID,
-  Glass,
-  resolveExtensionBackdrop,
-  resolveTheme,
-} from '@komogon/ui';
-import { getAll, type Stored } from '../lib/storage';
-
-const FALLBACK_PORTAL = import.meta.env.VITE_PORTAL_URL ?? 'http://localhost:5173';
+import { Button, Glass, LogoMark } from '@komogon/ui';
+import { portalOf, useLook, useStored } from '../lib/look';
 
 export function Options() {
-  const [store, setStore] = useState<Stored | null>(null);
-  useEffect(() => {
-    void getAll().then(setStore);
-  }, []);
-  const settings = store?.snapshot?.settings ?? null;
-  const portal = store?.connection?.portalUrl ?? FALLBACK_PORTAL;
-  const choice = settings
-    ? resolveExtensionBackdrop(settings.theme, store?.customBackground?.dataUrl ?? null)
-    : { backgroundId: DEFAULT_BACKGROUND_ID, customImageUrl: null };
-  const backdropId = choice.customImageUrl ? null : choice.backgroundId;
-  useEffect(() => {
-    if (settings) applyUserTheme(settings, document.documentElement, backdropId);
-  }, [settings, backdropId]);
+  const store = useStored();
+  const backdrop = useLook(store);
+  const portal = portalOf(store);
   return (
-    <main style={{ padding: 32, maxWidth: 520 }}>
-      <Backdrop
-        backgroundId={choice.backgroundId}
-        theme={settings ? resolveTheme(settings.theme.mode) : 'dark'}
-        customImageUrl={choice.customImageUrl}
-        assetBase={portal}
-        texture={settings?.theme.texture}
-      />
-      <Glass
-        className="card"
-        style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 12 }}
-      >
-        <h1 style={{ fontSize: 'var(--text-xl)' }}>Komogon</h1>
-        <p style={{ color: 'var(--fg-muted)' }}>
+    <main className="options">
+      {backdrop}
+      <Glass className="card stack">
+        <div className="brand">
+          <LogoMark size={28} />
+          <h1 className="card-title">Komogon</h1>
+        </div>
+        <p className="muted text-sm">
           {store?.connection
-            ? `Connected as ${store.connection.email ?? 'your account'}. All settings live in the portal.`
-            : 'Not connected. Sign in to the portal and this extension connects automatically.'}
+            ? `Connected as ${store.connection.email ?? 'your account'}.`
+            : store
+              ? 'Sign in to Komogon in this browser.'
+              : ''}
         </p>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="row">
           <Button
             variant="primary"
-            onClick={() => chrome.tabs.create({ url: `${portal}/settings` })}
+            onClick={() =>
+              chrome.tabs.create({ url: store?.connection ? `${portal}/settings` : `${portal}/` })
+            }
           >
-            Open portal settings
+            {store?.connection ? 'Open settings' : 'Open Komogon'}
           </Button>
           {store?.connection && (
             <Button
               variant="ghost"
-              onClick={() => {
-                void chrome.runtime
-                  .sendMessage({ type: 'disconnect' })
-                  .then(() => getAll().then(setStore));
-              }}
+              onClick={() => void chrome.runtime.sendMessage({ type: 'disconnect' })}
             >
               Disconnect
             </Button>
