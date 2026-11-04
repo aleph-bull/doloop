@@ -870,6 +870,11 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   "Your timelapse" card's Video switch (`FormatChoice`) saves the format and remakes a made
   video; `timelapseLook(settings, 'computer', o, format)` gives the story's aspect and
   layout. Phones are unchanged: they already have upright and sideways.
+- **Moving the footage** (2026-11-03): when the video's shape cuts some of the camera off (a
+  story from a wide camera, a phone's still the other way round), the trim's viewer drags it
+  and a made video has "Move the footage" (`MoveFootage.tsx`). It is `crop` on the look,
+  0 to 1 on each side, per video and never saved. Any new place that draws the camera must
+  cut it with `coverCut` and the look's `crop`, or it won't match the video.
 - `showTimer` / `showClockTime` are old switches kept in the type only so a row saved
   before the layout existed seeds the two clock pieces.
 

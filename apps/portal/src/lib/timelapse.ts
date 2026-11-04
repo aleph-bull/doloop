@@ -23,9 +23,11 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   composeFrame,
+  coverCut,
   logoReady,
   rectLuma,
   sourceSize,
+  type CameraCrop,
   type DrawnRects,
   type WatermarkTone,
 } from './timelapse-compose';
@@ -831,6 +833,12 @@ export interface TimelapseLook {
    * taken the other way round is cropped to the middle.
    */
   orientation?: TimelapseOrientation;
+  /**
+   * Which part of the camera shows when the video's shape cuts some of it off (a wide camera
+   * in a story, a phone's still the other way round); the middle when absent. It belongs to
+   * this one video, like its text.
+   */
+  crop?: CameraCrop;
 }
 
 /** The video's width over height for a look, from the camera's and the screen's shapes. */
@@ -943,18 +951,22 @@ function blendBuffer(
 
 /**
  * A still drawn over the whole buffer. A still the same shape as the buffer just fills it;
- * one the other way round (the phone held the other way from the video) is cropped to the
- * middle rather than squashed, since the video keeps its one shape.
+ * one the other way round (the phone held the other way from the video) is cropped rather
+ * than squashed, since the video keeps its one shape: to the middle, or where it was moved.
  */
-function fillBuffer(b: CanvasRenderingContext2D, bmp: ImageBitmap, bw: number, bh: number) {
+function fillBuffer(
+  b: CanvasRenderingContext2D,
+  bmp: ImageBitmap,
+  bw: number,
+  bh: number,
+  at?: CameraCrop,
+) {
   if (Math.abs(bmp.width / bmp.height - bw / bh) < 0.01) {
     b.drawImage(bmp, 0, 0, bw, bh);
     return;
   }
-  const scale = Math.max(bw / bmp.width, bh / bmp.height);
-  const cw = bw / scale;
-  const ch = bh / scale;
-  b.drawImage(bmp, (bmp.width - cw) / 2, (bmp.height - ch) / 2, cw, ch, 0, 0, bw, bh);
+  const cut = coverCut(bmp.width, bmp.height, bw / bh, at);
+  b.drawImage(bmp, cut.x, cut.y, cut.w, cut.h, 0, 0, bw, bh);
 }
 
 /**
@@ -1037,6 +1049,8 @@ function frameDrawer(
     const { ctx: b, canvas } = buf;
     const bw = canvas.width;
     const bh = canvas.height;
+    // Only the camera is moved; the screen keeps its own shape.
+    const at = key === 'blob' ? look.crop : undefined;
     b.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
     b.globalAlpha = 1;
     let drew = false;
@@ -1044,7 +1058,7 @@ function frameDrawer(
       // A live clip is real motion already: each frame is just its own still.
       const now = await bitmap(from, key);
       if (now) {
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       }
     } else if (look.smooth && to - from > 1) {
@@ -1055,7 +1069,7 @@ function frameDrawer(
         if (!bmp) continue;
         n++;
         b.globalAlpha = 1 / n;
-        fillBuffer(b, bmp, bw, bh);
+        fillBuffer(b, bmp, bw, bh, at);
         drew = true;
       }
     } else {
@@ -1063,12 +1077,12 @@ function frameDrawer(
       const before = previous !== null && previous !== from ? await bitmap(previous, key) : null;
       if (look.smooth && now && before) {
         // One still per frame: a little of the last one under it softens the steps.
-        fillBuffer(b, before, bw, bh);
+        fillBuffer(b, before, bw, bh, at);
         b.globalAlpha = 0.7;
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       } else if (now) {
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       }
     }
@@ -1115,7 +1129,7 @@ function frameDrawer(
         ...stillTexts(still, look),
         progress: progressAt(j),
       },
-      { mark },
+      { mark, crop: look.crop },
     );
     previous = to - 1;
     return drawn;

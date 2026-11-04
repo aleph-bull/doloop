@@ -9,7 +9,8 @@ import {
   type Still,
   type TimelapseLook,
 } from '../../lib/timelapse';
-import { composeFrame } from '../../lib/timelapse-compose';
+import { composeFrame, MIDDLE_CROP, type CameraCrop } from '../../lib/timelapse-compose';
+import { useFootageDrag } from './MoveFootage';
 
 /** How many stills a phone's strip shows, spread over the whole recording. */
 const THUMBS = 9;
@@ -45,6 +46,11 @@ export interface TimelapseTrimProps {
   /** A computer's card: the strip fits its stills at their own shape, the viewer is sharper. */
   wide?: boolean;
   onChange: (from: number, to: number) => void;
+  /**
+   * The footage was dragged in the viewer, when the video's shape cuts some of it off. The
+   * viewer draws it where `look.crop` says.
+   */
+  onCrop?: (next: CameraCrop) => void;
 }
 
 /**
@@ -66,6 +72,7 @@ export function TimelapseTrim({
   look,
   wide = false,
   onChange,
+  onCrop,
 }: TimelapseTrimProps) {
   const span = Math.max(1, last - first);
   // At least a few seconds of session between the two ends, so something is always kept.
@@ -229,11 +236,19 @@ export function TimelapseTrim({
           // By time, so the bar holds through a live clip as it does in the video.
           progress: keptSpan > 0 ? ((times[i] ?? keptFrom) - keptFrom) / keptSpan : 1,
         },
-        { mark: '#ffffff' },
+        { mark: '#ffffff', crop: look.crop },
       );
     },
     [stills, times, pictures, vw, vh, look, keptFrom, keptSpan],
   );
+  const move = useFootageDrag({
+    canvas: canvasRef,
+    camera: shapes.camera,
+    w: vw,
+    h: vh,
+    crop: look.crop ?? MIDDLE_CROP,
+    onCrop,
+  });
 
   useEffect(() => {
     void drawAt(viewAt);
@@ -364,7 +379,18 @@ export function TimelapseTrim({
         className="tl-trim-view"
         style={{ aspectRatio: `${vw} / ${vh}`, width: `min(100%, ${(46 * vw) / vh}vh)` }}
         aria-label="The trimmed timelapse"
+        {...move.props}
       />
+      {move.axis && (
+        <div className="tl-move-hint field-hint">
+          <span>Drag to move the footage</span>
+          {move.moved && (
+            <Button variant="ghost" size="sm" onClick={() => onCrop?.(MIDDLE_CROP)}>
+              Centre
+            </Button>
+          )}
+        </div>
+      )}
       <div className="tl-trim-bar">
         <button
           type="button"

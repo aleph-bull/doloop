@@ -43,6 +43,47 @@ export interface ComposeOptions {
   mark: WatermarkTone | null;
   /** Draw labelled stand-ins for a missing camera or screen, for the editor. */
   placeholders?: boolean;
+  /** Which part of the camera shows when the frame cuts some of it off; the middle if absent. */
+  crop?: CameraCrop;
+}
+
+/**
+ * Which part of the camera's picture a frame of another shape keeps, on each side: 0 its
+ * left (or top) edge, 1 its right (or bottom) edge, 0.5 the middle. Only the side the frame
+ * cuts matters: a wide picture in a tall video moves left and right, a tall one up and down.
+ */
+export interface CameraCrop {
+  x: number;
+  y: number;
+}
+
+export const MIDDLE_CROP: CameraCrop = { x: 0.5, y: 0.5 };
+
+const unit = (v: number) => (Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0.5);
+
+/**
+ * How many pixels of a picture `sw` × `sh` fall outside a `w` × `h` frame it covers, across
+ * and down: one of the two is always 0.
+ */
+export function coverSpare(sw: number, sh: number, w: number, h: number): { x: number; y: number } {
+  if (!(sw > 0 && sh > 0 && w > 0 && h > 0)) return { x: 0, y: 0 };
+  const scale = Math.max(w / sw, h / sh);
+  return { x: sw * scale - w, y: sh * scale - h };
+}
+
+/**
+ * The part of a `sw` × `sh` picture that covers a frame of width over height `ratio`, placed
+ * by `at`, in the picture's own pixels.
+ */
+export function coverCut(
+  sw: number,
+  sh: number,
+  ratio: number,
+  at: CameraCrop = MIDDLE_CROP,
+): Rect {
+  const cw = Math.min(sw, sh * ratio);
+  const ch = Math.min(sh, sw / ratio);
+  return { x: (sw - cw) * unit(at.x), y: (sh - ch) * unit(at.y), w: cw, h: ch };
 }
 
 /** A box in pixels. */
@@ -94,13 +135,20 @@ function keepInFrame(x: number, y: number, pw: number, ph: number, w: number, h:
   };
 }
 
-/** The camera fills the frame and is cropped to it, like a photo in a frame. */
-function drawCover(ctx: CanvasRenderingContext2D, src: CanvasImageSource, w: number, h: number) {
+/**
+ * The camera fills the frame and is cropped to it, like a photo in a frame: to the middle,
+ * or wherever the person moved it.
+ */
+function drawCover(
+  ctx: CanvasRenderingContext2D,
+  src: CanvasImageSource,
+  w: number,
+  h: number,
+  at?: CameraCrop,
+) {
   const { w: sw, h: sh } = sourceSize(src);
-  const scale = Math.max(w / sw, h / sh);
-  const cw = w / scale;
-  const ch = h / scale;
-  ctx.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, 0, 0, w, h);
+  const cut = coverCut(sw, sh, w / h, at);
+  ctx.drawImage(src, cut.x, cut.y, cut.w, cut.h, 0, 0, w, h);
 }
 
 /** The screen is shown whole inside its box, so nothing on it is cut off. */
@@ -410,7 +458,7 @@ export function composeFrame(
   ctx.fillRect(0, 0, w, h);
   const full = { x: 0, y: 0, w, h };
   const screenBox = layout.screen.visible ? toRect(layout.screen, w, h) : null;
-  if (frame.camera) drawCover(ctx, frame.camera, w, h);
+  if (frame.camera) drawCover(ctx, frame.camera, w, h, opts.crop);
   else if (opts.placeholders) drawPlaceholder(ctx, full, 0, '#3b4157', 'Camera', screenBox);
   drawn.camera = full;
   if (screenBox) {

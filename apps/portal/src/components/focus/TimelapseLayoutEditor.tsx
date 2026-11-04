@@ -75,6 +75,7 @@ import {
   sourceSize,
   TIMELAPSE_COLOR_HEX,
   TIMELAPSE_FONT_VAR,
+  type CameraCrop,
   type ComposeFrame,
   type DrawnRects,
 } from '../../lib/timelapse-compose';
@@ -312,9 +313,14 @@ export interface TimelapseLayoutEditorProps {
   noteText?: string;
   /**
    * A still to arrange the pieces over, in place of the live camera: a frame of a video just
-   * made. The preview then shows that frame, and the camera button goes.
+   * made. The preview then shows that frame, and the camera button goes. `crop` is where
+   * that video's footage was moved to.
    */
-  backdrop?: { camera: CanvasImageSource | null; screen: CanvasImageSource | null } | null;
+  backdrop?: {
+    camera: CanvasImageSource | null;
+    screen: CanvasImageSource | null;
+    crop?: CameraCrop;
+  } | null;
   /** What the clocks, the task name and the progress bar say in the preview. */
   sample?: Partial<Omit<ComposeFrame, 'camera' | 'screen'>>;
   /**
@@ -507,7 +513,7 @@ export function TimelapseLayoutEditor({
         progress: 0.6,
         ...sample,
       },
-      { mark: '#ffffff', placeholders: true },
+      { mark: '#ffffff', placeholders: true, crop: video ? undefined : backdrop?.crop },
     );
     const next: Partial<Record<TimelapseElementId, TimelapseBox>> = {};
     for (const id of TIMELAPSE_MOVABLE) {

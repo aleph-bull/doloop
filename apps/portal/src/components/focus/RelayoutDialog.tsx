@@ -7,9 +7,9 @@ import {
   type TimelapseOrientation,
   type UserSettings,
 } from '@komogon/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Modal } from '@komogon/ui';
-import type { ComposeFrame } from '../../lib/timelapse-compose';
+import type { CameraCrop, ComposeFrame } from '../../lib/timelapse-compose';
 import type { Still } from '../../lib/timelapse';
 import { NoteField } from './NoteField';
 import { targetsFor, TimelapseLayoutEditor } from './TimelapseLayoutEditor';
@@ -39,6 +39,8 @@ export interface RelayoutDialogProps {
   sample: Partial<Omit<ComposeFrame, 'camera' | 'screen'>>;
   /** The text on this video, which belongs to it rather than to the layout. */
   noteText: string;
+  /** Where this video's footage was moved to, so the moment shows as it does in the video. */
+  crop?: CameraCrop;
   /** Saved: make the video again with this. */
   onRedraw: (next: Relayout) => void;
 }
@@ -60,6 +62,7 @@ export function RelayoutDialog({
   still,
   sample,
   noteText: videoNote,
+  crop,
   onRedraw,
 }: RelayoutDialogProps) {
   // Only the layout this video uses: a phone's upright or sideways one, a computer's own or
@@ -69,7 +72,8 @@ export function RelayoutDialog({
       ? t.id === (format === 'story' ? 'story' : 'computer')
       : t.id === (orientation ?? 'upright'),
   );
-  const backdrop = useStillPictures(open ? still : undefined);
+  const pictures = useStillPictures(open ? still : undefined);
+  const backdrop = useMemo(() => pictures && { ...pictures, crop }, [pictures, crop]);
   const [noteText, setNoteText] = useState(videoNote);
   // Opened again: start from the video's own text.
   useEffect(() => {
@@ -132,8 +136,8 @@ export function RelayoutDialog({
   );
 }
 
-/** A still's camera and screen pictures, decoded for drawing while the dialog is open. */
-function useStillPictures(still: Still | undefined) {
+/** A still's camera and screen pictures, decoded for drawing while a dialog is open. */
+export function useStillPictures(still: Still | undefined) {
   const [pictures, setPictures] = useState<{
     camera: ImageBitmap | null;
     screen: ImageBitmap | null;

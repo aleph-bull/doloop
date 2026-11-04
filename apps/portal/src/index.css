@@ -11107,6 +11107,35 @@ button.start-subject:hover {
   border-radius: var(--radius-md);
   background: #000;
 }
+/* The video's shape cuts some of the footage off: drag it along (2026-11-03). A sideways
+   drag leaves the page free to scroll up and down, an up-and-down one the other way. */
+.tl-trim-view[data-move] {
+  cursor: grab;
+  touch-action: pan-y;
+}
+.tl-trim-view[data-move='y'] {
+  touch-action: pan-x;
+}
+.tl-trim-view[data-dragging] {
+  cursor: grabbing;
+}
+.tl-trim-view[data-move]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.tl-move-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 30px;
+  margin: -2px 0 6px;
+}
+@media (min-width: 561px) {
+  .modal.move-footage-dialog {
+    max-width: min(640px, calc(100vw - 32px));
+  }
+}
 .tl-trim-bar {
   display: flex;
   align-items: stretch;
