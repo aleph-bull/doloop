@@ -141,6 +141,9 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   it only ever calls the app Komogon (never Doloop, KomodoIt or Komodon; the one exception is
   the 10-20 line saying the name became Komodon, kept as history). The page shows only the
   last three days; never delete older entries, they stay in the file and the sidebar on purpose.
+  It covers the app only (owner, 2026-11-04: "only for the portal not the marketing app"):
+  never the homepage's changes, and nothing only admins see. Days with nothing for the app
+  get no entry.
 - **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
   to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
   numbered batches. Work on it only when they ask, and tick items off there as they ship.
