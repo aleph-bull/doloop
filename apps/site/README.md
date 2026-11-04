@@ -192,6 +192,10 @@ down, are in [DESIGN.md](DESIGN.md). Read it before changing how the page looks 
   task, the progress bar and the mark), so they look exactly like Komogon's. They are other
   people's footage: check the rights before the site goes live, or swap them for the owner's.
 
+## Why it works (2026-11-04)
+
+`why-it-works/index.html`, `src/why.css`, `src/why.js`: the studies behind each part of the app, laid out like an index of articles (picture, title with the study under it, what it found, an arrow to the paper by DOI), under a plain heading (no hero, at the owner's word). It uses the homepage's header, closing and footer from styles.css and its own trimmed copy of the sky and header script; main.js isn't loaded. The homepage links it from the app card, just above Next (`.app-why` in `.app-card-foot`, below the five parts' words so it never moves), and from the footer. The pictures in `public/why/` were cut with sharp from `public/clips` and `public/shots` (and one frame of `clips/plan-week.mp4`) at 720 x 450. DECISIONS.md, "Why it works", has the studies and the reasons.
+
 ## Retaking the screenshots
 
 1. Seed a sandbox with Jerry and six friends (Zachary posts the timelapses): in `../api`,

@@ -327,10 +327,16 @@
                   </p>
                 </div>
               </div>
-              <button class="app-next" type="button">
-                <span class="app-next-label">Plan</span>
-                <span class="app-next-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
-              </button>
+              <!-- The card's foot: a small link to the studies just above Next (owner, 2026-11-04:
+                   "put why it works above earn start plan track social", pointing at the card's
+                   Earn button). It sits outside the five parts' words, so it never moves. -->
+              <div class="app-card-foot">
+                <a class="app-why" href="/why-it-works/">Why it works</a>
+                <button class="app-next" type="button">
+                  <span class="app-next-label">Plan</span>
+                  <span class="app-next-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg></span>
+                </button>
+              </div>
             </div>
             <div class="app-view">
               <div class="window app-window">
@@ -419,6 +425,7 @@
           <nav class="site-footer-links" aria-label="Footer">
             <a href="https://komogon.app">Open the app</a>
             <a href="https://discord.gg/bUkqd58FF5" target="_blank" rel="noopener">Join Discord</a>
+            <a href="/why-it-works/">Why it works</a>
             <a href="/changelog/">Changelog</a>
             <a href="#top">Back to top</a>
           </nav>

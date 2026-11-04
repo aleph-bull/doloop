@@ -49,6 +49,7 @@ export default defineConfig({
         changelog: page('./changelog/index.html'),
         // Opened by the extension once it is added (apps/extension, background).
         downloaded: page('./downloaded/index.html'),
+        why: page('./why-it-works/index.html'),
       },
     },
   },

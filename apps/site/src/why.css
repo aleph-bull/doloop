@@ -1,0 +1,339 @@
+/*
+ * "Why it works" (/why-it-works/): the research behind each part of the app. The homepage's
+ * header, closing and footer (styles.css) around a list of studies laid out like an
+ * index of articles (the owner's reference, 2026-11-04): a picture of that part of the app, the
+ * title with the study under it, what it found, and an arrow to the paper. The rows sit on
+ * the lavender morning of the homepage's phones; hairlines between them, nothing boxed.
+ */
+
+/* The page is light from the top: the lavender morning under everything until the script
+   takes over (styles.css starts the homepage on its dusk). */
+.why-root {
+  background: #eeeaf5;
+}
+.why-root:not(.has-sky) .sky-layer[data-sky='dawn'] {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* The header has no photo under it here, so it is dark on the light sky from the top, with the
+   buttons it wears on the white glass. */
+.why .site-nav[data-tone='light'] {
+  color: var(--ink);
+}
+.why .site-nav[data-tone='light'] .cta-discord {
+  color: var(--accent-text);
+  background: rgb(255 255 255 / 0.6);
+  box-shadow: inset 0 0 0 1px rgb(26 22 34 / 0.1);
+}
+.why .site-nav[data-tone='light'] .cta-light {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ---------- The heading ---------- */
+
+/* No hero (the owner: "remove the hero make it more serious"): the heading and one line on the
+   rows' own grid, the heading over the pictures and titles, the line over the words. */
+.why-list {
+  position: relative;
+  z-index: 1;
+  padding: calc(76px + clamp(56px, 11vh, 120px)) 0 clamp(40px, 8vh, 96px);
+}
+.why-head {
+  display: grid;
+  grid-template-columns: var(--pic) minmax(0, 0.92fr) minmax(0, 1.08fr) 44px;
+  align-items: end;
+  gap: 18px clamp(28px, 3.4vw, 52px);
+  margin-bottom: clamp(36px, 6vh, 64px);
+  --pic: clamp(220px, 23vw, 300px);
+}
+.why-title {
+  grid-column: 1 / span 2;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(40px, 4.6vw, 64px);
+  line-height: 1;
+  letter-spacing: -0.036em;
+  font-feature-settings: 'ss01', 'ss03';
+}
+.why-intro {
+  grid-column: 3 / span 2;
+  margin: 0 0 6px;
+  max-width: 40ch;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* ---------- The studies ---------- */
+.studies {
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+/* One row: picture, title and study, what it found, the arrow. */
+.study {
+  --pic: clamp(220px, 23vw, 300px);
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--pic) minmax(0, 0.92fr) minmax(0, 1.08fr) 44px;
+  align-items: center;
+  gap: 0 clamp(28px, 3.4vw, 52px);
+  padding: clamp(28px, 3.6vw, 40px) 0;
+  border-top: 1px solid var(--line);
+}
+.study:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+/* A picture of that part of the app, in a window with the app's rounded corner. */
+.study-pic {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #e7e2f0;
+  box-shadow:
+    0 0 0 1px rgb(26 22 34 / 0.06),
+    0 18px 34px -24px rgb(30 20 64 / 0.55);
+  transition:
+    transform 420ms var(--rise-ease),
+    box-shadow 420ms var(--rise-ease);
+}
+.study-pic img,
+.study-pic video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.study-head {
+  display: grid;
+  gap: 10px;
+}
+.study-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(24px, 2.25vw, 31px);
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  font-feature-settings: 'ss01', 'ss03';
+  text-wrap: balance;
+}
+/* The title's link covers the whole row, so any of it opens the study. */
+.study-link {
+  color: inherit;
+  text-decoration: none;
+  transition: color 220ms;
+}
+.study-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.study-link:focus-visible {
+  outline: none;
+}
+.study:has(.study-link:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 6px;
+  border-radius: 8px;
+}
+.study-cite {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+.study-text {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+/* The arrow: a hairline ring that fills with the accent when the row is pointed at. */
+.study-go {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(26 22 34 / 0.14);
+  color: var(--ink-2);
+  transition:
+    background-color 220ms,
+    color 220ms,
+    box-shadow 220ms,
+    transform 320ms var(--rise-ease);
+}
+.study-go svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (hover: hover) {
+  .study:hover .study-title {
+    color: var(--accent-text);
+  }
+  .study:hover .study-pic {
+    transform: translateY(-3px);
+    box-shadow:
+      0 0 0 1px rgb(26 22 34 / 0.06),
+      0 26px 40px -24px rgb(30 20 64 / 0.6);
+  }
+  .study:hover .study-go {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: none;
+    transform: translate(2px, -2px);
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* The closing: the homepage's, with less sky above and below. */
+.why-closing {
+  padding-block: clamp(110px, 16vh, 180px);
+}
+
+/* ---------- Narrower windows ---------- */
+
+/* The picture beside the words, the words in one column, the arrow at the end. */
+@media (max-width: 1023px) {
+  .why-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .why-title,
+  .why-intro {
+    grid-column: 1;
+  }
+  .study {
+    --pic: clamp(200px, 30vw, 260px);
+    grid-template-columns: var(--pic) minmax(0, 1fr) 40px;
+    grid-template-rows: auto auto;
+    align-items: start;
+    gap: 14px clamp(22px, 3.4vw, 36px);
+  }
+  .study-pic {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+  .study-head {
+    grid-column: 2;
+    align-self: end;
+  }
+  .study-text {
+    grid-column: 2;
+  }
+  .study-go {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* A phone: the picture across, the words under it, the arrow beside the study's name, all on
+   plain white like the homepage's lower parts on a phone. */
+@media (max-width: 640px) {
+  .why-list {
+    padding: calc(64px + 40px) 0 24px;
+  }
+  .why-head {
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .why-title {
+    font-size: clamp(36px, 10vw, 44px);
+  }
+  .why-intro {
+    font-size: 16px;
+  }
+  .study {
+    grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-rows: none;
+    gap: 0 14px;
+    padding: 28px 0 30px;
+  }
+  .study:first-child {
+    border-top: 0;
+  }
+  .study:last-child {
+    border-bottom: 0;
+  }
+  .study-pic {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    margin-bottom: 20px;
+    border-radius: 16px;
+  }
+  .study-head {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: start;
+    gap: 6px;
+  }
+  .study-title {
+    font-size: 25px;
+  }
+  .study-text {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    margin-top: 12px;
+    font-size: 15.5px;
+  }
+  .study-go {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    width: 36px;
+    height: 36px;
+  }
+  .study-go svg {
+    width: 16px;
+    height: 16px;
+  }
+  .why-closing {
+    padding-block: 72px 112px;
+  }
+}
+
+/* The flat sky on a phone (styles.css turns the fixed one off): white from the top. */
+@media (max-width: 640px), (max-height: 500px) {
+  .why-root {
+    background: #fff;
+  }
+  .why main > .why-list[data-sky] {
+    background: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .study-pic,
+  .study-go {
+    transition: none;
+  }
+}

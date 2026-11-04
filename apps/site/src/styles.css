@@ -1298,6 +1298,31 @@ html:not(.has-thumb) .app-tab.is-on {
 .app-next:hover .app-next-arrow {
   translate: 3px 0;
 }
+/* The card's foot: a small link to the studies just above Next (owner, 2026-11-04). Both sit
+   under the five parts' words, which share one place as tall as the longest, so the link stays
+   put whichever part is up. */
+.app-card-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+}
+.app-why {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.88);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 200ms;
+}
+.app-why:hover {
+  color: #fff;
+}
+.app-why:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
 /* A paperclip holding the card, over its top edge. */
 .paperclip {
   position: absolute;
@@ -2217,6 +2242,19 @@ html.has-scrub .floaters {
   .paperclip,
   .app-next {
     display: none;
+  }
+  /* No card or Next here: the link centred under the words, in the accent on the white. */
+  .app-card-foot {
+    align-items: center;
+  }
+  .app-why {
+    color: var(--accent-text);
+  }
+  .app-why:hover {
+    color: var(--accent-deep);
+  }
+  .app-why:focus-visible {
+    outline-color: var(--accent);
   }
   .app-panel h2 {
     margin-bottom: 10px;
