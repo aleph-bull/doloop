@@ -220,11 +220,10 @@ export function UniversityField({ active }: { active: boolean }) {
             inputMode="numeric"
             autoComplete="one-time-code"
             pattern="\d{6}"
-            maxLength={6}
             placeholder="6 digits"
             className="profile-uni-code"
             value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

@@ -127,7 +127,6 @@ export function EmailCodeDialog({
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             inputMode="numeric"
             autoComplete="one-time-code"
-            maxLength={6}
             required
           />
         )}

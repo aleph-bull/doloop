@@ -61,11 +61,10 @@ export function ResetPassword() {
                   <Input
                     label="Reset code"
                     value={code}
-                    onChange={(e) => setCode(e.target.value)}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                     inputMode="numeric"
                     autoComplete="one-time-code"
                     pattern="[0-9]{6}"
-                    maxLength={6}
                     required
                   />
                   <Input
