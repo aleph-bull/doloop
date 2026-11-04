@@ -47,12 +47,12 @@ export const TIMELAPSE_STYLES: readonly TimelapseStyle[] = [
   { id: 'clean', name: 'Clean', description: 'The camera, the mark and your text.' },
 ];
 
-/** The pieces a look places; the others (the screen, the time elapsed, start and end) stay put. */
+/** The pieces a look places; the others (the screen, the times elapsed, start and end) stay put. */
 type StyledId = 'clock' | 'elapsed' | 'title' | 'note' | 'progress' | 'watermark';
 const STYLED: readonly StyledId[] = ['clock', 'elapsed', 'title', 'note', 'progress', 'watermark'];
 
 /** Text pieces a look draws its way but leaves where they are. */
-const DRESSED: readonly TimelapseElementId[] = ['total', 'start', 'end'];
+const DRESSED: readonly TimelapseElementId[] = ['total', 'sum', 'start', 'end'];
 
 /** How a look draws a text: its pill and colour, never its font. */
 type LookStyle = Partial<Pick<TimelapsePieceStyle, 'pill' | 'color'>>;

@@ -873,11 +873,12 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   are mended to a full-frame camera by `normalizeTimelapseLayout`.
 - On top sit the **screen**, **current time**, **focus time** (the piece's id is still
   `elapsed`; it draws "Focus 42:17", "Break 3:10"), **time elapsed** (`total`, "Elapsed
-  51:02": focus and breaks), **start time** and **end time** (`start`, `end`: the
-  session's, "Start 9:10 AM"; until it ends, the end is the last still), **task name**,
-  **progress bar** (fills as the video plays through the session) and the **Komogon mark**
-  (can't be removed). The time elapsed, start and end start out of the layout, as chips to
-  add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
+  51:02": focus and breaks), **total time elapsed** (`sum`, "Total elapsed 1:25:03": the
+  whole recording's, the same on every frame, 2026-11-04), **start time** and **end time**
+  (`start`, `end`: the session's, "Start 9:10 AM"; until it ends, the end is the last
+  still), **task name**, **progress bar** (fills as the video plays through the session)
+  and the **Komogon mark** (can't be removed). The time elapsed, total, start and end start
+  out of the layout, as chips to add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
 - The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
   each one, and the boxes come from that. Text pieces are placed by their top left and sized
   by their height; their width is the text's. Resizing from a corner keeps the shape of the

@@ -863,6 +863,11 @@ export interface TimelapseLook {
   startAt?: number | null;
   endAt?: number | null;
   /**
+   * The whole recording's time elapsed in seconds, focus and breaks, for the total piece: the
+   * same on every frame, whatever the trim keeps. Left out when absent.
+   */
+  sumSeconds?: number | null;
+  /**
    * A phone's video: which way it goes. The camera's shape is turned to match, so a still
    * taken the other way round is cropped to the middle.
    */
@@ -917,7 +922,10 @@ export function clockText(
 /** What every text piece says on a still, as the video draws it. */
 export function stillTexts(
   still: Pick<Still, 'workSeconds' | 'breakSeconds' | 'totalSeconds' | 'takenAt' | 'title'>,
-  look: Pick<TimelapseLook, 'breakClock' | 'timeZone' | 'noteText' | 'startAt' | 'endAt'>,
+  look: Pick<
+    TimelapseLook,
+    'breakClock' | 'timeZone' | 'noteText' | 'startAt' | 'endAt' | 'sumSeconds'
+  >,
 ) {
   const at = (label: string, ms: number | null | undefined) =>
     ms ? `${label} ${timeOfDayText(ms, look.timeZone, false)}` : null;
@@ -926,6 +934,7 @@ export function stillTexts(
     clock: still.takenAt ? timeOfDayText(still.takenAt, look.timeZone) : null,
     elapsed: clockText(still, look.breakClock),
     total: `Elapsed ${timelapseClock(still.totalSeconds)}`,
+    sum: look.sumSeconds != null ? `Total elapsed ${timelapseClock(look.sumSeconds)}` : null,
     start: at('Start', look.startAt),
     end: at('End', look.endAt),
     title: still.title,

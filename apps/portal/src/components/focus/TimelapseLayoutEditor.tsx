@@ -506,6 +506,7 @@ export function TimelapseLayoutEditor({
         clock: timeOfDayText(now, timeZone),
         elapsed: 'Focus 42:17',
         total: 'Elapsed 51:02',
+        sum: 'Total elapsed 1:25:03',
         start: `Start ${timeOfDayText(now - 51 * 60_000, timeZone, false)}`,
         end: `End ${timeOfDayText(now, timeZone, false)}`,
         title: sampleTitle,

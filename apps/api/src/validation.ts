@@ -245,6 +245,7 @@ const timelapseLayout = z
     clock: timelapseBox,
     elapsed: timelapseBox,
     total: timelapseBox,
+    sum: timelapseBox,
     start: timelapseBox,
     end: timelapseBox,
     title: timelapseBox,

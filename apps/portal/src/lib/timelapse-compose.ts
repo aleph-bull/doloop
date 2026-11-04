@@ -28,6 +28,8 @@ export interface ComposeFrame {
   elapsed: string | null;
   /** Focus and breaks together, "Elapsed 41:02". */
   total?: string | null;
+  /** The whole recording's time elapsed, the same on every frame, "Total elapsed 1:24:10". */
+  sum?: string | null;
   /** When the session started and ended, "Start 9:10 AM". */
   start?: string | null;
   end?: string | null;
@@ -241,7 +243,7 @@ const LIGHT = 450;
 /** One run of a piece's text, and whether it is the small part beside the number. */
 type Part = { text: string; small: boolean };
 
-const LABEL = /^(Focus|Break|Elapsed|Start|End) (.+)$/;
+const LABEL = /^(Focus|Break|Elapsed|Total elapsed|Start|End) (.+)$/;
 const SUFFIX = /^(.*\d)\s+([AP]M(?:\s+\S+)?)$/;
 
 /**
@@ -478,11 +480,12 @@ export function composeFrame(
     }
   }
   const texts: Array<
-    ['clock' | 'elapsed' | 'total' | 'start' | 'end' | 'title' | 'note', string | null]
+    ['clock' | 'elapsed' | 'total' | 'sum' | 'start' | 'end' | 'title' | 'note', string | null]
   > = [
     ['clock', frame.clock],
     ['elapsed', frame.elapsed],
     ['total', frame.total ?? null],
+    ['sum', frame.sum ?? null],
     ['start', frame.start ?? null],
     ['end', frame.end ?? null],
     ['title', frame.title],

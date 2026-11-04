@@ -14,6 +14,8 @@ export type TimelapseElementId =
   | 'clock'
   | 'elapsed'
   | 'total'
+  /** The whole recording's time elapsed, the same on every frame (`total` counts up). */
+  | 'sum'
   | 'start'
   | 'end'
   | 'title'
@@ -28,6 +30,7 @@ export const TIMELAPSE_ELEMENTS: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
   'total',
+  'sum',
   'start',
   'end',
   'title',
@@ -46,6 +49,7 @@ export const TIMELAPSE_TEXT_ELEMENTS: readonly TimelapseElementId[] = [
   'clock',
   'elapsed',
   'total',
+  'sum',
   'start',
   'end',
   'title',
@@ -69,6 +73,7 @@ export const TIMELAPSE_ELEMENT_LABELS: Record<TimelapseElementId, string> = {
   clock: 'Current time',
   elapsed: 'Focus time',
   total: 'Time elapsed',
+  sum: 'Total time elapsed',
   start: 'Start time',
   end: 'End time',
   title: 'Task name',
@@ -289,7 +294,7 @@ export function fitBoxToRatio(
  * A starting layout for a shape, after the owner's sketch: the time of day top left, the
  * screen top right, the time elapsed bottom left, the task bottom right, the camera behind.
  * Tall videos stack the same pieces instead. The screen starts out of the layout, waiting
- * under the editor to be added, and so do the time elapsed and the start and end times. The person's own text sits under the time of day; it is
+ * under the editor to be added, and so do the time elapsed (counting and total) and the start and end times. The person's own text sits under the time of day; it is
  * drawn only once there is some.
  */
 export function defaultTimelapseLayout(
@@ -304,6 +309,7 @@ export function defaultTimelapseLayout(
       clock: box(0.05, 0.035, 0.3, 0.04),
       elapsed: box(0.05, 0.86, 0.25, 0.045),
       total: box(0.05, 0.74, 0.25, 0.045, false),
+      sum: box(0.05, 0.68, 0.3, 0.045, false),
       start: box(0.05, 0.135, 0.3, 0.035, false),
       end: box(0.05, 0.18, 0.3, 0.035, false),
       title: box(0.05, 0.8, 0.6, 0.045),
@@ -319,6 +325,7 @@ export function defaultTimelapseLayout(
       clock: box(0.05, 0.05, 0.3, 0.06),
       elapsed: box(0.05, 0.86, 0.2, 0.065),
       total: box(0.05, 0.68, 0.2, 0.065, false),
+      sum: box(0.05, 0.59, 0.25, 0.065, false),
       start: box(0.05, 0.2, 0.3, 0.055, false),
       end: box(0.05, 0.27, 0.3, 0.055, false),
       title: box(0.05, 0.77, 0.5, 0.065),
@@ -333,6 +340,7 @@ export function defaultTimelapseLayout(
     clock: box(0.04, 0.06, 0.2, 0.08),
     elapsed: box(0.04, 0.84, 0.12, 0.08),
     total: box(0.04, 0.74, 0.12, 0.08, false),
+    sum: box(0.04, 0.64, 0.16, 0.08, false),
     start: box(0.04, 0.25, 0.2, 0.07, false),
     end: box(0.04, 0.33, 0.2, 0.07, false),
     title: box(0.5, 0.76, 0.46, 0.08, true, 'right'),

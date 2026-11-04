@@ -136,7 +136,7 @@ describe('how each piece is drawn', () => {
 
   it('draws the clocks in the timer font and the words in the text font, unless told', () => {
     const d = defaultTimelapseLayout(16 / 9);
-    for (const id of ['clock', 'elapsed', 'total', 'start', 'end'] as const)
+    for (const id of ['clock', 'elapsed', 'total', 'sum', 'start', 'end'] as const)
       expect(pieceStyle(id, d[id]).font).toBe('timer');
     for (const id of ['title', 'note'] as const) expect(pieceStyle(id, d[id]).font).toBe('text');
     // A clock's own font is not stored; another of theirs is.
@@ -175,7 +175,7 @@ describe('how each piece is drawn', () => {
   it('draws the pieces a look leaves in place its way too', () => {
     const r = 16 / 9;
     const outline = applyTimelapseStyle('outline', r, defaultTimelapseLayout(r));
-    for (const id of ['total', 'start', 'end'] as const)
+    for (const id of ['total', 'sum', 'start', 'end'] as const)
       expect(pieceStyle(id, outline[id]).pill).toBe('outline');
     // Back to Classic, they are plain again.
     const classic = applyTimelapseStyle('classic', r, outline);

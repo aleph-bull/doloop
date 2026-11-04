@@ -1141,6 +1141,8 @@ export function Focus() {
               sessionSpan={{
                 startedAt: tlLinked[0]?.startedAt ?? summary.session.startedAt,
                 endedAt: tlLinked[tlLinked.length - 1]?.endedAt ?? summary.session.endedAt,
+                // Every session the recording went through, as the video's clocks run.
+                elapsedSeconds: tlCovered.reduce((n, c) => n + c.workSeconds + c.breakSeconds, 0),
               }}
               orientation={picked?.o ?? null}
               postSession={linkedPost(tlLinked)}

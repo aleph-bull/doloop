@@ -987,8 +987,11 @@ export interface TimelapseExportProps {
    * together, and the tasks.
    */
   postSession?: { minutes: number; elapsedMinutes: number; subject: string | null } | null;
-  /** When the first session started and, once over, the last ended: the video's start and end. */
-  sessionSpan?: { startedAt: string; endedAt: string | null } | null;
+  /**
+   * When the first session started and, once over, the last ended: the video's start and end.
+   * Once over, also every session's time elapsed added up, for the total piece.
+   */
+  sessionSpan?: { startedAt: string; endedAt: string | null; elapsedSeconds?: number } | null;
   /** Which way a phone's video goes, picked before the camera opened. */
   orientation?: TimelapseOrientation | null;
   /** The made video as a file, or null once there is none: it can go along to the post box. */
@@ -1083,6 +1086,11 @@ export function TimelapseExport({
   const endMs = sessionSpan?.endedAt
     ? Date.parse(sessionSpan.endedAt)
     : (all[all.length - 1]?.takenAt ?? null);
+  // The whole recording's time elapsed, the same on every frame: the sessions' own once they
+  // are over (the last still can be a little before the end), else the last still's.
+  const lastTotal = all[all.length - 1]?.totalSeconds;
+  const sumSeconds =
+    lastTotal === undefined ? null : Math.max(lastTotal, sessionSpan?.elapsedSeconds ?? 0);
   const look: TimelapseLook = useMemo(
     () => ({
       ...timelapseLook(
@@ -1095,10 +1103,23 @@ export function TimelapseExport({
       noteText: cleanNoteText(noteText),
       startAt: startMs,
       endAt: endMs,
+      sumSeconds,
       orientation: device === 'phone' ? (orientation ?? undefined) : undefined,
       crop,
     }),
-    [settings, device, upright, asStory, timeZone, noteText, startMs, endMs, orientation, crop],
+    [
+      settings,
+      device,
+      upright,
+      asStory,
+      timeZone,
+      noteText,
+      startMs,
+      endMs,
+      sumSeconds,
+      orientation,
+      crop,
+    ],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
