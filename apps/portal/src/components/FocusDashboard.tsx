@@ -61,7 +61,7 @@ export function FocusDashboard() {
       {!active.data?.active && (
         <GetStarted
           title="Got a lot due?"
-          line="Bring it in all at once, and Komodon plans each day."
+          line="Bring it in all at once, and Komogon plans each day."
         />
       )}
       <Button variant="ghost" onClick={() => void showMore()} disabled={update.isPending}>

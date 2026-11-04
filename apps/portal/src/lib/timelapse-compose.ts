@@ -409,7 +409,7 @@ function logoIn(tone: WatermarkTone, size: number): CanvasImageSource | null {
   return black;
 }
 
-/** The Komodon mark and wordmark, as in the portal nav, its height the box's. */
+/** The Komogon mark and wordmark, as in the portal nav, its height the box's. */
 function drawWatermark(
   ctx: CanvasRenderingContext2D,
   r: Rect,
@@ -419,7 +419,7 @@ function drawWatermark(
   align: TimelapseAlign | undefined,
 ): Rect {
   const size = r.h;
-  const text = 'Komodon';
+  const text = 'Komogon';
   ctx.save();
   ctx.font = `600 ${Math.round(size * 0.78)}px Satoshi, ${FONT}`;
   const tw = ctx.measureText(text).width;

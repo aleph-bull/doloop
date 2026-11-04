@@ -25,7 +25,7 @@ export interface EventInput {
   description?: string;
   start: string; // ISO
   end: string; // ISO
-  /** Marks events created by Komodon. */
+  /** Marks events created by Komogon. */
   komogonBlockId?: string;
 }
 

@@ -165,7 +165,7 @@ type MenuView = 'list' | 'sure' | 'report' | 'elsewhere';
  * The ⋯ under every post. Yours: edit the words, trim the video when there is one, post it
  * on Instagram, TikTok or X (`PostElsewhere`), or delete it after "Are you sure?". Someone
  * else's: Hide (not built yet) and Report, which asks why (optional) and goes to whoever
- * runs Komodon. An admin also gets Delete on anyone's post and the post's ID, which a report
+ * runs Komogon. An admin also gets Delete on anyone's post and the post's ID, which a report
  * names (2026-11-03).
  */
 function PostMenu({

@@ -17,7 +17,7 @@ const OWNER_KEY = 'komogon.push.user';
 export type PushState =
   /** No notifications in this browser at all. */
   | 'unsupported'
-  /** Safari on an iPhone or iPad: only once Komodon is on the Home Screen. */
+  /** Safari on an iPhone or iPad: only once Komogon is on the Home Screen. */
   | 'home-screen'
   /** Turned down in the browser; only its site settings can bring them back. */
   | 'denied'

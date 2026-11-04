@@ -1059,7 +1059,7 @@ export const api = {
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
   /** Your own post, or any post from an admin. */
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
-  /** Someone else's post, with what's wrong (may be empty); goes to whoever runs Komodon. */
+  /** Someone else's post, with what's wrong (may be empty); goes to whoever runs Komogon. */
   reportPost: (id: string, reason: string) =>
     request<{ reported: boolean }>('POST', `/api/posts/${id}/report`, { reason }),
   /** Changes only the words of your own post. */

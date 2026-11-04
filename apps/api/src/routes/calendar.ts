@@ -350,7 +350,7 @@ export function calendarRoutes(
       listRoutines(db, req.user.id, true),
     ]);
     reply.header('content-type', 'text/calendar; charset=utf-8');
-    reply.header('content-disposition', 'attachment; filename="komodon.ics"');
+    reply.header('content-disposition', 'attachment; filename="komogon.ics"');
     return buildIcs({
       blocks,
       nodes,

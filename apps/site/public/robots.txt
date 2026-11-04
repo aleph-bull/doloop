@@ -1,4 +1,4 @@
-# Komodon's docs and changelog are for people. AI crawlers and chat assistants
+# Komogon's docs and changelog are for people. AI crawlers and chat assistants
 # (training, search and on-demand fetchers) are asked to stay out of them.
 User-agent: GPTBot
 User-agent: ChatGPT-User

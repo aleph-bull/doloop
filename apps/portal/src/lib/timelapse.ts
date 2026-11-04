@@ -1343,5 +1343,5 @@ async function recordFrames(
 /** A file name for the download, by the day it was made. */
 export function timelapseFileName(mime: string, now = new Date()): string {
   const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  return `komodon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
+  return `komogon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
 }

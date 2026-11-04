@@ -831,9 +831,9 @@ export function Focus() {
   }, [session]);
 
   useEffect(() => {
-    document.title = session ? `${session.nodeTitle} · Komodon` : 'Focus · Komodon';
+    document.title = session ? `${session.nodeTitle} · Komogon` : 'Focus · Komogon';
     return () => {
-      document.title = 'Komodon';
+      document.title = 'Komogon';
     };
   }, [session]);
 
@@ -913,8 +913,8 @@ export function Focus() {
       )}
 
       <div className={`focus-top focus-chrome${chromeVisible ? '' : ' is-hidden'}`}>
-        <Link to="/" className="focus-brand" title="Back to Komodon">
-          Komodon
+        <Link to="/" className="focus-brand" title="Back to Komogon">
+          Komogon
         </Link>
         <span className="flex-1" />
         {audio.state === 'listening' && <span className="focus-hint">Listening</span>}

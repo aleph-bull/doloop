@@ -85,7 +85,7 @@ a {
   font-weight: 600;
   font-size: 18px;
   letter-spacing: -0.02em;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-feature-settings: 'ss01', 'ss03';
 }
 .doc-crumb {
   color: var(--site-subtle);
@@ -132,7 +132,7 @@ a {
   font-size: clamp(36px, 5vw, 56px);
   letter-spacing: -0.03em;
   line-height: 1.05;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-feature-settings: 'ss01', 'ss03';
 }
 .doc-top > p {
   max-width: 56ch;
@@ -314,7 +314,7 @@ html.is-searching .doc-starts {
   font-size: 30px;
   letter-spacing: -0.02em;
   line-height: 1.15;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-feature-settings: 'ss01', 'ss03';
 }
 .doc-section > .doc-lead {
   margin: 0 0 22px;

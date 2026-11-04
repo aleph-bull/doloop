@@ -158,7 +158,7 @@ function getOnce(url: URL): Promise<{ status: number; location: string | null; b
       {
         lookup: safeLookup as never,
         headers: {
-          'user-agent': 'Komodon calendar (+https://komogon.app)',
+          'user-agent': 'Komogon calendar (+https://komogon.app)',
           accept: 'text/calendar, text/plain;q=0.9, */*;q=0.5',
           'accept-encoding': 'gzip, deflate, br',
         },

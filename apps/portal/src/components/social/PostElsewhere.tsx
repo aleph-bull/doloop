@@ -35,12 +35,12 @@ async function fetchFile(post: FeedPost, f: PostFile, name: string): Promise<Fil
   return new File([blob], name, { type: f.mime });
 }
 
-/** "komodon-2026-11-03.mp4" (the day it was posted, here), numbered when it has several. */
+/** "komogon-2026-11-03.mp4" (the day it was posted, here), numbered when it has several. */
 function fileNames(post: FeedPost, files: PostFile[]): string[] {
   const at = new Date(post.createdAt);
   const day = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, '0')}-${String(at.getDate()).padStart(2, '0')}`;
   return files.map(
-    (f, i) => `komodon-${day}${files.length > 1 ? `-${i + 1}` : ''}.${EXTENSIONS[f.mime] ?? 'bin'}`,
+    (f, i) => `komogon-${day}${files.length > 1 ? `-${i + 1}` : ''}.${EXTENSIONS[f.mime] ?? 'bin'}`,
   );
 }
 

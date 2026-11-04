@@ -97,7 +97,7 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, BoundarySt
       return (
         <div className="page">
           <ErrorPanel
-            message="Komodon was just updated. Refresh the page to load the new version."
+            message="Komogon was just updated. Refresh the page to load the new version."
             retryLabel="Refresh"
             onRetry={() => window.location.reload()}
           />

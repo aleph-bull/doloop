@@ -1,5 +1,5 @@
 /**
- * Komodon's notifications worker: shows what the API sends (nudges, kudos, comments and
+ * Komogon's notifications worker: shows what the API sends (nudges, kudos, comments and
  * mentions; apps/api/src/services/push.ts) and opens the app when one is clicked.
  *
  * It is a worker of its own, scoped to /push/ where no page lives, so it never caches or

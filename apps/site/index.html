@@ -3,32 +3,39 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Komodon — Study timer, timelapse and planner</title>
+    <title>Komogon — Study timer, timelapse and planner</title>
     <meta
       name="description"
       content="Plan your study week, focus with a timer, track your hours, and share your progress with friends. Free to use."
     />
     <link rel="canonical" href="https://app.komogon.app/" />
+    <!-- Lets search show the big link picture, not a thumbnail. -->
+    <meta name="robots" content="max-image-preview:large" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Komodon" />
+    <meta property="og:site_name" content="Komogon" />
     <meta property="og:url" content="https://app.komogon.app/" />
-    <meta property="og:title" content="Komodon" />
+    <meta property="og:title" content="Komogon" />
     <meta
       property="og:description"
       content="A better place to plan, focus, and keep track of your studying."
     />
     <!-- The link preview: the hero at 1200x630 (made from the page, not by hand). -->
-    <meta property="og:image" content="https://app.komogon.app/og.jpg?v=2" />
+    <meta property="og:image" content="https://app.komogon.app/og.jpg?v=3" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Komodon: Your study sessions, on record." />
+    <meta property="og:image:alt" content="Komogon: Your study sessions, on record." />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#2e2337" />
+    <!-- Search results show a site's icon only when it has one of 48px or more: the .ico (16, 32
+         and 48) and the 192. The 16 and 32 stay for browser tabs. -->
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=4" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png?v=4" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4" />
-    <!-- What search engines read about the app: no ratings or reviews, only what's true. -->
+    <!-- What search engines read about the app: no ratings or reviews, only what's true.
+         WebSite's name is the site name search results show above the address. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -37,21 +44,23 @@
             "@type": "WebSite",
             "@id": "https://app.komogon.app/#website",
             "url": "https://app.komogon.app/",
-            "name": "Komodon"
+            "name": "Komogon",
+            "alternateName": "komogon.app",
+            "publisher": { "@id": "https://app.komogon.app/#org" }
           },
           {
             "@type": "Organization",
             "@id": "https://app.komogon.app/#org",
-            "name": "Komodon",
+            "name": "Komogon",
             "url": "https://app.komogon.app/",
             "logo": "https://app.komogon.app/icon-512.png?v=4",
             "sameAs": ["https://discord.gg/bUkqd58FF5"]
           },
           {
             "@type": "SoftwareApplication",
-            "name": "Komodon",
+            "name": "Komogon",
             "url": "https://komogon.app/",
-            "image": "https://app.komogon.app/og.jpg?v=2",
+            "image": "https://app.komogon.app/og.jpg?v=3",
             "applicationCategory": "EducationalApplication",
             "operatingSystem": "Web",
             "description": "Plan your study week, focus with a timer, track your hours, and share your progress with friends.",
@@ -89,9 +98,9 @@
          bar in the portal's glass, smoked while the sky is dark and frosted white while it is
          light (main.js). -->
     <header class="site-nav" role="banner">
-      <a class="site-brand" href="#top" aria-label="Komodon home">
+      <a class="site-brand" href="#top" aria-label="Komogon home">
         <img class="site-brand-mark" src="/logo-small.png" alt="" width="28" height="28" />
-        <span class="site-wordmark">Komodon</span>
+        <span class="site-wordmark">Komogon</span>
       </a>
       <div class="site-nav-actions">
         <a
@@ -125,22 +134,22 @@
             <a class="cta cta-glass" href="#timelapse">See how it works</a>
           </div>
         </div>
-        <div class="hero-devices rise rise-pop" style="--d: 300ms" aria-label="Komodon on a laptop and a phone">
+        <div class="hero-devices rise rise-pop" style="--d: 300ms" aria-label="Komogon on a laptop and a phone">
           <div class="laptop">
             <div class="laptop-lid">
               <span class="laptop-cam"></span>
-              <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komodon timelapse: a morning before an exam, the screen in the corner and the focus time counting up"></video>
+              <video class="clip" src="/clips/morning-exam.mp4" poster="/clips/morning-exam.webp" width="1280" height="720" muted loop playsinline disablepictureinpicture preload="auto" aria-label="A Komogon timelapse: a morning before an exam, the screen in the corner and the focus time counting up"></video>
             </div>
             <div class="laptop-base"><span class="laptop-notch"></span></div>
           </div>
           <div class="hero-phone">
-            <span class="device"><img class="device-screen" src="/shots/today-phone.webp" alt="The Komodon dashboard on a phone: the streak and what's most pressing today" width="1179" height="2556" fetchpriority="high" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
+            <span class="device"><img class="device-screen" src="/shots/today-phone.webp" alt="The Komogon dashboard on a phone: the streak and what's most pressing today" width="1179" height="2556" fetchpriority="high" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
           </div>
         </div>
         </div>
       </section>
 
-      <!-- Record: the night. Real Komodon timelapses drift around the words; on a computer the
+      <!-- Record: the night. Real Komogon timelapses drift around the words; on a computer the
            part holds the screen while they fall past, on a phone they slide by in two rows. -->
       <section id="timelapse" class="record" data-sky="night" aria-labelledby="fall-title">
         <div class="fall" data-scrub="fall">
@@ -153,12 +162,12 @@
               </p>
             </div>
             <div class="floaters">
-              <video class="floater clip" style="--x: 1.5%; --y: -50; --v: 95; --w: 270px; --r: -7deg; --dr: 6deg" src="/clips/desk.mp4" poster="/clips/desk.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse: a desk, with an Excel timeline on the screen"></video>
+              <video class="floater clip" style="--x: 1.5%; --y: -50; --v: 95; --w: 270px; --r: -7deg; --dr: 6deg" src="/clips/desk.mp4" poster="/clips/desk.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komogon timelapse: a desk, with an Excel timeline on the screen"></video>
               <video class="floater clip is-far" style="--x: 18%; --y: 8; --v: 72; --w: 190px; --r: 5deg; --dr: -5deg" src="/clips/first-week.mp4" poster="/clips/first-week.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session"></video>
               <video class="floater clip" style="--x: 2%; --y: 42; --v: 78; --w: 240px; --r: 4deg; --dr: -6deg" src="/clips/late-night.mp4" poster="/clips/late-night.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a late-night study session, 1:28 to 2:23 AM"></video>
-              <video class="floater clip" style="--x: 72%; --y: -42; --v: 100; --w: 270px; --r: 6deg; --dr: -5deg" src="/clips/essay.mp4" poster="/clips/essay.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse: typing an essay, with Word on the screen"></video>
+              <video class="floater clip" style="--x: 72%; --y: -42; --v: 100; --w: 270px; --r: 6deg; --dr: -5deg" src="/clips/essay.mp4" poster="/clips/essay.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komogon timelapse: typing an essay, with Word on the screen"></video>
               <video class="floater clip" style="--x: 82%; --y: 18; --v: 74; --w: 220px; --r: -5deg; --dr: 4deg" src="/clips/afternoon.mp4" poster="/clips/afternoon.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of an afternoon study session, 1:58 to 5:04 PM"></video>
-              <video class="floater clip is-far" style="--x: 70%; --y: 56; --v: 60; --w: 200px; --r: 3deg; --dr: 5deg" src="/clips/solo.mp4" poster="/clips/solo.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komodon timelapse of a morning at a desk"></video>
+              <video class="floater clip is-far" style="--x: 70%; --y: 56; --v: 60; --w: 200px; --r: 3deg; --dr: 5deg" src="/clips/solo.mp4" poster="/clips/solo.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A Komogon timelapse of a morning at a desk"></video>
               <video class="floater clip" style="--x: 41%; --y: 76; --v: 44; --w: 230px; --r: -3deg; --dr: 4deg" src="/clips/long-day.mp4" poster="/clips/long-day.webp" width="720" height="406" muted loop playsinline disablepictureinpicture preload="none" aria-label="A timelapse of a study session over three hours long"></video>
             </div>
           </div>
@@ -178,7 +187,7 @@
           </p>
         </header>
         <div class="phones-rail">
-          <ul class="phones" aria-label="Komodon on a phone">
+          <ul class="phones" aria-label="Komogon on a phone">
             <li class="phones-item" data-pos="0">
               <button class="phones-phone" type="button" data-pick="0" aria-expanded="false" aria-controls="hand-text" aria-label="Pomodoro">
                 <span class="device"><video class="device-screen hand-clip" src="/clips/phone-pomodoro.mp4" poster="/clips/phone-pomodoro.webp" width="786" height="1704" muted loop playsinline disablepictureinpicture preload="none" aria-hidden="true"></video><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
@@ -325,11 +334,11 @@
             </div>
             <div class="app-view">
               <div class="window app-window">
-                <video class="app-clip is-on" data-tab="start" src="/clips/focus-start.mp4" poster="/clips/focus-start.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Starting a session in Komodon: Start a session, pick the task, Pomodoro, then the focus screen counting down"></video>
-                <video class="app-clip" data-tab="plan" src="/clips/plan-week.mp4" poster="/clips/plan-week.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="The Komodon calendar: the week with its classes, then Plan my week's suggestions, then the week with them added"></video>
-                <video class="app-clip" data-tab="track" src="/clips/analytics-scroll.mp4" poster="/clips/analytics-scroll.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komodon Analytics: hours this week beside last week and the goal, then each day, where the time went, and the streaks"></video>
+                <video class="app-clip is-on" data-tab="start" src="/clips/focus-start.mp4" poster="/clips/focus-start.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Starting a session in Komogon: Start a session, pick the task, Pomodoro, then the focus screen counting down"></video>
+                <video class="app-clip" data-tab="plan" src="/clips/plan-week.mp4" poster="/clips/plan-week.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="The Komogon calendar: the week with its classes, then Plan my week's suggestions, then the week with them added"></video>
+                <video class="app-clip" data-tab="track" src="/clips/analytics-scroll.mp4" poster="/clips/analytics-scroll.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komogon Analytics: hours this week beside last week and the goal, then each day, where the time went, and the streaks"></video>
                 <video class="app-clip" data-tab="xp" src="/clips/xp-buy.mp4" poster="/clips/xp-buy.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Achievements: lifetime XP and what is left to spend, buying a streak freeze as the XP coins fly into it, then the RNG Rolls rarities"></video>
-                <video class="app-clip" data-tab="social" src="/clips/social-feed.mp4" poster="/clips/social-feed.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komodon Social: friends studying right now, then the feed of their sessions and timelapses, then the leaderboard"></video>
+                <video class="app-clip" data-tab="social" src="/clips/social-feed.mp4" poster="/clips/social-feed.webp" width="1600" height="1000" muted playsinline disablepictureinpicture preload="none" aria-label="Komogon Social: friends studying right now, then the feed of their sessions and timelapses, then the leaderboard"></video>
               </div>
               <div class="app-phone">
                 <span class="device"><img class="device-screen" src="/shots/cal-phone.webp" alt="The calendar on a phone: one day at a time, with the week in a strip above" width="1179" height="2556" loading="lazy" /><img class="device-frame" src="/phone-frame.webp" alt="" width="640" height="1276" /></span>
@@ -401,11 +410,11 @@
       <footer class="site-footer" data-sky="morning">
         <div class="wrap site-footer-inner">
           <div class="site-footer-brand">
-            <a class="site-brand" href="#top" aria-label="Komodon home">
+            <a class="site-brand" href="#top" aria-label="Komogon home">
               <img src="/logo-small.png" alt="" width="24" height="24" />
-              <span class="site-wordmark site-wordmark-sm">Komodon</span>
+              <span class="site-wordmark site-wordmark-sm">Komogon</span>
             </a>
-            <p class="site-muted">© 2026 Komodon. Photograph by frostroomhead on Pexels.</p>
+            <p class="site-muted">© 2026 Komogon. Photograph by frostroomhead on Pexels.</p>
           </div>
           <nav class="site-footer-links" aria-label="Footer">
             <a href="https://komogon.app">Open the app</a>

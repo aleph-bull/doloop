@@ -1,7 +1,7 @@
 /** Refresh the pinned MIT-licensed Hipo directory. No email addresses leave the app. */
 import { mkdir, writeFile } from 'node:fs/promises';
 const root = new URL('../packages/core/data/schools/', import.meta.url);
-const headers = { 'user-agent': 'Komodon-school-directory' };
+const headers = { 'user-agent': 'Komogon-school-directory' };
 const get = async (url) => {
   const response = await fetch(url, { headers });
   if (!response.ok) throw new Error(`${response.status}: ${url}`);

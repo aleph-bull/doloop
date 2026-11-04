@@ -1,5 +1,5 @@
 /**
- * Komodon service worker: makes the hosted portal installable and lets it open without a
+ * Komogon service worker: makes the hosted portal installable and lets it open without a
  * connection. The API is never cached here; data offline comes from the query cache the
  * app already keeps in IndexedDB (lib/persist.ts).
  *

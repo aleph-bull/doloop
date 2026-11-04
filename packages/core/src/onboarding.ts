@@ -1,6 +1,6 @@
 /**
  * The first-time setup: what the questions ask and how the answers are kept. The answers
- * are for whoever runs Komodon (Admin › Onboarding answers); nothing in the app reads them
+ * are for whoever runs Komogon (Admin › Onboarding answers); nothing in the app reads them
  * back except the setup itself. A question someone skipped is stored as `null`, so a skip
  * can be told apart from a question never reached (absent).
  */

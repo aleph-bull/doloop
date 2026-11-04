@@ -678,7 +678,7 @@ export const commentMentions = pgTable(
 
 /**
  * Someone reporting a post (2026-11-03): one row per person per post, emailed to whoever
- * runs Komodon (`REPORTS_EMAIL`) and listed in Admin › Reports until the post is deleted
+ * runs Komogon (`REPORTS_EMAIL`) and listed in Admin › Reports until the post is deleted
  * (the rows go with it) or the reports are dismissed.
  */
 export const postReports = pgTable(
@@ -1170,7 +1170,7 @@ export const drillItems = pgTable(
 );
 
 /**
- * What someone answered in the first-time setup, for whoever runs Komodon (Admin ›
+ * What someone answered in the first-time setup, for whoever runs Komogon (Admin ›
  * Onboarding answers). One row per account, filled in as they go.
  */
 export const onboardingAnswers = pgTable('onboarding_answers', {

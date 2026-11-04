@@ -3129,3 +3129,42 @@ The owner asked for four things at once: "in 3 dots on your own posts, add optio
 - **Admin › Reports**, first on the Admin page (`components/admin/Reports.tsx`): a Post ID box (Find; a number, "#42" or the uuid), then each reported post as the feed shows it beside its ID, author and reports, with Delete post and Dismiss (keeps the post, drops its reports). The email's link opens it with that post first. Routes: `GET /api/admin/reports`, `GET /api/admin/posts/:key`, `DELETE /api/admin/posts/:id/reports` (`services/post-reports.ts`).
 - Hide is still not built (it only closes the menu).
 - Checked in a sandbox in headless Chrome: Maya's menus and Post elsewhere (X opened with her words, the picture downloaded), her report arriving in the local outbox as the email above, the admin's ⋯ with Delete and the ID, and `/admin?post=2` deleting the post. Tests: `post-reports.test.ts`. Not tried: a real phone's share sheet, Resend sending for real.
+
+
+## The name is Komogon again, and the sites in search, 2026-11-03 (owner request)
+
+The owner sent a Google result for www.komogon.app (a grey globe for an icon, "Komodon" as the
+title) and asked: "change the site name to komogon everywhere", "make all of the sites have a
+logo for google search results", "improve visibility and SEO for all komogon sites", and
+"if first site entry onto login, and not redirected from app.komogon.app, make komogon.app
+redirect to the marketing page if that logic makes sense".
+
+- **Komogon everywhere people see the name**: the portal, the extension, the homepage, its
+  changelog and (switched-off) docs, emails, the .ics feed, the timelapse mark's word, the
+  share card, download names (`komogon-export-…`, `komogon-week-…`, `komogon-timelapse-…`,
+  `komogon.ics`) and the link preview picture (`og.jpg`: only the word was swapped, drawn in
+  the same font at the same spot, so the rest of the picture is unchanged). Internal ids from
+  the Komodon weeks stay (CLAUDE.md lists them; `komodon-vapid` in particular, since new VAPID
+  keys would cut off every push subscription). The changelog's 10-20 line "The name you see
+  everywhere is now Komodon." stays as history. This supersedes "The app is now called
+  Komodon" (2026-10-20). Timelapses already made keep the word they were made with.
+- **Icons for search results**: Google shows a site's icon only when it finds one of 48px or
+  more, and both sites had only 16 and 32 (www.komogon.app/favicon.ico even answered with the
+  app's page). Both now have `favicon.ico` (16/32/48) and `icon-192.png`, linked from every
+  page, made by `prepare:icons`.
+- **Search and previews**: the portal has a real description, link-preview tags and a
+  `robots.txt` (it used to answer with the app's page); both sites name themselves Komogon in
+  WebSite data (the name search shows above the address). The homepage allows large image
+  previews, the changelog has a canonical address and preview tags, and the sitemap has dates.
+- **A first visit straight onto sign in opens the homepage** (`shouldOpenHomepage` in core,
+  `lib/first-visit.ts` in the portal, run before anything else starts): only on komogon.app,
+  only at `/` or `/signin` with nothing after the address, and never from the homepage, in
+  the installed app, or in a browser that has been here (any `komogon.` key, written on
+  every visit that stays as `komogon.seen`) or is signed in. Reset links, sign-in callbacks
+  and other pages are never sent away. Search engines arrive with empty storage, so they
+  follow it too, and "komogon" searches should lead to the homepage.
+- **Then (2026-11-04): the plain g.** The owner: "dont use stylized g in satoshi use normal g
+  redo the rename". The homepage had Satoshi's two-loop g (`ss02`) on its wordmark and every
+  Satoshi heading (and the changelog's and docs'); it is off everywhere now, as in the app,
+  so "Komogon" and headings like "Give your study hours somewhere to go." use the plain g.
+  The link preview's word already had the plain g.

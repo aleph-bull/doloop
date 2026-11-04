@@ -725,11 +725,11 @@ export function AppShell() {
           aria-label="Primary"
           onMouseLeave={() => setResting(false)}
         >
-          <NavLink to="/" className="sidenav-brand" aria-label="Komodon home" title="Komodon">
+          <NavLink to="/" className="sidenav-brand" aria-label="Komogon home" title="Komogon">
             <span className="sidenav-icon" aria-hidden>
               <LogoMark size={22} />
             </span>
-            <span className="sidenav-label sidenav-wordmark">Komodon</span>
+            <span className="sidenav-label sidenav-wordmark">Komogon</span>
           </NavLink>
           <nav className="sidenav-group">
             {main.map((l) => (
@@ -846,11 +846,11 @@ export function AppShell() {
 
       <header ref={headerRef} className="nav chrome">
         <div className="nav-inner">
-          <NavLink to="/" className="brand" aria-label="Komodon home">
+          <NavLink to="/" className="brand" aria-label="Komogon home">
             <span className="brand-logo" aria-hidden>
               <LogoMark size={22} />
             </span>
-            <span>Komodon</span>
+            <span>Komogon</span>
           </NavLink>
           <div
             className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${

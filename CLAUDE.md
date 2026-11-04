@@ -1,4 +1,4 @@
-# Notes for AI agents working on Komodon
+# Notes for AI agents working on Komogon
 
 Read this before changing anything. It holds what isn't obvious from the code: how the owner
 works, the rules the app keeps, and the traps that have already cost time. The longer record
@@ -6,7 +6,7 @@ of every product decision is [DECISIONS.md](DECISIONS.md); keep adding to it.
 
 ## About the app
 
-Komodon (renamed from Komogon on 2026-10-20) is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
+Komogon (called Komodon from 2026-10-20 to 2026-11-03, then Komogon again to match komogon.app) is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
 until a time), and see progress the way a running app shows runs: streaks, personal bests,
 weekly recaps, XP and levels. The design idea is that a runner's "beat last time" discipline
 carries over to studying. It is in a **closed alpha** with a handful of testers.
@@ -125,7 +125,8 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - **The changelog** (`apps/site/src/content/changelog.html`, `/changelog/` on the site) is updated
   only when the owner tells you to, never as part of other work. It is written by hand from
   the commits: one entry per day, newest first, in plain words for people using the app, and
-  it only ever calls the app Komodon (never Doloop or any older name). The page shows only the
+  it only ever calls the app Komogon (never Doloop, KomodoIt or Komodon; the one exception is
+  the 10-20 line saying the name became Komodon, kept as history). The page shows only the
   last three days; never delete older entries, they stay in the file and the sidebar on purpose.
 - **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
   to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
@@ -184,7 +185,7 @@ and never explain the difference on screen.
 - **Never a thin, sectioned page**: panels take the page's full width. A narrow centred
   column of cards with empty sides on both reads as chopped (the owner's word, 2026-10-21,
   on the first Jams page). Use the width: columns side by side, a bento, wider rows.
-- Inter for everything; Satoshi only for the "Komodon" wordmark in the nav.
+- Inter for everything; Satoshi only for the "Komogon" wordmark in the nav.
 
 **Product.**
 
@@ -204,10 +205,13 @@ and never explain the difference on screen.
   numbers beside other people's (boards, You and everyone, Compare, school rankings) must
   follow Settings › Pages › Social › Comparisons (`useBoards`, see Sharing settings).
 - "Pomodoro" is the timer's name; never rename it in the app renames.
-- **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
-  (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
-  local scripts and the komogon.app domain. Renaming them would drop saved browser state.
-  Only the name people see is Komodon.
+- **The name is Komogon everywhere** (owner, 2026-11-03), the same as the `@komogon/*`
+  packages, storage keys (`komogon.*`) and the komogon.app domain. A few internal ids from
+  the Komodon weeks keep that spelling on purpose, because changing them would break
+  something already out there: the `komodon-media` R2 bucket, the `komodon-vapid` salt in
+  `services/push.ts` (new keys would cut off every push subscription), the
+  `komodon-backdrop-1` cache, the `komodon-push` worker messages, `dev.komodon.invalid` dev
+  accounts and the `komodon.test` / `komodon.demo` sandbox accounts.
 
 ## Checks and traps
 
@@ -823,7 +827,7 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   `elapsed`; it draws "Focus 42:17", "Break 3:10"), **time elapsed** (`total`, "Elapsed
   51:02": focus and breaks), **start time** and **end time** (`start`, `end`: the
   session's, "Start 9:10 AM"; until it ends, the end is the last still), **task name**,
-  **progress bar** (fills as the video plays through the session) and the **Komodon mark**
+  **progress bar** (fills as the video plays through the session) and the **Komogon mark**
   (can't be removed). The time elapsed, start and end start out of the layout, as chips to
   add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
 - The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
@@ -961,10 +965,10 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
   - Plain Video mode is no substitute. The camera covers the timer, and an hour of footage
     (3-4 GB) is too much for Safari to turn into a timelapse.
   - What would work is an import: the person films with the Camera app's Time-Lapse, then
-    picks the video from Photos after the session, and Komodon adds the mark. A running clock
+    picks the video from Photos after the session, and Komogon adds the mark. A running clock
     can't line up with the study time, because the Camera app can't pause for breaks and
     chooses its own speed.
-- **So a phone gets Komodon's own camera screen instead** (built 2026-10-21, the owner's
+- **So a phone gets Komogon's own camera screen instead** (built 2026-10-21, the owner's
   choices in DECISIONS.md, "The phone's camera screen"). A phone is a touch screen whose
   short side is under 600 px (`isPhone`, read once). On a phone, recording is the camera
   screen; without a recording it is the normal focus screen.

@@ -118,7 +118,7 @@ function RewardCard({
 }
 
 /**
- * The user's own shop. Komodon supplies the currency and the price floor; everything on the
+ * The user's own shop. Komogon supplies the currency and the price floor; everything on the
  * shelf is something the user decided was worth working for. With `buy` (Achievements), a
  * reward paid in XP is paid in coins that fly into it before it opens.
  */

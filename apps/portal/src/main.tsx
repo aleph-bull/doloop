@@ -1,3 +1,5 @@
+// First, before any other module: a first visit straight onto sign in leaves for the homepage.
+import { leavingForHomepage } from './lib/first-visit';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
@@ -13,6 +15,9 @@ import { restoreQueryCache } from './lib/persist';
 import { migrateOldStorage } from './lib/rename-migration';
 import { registerServiceWorker } from './lib/pwa';
 import { initMonitoring } from './lib/monitoring';
+
+// On the way to the homepage: start nothing, so the visit leaves nothing behind.
+if (leavingForHomepage) await new Promise<never>(() => {});
 
 // Before anything reads a storage key: move Doloop- and KomodoIt-era keys to Komogon names.
 migrateOldStorage();

@@ -17,7 +17,7 @@ const KINDS: Array<{ id: keyof Kinds; label: string }> = [
 const WHY_NOT: Partial<Record<PushState, string>> = {
   denied: "Blocked in this browser's site settings.",
   unsupported: 'Not available in this browser.',
-  'home-screen': 'Add Komodon to your Home Screen to turn these on.',
+  'home-screen': 'Add Komogon to your Home Screen to turn these on.',
 };
 
 /**

@@ -1,5 +1,5 @@
 /*
- * The Komodon homepage. One sky runs down the whole page, through a study day: the app's own
+ * The Komogon homepage. One sky runs down the whole page, through a study day: the app's own
  * evening photograph behind the hero, the night of the timelapses, sunrise into daylight for
  * the phones and the app, evening again for the looks, and a clear morning to close. Each part
  * begins in the colour the one before it ends in, so nothing sits on the page as a panel dropped
@@ -225,7 +225,7 @@ html:not(.has-sky) .sky-layer[data-sky='dusk'] {
   margin: 0;
   font-family: var(--display);
   font-weight: 600;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-feature-settings: 'ss01', 'ss03';
   text-wrap: balance;
 }
 .display {
@@ -354,7 +354,7 @@ html:not(.has-sky) .sky-layer[data-sky='dusk'] {
   font-weight: 600;
   font-size: 19px;
   letter-spacing: -0.02em;
-  font-feature-settings: 'ss01', 'ss02', 'ss03';
+  font-feature-settings: 'ss01', 'ss03';
 }
 .site-wordmark-sm {
   font-size: 16px;

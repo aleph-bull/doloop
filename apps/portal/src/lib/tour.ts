@@ -50,7 +50,7 @@ export function useTour(): TourStage | null {
   return saved && saved.userId === userId ? saved : null;
 }
 
-/** Answers are for whoever runs Komodon; a failed save never holds anyone up. */
+/** Answers are for whoever runs Komogon; a failed save never holds anyone up. */
 export function saveAnswers(patch: OnboardingAnswers) {
   void api.saveOnboarding(patch).catch(() => undefined);
 }

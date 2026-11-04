@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Marketing homepage for Komodon (komogon.app).",
+  "description": "Marketing homepage for Komogon (komogon.app).",
   "scripts": {
     "dev": "vite --port 5190 --strictPort",
     "build": "vite build",

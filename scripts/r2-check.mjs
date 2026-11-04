@@ -53,7 +53,7 @@ const step = async (what, fn) => {
   }
 };
 
-const text = `Komodon R2 check ${new Date().toISOString()}`;
+const text = `Komogon R2 check ${new Date().toISOString()}`;
 const mime = 'text/plain';
 const upload = `uploads/r2-check/${randomUUID()}`;
 const kept = `posts/r2-check/${randomUUID()}.txt`;

@@ -140,7 +140,7 @@ export function Onboarding() {
           <div className="ob-head">
             <span className="ob-brand">
               <LogoMark size={24} />
-              Komodon
+              Komogon
             </span>
             {current !== 'name' && (
               <button
@@ -193,7 +193,7 @@ export function Onboarding() {
               )}
               {current === 'uses' && (
                 <PickStep
-                  title="What will you use Komodon for?"
+                  title="What will you use Komogon for?"
                   options={ONBOARDING_USES}
                   initial={answers.uses ?? []}
                   onDone={(uses) => {

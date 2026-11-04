@@ -145,8 +145,8 @@ export function universityRoutes(
     try {
       await mailer.send({
         to: email,
-        subject: `${code} is your Komodon code`,
-        text: `Enter this code in Komodon to put ${uni.name} on your profile: ${code}\n\nIt works for 15 minutes. If you didn't ask for it, you can ignore this email.`,
+        subject: `${code} is your Komogon code`,
+        text: `Enter this code in Komogon to put ${uni.name} on your profile: ${code}\n\nIt works for 15 minutes. If you didn't ask for it, you can ignore this email.`,
       });
     } catch (err) {
       req.log.error(err, 'verification mail failed');

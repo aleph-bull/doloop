@@ -87,10 +87,10 @@ export function SignIn() {
       <main className="min-h-screen flex items-center justify-center p-4 on-backdrop">
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
           <div>
-            <Link to="/" aria-label="Back to Komodon">
+            <Link to="/" aria-label="Back to Komogon">
               <LogoMark size={40} className="mb-3" />
             </Link>
-            <h1 className="text-2xl">Komodon</h1>
+            <h1 className="text-2xl">Komogon</h1>
             <p className="muted text-sm mt-1">Plan coursework, track deadlines and study.</p>
           </div>
 
@@ -191,7 +191,7 @@ export function SignIn() {
               />
               {auth.mode !== 'dev' && (
                 <p className="field-hint">
-                  This is an early test of Komodon. I can see the accounts and study data saved
+                  This is an early test of Komogon. I can see the accounts and study data saved
                   here.
                 </p>
               )}

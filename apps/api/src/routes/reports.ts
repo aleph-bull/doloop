@@ -23,7 +23,7 @@ export interface ReportOptions {
 
 /**
  * Reporting a post (2026-11-03): from the ⋯ under someone else's post. Each person's report
- * is kept once; the first one emails whoever runs Komodon with the post's ID, and a second
+ * is kept once; the first one emails whoever runs Komogon with the post's ID, and a second
  * from the same person only updates what they said.
  */
 export function reportRoutes(

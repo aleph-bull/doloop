@@ -81,7 +81,7 @@ export interface Env {
 export function loadEnv(): Env {
   return {
     resendApiKey: str('RESEND_API_KEY'),
-    mailFrom: str('MAIL_FROM', 'Komodon <noreply@komogon.app>')!,
+    mailFrom: str('MAIL_FROM', 'Komogon <noreply@komogon.app>')!,
     localTestAccounts: process.env.LOCAL_TEST_ACCOUNTS === 'true',
     devLogin: process.env.DEV_LOGIN !== 'off',
     outlook: {

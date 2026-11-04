@@ -1,5 +1,5 @@
 /**
- * The Komodon mark: Komodon's face, front-on, with the eyes and nostrils cut out and the
+ * The Komogon mark: Komogon's face, front-on, with the eyes and nostrils cut out and the
  * jaw drawn as a band beneath.
  *
  * Since 2026-10-30 it comes from the designer's two PNGs in `design/brand` (replacing the

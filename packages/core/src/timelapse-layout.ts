@@ -74,7 +74,7 @@ export const TIMELAPSE_ELEMENT_LABELS: Record<TimelapseElementId, string> = {
   title: 'Task name',
   note: 'Your text',
   progress: 'Progress bar',
-  watermark: 'Komodon mark',
+  watermark: 'Komogon mark',
 };
 
 /**

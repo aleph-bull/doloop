@@ -304,7 +304,7 @@ function Onboarding({ account }: { account: AdminAccount }) {
       toast(
         account.you
           ? 'Onboarding starts again next time the page loads.'
-          : `${account.email} goes through onboarding next time they open Komodon.`,
+          : `${account.email} goes through onboarding next time they open Komogon.`,
       );
       await refresh();
     } catch (err) {
@@ -319,7 +319,7 @@ function Onboarding({ account }: { account: AdminAccount }) {
       <div className="admin-tool">
         <p className="field-hint">
           {account.onboarded
-            ? 'Starts it again next time they open Komodon. Their tasks, sessions, streaks and settings stay; the hints they closed come back.'
+            ? 'Starts it again next time they open Komogon. Their tasks, sessions, streaks and settings stay; the hints they closed come back.'
             : "They haven't finished onboarding yet."}
         </p>
         {account.onboarded && (

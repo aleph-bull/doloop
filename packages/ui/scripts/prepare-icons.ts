@@ -1,5 +1,5 @@
 /**
- * Writes every copy of the Komodon mark from the designer's two PNGs in `design/brand`:
+ * Writes every copy of the Komogon mark from the designer's two PNGs in `design/brand`:
  * `komo3.0.png` for the bigger sizes and `komo3.0small.png`, drawn to stay clear when tiny,
  * for anything `LOGO_SMALL_MAX` px or under. Each icon is the white mark on the rounded
  * indigo-to-violet tile:
@@ -11,8 +11,9 @@
  *    a full-bleed maskable 512 that Android crops to its own shape, so the face sits inside
  *    the central safe zone);
  *  - the extension's 16/48/128 icons;
- *  - the homepage's copies (apps/site): the same tab, apple-touch and 512 icons, and its logo
- *    at two sizes (`logo-small.png` up to 32px on the page, `logo.png` above).
+ *  - the homepage's copies (apps/site): the same tab, apple-touch, 192 and 512 icons, and its
+ *    logo at two sizes (`logo-small.png` up to 32px on the page, `logo.png` above);
+ *  - a `favicon.ico` (16/32/48) for the portal and the homepage, for Google's search results.
  *
  * Run: pnpm --filter @komogon/ui prepare:icons
  */
@@ -69,7 +70,7 @@ async function tile(
   inset: number,
   out: string,
   radius: number = LOGO_TILE.radius,
-) {
+): Promise<Buffer> {
   const t = LOGO_TILE;
   const big = size * Math.ceil(256 / size);
   const side = Math.round((big * (t.size - inset * 2)) / t.size);
@@ -86,8 +87,39 @@ async function tile(
     .composite([{ input: face, left: at, top: at }])
     .png()
     .toBuffer();
-  await sharp(drawn).resize(size, size).png({ compressionLevel: 9 }).toFile(out);
-  console.log(`${out.replace(/\\/g, '/').split('/').slice(-3).join('/')}  ${size}px`);
+  const png = await sharp(drawn).resize(size, size).png({ compressionLevel: 9 }).toBuffer();
+  if (out) {
+    writeFileSync(out, png);
+    console.log(`${out.replace(/\\/g, '/').split('/').slice(-3).join('/')}  ${size}px`);
+  }
+  return png;
+}
+
+/**
+ * `favicon.ico` with 16, 32 and 48px tiles (PNG inside, which every current browser and
+ * Google read). Google Search shows a site's icon only when it can find one at least 48px
+ * square, and some crawlers ask for /favicon.ico without reading the page at all.
+ */
+async function favicon(normal: Buffer, small: Buffer, out: string) {
+  const sizes = [16, 32, 48];
+  const pngs = await Promise.all(sizes.map((s) => tile(s <= 32 ? small : normal, s, 11, '')));
+  const head = Buffer.alloc(6 + 16 * sizes.length);
+  head.writeUInt16LE(0, 0);
+  head.writeUInt16LE(1, 2);
+  head.writeUInt16LE(sizes.length, 4);
+  let offset = head.length;
+  sizes.forEach((s, i) => {
+    const at = 6 + 16 * i;
+    head.writeUInt8(s, at);
+    head.writeUInt8(s, at + 1);
+    head.writeUInt16LE(1, at + 4);
+    head.writeUInt16LE(32, at + 6);
+    head.writeUInt32LE(pngs[i]!.length, at + 8);
+    head.writeUInt32LE(offset, at + 12);
+    offset += pngs[i]!.length;
+  });
+  writeFileSync(out, Buffer.concat([head, ...pngs]));
+  console.log(`${out.replace(/\\/g, '/').split('/').slice(-3).join('/')}  ${sizes.join('/')}px`);
 }
 
 async function main() {
@@ -118,8 +150,10 @@ async function main() {
     await tile(small, 32, 11, resolve(dir, 'favicon-32.png'));
     await tile(normal, 180, 12, resolve(dir, 'apple-touch-icon.png'), 0);
     await tile(normal, 512, 11, resolve(dir, 'icon-512.png'));
+    // The icon Google shows beside each site in search results (48px and up).
+    await tile(normal, 192, 11, resolve(dir, 'icon-192.png'));
+    await favicon(normal, small, resolve(dir, 'favicon.ico'));
   }
-  await tile(normal, 192, 11, resolve(PORTAL_PUBLIC, 'icon-192.png'));
   await tile(normal, 512, 17, resolve(PORTAL_PUBLIC, 'icon-maskable-512.png'), 0);
 
   // Three times the size they're shown at: 22-28px in the nav and footer, 64px at the end.

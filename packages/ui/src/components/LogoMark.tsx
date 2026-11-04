@@ -5,12 +5,12 @@ export interface LogoMarkProps {
   /** Rendered width and height in px. At `LOGO_SMALL_MAX` and under it takes the small mark. */
   size?: number;
   className?: string;
-  /** Announce as "Komodon"; leave off when a visible wordmark sits next to it. */
+  /** Announce as "Komogon"; leave off when a visible wordmark sits next to it. */
   title?: string;
 }
 
 /**
- * The bare Komodon mark, inline, in `currentColor`: the mark's PNG is a mask over the text
+ * The bare Komogon mark, inline, in `currentColor`: the mark's PNG is a mask over the text
  * colour. The portal sets it white on its accent tile (`.brand-mark`); the files that need
  * the tile baked in come from `scripts/prepare-icons.ts`.
  */
