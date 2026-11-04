@@ -1,4 +1,5 @@
 import { clearBackdropCache } from '@komogon/ui';
+import { dropKeptTimelapse } from './timelapse-keep';
 import {
   createClient,
   type Session as SupabaseSession,
@@ -356,6 +357,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (supabase) await supabase.auth.signOut();
     // The blurred background kept between visits may be someone's own uploaded photo.
     void clearBackdropCache();
+    // So are the stills of a timelapse kept in this browser.
+    void dropKeptTimelapse();
     try {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(EMAIL_KEY);

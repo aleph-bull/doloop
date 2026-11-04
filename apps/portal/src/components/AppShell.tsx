@@ -38,6 +38,7 @@ import { handTimelapse, postPathSessions } from '../lib/after-session';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FOCUS_PATH, openFocusTab, useOpenerRequests } from '../lib/focus-tab';
+import { useDropFinishedTimelapse } from '../lib/timelapse-keep';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
@@ -447,6 +448,11 @@ export function AppShell() {
   const nodes = useNodes();
   const active = useActiveSession();
   const running = Boolean(active.data?.active);
+  // A timelapse kept from a browser that closed mid-session goes once its session is done.
+  useDropFinishedTimelapse(
+    me.data?.user.id,
+    active.data ? (active.data.active?.session.id ?? null) : undefined,
+  );
   const [starting, setStarting] = useState(false);
   const here = phonePlace(target);
   // The focus screen this tab opened sends it to Social after a session, to post it, with

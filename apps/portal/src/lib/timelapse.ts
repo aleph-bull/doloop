@@ -34,8 +34,9 @@ import {
 
 /**
  * The timelapse: stills from the camera, and from a shared screen when asked, taken while
- * the user focuses, kept in this tab's memory, and made into a video on request. Nothing
- * is uploaded; closing the tab discards the stills.
+ * the user focuses, held in this tab's memory, and made into a video on request. Nothing
+ * is uploaded. The focus screen also keeps a copy in this browser (lib/timelapse-keep.ts),
+ * so a refresh or a closed browser doesn't lose them.
  */
 
 /** One moment of the recording: the camera's still, the screen's, or both. */
@@ -317,6 +318,14 @@ export interface TimelapseRecorderArgs {
   keepStills?: boolean;
 }
 
+/** Where a recording's pacing stands, kept beside its stills so it can carry on after a reload. */
+export interface RecorderPace {
+  /** Milliseconds between stills now; it doubles each time the stills are thinned. */
+  intervalMs: number;
+  /** Seconds of live clip held, against the room a recording has for them. */
+  clipSeconds: number;
+}
+
 export interface TimelapseRecorder {
   /** The camera. */
   status: RecorderStatus;
@@ -345,6 +354,10 @@ export interface TimelapseRecorder {
   spanSeconds: () => number;
   /** Throw the stills away. */
   clear: () => void;
+  /** Where the pacing stands, to keep with the stills. */
+  pace: () => RecorderPace;
+  /** Take back stills kept from before (the page reloaded), with their pacing. */
+  restore: (stills: Still[], pace: RecorderPace) => void;
   /** The live clip filming now: seconds into it, and how long it may run. */
   clip: { seconds: number; maxSeconds: number } | null;
   /** A live clip can start now: the camera is giving pictures during focus, with room left. */
@@ -779,6 +792,24 @@ export function useTimelapseRecorder({
     setClipsFull(false);
     setCount(0);
   }, [stopClip]);
+  const pace = useCallback(
+    (): RecorderPace => ({ intervalMs: intervalRef.current, clipSeconds: clipUsed.current }),
+    [],
+  );
+  const restore = useCallback(
+    (kept: Still[], p: RecorderPace) => {
+      stopClip();
+      clears.current += 1;
+      stillsRef.current = kept;
+      intervalRef.current = p.intervalMs > 0 ? p.intervalMs : startIntervalMs(live.current.options);
+      clipUsed.current = Math.max(0, p.clipSeconds);
+      // New clips are numbered on from the ones kept, so each stays its own clip.
+      clipsMade.current = kept.reduce((n, s) => Math.max(n, s.clip ?? 0), clipsMade.current);
+      setClipsFull(clipUsed.current > LIVE_CLIP_TOTAL_SECONDS - 1);
+      setCount(kept.length);
+    },
+    [stopClip],
+  );
 
   return {
     status,
@@ -793,6 +824,8 @@ export function useTimelapseRecorder({
     stills,
     spanSeconds,
     clear,
+    pace,
+    restore,
     clip: clipMax !== null ? { seconds: clipSeconds, maxSeconds: clipMax } : null,
     canClip:
       !clipOn &&

@@ -96,18 +96,9 @@ import {
   timelapseSpaceWarning,
 } from '../components/focus/Timelapse';
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+import { useTimelapseKeep, type CoveredSession, type KeptRecording } from '../lib/timelapse-keep';
 
-/** A session a timelapse went through, as it ended. */
-interface CoveredSession {
-  id: string;
-  startedAt: string;
-  endedAt: string;
-  workSeconds: number;
-  breakSeconds: number;
-  /** What it was on, "Course · Task", as a post names it. */
-  subject: string | null;
-}
+type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
 
 /** What one post about these sessions says, the way the API works it out. */
 function linkedPost(list: CoveredSession[]) {
@@ -253,6 +244,8 @@ export function Focus() {
   const { toast } = useToast();
 
   const settings = me.data?.user.settings;
+  // The stills a refresh or a closed browser left behind, and the keeper of the next ones.
+  const keep = useTimelapseKeep(me.data?.user.id);
   const appearance = useAppearance(settings);
   const [chromeVisible, wake] = useStillness();
   const [cameraView, setCameraView] = useCameraView();
@@ -510,7 +503,7 @@ export function Focus() {
     return () => window.removeEventListener('keydown', onKey);
   }, [recording, toggleClip]);
 
-  /** Stills not yet saved as a video, or thrown away: they live only in this tab. */
+  /** Stills not yet saved as a video, or thrown away: kept in this browser until they are. */
   const tlPending = recorder.count > 0 && recorder.count !== tlSavedAt;
 
   // The camera would not start: say why once, and stop trying. A computer recording its
@@ -546,6 +539,49 @@ export function Focus() {
     setScreenAskOpen(false);
   }, [screenSessionId]);
 
+  /**
+   * The stills kept from before this page loaded (a refresh, the browser closed, the computer
+   * turned off) come back once, before anything is asked. While their session still runs, the
+   * recording carries on where it was; on the ending screen, that screen comes back with them.
+   * A session stopped elsewhere meanwhile had no ending screen here, and takes them with it.
+   */
+  const [keptBack, setKeptBack] = useState(false);
+  const restoreStills = recorder.restore;
+  const activeLoaded = !!active.data;
+  const currentSessionId = session?.session.id ?? null;
+  useEffect(() => {
+    if (keptBack || !keep.settled || !settings || !activeLoaded || !nodes.data) return;
+    setKeptBack(true);
+    const found = keep.found;
+    if (!found) return;
+    const { meta, stills } = found;
+    const current = currentSessionId;
+    if (!meta.sessionId && meta.summary && !current) {
+      restoreStills(stills, meta.pace);
+      tlRecordedIn.current = null;
+      setTlCovered(meta.covered);
+      tlOffset.current = meta.offset;
+      if (meta.orientation) setPicked({ session: meta.summary.session.id, o: meta.orientation });
+      setSummary(meta.summary);
+      return;
+    }
+    if (!meta.sessionId || meta.sessionId !== current) {
+      keep.keeper?.drop(true);
+      return;
+    }
+    restoreStills(stills, meta.pace);
+    tlRecordedIn.current = current;
+    setTlCovered(meta.covered);
+    tlOffset.current = meta.offset;
+    tlAskedFor.current = current;
+    screenAskedFor.current = current;
+    // The screen picker needs a click: the recording pill offers Share screen.
+    if (meta.screen) setScreenOn(true);
+    if (meta.orientation) setPicked({ session: current, o: meta.orientation });
+    if (meta.recording) setRecording(true);
+    toast(meta.recording ? 'Still recording.' : 'Your timelapse is back.');
+  }, [keptBack, keep, settings, activeLoaded, nodes.data, restoreStills, currentSessionId, toast]);
+
   // A recording that starts with stills already made into a video starts over; with stills
   // not yet made into one, it goes on with them (the same session, or the next).
   const recorderRef = useRef(recorder);
@@ -579,15 +615,18 @@ export function Focus() {
     toast('Still recording.');
   }, [screenSessionId, tlPending, phone, toast]);
 
+  /** What a session was on, "Course · Task", as a post names it. */
+  const subjectOf = (nodeId: string | null | undefined) =>
+    nodeId && nodeIndex.byId.has(nodeId)
+      ? focusLabel(focusContext(nodeIndex.byId, nodeId, ''))
+      : null;
+
   /** A session ends: one the recording went through joins it, and its numbers run on. */
   const coverEnded = (s: EndSummary) => {
     const id = s.session.id;
     if (tlRecordedIn.current !== id || recorder.count === 0) return;
     tlRecordedIn.current = null;
-    const subject =
-      s.session.nodeId && nodeIndex.byId.has(s.session.nodeId)
-        ? focusLabel(focusContext(nodeIndex.byId, s.session.nodeId, ''))
-        : null;
+    const subject = subjectOf(s.session.nodeId);
     setTlCovered((c) =>
       c.some((x) => x.id === id)
         ? c
@@ -664,15 +703,16 @@ export function Focus() {
   // A computer already recording the session comes first: the phone asks whether to film for
   // it, and only after "Not now" goes on to its own timelapse.
   const linkFirst = !cameraLink.checked || (cameraLink.host && linkAskedFor !== sessionId);
+  // Both wait for the stills kept from before, which may carry the answer already.
   useLayoutEffect(() => {
-    if (!phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
+    if (!phone || !tl || !sessionId || !keptBack || tlAskedFor.current === sessionId) return;
     if (!cameraSupported() || tlPending || linkFirst) return;
     tlAskedFor.current = sessionId;
     if (tl.record === 'always') setRecording(true);
     else if (tl.record === 'ask') setTlAskOpen(true);
-  }, [phone, tl, sessionId, tlPending, linkFirst]);
+  }, [phone, tl, sessionId, keptBack, tlPending, linkFirst]);
   useEffect(() => {
-    if (phone || !tl || !sessionId || tlAskedFor.current === sessionId) return;
+    if (phone || !tl || !sessionId || !keptBack || tlAskedFor.current === sessionId) return;
     if (askOpen || audio.state === 'requesting' || !cameraSupported()) return;
     // Last session's stills are still waiting to be saved; they come first.
     if (tlPending) return;
@@ -686,7 +726,7 @@ export function Focus() {
       else setTlAskOpen(true);
     }, PROMPT_DELAY_MS * 1.6);
     return () => window.clearTimeout(id);
-  }, [phone, tl, sessionId, askOpen, audio.state, tlPending]);
+  }, [phone, tl, sessionId, keptBack, askOpen, audio.state, tlPending]);
 
   // A break starting or ending while it records: the screen wakes for a moment to show it.
   useEffect(() => {
@@ -695,17 +735,78 @@ export function Focus() {
   /** How dark the resting screen goes: the preset's dim while a phone records. A computer never dims. */
   const restingDim = phone && cameraOn && recorder.live ? (preset?.dim ?? 0) : 0;
 
-  // Unsaved stills live only in this tab: ask before it closes.
+  /** The ending screen was left (closed, or off to Social): its stills aren't kept any more. */
+  const tlEndingLeft = useRef(false);
+  // What the kept copy says beside the stills, read when it writes: the ending screen while it
+  // shows, else the running session the recording is on in. Null once neither holds (the
+  // ending screen gone through, or the session stopped elsewhere): the copy goes.
+  const keptNow = useRef<() => KeptRecording | null>(() => null);
+  const pendingRef = useRef(tlPending);
+  const userId = me.data?.user.id;
+  useEffect(() => {
+    pendingRef.current = tlPending;
+    keptNow.current = () => {
+      if (!userId) return null;
+      const inSession = tlRecordedIn.current;
+      const ending = summary && !tlEndingLeft.current ? summary : null;
+      const running = !!inSession && sessionRef.current?.session.id === inSession;
+      if (!ending && !running) return null;
+      return {
+        userId,
+        sessionId: ending ? null : inSession,
+        summary: ending,
+        covered: tlCovered,
+        offset: { ...tlOffset.current },
+        recording: wantsRecording,
+        screen: screenOn,
+        orientation: orientation ?? picked?.o ?? null,
+        pace: recorder.pace(),
+      };
+    };
+  });
+
+  // While their session runs and on its ending screen, unsaved stills are kept in this browser
+  // as they come, so a refresh or a closed browser doesn't lose them: every second, and the
+  // moment the page is hidden or goes. Once the ending screen is gone through, the copy goes.
+  const keeper = keep.keeper;
+  /** The copy is being kept now. */
+  const keeping = useRef(false);
+  useEffect(() => {
+    if (!keeper || !keptBack) return;
+    const tick = () => {
+      const meta = pendingRef.current && !tlHandedOff.current ? keptNow.current() : null;
+      keeping.current = !!meta;
+      if (meta) keeper.sync(recorderRef.current.stills(), meta);
+      else keeper.drop();
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    const onHide = () => {
+      if (document.visibilityState === 'hidden') tick();
+    };
+    window.addEventListener('pagehide', tick);
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('pagehide', tick);
+      document.removeEventListener('visibilitychange', onHide);
+    };
+  }, [keeper, keptBack]);
+
+  // Unsaved stills not kept in this browser (the ending screen was left, or the copy couldn't
+  // be written) live only in this tab: ask before it closes.
   useEffect(() => {
     if (!tlPending) return;
     const warn = (e: BeforeUnloadEvent) => {
       if (tlHandedOff.current) return;
+      // Kept, they come back when the focus screen opens again.
+      if (keeping.current && keeper?.safe) return;
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', warn);
     return () => window.removeEventListener('beforeunload', warn);
-  }, [tlPending]);
+  }, [tlPending, keeper]);
 
   /**
    * While a question or the browser's picker is up, the clock waits: choosing a window to
@@ -787,7 +888,6 @@ export function Focus() {
     const open = postable ? new Set(postable) : null;
     return tlCovered.filter((c) => c === own || !open || open.has(c.id));
   }, [summary, tlCovered, postable]);
-
   /* ---------- leaving ---------- */
   const toSocial = useSocialAfterSession(
     summary?.session ?? null,
@@ -795,6 +895,13 @@ export function Focus() {
   );
   const summarySessionId = summary?.session.id ?? null;
   const leave = useCallback(() => {
+    // Leaving the ending screen is going through it: the copy of its stills goes. They are
+    // only in this tab now, so leaving asks first as it always did, unless the video went along.
+    if (summarySessionId) {
+      tlEndingLeft.current = true;
+      keeping.current = false;
+      keeper?.drop();
+    }
     void toSocial().then((path) => {
       // After a session, off to Social to post it (the setting): the tab that opened this one
       // goes there as this one closes, or, with no such tab, this one goes. A video made
@@ -813,7 +920,7 @@ export function Focus() {
       window.close();
       window.setTimeout(() => navigate('/'), 150);
     });
-  }, [navigate, toSocial, summarySessionId]);
+  }, [navigate, toSocial, summarySessionId, keeper]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -839,7 +946,13 @@ export function Focus() {
 
   // A phone waits for its first look for a computer too, so the screen isn't swapped for the
   // camera a moment after it shows.
-  if (!settings || !active.data || !nodes.data || (phone && !!session && !cameraLink.checked)) {
+  if (
+    !settings ||
+    !active.data ||
+    !nodes.data ||
+    !keptBack ||
+    (phone && !!session && !cameraLink.checked)
+  ) {
     return (
       <div className="focus-screen focus-centre on-backdrop">
         <Backdrop

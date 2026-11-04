@@ -3168,3 +3168,14 @@ redirect to the marketing page if that logic makes sense".
   Satoshi heading (and the changelog's and docs'); it is off everywhere now, as in the app,
   so "Komogon" and headings like "Give your study hours somewhere to go." use the plain g.
   The link preview's word already had the plain g.
+
+## The timelapse survives a refresh or a closed browser, 2026-11-03 (owner request)
+
+The owner: "when the browser refreshes or exits, or computer shuts down without session ending try to get the timelapse to save". The stills used to live only in the focus tab's memory, so any of those lost them. Now the focus screen copies unsaved stills into this browser's IndexedDB as they are taken (each still written once, thinned ones deleted, every second and when the page hides) beside what it needs to carry on: the session it was recording, the sessions it already went through, the clock offset, whether the camera and the screen were on, a phone's direction and the pacing. Nothing is uploaded; the pictures stay on the device, like custom backgrounds.
+
+- **Opening the focus screen again** while their session is still running takes them back before anything is asked, and the recording carries on where it was ("Still recording."); the screen needs a click again, so the pill offers Share screen. A computer shutting down doesn't end the session (it lives on the server, its clock running from timestamps); only a planned end ends one by itself.
+- **While the session runs and on its ending screen** (owner, 2026-11-04: "throw away the stills when the session is done", then "the timelapse stills should also stay on the ending screens as well, once the ending screens have been gone through then delete the stills"). A refresh on the ending screen brings it back with the stills (its summary is kept beside them). The copy is thrown away once the ending screen is gone through: Close, Escape, off to Social, Start another (unless the recording carries on into it), or the summary closing after a trim. A session stopped from the dashboard while no focus screen was open never had an ending screen here, so its copy goes too (the focus screen or the dashboard drops it). A first version kept stills after any session, with a "Your timelapse" card on the focus screen and a once-only note on the dashboard; both went with this.
+- **It also goes** when the video is saved, shared or handed to Social's post box, when the stills are thrown away, on sign-out or "clear this device", for another account signing in, and after a week.
+- **The leave warning** ("Leave site?") shows only while the copy isn't being kept: leaving the ending screen (as it always did), or when the copy can't be written (storage full, a second focus tab).
+- One focus tab keeps a recording at a time (a Web Lock), so two tabs never write over each other.
+- Not built: making the video by itself as the page closes. A page gets no time to encode on its way out, and a download can't start then.

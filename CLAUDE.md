@@ -766,8 +766,33 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - On the focus screen, `useTimelapseRecorder` takes JPEG stills from the camera (960 px
   wide), plus a shared screen (1280 px wide, `getDisplayMedia`) when the person said yes to
   it this session. It takes them during focus only, unless "Record breaks too" is on. The
-  stills stay in the tab's memory: nothing is uploaded, and closing the tab loses them (the
-  focus screen asks before it closes with unsaved stills).
+  stills are held in the tab's memory and nothing is uploaded.
+- **Kept through a refresh or a closed browser** (2026-11-03, `lib/timelapse-keep.ts`): the
+  focus screen copies unsaved stills into IndexedDB (`komogon-timelapse`) every second and
+  when the page hides, with what it needs to carry on (the session, the sessions covered,
+  the clock offset, camera and screen on, the phone's direction, the pacing from
+  `recorder.pace()`). It is kept **while that session runs and on its ending screen, and
+  thrown away once the ending screen has been gone through** (owner, 2026-11-04: "throw away
+  the stills when the session is done", then "the timelapse stills should also stay on the
+  ending screens as well, once the ending screens have been gone through then delete the
+  stills"). Opening the focus screen again takes them back (`recorder.restore`) before
+  anything is asked: with the session still running the recording carries on ("Still
+  recording.", the screen waits for a click on Share screen); on the ending screen, the
+  summary comes back too (the `EndSummary` is kept beside the stills). Gone through means
+  Close, Escape, off to Social, Start another (unless the recording carries on into it) or
+  the summary going after a trim; `leave()` drops the copy at once. A session stopped from
+  the dashboard while no focus screen was open had no ending screen, so its copy goes: the
+  focus screen drops it on load, and AppShell (`useDropFinishedTimelapse`) drops a
+  mid-session copy whose session stopped. One focus tab keeps them, the one holding the
+  Web Lock. The copy also goes when the video is saved or handed to Social, the stills are
+  thrown away, on sign-out, for another account and after a week. The leave warning shows
+  only while the copy isn't being kept (leaving the ending screen, or a failed write).
+  Tests of the store: none in the repo (the portal has no test setup); it was checked
+  against fake-indexeddb from a scratch script.
+- **A computer shutting down doesn't end a session**: it lives on the server and its clock
+  runs from timestamps. Only a planned end ends one by itself (60 s after it, crediting work
+  up to it, finalized on the next read), and a Pomodoro with auto-start off waits at the end
+  of its block.
 - Each still carries the session's focused time, break time, running time, the time of day,
   and the task name as the focus screen shows it ("Course · Task").
 - Pacing works like a phone timelapse. Auto mode starts at one still every 0.5 s. Each time

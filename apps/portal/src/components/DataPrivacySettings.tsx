@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { exportToCsvFiles, zipFiles } from '../lib/csv-export';
 import { clearQueryCache } from '../lib/persist';
+import { dropKeptTimelapse } from '../lib/timelapse-keep';
 
 function download(blob: Blob, name: string) {
   const a = document.createElement('a');
@@ -24,6 +25,7 @@ function clearThisDevice() {
   } catch {
     // Private windows can refuse IndexedDB; there is nothing stored there to clear.
   }
+  void dropKeptTimelapse();
   try {
     for (const k of Object.keys(localStorage)) if (k.startsWith('komogon')) localStorage.removeItem(k);
   } catch {
