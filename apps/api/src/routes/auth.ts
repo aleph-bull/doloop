@@ -6,7 +6,13 @@ import type { Db } from '../db/client';
 import { HttpError } from '../errors';
 import { isAdmin } from '../services/admin';
 import { assertMayEnter, isEmailBlocked, SUSPENDED } from '../services/moderation';
-import { hashPassword, signIn, signUp } from '../services/passwords';
+import {
+  GOOGLE_ONLY,
+  hashPassword,
+  passwordlessAccount,
+  signIn,
+  signUp,
+} from '../services/passwords';
 import { accountSession } from '../services/account-session';
 import { issueEmailCode, redeemEmailCode, requestLimits } from '../services/email-codes';
 import type { Mailer } from '../services/mailer';
@@ -138,6 +144,23 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
   const signInIp = limits && limiter(limits.signInPerIp);
   const signUpIp = limits && limiter(limits.signUpPerIp);
 
+  /**
+   * A password tried on an email whose account has none (it signs in with Google): say so,
+   * so they use Google or set a password instead of guessing. Only while Google is on.
+   */
+  const googleOnly = async (email: string, status = 401) =>
+    !!opts.google && !!(await passwordlessAccount(db, email))
+      ? new HttpError(status, GOOGLE_ONLY, { reason: 'google' })
+      : null;
+  const checkPassword = async (email: string, password: string) => {
+    try {
+      return await signIn(db, email, password);
+    } catch (err) {
+      if (err instanceof HttpError && err.status === 401) throw (await googleOnly(email)) ?? err;
+      throw err;
+    }
+  };
+
   app.post('/api/auth/signup', { config: { public: true } }, async (req) => {
     if (signUpIp) {
       checkLimits([[signUpIp, req.ip]]);
@@ -149,6 +172,11 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
     if (!isInvited(body.email, opts.allowedEmails)) throw new HttpError(403, 'invite_only');
     if (await isEmailBlocked(db, body.email)) throw new HttpError(403, SUSPENDED);
     const claim = isAdmin(body.email, opts.adminEmails ?? []);
+    // A second, empty account on the same email would take over its Google sign-in.
+    if (!claim) {
+      const google = await googleOnly(body.email, 409);
+      if (google) throw google;
+    }
     const timezone = timezoneOf(req.headers['x-timezone']);
     if (opts.requireVerification) {
       const now = opts.clock?.() ?? new Date().toISOString();
@@ -179,13 +207,13 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
     const body = credentialsSchema.parse(req.body);
     const email = body.email.toLowerCase();
     if (!signInEmail || !signInIp)
-      return passwordMatched(await signIn(db, email, body.password), req);
+      return passwordMatched(await checkPassword(email, body.password), req);
     checkLimits([
       [signInEmail, email],
       [signInIp, req.ip],
     ]);
     try {
-      const user = await signIn(db, email, body.password);
+      const user = await checkPassword(email, body.password);
       signInEmail.clear(email);
       return passwordMatched(user, req);
     } catch (err) {

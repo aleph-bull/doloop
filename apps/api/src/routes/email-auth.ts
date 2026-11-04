@@ -13,7 +13,7 @@ import {
   requestLimits,
 } from '../services/email-codes';
 import { isLocalTestEmail, requireLocalTestRequest } from '../services/local-test-accounts';
-import { createPasswordAccount, hashPassword } from '../services/passwords';
+import { createPasswordAccount, hashPassword, passwordlessAccount } from '../services/passwords';
 import type { Mailer } from '../services/mailer';
 
 export interface EmailOptions {
@@ -107,9 +107,11 @@ export function emailAuthRoutes(
     if (!opts.mailer || !opts.passwordAuth)
       throw new HttpError(503, 'Password reset email is not configured on this server yet.');
     await requestLimits(db, opts.secret, email, req.ip, clock());
-    const account = await db.query.passwordAccounts.findFirst({
-      where: eq(passwordAccounts.email, normalEmail(email)),
-    });
+    // An account with no password yet (made through Google) gets its first one this way.
+    const account =
+      (await db.query.passwordAccounts.findFirst({
+        where: eq(passwordAccounts.email, normalEmail(email)),
+      })) ?? (await passwordlessAccount(db, email).then((a) => a && { userId: a.id }));
     let challengeId: string = randomUUID();
     if (account) {
       if (isLocalTestEmail(email)) requireLocalTestRequest(req, opts.localTestAccounts);
@@ -150,7 +152,15 @@ export function emailAuthRoutes(
             and(eq(passwordAccounts.userId, row.userId), eq(passwordAccounts.email, row.email)),
           )
           .returning();
-        if (!updated.length) throw badRequest('Request a new reset code.');
+        if (!updated.length) {
+          // No password yet: this sets the first, if the email is still the account's own
+          // and no other account has taken it with a password since the code was sent.
+          const first = await passwordlessAccount(tx, row.email);
+          if (first?.id !== row.userId) throw badRequest('Request a new reset code.');
+          await tx
+            .insert(passwordAccounts)
+            .values({ userId: row.userId, email: row.email, passwordHash });
+        }
         await tx
           .update(users)
           .set({ authVersion: sql`${users.authVersion} + 1`, emailVerifiedAt: new Date(clock()) })

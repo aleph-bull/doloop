@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useLocation } from 'react-router';
 import { Backdrop, Button, Glass, Input } from '@komogon/ui';
 import { api } from '../lib/api';
 import { LocalMailInbox } from '../components/LocalMailInbox';
 
 export function ResetPassword() {
-  const [email, setEmail] = useState(''),
+  // From sign-in, for an email that signs in with Google: its first password.
+  const from = useLocation().state as { email?: string; first?: boolean } | null;
+  const first = from?.first === true;
+  const [email, setEmail] = useState(from?.email ?? ''),
     [code, setCode] = useState(''),
     [password, setPassword] = useState('');
   const [challenge, setChallenge] = useState<string | null>(null),
@@ -17,10 +20,14 @@ export function ResetPassword() {
       <Backdrop backgroundId="aurora" theme="dark" />
       <main className="min-h-screen flex items-center justify-center p-4 on-backdrop">
         <Glass className="p-8 w-full max-w-sm flex flex-col gap-5" strong>
-          <h1 className="text-2xl">Reset your password</h1>
+          <h1 className="text-2xl">{first ? 'Set a password' : 'Reset your password'}</h1>
           {done ? (
             <>
-              <p>Your password has been updated. Sign in with your new password.</p>
+              <p>
+                {first
+                  ? 'Your password is set. Sign in with it, or with Google as before.'
+                  : 'Your password has been updated. Sign in with your new password.'}
+              </p>
               <Link to="/signin" className="btn btn-primary">
                 Sign in
               </Link>
@@ -85,7 +92,13 @@ export function ResetPassword() {
                 </p>
               )}
               <Button type="submit" variant="primary" loading={busy}>
-                {challenge ? 'Set new password' : 'Send reset code'}
+                {challenge
+                  ? first
+                    ? 'Set password'
+                    : 'Set new password'
+                  : first
+                    ? 'Send code'
+                    : 'Send reset code'}
               </Button>
               {challenge && (
                 <>

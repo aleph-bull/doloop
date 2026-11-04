@@ -28,6 +28,8 @@ export function SignIn() {
   const [sent, setSent] = useState<'link' | 'confirm' | 'two-step' | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
+  /** The email tried has no password: it signs in with Google. */
+  const [googleOnly, setGoogleOnly] = useState(false);
 
   /** Server mode: set when the API offers "Continue with Google". */
   const [googleClientId, setGoogleClientId] = useState<string | null>(null);
@@ -53,6 +55,7 @@ export function SignIn() {
     e.preventDefault();
     if (!email.trim()) return;
     setBusy(true);
+    setGoogleOnly(false);
     try {
       if (auth.mode === 'dev') await auth.signInDev(email.trim());
       else if (creating) {
@@ -62,7 +65,8 @@ export function SignIn() {
         setSent('two-step');
       }
     } catch (err) {
-      toast(err instanceof Error ? friendlyAuthError(err.message) : 'Sign-in failed');
+      if ((err as { reason?: string }).reason === 'google') setGoogleOnly(true);
+      else toast(err instanceof Error ? friendlyAuthError(err.message) : 'Sign-in failed');
     } finally {
       setBusy(false);
     }
@@ -236,7 +240,10 @@ export function SignIn() {
                 type="email"
                 autoComplete="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setGoogleOnly(false);
+                }}
                 required
                 autoFocus
               />
@@ -260,6 +267,19 @@ export function SignIn() {
                 <Link className="link-button text-sm" to="/reset-password">
                   Forgot password?
                 </Link>
+              )}
+              {googleOnly && (
+                <p className="text-sm" role="alert">
+                  This email signs in with Google. Continue with Google, or{' '}
+                  <Link
+                    className="link-button"
+                    to="/reset-password"
+                    state={{ email: email.trim(), first: true }}
+                  >
+                    set a password
+                  </Link>
+                  .
+                </p>
               )}
               <Button type="submit" variant="primary" loading={busy} disabled={busy}>
                 {auth.mode === 'dev' ? 'Continue (dev)' : creating ? 'Create account' : 'Sign in'}

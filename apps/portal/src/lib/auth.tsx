@@ -120,8 +120,12 @@ async function serverAuth(
     twoStep?: boolean;
     challengeId?: string;
     error?: string;
+    details?: { reason?: string };
   } | null;
   if (res.status === 404) throw new Error('Password sign-in is not set up on the server.');
+  // A password tried on an email that signs in with Google: the page says what to do.
+  if (data?.details?.reason === 'google')
+    throw Object.assign(new Error(data.error), { reason: 'google' as const });
   if (res.status === 403 && data?.error === 'invite_only') throw new Error(NOT_INVITED_MESSAGE);
   if (res.status === 400 && data?.error === 'Validation failed')
     throw new Error('Enter a valid email and a password.');

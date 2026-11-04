@@ -19,6 +19,8 @@ interface GoogleIdentity {
 }
 
 const SCRIPT_URL = 'https://accounts.google.com/gsi/client';
+/** Any failure from Google's window; a fresh page clears what it left behind. */
+const FAILED = "Google sign-in didn't go through. Refresh the page and try again.";
 let scriptPromise: Promise<GoogleIdentity> | null = null;
 
 function loadGoogle(): Promise<GoogleIdentity> {
@@ -55,6 +57,10 @@ export function GoogleSignInButton({
 }) {
   const client = useRef<TokenClient | null>(null);
   const [ready, setReady] = useState(false);
+  /** Google's window was opened and nothing has come back from it yet. */
+  const waiting = useRef(false);
+  /** Back on this page from Google's tab without being signed in (phones, mostly). */
+  const [stuck, setStuck] = useState(false);
   // Latest handlers without making a new token client each time they change.
   const handlers = useRef({ onAccessToken, onError });
   useEffect(() => {
@@ -69,39 +75,80 @@ export function GoogleSignInButton({
         client.current = google.accounts.oauth2.initTokenClient({
           client_id: clientId,
           scope: 'openid email',
-          callback: (r) =>
-            r.access_token
-              ? handlers.current.onAccessToken(r.access_token)
-              : handlers.current.onError("Google sign-in didn't go through. Try again."),
+          callback: (r) => {
+            waiting.current = false;
+            setStuck(false);
+            if (r.access_token) handlers.current.onAccessToken(r.access_token);
+            else handlers.current.onError(FAILED);
+          },
           // Closing the popup is changing your mind, not an error.
           error_callback: (e) => {
             if (e.type === 'popup_failed_to_open')
               handlers.current.onError(
                 'Your browser blocked the Google window. Allow pop-ups here and try again.',
               );
+            else if (e.type !== 'popup_closed') handlers.current.onError(FAILED);
           },
         });
         setReady(true);
       })
       .catch(() => {
-        if (!cancelled) handlers.current.onError("Google sign-in couldn't load just now.");
+        if (!cancelled)
+          handlers.current.onError("Google sign-in couldn't load just now. Refresh the page.");
       });
     return () => {
       cancelled = true;
     };
   }, [clientId]);
 
+  useEffect(() => {
+    // On a phone Google opens in a tab of its own. Going back from it there can leave
+    // Google's side in a state only a fresh page clears, so coming back here without a
+    // sign-in offers a refresh. A sign-in lands as Google's tab closes, so wait a moment.
+    let timer: number | undefined;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !waiting.current) return;
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => waiting.current && setStuck(true), 2500);
+    };
+    // Back on this page from the browser's back/forward cache: start fresh, as a refresh would.
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) location.reload();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('pageshow', onShow);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('pageshow', onShow);
+    };
+  }, []);
+
   return (
-    <button
-      type="button"
-      className="btn google-button"
-      disabled={!ready}
-      // The popup has to open inside the click, or the browser blocks it.
-      onClick={() => client.current?.requestAccessToken()}
-    >
-      <GoogleMark />
-      Continue with Google
-    </button>
+    <>
+      <button
+        type="button"
+        className="btn google-button"
+        disabled={!ready}
+        // The popup has to open inside the click, or the browser blocks it.
+        onClick={() => {
+          waiting.current = true;
+          setStuck(false);
+          client.current?.requestAccessToken();
+        }}
+      >
+        <GoogleMark />
+        Continue with Google
+      </button>
+      {stuck && (
+        <p className="field-hint" role="status">
+          Trouble with Google?{' '}
+          <button type="button" className="link-button" onClick={() => location.reload()}>
+            Refresh the page
+          </button>
+        </p>
+      )}
+    </>
   );
 }
 

@@ -82,5 +82,35 @@ export async function signIn(
   return { id: account.userId, email: e };
 }
 
+/** Said to a password sign-in or sign-up on an email that only signs in with Google. */
+export const GOOGLE_ONLY =
+  'This email signs in with Google. Continue with Google, or set a password.';
+
+/**
+ * The account using this email when it has no password (made through Google, or moved over
+ * from a local copy), else null.
+ */
+export async function passwordlessAccount(
+  db: Db,
+  email: string,
+): Promise<{ id: string; email: string } | null> {
+  const e = normalise(email);
+  const withPassword = await db.query.passwordAccounts.findFirst({
+    where: eq(passwordAccounts.email, e),
+    columns: { userId: true },
+  });
+  if (withPassword) return null;
+  const user = await db.query.users.findFirst({
+    where: eq(sql`lower(${users.email})`, e),
+    columns: { id: true },
+  });
+  if (!user) return null;
+  const hasOne = await db.query.passwordAccounts.findFirst({
+    where: eq(passwordAccounts.userId, user.id),
+    columns: { userId: true },
+  });
+  return hasOne ? null : { id: user.id, email: e };
+}
+
 let dummy: Promise<string> | undefined;
 const dummyHash = () => (dummy ??= hashPassword(randomUUID()));

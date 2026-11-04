@@ -16,6 +16,9 @@ export type GoogleTokenVerifier = (idToken: string) => Promise<GoogleIdentity>;
 
 const GOOGLE_ISSUERS = ['https://accounts.google.com', 'accounts.google.com'];
 
+/** A Google sign-in that failed; a fresh page clears whatever Google's window left behind. */
+const GOOGLE_FAILED = "Google sign-in didn't go through. Refresh the page and try again.";
+
 /**
  * Checks an ID token from Google's sign-in button: signed by Google's keys, issued by
  * Google, and meant for our client id.
@@ -33,7 +36,7 @@ export function createGoogleTokenVerifier(clientId: string): GoogleTokenVerifier
         emailVerified: payload.email_verified === true,
       };
     } catch {
-      throw new HttpError(401, "Google sign-in didn't go through. Try again.");
+      throw new HttpError(401, GOOGLE_FAILED);
     }
   };
 }
@@ -48,7 +51,7 @@ export function createGoogleAccessTokenVerifier(
   fetcher: typeof fetch = fetch,
 ): GoogleTokenVerifier {
   return async (accessToken) => {
-    const failed = new HttpError(401, "Google sign-in didn't go through. Try again.");
+    const failed = new HttpError(401, GOOGLE_FAILED);
     let info: Record<string, unknown>;
     try {
       const res = await fetcher('https://oauth2.googleapis.com/tokeninfo', {
