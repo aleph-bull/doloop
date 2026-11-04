@@ -196,3 +196,17 @@ Built as "Saved looks" in Settings → Appearance: list in localStorage, an uplo
 - While the timelapse is recording, hold a screen wake lock (`navigator.wakeLock.request('screen')`) and ask for it again when the page comes back into view, since the browser drops it whenever the page is hidden.
 - If the camera stops anyway, say so quietly on the focus screen rather than ending up with a short video and no explanation.
 - When building: the screen recording already listens for its track ending; the camera track doesn't (it should watch `ended` and `mute`). Check on a real iPhone, both in Safari and installed to the Home Screen, since older iOS versions had trouble with wake locks in installed web apps.
+
+## Phone and computer sync (logged 2026-11-03)
+
+- Sync between the phone and the computer is broken. It crashes the phone when the session is on a break.
+- Make the sync better. Whenever they sync:
+  - The phone always films.
+  - The computer records its screen if screen recording is enabled.
+- How to sync: first make sure both ends are on the same state, then get the time from the phone or computer.
+
+## Launch the extension (logged 2026-11-03)
+
+- Launch the extension.
+- It needs a "You have downloaded Komodon" page, shown when prompted after downloading.
+- The owner's wording, kept because how app.komogon.app fits in isn't settled: "need a you have downloaded komodon page when prompted downloaded app.komogon.app".
