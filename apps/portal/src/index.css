@@ -3288,6 +3288,12 @@ button.start-subject:hover {
 }
 
 /* ---------- Settings: sidebar + search ---------- */
+/* Some sections are long enough to scroll and some aren't. Where the scrollbar takes room,
+   its coming and going moved the centred page sideways and changed its width with every
+   click in the list, so on Settings it is always there. */
+:root:has(.settings-layout) {
+  overflow-y: scroll;
+}
 .settings-layout {
   display: grid;
   grid-template-columns: 216px minmax(0, 1fr);
