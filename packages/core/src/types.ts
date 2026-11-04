@@ -14,7 +14,7 @@ export type NodeKind = 'course' | 'assessment' | 'task' | 'other';
 export type SessionMode = 'pomodoro' | 'unlimited' | 'scheduled';
 /**
  * Where a calendar block came from.
- * - 'app': study time the user scheduled in Komodon. The only kind pushed to Google.
+ * - 'app': study time the user scheduled in Komogon. The only kind pushed to Google.
  * - 'google': an imported commitment - a lecture, a shift, a dentist. Shown so the user
  *   can plan around it; never treated as study time and never used to tell them to study.
  * - 'outlook', 'ics': the same as 'google', from Outlook or from a calendar added by link.
@@ -487,6 +487,11 @@ export interface User {
   username: string | null;
   /** When the person last chose it; null while it is still the one the app picked. */
   usernameChangedAt: ISODateTime | null;
+  /**
+   * Kept from posting and commenting on Social by an admin. Optional because the portal's
+   * offline cache can hold a user from before it existed.
+   */
+  socialBanned?: boolean;
 }
 
 /**

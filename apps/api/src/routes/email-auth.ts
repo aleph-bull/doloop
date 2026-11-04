@@ -86,7 +86,7 @@ export function emailAuthRoutes(
   app.post('/api/auth/email/resend', { config: { public: true } }, async (req) => {
     const { challengeId } = z.object({ challengeId: z.uuid() }).parse(req.body);
     const row = await db.query.emailCodes.findFirst({ where: eq(emailCodes.id, challengeId) });
-    if (!row || row.consumedAt || !['signup', 'password-reset'].includes(row.purpose))
+    if (!row || row.consumedAt || !['signup', 'password-reset', 'two-step'].includes(row.purpose))
       throw badRequest('Request a new code from the original form.');
     await requestLimits(db, opts.secret, row.email, req.ip, clock());
     return issueEmailCode(

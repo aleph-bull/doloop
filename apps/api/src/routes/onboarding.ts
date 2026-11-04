@@ -80,7 +80,7 @@ export function onboardingRoutes(
     return { answers };
   });
 
-  /** Everyone's answers, newest first, for whoever runs Komodon. Dev accounts are left out. */
+  /** Everyone's answers, newest first, for whoever runs Komogon. Dev accounts are left out. */
   app.get('/api/admin/onboarding', async (req) => {
     if (!isAdmin(req.user.email, admins)) throw forbidden('Admins only');
     const rows = await db

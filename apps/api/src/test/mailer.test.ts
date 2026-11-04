@@ -6,14 +6,14 @@ it('sends bare plain text through Resend without HTML or tracking content', asyn
     .fn()
     .mockResolvedValue(new Response(JSON.stringify({ id: 'mail' }), { status: 200 }));
   vi.stubGlobal('fetch', fetcher);
-  await createResendMailer('fake-key', 'Komodon <noreply@komogon.app>').send({
+  await createResendMailer('fake-key', 'Komogon <noreply@komogon.app>').send({
     to: 'test@example.test',
     subject: 'Your code',
     text: '123456\n\nExpires in 10 minutes.',
   });
   const message = JSON.parse(fetcher.mock.calls[0]![1].body);
   expect(message).toEqual({
-    from: 'Komodon <noreply@komogon.app>',
+    from: 'Komogon <noreply@komogon.app>',
     to: ['test@example.test'],
     subject: 'Your code',
     text: '123456\n\nExpires in 10 minutes.',

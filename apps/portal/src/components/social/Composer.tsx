@@ -230,6 +230,14 @@ export function Composer() {
 
   const resting = !opened && !text && sessionIds.length === 0 && files.length === 0 && !oversize;
 
+  // Kept from posting by an admin: the box says so instead (the API refuses it anyway).
+  if (me?.socialBanned)
+    return (
+      <Panel as="section" className="composer" aria-label="New post">
+        <p className="muted text-sm">You can&apos;t post on Social right now.</p>
+      </Panel>
+    );
+
   return (
     <Panel as="section" className={`composer${resting ? ' is-resting' : ''}`} aria-label="New post">
       <div className="composer-row">

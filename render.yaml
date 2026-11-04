@@ -1,4 +1,4 @@
-# Render blueprint for the Komodon API (closed alpha). The portal is on Vercel
+# Render blueprint for the Komogon API (closed alpha). The portal is on Vercel
 # (apps/portal/vercel.json); data is in a hosted Postgres (Neon). Setup: docs/ALPHA.md.
 #
 # Values marked `sync: false` are asked for when the blueprint is first applied, and live
@@ -26,7 +26,7 @@ services:
       - key: RESEND_API_KEY
         sync: false
       - key: MAIL_FROM
-        value: Komodon <noreply@komogon.app>
+        value: Komogon <noreply@komogon.app>
 
       # Render's proxy adds the caller's address to X-Forwarded-For; trust that one entry
       # so the sign-in limits count each caller, not the proxy

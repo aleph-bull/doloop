@@ -642,7 +642,7 @@ export function Tasks() {
         {roots.length === 0 ? (
           <EmptyState
             title="Nothing here yet"
-            body="Add a course, then its assignments, quizzes and readings. Estimates and due dates let Komodon plan your day."
+            body="Add a course, then its assignments, quizzes and readings. Estimates and due dates let Komogon plan your day."
             action={
               <div className="flex gap-2 flex-wrap justify-center">
                 <Button variant="primary" onClick={() => setDialog({ parentId: null })}>

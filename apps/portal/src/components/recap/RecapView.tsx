@@ -259,7 +259,7 @@ function Hero({
             : null,
           accent: accentHexFor(me.data?.user.settings.theme.accent ?? 'sky'),
         },
-        `komodon-week-${p.from}.png`,
+        `komogon-week-${p.from}.png`,
       );
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not make the card');

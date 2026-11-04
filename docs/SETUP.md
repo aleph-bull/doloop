@@ -47,7 +47,7 @@ accounts can verify their account email from Social without repeating onboarding
 
    ```dotenv
    RESEND_API_KEY=<private sending key>
-   MAIL_FROM=Komodon <noreply@komogon.app>
+   MAIL_FROM=Komogon <noreply@komogon.app>
    ```
 
    Never put the key in a `VITE_` variable, source control or the portal. The sender
@@ -127,7 +127,7 @@ connection, on Sync now, and about every 15 minutes while the API is running. Th
 refreshes imported data within a minute of a completed background sync. A sleeping or
 offline API catches up when it starts again.
 
-Google reads all accessible calendars except Komodon's dedicated Study calendar. It
+Google reads all accessible calendars except Komogon's dedicated Study calendar. It
 keeps the existing two-way Study calendar sync. Existing connections already have the
 calendar.readonly permission; no additional scope is needed.
 

@@ -26,8 +26,10 @@ import {
   type UserRow,
 } from '../db/schema';
 import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from '../errors';
+import { isAdmin } from '../services/admin';
 import { inWorldOf, ownerInWorldOf, sameWorld } from '../services/dev-accounts';
 import { removeAll, type MediaStore } from '../services/media-store';
+import { assertMayPost } from '../services/moderation';
 import { loadPeople, type Person } from '../services/people';
 import { pushMessages } from '../services/push';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
@@ -99,6 +101,8 @@ function checkMedia(mime: string, bytes: number, limits: MediaLimits): void {
 
 export interface FeedPost {
   id: string;
+  /** Its ID for moderation, a number (`posts.ref`): sent to admins only. */
+  ref?: number;
   userId: string;
   body: string;
   createdAt: string;
@@ -261,13 +265,15 @@ export async function canSeePost(db: Db, viewer: UserRow, postId: string): Promi
 
 /**
  * Posts with their counts, newest first, and the people behind them. `where` picks the
- * posts; the viewer decides `liked` and `you`.
+ * posts; the viewer decides `liked` and `you`. Each post's ID (`ref`) only with `ids`,
+ * which is for admins.
  */
 export async function loadPosts(
   db: Db,
   viewerId: string,
   where: ReturnType<typeof and>,
   limit: number,
+  { ids = false }: { ids?: boolean } = {},
 ): Promise<{ posts: FeedPost[]; people: Record<string, Person> }> {
   // Written out by hand: in a select list drizzle drops the table from `posts.id`, and a
   // bare "id" inside the comments subquery would be the comment's own id.
@@ -287,6 +293,7 @@ export async function loadPosts(
   const rows = await db
     .select({
       id: posts.id,
+      ref: posts.ref,
       userId: posts.userId,
       body: posts.body,
       createdAt: posts.createdAt,
@@ -347,6 +354,7 @@ export async function loadPosts(
       const first = files[0];
       return {
         id: r.id,
+        ...(ids ? { ref: r.ref } : {}),
         userId: r.userId,
         body: r.body,
         createdAt: r.createdAt.toISOString(),
@@ -386,9 +394,12 @@ export function socialRoutes(
   db: Db,
   clock: () => string,
   store: MediaStore | null = null,
+  /** `ADMIN_EMAILS`: they can delete any post and open its files, to act on a report. */
+  admins: string[] = [],
 ) {
   const idParam = z.object({ id: uuid });
   const limits = mediaLimits(store);
+  const admin = (viewer: UserRow) => isAdmin(viewer.email, admins);
   // Upload links cost nothing to ask for, so each person gets a sane number an hour.
   const uploadLimiter = new RateLimiter({ max: 30, windowMs: 60 * 60 * 1000 });
   // And 250 MB a day each, with everything stopping once the bucket holds 10 GB.
@@ -428,6 +439,7 @@ export function socialRoutes(
       req.user.id,
       conds.length ? and(...conds) : undefined,
       q.limit,
+      { ids: admin(req.user) },
     );
     const last = page.posts[page.posts.length - 1];
     return {
@@ -447,6 +459,7 @@ export function socialRoutes(
    * `posts/`, so a file nobody posted doesn't stay.
    */
   app.post('/api/social/uploads', async (req) => {
+    assertMayPost(req.user);
     if (!store || !quota) throw conflict('Files go with the post here');
     const input = z
       .object({ mime: z.string().max(40), bytes: z.number().int().min(1) })
@@ -495,6 +508,7 @@ export function socialRoutes(
   });
 
   app.post('/api/social/posts', { bodyLimit: POST_BODY_LIMIT }, async (req, reply) => {
+    assertMayPost(req.user);
     const input = z
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
@@ -681,7 +695,9 @@ export function socialRoutes(
     // The copies under posts/ are the ones kept; the lifecycle rule would get these anyway.
     const uploads = ready.flatMap((f) => (f.upload ? [f.upload] : []));
     if (uploads.length && store) await removeAll(store, uploads, req.log);
-    const page = await loadPosts(db, req.user.id, eq(posts.id, post.id), 1);
+    const page = await loadPosts(db, req.user.id, eq(posts.id, post.id), 1, {
+      ids: admin(req.user),
+    });
     return reply.code(201).send({ post: page.posts[0], people: page.people });
   });
 
@@ -691,10 +707,13 @@ export function socialRoutes(
       where: eq(postMedia.postId, id),
       columns: { key: true },
     });
-    // Only your own: a post that isn't yours reads as not there.
+    // Only your own, unless you're an admin acting on a report: someone else's post reads as
+    // not there.
     const deleted = await db
       .delete(posts)
-      .where(and(eq(posts.id, id), eq(posts.userId, req.user.id)))
+      .where(
+        admin(req.user) ? eq(posts.id, id) : and(eq(posts.id, id), eq(posts.userId, req.user.id)),
+      )
       .returning({ id: posts.id });
     if (deleted.length === 0) throw notFound('No such post');
     const keys = files.flatMap((f) => (f.key ? [f.key] : []));
@@ -704,6 +723,7 @@ export function socialRoutes(
 
   /** Only the words of your own post change; the session and files stay as they were. */
   app.patch('/api/posts/:id', async (req) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const { body } = z.object({ body: z.string().trim().max(POST_MAX_LENGTH) }).parse(req.body);
     const updated = await db
@@ -712,7 +732,7 @@ export function socialRoutes(
       .where(and(eq(posts.id, id), eq(posts.userId, req.user.id)))
       .returning({ id: posts.id });
     if (updated.length === 0) throw notFound('No such post');
-    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1);
+    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1, { ids: admin(req.user) });
     return { post: page.posts[0], people: page.people };
   });
 
@@ -721,6 +741,7 @@ export function socialRoutes(
    * its poster the old poster's. The words, the pictures and the session stay as they were.
    */
   app.put('/api/posts/:id/video', { bodyLimit: POST_BODY_LIMIT }, async (req) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const input = z
       .object({
@@ -792,7 +813,7 @@ export function socialRoutes(
     // The old file and the upload it was copied from.
     const gone = [old.key, input.upload].flatMap((k) => (k ? [k] : []));
     if (gone.length && store) await removeAll(store, gone, req.log);
-    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1);
+    const page = await loadPosts(db, req.user.id, eq(posts.id, id), 1, { ids: admin(req.user) });
     return { post: page.posts[0], people: page.people };
   });
 
@@ -802,7 +823,9 @@ export function socialRoutes(
     const row = await db.query.postMedia.findFirst({
       where: and(eq(postMedia.postId, postId), eq(postMedia.position, n)),
     });
-    if (!row || !(await canSeePost(db, viewer, postId))) throw notFound('No video on this post');
+    // An admin can open any post's files, to look at what was reported.
+    if (!row || !(admin(viewer) || (await canSeePost(db, viewer, postId))))
+      throw notFound('No video on this post');
     return row;
   };
 
@@ -953,6 +976,7 @@ export function socialRoutes(
   });
 
   app.post('/api/posts/:id/comments', async (req, reply) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const { body } = z
       .object({ body: z.string().trim().min(1).max(COMMENT_MAX_LENGTH) })

@@ -51,3 +51,4 @@ export * from './fonts';
 export * from './onboarding';
 export * from './names';
 export * from './comparisons';
+export * from './first-visit';

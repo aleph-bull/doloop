@@ -3,15 +3,18 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { Button, Chip, Input, Panel, Spinner, useToast } from '@komogon/ui';
 import { AccountManager } from '../components/admin/AccountManager';
+import { AdminStats } from '../components/admin/AdminStats';
 import { OnboardingAnswers } from '../components/admin/OnboardingAnswers';
+import { Reports } from '../components/admin/Reports';
 import {
   adminFetch,
   adminKeys,
   adminSend,
+  fmtSize,
   type AdminAccount,
   type BlockedEmail,
 } from '../lib/admin';
-import { fmtDate, fmtMinutes } from '../lib/format';
+import { fmtAgo, fmtDate, fmtMinutes } from '../lib/format';
 import { keys, useMe } from '../lib/queries';
 import '../components/admin/admin.css';
 
@@ -35,7 +38,7 @@ export function Admin() {
       const url = URL.createObjectURL(await res.blob());
       const link = document.createElement('a');
       link.href = url;
-      link.download = `komodon-${a.email}.json`;
+      link.download = `komogon-${a.email}.json`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -64,15 +67,20 @@ export function Admin() {
         <Spinner />
       ) : accounts.isError ? (
         <Panel className="p-5">
-          <p>This page is only for the people running Komodon.</p>
+          <p>This page is only for the people running Komogon.</p>
         </Panel>
       ) : (
         <>
-          <Panel className="p-5 flex flex-col gap-3">
+          <Reports />
+
+          <AdminStats />
+
+          <Panel className="p-5 flex flex-col gap-3 admin-accounts">
             <p className="muted text-sm">
               {accounts.data.length} {accounts.data.length === 1 ? 'account' : 'accounts'}. Download
-              gives everything an account has saved, as JSON. Manage adds or takes away study time,
-              restarts onboarding, and suspends or deletes the account.
+              gives everything an account has saved, as JSON. Manage shows their activity, adds or
+              takes away study time, restarts onboarding, keeps them from posting, and suspends or
+              deletes the account.
             </p>
             <div className="table-wrap">
               <table className="data-table">
@@ -80,8 +88,11 @@ export function Admin() {
                   <tr>
                     <th>Email</th>
                     <th>Joined</th>
+                    <th>Last active</th>
                     <th>Focus</th>
                     <th>Sessions</th>
+                    <th>Posts</th>
+                    <th>Files</th>
                     <th>Level</th>
                     <th>Streak</th>
                     <th>Password</th>
@@ -97,12 +108,16 @@ export function Admin() {
                           {a.you && <Chip tone="neutral">You</Chip>}
                           {a.admin && !a.you && <Chip tone="neutral">Admin</Chip>}
                           {a.bannedAt && <Chip tone="warn">Suspended</Chip>}
+                          {a.socialBannedAt && !a.bannedAt && <Chip tone="warn">Can't post</Chip>}
                           {!a.onboarded && <Chip tone="info">Onboarding</Chip>}
                         </span>
                       </td>
                       <td className="tabular">{a.createdAt.slice(0, 10)}</td>
+                      <td className="tabular">{a.lastActiveAt ? fmtAgo(a.lastActiveAt) : '–'}</td>
                       <td className="tabular">{fmtMinutes(a.focusMinutes)}</td>
                       <td className="tabular">{a.sessions}</td>
+                      <td className="tabular">{a.posts}</td>
+                      <td className="tabular">{a.storageBytes ? fmtSize(a.storageBytes) : '–'}</td>
                       <td className="tabular">{a.level}</td>
                       <td className="tabular">{a.streak}</td>
                       <td>

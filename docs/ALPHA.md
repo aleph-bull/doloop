@@ -116,7 +116,7 @@ hosted address only). Tell testers:
 - Android: open it in Chrome › menu › Install app.
 - Computer: Chrome or Edge › the install icon at the right of the address bar.
 
-It then opens in its own window with the Komodon icon, and it still opens without a
+It then opens in its own window with the Komogon icon, and it still opens without a
 connection, showing the last data it had.
 
 **Admin.** `ADMIN_EMAILS` on Render (already set to your email in `render.yaml`) turns
@@ -129,7 +129,7 @@ computer), the password goes on that account and the data carries on.
 **Verification and password reset.** Password signup makes the account at once, with no
 email code (since 2026-10-24). Forgot password still emails a code: verify `komogon.app` in
 Resend, set `RESEND_API_KEY` privately on Render, and use
-`MAIL_FROM=Komodon <noreply@komogon.app>`. Reset revokes existing sessions. Missing mail configuration
+`MAIL_FROM=Komogon <noreply@komogon.app>`. Reset revokes existing sessions. Missing mail configuration
 leaves existing sign-in available and returns an unavailable message for code requests.
 See [SETUP.md](SETUP.md#verification-emails-and-password-reset-resend). Google sign-in
 continues to use Google's email proof; school/organization verification is separate.
@@ -159,7 +159,7 @@ on a phone. Tick each line; anything that fails goes on the known-issues list or
 **Timelapse** (needs a camera)
 
 - [ ] Record a short session with "Record breaks too" on; the video has the clock, the break
-      label and the Komodon watermark, and is the length it says.
+      label and the Komogon watermark, and is the length it says.
 - [ ] The camera picture is not dark.
 
 **Planning and progress**

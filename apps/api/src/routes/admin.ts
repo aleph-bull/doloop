@@ -12,17 +12,21 @@ import {
   restartOnboarding,
   setAccountPassword,
 } from '../services/admin';
+import { accountActivity, adminStats, cloudMeter } from '../services/admin-stats';
 import { exportUserData } from '../services/export';
 import type { MediaStore } from '../services/media-store';
 import {
+  banFromSocial,
   blockEmail,
   deleteAccount,
+  liftSocialBan,
   liftSuspension,
   listBlockedEmails,
   normaliseEmail,
   suspendAccount,
   unblockEmail,
 } from '../services/moderation';
+import { dismissReports, findPostForAdmin, listReportedPosts } from '../services/post-reports';
 import { sessionHistory, trimSession } from '../services/sessions';
 import { isoDate, isoDateTime, trimSessionSchema, uuid } from '../validation';
 
@@ -42,6 +46,14 @@ const addTimeSchema = z.object({
     .optional(),
 });
 const emailSchema = z.object({ email: z.string().trim().email().max(320) });
+/** A post's ID as a report names it (a number, "#" allowed), or its uuid. */
+const postKey = z.object({
+  key: z
+    .string()
+    .trim()
+    .transform((k) => k.replace(/^#/, ''))
+    .pipe(z.union([z.string().regex(/^\d{1,9}$/), uuid])),
+});
 
 /**
  * For whoever runs the alpha (`ADMIN_EMAILS`): every account, each one's data as JSON,
@@ -65,6 +77,7 @@ export function adminRoutes(
     if (!user) throw notFound('No such account');
     return user;
   };
+  const cloud = cloudMeter(db, store);
   /** Admins, yourself included, can't be suspended, deleted or blocked from here. */
   const notAnAdmin = (email: string, what: string) => {
     if (isAdmin(email, admins)) throw badRequest(`An admin account can't be ${what}.`);
@@ -91,7 +104,7 @@ export function adminRoutes(
     const data = await exportUserData(db, user);
     const name = user.email.replace(/[^a-z0-9@._-]/gi, '_');
     return reply
-      .header('content-disposition', `attachment; filename="komodon-${name}.json"`)
+      .header('content-disposition', `attachment; filename="komogon-${name}.json"`)
       .send(data);
   });
 
@@ -180,6 +193,45 @@ export function adminRoutes(
     return reply.code(204).send();
   });
 
+  /* ---------- posting on Social ---------- */
+
+  /** Keep an account from posting and commenting on Social; its posts so far stay. */
+  app.post('/api/admin/accounts/:id/social-ban', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    const user = await account(id);
+    notAnAdmin(user.email, 'kept from posting');
+    await banFromSocial(db, user, clock());
+    return reply.code(204).send();
+  });
+
+  app.delete('/api/admin/accounts/:id/social-ban', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    await liftSocialBan(db, await account(id));
+    return reply.code(204).send();
+  });
+
+  /* ---------- figures ---------- */
+
+  /** People, activity, study, Social and storage across every real account. */
+  app.get('/api/admin/stats', async (req) => {
+    requireAdmin(req);
+    const now = clock();
+    return adminStats(db, {
+      now,
+      timezone: req.user.timezone,
+      cloud: await cloud(Date.parse(now), req.log),
+    });
+  });
+
+  /** One account's activity: days used, focus by week, Social and files. */
+  app.get('/api/admin/accounts/:id/activity', async (req) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    return accountActivity(db, await account(id), clock());
+  });
+
   /* ---------- blocked addresses ---------- */
 
   app.get('/api/admin/blocked-emails', async (req) => {
@@ -203,4 +255,29 @@ export function adminRoutes(
       return reply.code(204).send();
     },
   );
+
+  /* ---------- reported posts ---------- */
+  // Deleting a post is DELETE /api/posts/:id, which takes any post from an admin.
+
+  app.get('/api/admin/reports', async (req) => {
+    requireAdmin(req);
+    return listReportedPosts(db, req.user.id);
+  });
+
+  /** A post by the ID a report email names (a number), or by its uuid. */
+  app.get('/api/admin/posts/:key', async (req) => {
+    requireAdmin(req);
+    const { key } = postKey.parse(req.params);
+    const found = await findPostForAdmin(db, req.user.id, key);
+    if (!found) throw notFound('No post with that ID');
+    return found;
+  });
+
+  /** Keep the post and drop its reports. */
+  app.delete('/api/admin/posts/:id/reports', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    await dismissReports(db, id);
+    return reply.code(204).send();
+  });
 }

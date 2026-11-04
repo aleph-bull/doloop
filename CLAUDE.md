@@ -1,4 +1,4 @@
-# Notes for AI agents working on Komodon
+# Notes for AI agents working on Komogon
 
 Read this before changing anything. It holds what isn't obvious from the code: how the owner
 works, the rules the app keeps, and the traps that have already cost time. The longer record
@@ -6,7 +6,7 @@ of every product decision is [DECISIONS.md](DECISIONS.md); keep adding to it.
 
 ## About the app
 
-Komodon (renamed from Komogon on 2026-10-20) is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
+Komogon (called Komodon from 2026-10-20 to 2026-11-03, then Komogon again to match komogon.app) is a study app: plan courses and tasks, run focus sessions (Pomodoro, open-ended or
 until a time), and see progress the way a running app shows runs: streaks, personal bests,
 weekly recaps, XP and levels. The design idea is that a runner's "beat last time" discipline
 carries over to studying. It is in a **closed alpha** with a handful of testers.
@@ -84,12 +84,25 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   `account_suspended`, and the portal signs out with a message). Suspended accounts are left
   off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
   blocked from there.
+- Admin figures and tracking (2026-11-03): the auth plugin notes each account's last request
+  (`users.last_active_at`) and the days it was used (`user_active_days`, its own time zone), at
+  most once a minute (`services/activity.ts`). Admin shows people, activity, study, Social and
+  storage over real accounts (`services/admin-stats.ts`), and each Manage dialog that account's
+  activity. **Ban from posting** (`users.social_banned_at`) stops posts, comments, uploads and
+  edits through `assertMayPost`; a new way of posting on Social must call it too.
 - **Usernames** (2026-10-22): every account has a unique @username (`users.username`, stored
   without the @; rules in core `names.ts`: a to z, numbers and `_ - ! .`, no two symbols
   together; names take no symbols). Accounts get two random words when made, and migration
   0033 gave every older account some; the first-time setup opens with "Pick a username" (no
   skip), and older accounts are asked once to change theirs (`UsernameNotice`). A chosen one
   holds for 14 days. DECISIONS.md has the details.
+- **Settings › Security** (2026-11-03): the email (verified or not), two-step sign-in, the
+  password and Sign out. Verifying the email is never required: `VerifyEmailPrompt` asks as
+  the account is made and once each visit (a tab) until it's done. Two-step sign-in
+  (`users.two_step_at`) is off until turned on with an emailed code; a right password then
+  answers `{ twoStep, challengeId }` and `POST /api/auth/two-step` gives the token. Google
+  sign-in skips it. The API sends at most 95 emails a day for everyone, so nothing sends a
+  code by itself except sign-up's first ask and a two-step sign-in. DECISIONS.md has the details.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.
@@ -125,7 +138,8 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
 - **The changelog** (`apps/site/src/content/changelog.html`, `/changelog/` on the site) is updated
   only when the owner tells you to, never as part of other work. It is written by hand from
   the commits: one entry per day, newest first, in plain words for people using the app, and
-  it only ever calls the app Komodon (never Doloop or any older name). The page shows only the
+  it only ever calls the app Komogon (never Doloop, KomodoIt or Komodon; the one exception is
+  the 10-20 line saying the name became Komodon, kept as history). The page shows only the
   last three days; never delete older entries, they stay in the file and the sidebar on purpose.
 - **Open copy audit:** [docs/COPY-AUDIT.md](docs/COPY-AUDIT.md) lists flagged wording still
   to fix (wordy, abrupt or AI-sounding copy) and how the owner likes to go through it, in
@@ -184,7 +198,7 @@ and never explain the difference on screen.
 - **Never a thin, sectioned page**: panels take the page's full width. A narrow centred
   column of cards with empty sides on both reads as chopped (the owner's word, 2026-10-21,
   on the first Jams page). Use the width: columns side by side, a bento, wider rows.
-- Inter for everything; Satoshi only for the "Komodon" wordmark in the nav.
+- Inter for everything; Satoshi only for the "Komogon" wordmark in the nav.
 
 **Product.**
 
@@ -204,10 +218,13 @@ and never explain the difference on screen.
   numbers beside other people's (boards, You and everyone, Compare, school rankings) must
   follow Settings › Pages › Social › Comparisons (`useBoards`, see Sharing settings).
 - "Pomodoro" is the timer's name; never rename it in the app renames.
-- **Internal names still say komogon** on purpose: the `@komogon/*` packages, storage keys
-  (`komogon.*`), IndexedDB names, extension message types, the `~/.komogon` data folder, the
-  local scripts and the komogon.app domain. Renaming them would drop saved browser state.
-  Only the name people see is Komodon.
+- **The name is Komogon everywhere** (owner, 2026-11-03), the same as the `@komogon/*`
+  packages, storage keys (`komogon.*`) and the komogon.app domain. A few internal ids from
+  the Komodon weeks keep that spelling on purpose, because changing them would break
+  something already out there: the `komodon-media` R2 bucket, the `komodon-vapid` salt in
+  `services/push.ts` (new keys would cut off every push subscription), the
+  `komodon-backdrop-1` cache, the `komodon-push` worker messages, `dev.komodon.invalid` dev
+  accounts and the `komodon.test` / `komodon.demo` sandbox accounts.
 
 ## Checks and traps
 
@@ -362,7 +379,7 @@ and never explain the difference on screen.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,
-  last sidebar row), and Sign out is a button on the profile itself and in Settings › Account. Picture, name, Ontario university (`settings.profile.university`, ids in
+  last sidebar row), and Sign out is a button on the profile itself and in Settings › Security. Picture, name, Ontario university (`settings.profile.university`, ids in
   `packages/core/src/universities.ts`), bio, the study-days grid and totals in one card, then the person's posts (see Social
   above). The gear on your own profile opens `ProfileSettingsDialog`; its fields are
   `ProfileFields`, shared with Settings › Account. Profiles are visible
@@ -629,7 +646,8 @@ browser (`lib/compress.ts`, mediabunny). Files follow the feed's visibility rule
 when their post or account does. The focus screen's timelapse export has "Share to Social",
 which posts the video with the session attached. Kudos are the like routes relabelled (`post_likes`, one per person; the button is the thumbs-up and count, no word); comments are
 `post_comments` (500 characters, deletable by their author or the post's author). There are no threads: Reply on a comment puts "@username " in the box, and an @username in a comment tells that person under the bell (2026-10-25, `comment_mentions`, matched by `findMentions` in core `names.ts`, only people who can see the post). Only the
-author edits a post (the words only, `PATCH /api/posts/:id`), trims its video (2026-10-23: Trim video, `TrimVideo.tsx`; the browser cuts it with mediabunny, `lib/video-cut.ts`, and `PUT /api/posts/:id/video` swaps the file and poster) or deletes it, from the ⋯ under it.
+author edits a post (the words only, `PATCH /api/posts/:id`), trims its video (2026-10-23: Trim video, `TrimVideo.tsx`; the browser cuts it with mediabunny, `lib/video-cut.ts`, and `PUT /api/posts/:id/video` swaps the file and poster), posts it on Instagram, TikTok or X (2026-11-03, `PostElsewhere.tsx`, the timelapse's hand-over) or deletes it, from the ⋯ under it.
+**Reports and moderation** (2026-11-03): every post has a number, `posts.ref`, its ID, sent to admins only (`loadPosts(..., { ids: true })`; nobody else's data carries it, not even their own posts) and shown last in their ⋯. Report on someone else's post (`POST /api/posts/:id/report`, `routes/reports.ts`, one `post_reports` row per person) emails `REPORTS_EMAIL` (the owner's address by default) with the ID and a link to `/admin?post=<ID>`; Admin › Reports lists reported posts and finds any by ID, with Delete post and Dismiss. An `ADMIN_EMAILS` account can delete any post (`DELETE /api/posts/:id`, also from the ⋯) and open any post's files. DECISIONS.md has the details.
 A post also shows what its session earned: one award naming the session's badges on hover
 (`sessions.badges_awarded`) and the daily streak when it ended (`sessions.streak`, kept since
 0034), only when the author shares study stats, like the profile. Counts come with every post; liking patches the caches rather than
@@ -761,8 +779,33 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - On the focus screen, `useTimelapseRecorder` takes JPEG stills from the camera (960 px
   wide), plus a shared screen (1280 px wide, `getDisplayMedia`) when the person said yes to
   it this session. It takes them during focus only, unless "Record breaks too" is on. The
-  stills stay in the tab's memory: nothing is uploaded, and closing the tab loses them (the
-  focus screen asks before it closes with unsaved stills).
+  stills are held in the tab's memory and nothing is uploaded.
+- **Kept through a refresh or a closed browser** (2026-11-03, `lib/timelapse-keep.ts`): the
+  focus screen copies unsaved stills into IndexedDB (`komogon-timelapse`) every second and
+  when the page hides, with what it needs to carry on (the session, the sessions covered,
+  the clock offset, camera and screen on, the phone's direction, the pacing from
+  `recorder.pace()`). It is kept **while that session runs and on its ending screen, and
+  thrown away once the ending screen has been gone through** (owner, 2026-11-04: "throw away
+  the stills when the session is done", then "the timelapse stills should also stay on the
+  ending screens as well, once the ending screens have been gone through then delete the
+  stills"). Opening the focus screen again takes them back (`recorder.restore`) before
+  anything is asked: with the session still running the recording carries on ("Still
+  recording.", the screen waits for a click on Share screen); on the ending screen, the
+  summary comes back too (the `EndSummary` is kept beside the stills). Gone through means
+  Close, Escape, off to Social, Start another (unless the recording carries on into it) or
+  the summary going after a trim; `leave()` drops the copy at once. A session stopped from
+  the dashboard while no focus screen was open had no ending screen, so its copy goes: the
+  focus screen drops it on load, and AppShell (`useDropFinishedTimelapse`) drops a
+  mid-session copy whose session stopped. One focus tab keeps them, the one holding the
+  Web Lock. The copy also goes when the video is saved or handed to Social, the stills are
+  thrown away, on sign-out, for another account and after a week. The leave warning shows
+  only while the copy isn't being kept (leaving the ending screen, or a failed write).
+  Tests of the store: none in the repo (the portal has no test setup); it was checked
+  against fake-indexeddb from a scratch script.
+- **A computer shutting down doesn't end a session**: it lives on the server and its clock
+  runs from timestamps. Only a planned end ends one by itself (60 s after it, crediting work
+  up to it, finalized on the next read), and a Pomodoro with auto-start off waits at the end
+  of its block.
 - Each still carries the session's focused time, break time, running time, the time of day,
   and the task name as the focus screen shows it ("Course · Task").
 - Pacing works like a phone timelapse. Auto mode starts at one still every 0.5 s. Each time
@@ -829,7 +872,7 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   `elapsed`; it draws "Focus 42:17", "Break 3:10"), **time elapsed** (`total`, "Elapsed
   51:02": focus and breaks), **start time** and **end time** (`start`, `end`: the
   session's, "Start 9:10 AM"; until it ends, the end is the last still), **task name**,
-  **progress bar** (fills as the video plays through the session) and the **Komodon mark**
+  **progress bar** (fills as the video plays through the session) and the **Komogon mark**
   (can't be removed). The time elapsed, start and end start out of the layout, as chips to
   add (2026-10-22); the looks leave them where they are. Each is a box in fractions of the frame (0-1), so one layout fits any size.
 - The editor's boxes are **exactly** the drawn pieces: `composeFrame` returns where it drew
@@ -877,6 +920,11 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   "Your timelapse" card's Video switch (`FormatChoice`) saves the format and remakes a made
   video; `timelapseLook(settings, 'computer', o, format)` gives the story's aspect and
   layout. Phones are unchanged: they already have upright and sideways.
+- **Moving the footage** (2026-11-03): when the video's shape cuts some of the camera off (a
+  story from a wide camera, a phone's still the other way round), the trim's viewer drags it
+  and a made video has "Move the footage" (`MoveFootage.tsx`). It is `crop` on the look,
+  0 to 1 on each side, per video and never saved. Any new place that draws the camera must
+  cut it with `coverCut` and the look's `crop`, or it won't match the video.
 - `showTimer` / `showClockTime` are old switches kept in the type only so a row saved
   before the layout existed seeds the two clock pieces.
 
@@ -962,10 +1010,10 @@ refetches on focus). Settings › Focus screen keeps a one-line link to the Time
   - Plain Video mode is no substitute. The camera covers the timer, and an hour of footage
     (3-4 GB) is too much for Safari to turn into a timelapse.
   - What would work is an import: the person films with the Camera app's Time-Lapse, then
-    picks the video from Photos after the session, and Komodon adds the mark. A running clock
+    picks the video from Photos after the session, and Komogon adds the mark. A running clock
     can't line up with the study time, because the Camera app can't pause for breaks and
     chooses its own speed.
-- **So a phone gets Komodon's own camera screen instead** (built 2026-10-21, the owner's
+- **So a phone gets Komogon's own camera screen instead** (built 2026-10-21, the owner's
   choices in DECISIONS.md, "The phone's camera screen"). A phone is a touch screen whose
   short side is under 600 px (`isPhone`, read once). On a phone, recording is the camera
   screen; without a recording it is the normal focus screen.

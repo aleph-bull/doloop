@@ -273,7 +273,7 @@ function TimelapseBar() {
               Your timelapse
             </h2>
             <p className="muted">
-              While you focus, Komodon can film you and speed it up into a short video to keep or
+              While you focus, Komogon can film you and speed it up into a short video to keep or
               share
             </p>
             <p className="muted">Set up how it looks here</p>
@@ -398,7 +398,7 @@ function AllDone() {
     >
       <div className="tour-done-head">
         <h2 className="tour-done-title">All done</h2>
-        <p className="muted">Thanks for setting up and choosing Komodon</p>
+        <p className="muted">Thanks for setting up and choosing Komogon</p>
       </div>
     </Modal>
   );

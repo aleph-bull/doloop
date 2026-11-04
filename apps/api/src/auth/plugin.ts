@@ -3,6 +3,7 @@ import fp from 'fastify-plugin';
 import { isValidTimezone } from '@komogon/core';
 import type { Db } from '../db/client';
 import type { UserRow } from '../db/schema';
+import { activityTracker } from '../services/activity';
 import { ensureUser } from '../services/users';
 import { AuthError, type Verifier } from './verify';
 import { isLocalTestEmail, requireLocalTestRequest } from '../services/local-test-accounts';
@@ -27,6 +28,8 @@ export interface AuthPluginOptions {
   /** Invite list for a closed test; empty or missing lets every signed-in account in. */
   allowedEmails?: string[];
   localTestAccounts?: boolean;
+  /** For the activity times on the admin page; tests pass their own. */
+  clock?: () => string;
 }
 
 /**
@@ -53,6 +56,7 @@ function bearer(req: FastifyRequest): string | null {
 export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOptions) => {
   app.decorateRequest('user', null as unknown as UserRow);
   app.decorateRequest('authUserId', '');
+  const track = activityTracker(opts.db, opts.clock);
 
   app.addHook('onRequest', async (req, reply) => {
     if (req.routeOptions.config.public) return;
@@ -83,6 +87,12 @@ export const authPlugin = fp(async (app: FastifyInstance, opts: AuthPluginOption
       req.user = await ensureUser(opts.db, auth, tz);
       if (req.user.devAccount && devOffLimits(req))
         return reply.code(403).send({ error: DEV_OFF_LIMITS });
+      // For the admin page; never a reason to refuse the request.
+      try {
+        await track(req.user);
+      } catch (err) {
+        req.log.warn({ err }, 'Could not note activity');
+      }
     } catch (err) {
       if (err instanceof AuthError) return reply.code(401).send({ error: err.message });
       throw err;

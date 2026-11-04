@@ -1,7 +1,7 @@
 import type { ISODate } from './types';
 
 /**
- * A pasted list of courses and what's due in them, read into something Komodon can add in
+ * A pasted list of courses and what's due in them, read into something Komogon can add in
  * one go. The list can be an AI chat's answer to `studyListPrompt`, columns copied out of
  * a spreadsheet, or lines typed by hand:
  *

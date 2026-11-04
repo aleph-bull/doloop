@@ -94,6 +94,7 @@ const app = await buildServer({
   trustProxyHops: env.trustProxyHops,
   allowedEmails: env.allowedEmails,
   adminEmails: env.adminEmails,
+  reportsEmail: env.reportsEmail,
   devLogin: env.devLogin ? { passwordHash: DEV_PASSWORD_HASH } : null,
   passwordAuth:
     !env.supabaseUrl && env.authSecret

@@ -200,6 +200,16 @@ export interface CalendarFeedResponse {
   result: { status: string; courses: number; tasks: number; events: number } | null;
 }
 
+/** Settings › Security. */
+export interface AccountSecurity {
+  email: string;
+  emailVerified: boolean;
+  hasPassword: boolean;
+  twoStep: boolean;
+  /** A code can be emailed: the API has a mailer and the account a real address. */
+  canVerify: boolean;
+}
+
 export interface MeResponse {
   user: User;
   onboarded: boolean;
@@ -384,6 +394,8 @@ export interface PostSession {
 /** A post on Social, with its counts as the viewer sees them. */
 export interface FeedPost {
   id: string;
+  /** Its ID for moderation, shown to admins; missing from a feed cached before it. */
+  ref?: number;
   userId: string;
   body: string;
   createdAt: string;
@@ -1055,7 +1067,11 @@ export const api = {
     ),
   createPost: (input: NewPost) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
+  /** Your own post, or any post from an admin. */
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
+  /** Someone else's post, with what's wrong (may be empty); goes to whoever runs Komogon. */
+  reportPost: (id: string, reason: string) =>
+    request<{ reported: boolean }>('POST', `/api/posts/${id}/report`, { reason }),
   /** Changes only the words of your own post. */
   editPost: (id: string, body: string) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('PATCH', `/api/posts/${id}`, {
@@ -1203,6 +1219,20 @@ export const api = {
     request<{ challengeId: string; email: string }>('POST', '/api/auth/email/request-verification'),
   verifyAccountCode: (challengeId: string, code: string) =>
     request<{ ok: boolean }>('POST', '/api/auth/email/verify-account', { challengeId, code }),
+  security: () => request<AccountSecurity>('GET', '/api/account/security'),
+  /** Two-step sign-in on or off, with a code from `requestAccountCode`. */
+  setTwoStep: (on: boolean, challengeId: string, code: string) =>
+    request<{ twoStep: boolean; emailVerified: boolean }>('POST', '/api/account/two-step', {
+      on,
+      challengeId,
+      code,
+    }),
+  /** Answers a new token for this device; every other device is signed out. */
+  changePassword: (current: string, password: string) =>
+    request<{ token: string; email: string }>('POST', '/api/account/password', {
+      current,
+      password,
+    }),
   googleStatus: () =>
     request<{
       available: boolean;

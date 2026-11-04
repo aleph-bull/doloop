@@ -233,6 +233,77 @@ describe('admin', () => {
     ).toBe(200);
   });
 
+  it('keeps an account from posting on Social until it is lifted', async () => {
+    const adminId = (await get('/api/me', adminToken)).json().user.id;
+    const url = `/api/admin/accounts/${memberId}/social-ban`;
+    expect((await post(url, {}, memberToken)).statusCode).toBe(403);
+    expect(
+      (await post(`/api/admin/accounts/${adminId}/social-ban`, {}, adminToken)).statusCode,
+    ).toBe(400);
+    expect((await post(url, {}, adminToken)).statusCode).toBe(204);
+
+    expect((await get('/api/me', memberToken)).json().user.socialBanned).toBe(true);
+    expect((await account()).socialBannedAt).not.toBeNull();
+    const refused = await post('/api/social/posts', { body: 'hi' }, memberToken);
+    expect(refused.statusCode).toBe(403);
+    expect(refused.json().error).toBe("You can't post on Social right now.");
+    const comment = await post(
+      `/api/posts/${'99999999-9999-4999-8999-999999999999'}/comments`,
+      { body: 'hi' },
+      memberToken,
+    );
+    expect(comment.statusCode).toBe(403);
+    // Everything else still works.
+    expect((await get('/api/social/feed', memberToken)).statusCode).toBe(200);
+
+    expect((await send('DELETE', url, adminToken)).statusCode).toBe(204);
+    expect((await get('/api/me', memberToken)).json().user.socialBanned).toBe(false);
+    // Past the ban: refused now only for having no session.
+    expect((await post('/api/social/posts', { body: 'hi' }, memberToken)).statusCode).toBe(400);
+  });
+
+  it('counts people, activity and storage for admins only', async () => {
+    expect((await get('/api/admin/stats', memberToken)).statusCode).toBe(403);
+    const res = await get('/api/admin/stats', adminToken);
+    expect(res.statusCode).toBe(200);
+    const stats = res.json();
+    // The admin, the member and the address unblocked above.
+    expect(stats.accounts.total).toBe(3);
+    expect(stats.accounts.newThisWeek).toBe(3);
+    // Only the two that have used the app since signing up.
+    expect(stats.active).toEqual({ now: 2, day: 2, week: 2, month: 2 });
+    expect(stats.daily).toHaveLength(30);
+    expect(stats.daily.at(-1).people).toBeGreaterThanOrEqual(1);
+    expect(stats.social.postBans).toBe(0);
+    // No R2 here; the database says how big it is.
+    expect(stats.storage.cloud).toBeNull();
+    expect(stats.storage.databaseBytes).toBeGreaterThan(0);
+    expect(stats.storage.mediaInDatabaseBytes).toBe(0);
+
+    expect((await account()).lastActiveAt).not.toBeNull();
+    expect((await account()).storageBytes).toBe(0);
+  });
+
+  it("shows one account's activity", async () => {
+    const url = `/api/admin/accounts/${memberId}/activity`;
+    expect((await get(url, memberToken)).statusCode).toBe(403);
+    const res = await get(url, adminToken);
+    expect(res.statusCode).toBe(200);
+    const activity = res.json();
+    expect(activity.lastActiveAt).not.toBeNull();
+    expect(activity.days).toHaveLength(30);
+    expect(activity.days.at(-1).active).toBe(true);
+    expect(activity.weeks).toHaveLength(8);
+    expect(activity.social).toEqual({
+      posts: 0,
+      comments: 0,
+      kudosGiven: 0,
+      kudosReceived: 0,
+      friends: 0,
+    });
+    expect(activity.storage).toEqual({ cloudBytes: 0, databaseBytes: 0 });
+  });
+
   it('deletes an account, keeping its address out if asked', async () => {
     expect(
       (await send('DELETE', `/api/admin/accounts/${memberId}?block=true`, adminToken)).statusCode,

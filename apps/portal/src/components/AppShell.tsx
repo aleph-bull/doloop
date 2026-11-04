@@ -38,6 +38,7 @@ import { handTimelapse, postPathSessions } from '../lib/after-session';
 import { useAppearance } from '../lib/appearance';
 import { useCalendarImportRefresh } from '../lib/calendar-import-refresh';
 import { FOCUS_PATH, openFocusTab, useOpenerRequests } from '../lib/focus-tab';
+import { useDropFinishedTimelapse } from '../lib/timelapse-keep';
 import { FEEDBACK_URL } from '../lib/monitoring';
 import { useIsAdmin } from '../lib/admin';
 import { useOnlineStatus } from '../lib/local-state';
@@ -54,7 +55,8 @@ import { StartSessionDialog } from './StartSessionDialog';
 
 // The first-time setup's look around, loaded only while one is running.
 const Tour = lazy(() => import('./onboarding/Tour').then((m) => ({ default: m.Tour })));
-import { UsernameNotice } from './UsernameNotice';
+import { UsernameNotice, useUsernameNoticeDue } from './UsernameNotice';
+import { VerifyEmailPrompt } from './VerifyEmailPrompt';
 import { PushBridge } from './PushBridge';
 
 /**
@@ -409,6 +411,7 @@ export function AppShell() {
   // Ctrl+Z and Ctrl+Y for the small reversible things, anywhere in the app.
   useUndoShortcuts();
   const touring = useTour() !== null;
+  const usernameAsking = useUsernameNoticeDue();
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
@@ -447,6 +450,11 @@ export function AppShell() {
   const nodes = useNodes();
   const active = useActiveSession();
   const running = Boolean(active.data?.active);
+  // A timelapse kept from a browser that closed mid-session goes once its session is done.
+  useDropFinishedTimelapse(
+    me.data?.user.id,
+    active.data ? (active.data.active?.session.id ?? null) : undefined,
+  );
   const [starting, setStarting] = useState(false);
   const here = phonePlace(target);
   // The focus screen this tab opened sends it to Social after a session, to post it, with
@@ -725,11 +733,11 @@ export function AppShell() {
           aria-label="Primary"
           onMouseLeave={() => setResting(false)}
         >
-          <NavLink to="/" className="sidenav-brand" aria-label="Komodon home" title="Komodon">
+          <NavLink to="/" className="sidenav-brand" aria-label="Komogon home" title="Komogon">
             <span className="sidenav-icon" aria-hidden>
               <LogoMark size={22} />
             </span>
-            <span className="sidenav-label sidenav-wordmark">Komodon</span>
+            <span className="sidenav-label sidenav-wordmark">Komogon</span>
           </NavLink>
           <nav className="sidenav-group">
             {main.map((l) => (
@@ -846,11 +854,11 @@ export function AppShell() {
 
       <header ref={headerRef} className="nav chrome">
         <div className="nav-inner">
-          <NavLink to="/" className="brand" aria-label="Komodon home">
+          <NavLink to="/" className="brand" aria-label="Komogon home">
             <span className="brand-logo" aria-hidden>
               <LogoMark size={22} />
             </span>
-            <span>Komodon</span>
+            <span>Komogon</span>
           </NavLink>
           <div
             className={`nav-scroll scroll-edges ml-2${overflow.left ? ' can-left' : ''}${
@@ -1037,6 +1045,7 @@ export function AppShell() {
           <PhoneSwitcher label="Your pages" pages={youPages} target={target} onGo={go} />
         )}
         <UsernameNotice />
+        <VerifyEmailPrompt hold={touring || usernameAsking} />
         <PushBridge />
         <ErrorBoundary>
           {/* Keyed by route so each page rises in as it arrives. A page whose code is still

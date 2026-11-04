@@ -23,17 +23,20 @@ import { ArrayBufferTarget, Muxer } from 'mp4-muxer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   composeFrame,
+  coverCut,
   logoReady,
   rectLuma,
   sourceSize,
+  type CameraCrop,
   type DrawnRects,
   type WatermarkTone,
 } from './timelapse-compose';
 
 /**
  * The timelapse: stills from the camera, and from a shared screen when asked, taken while
- * the user focuses, kept in this tab's memory, and made into a video on request. Nothing
- * is uploaded; closing the tab discards the stills.
+ * the user focuses, held in this tab's memory, and made into a video on request. Nothing
+ * is uploaded. The focus screen also keeps a copy in this browser (lib/timelapse-keep.ts),
+ * so a refresh or a closed browser doesn't lose them.
  */
 
 /** One moment of the recording: the camera's still, the screen's, or both. */
@@ -315,6 +318,14 @@ export interface TimelapseRecorderArgs {
   keepStills?: boolean;
 }
 
+/** Where a recording's pacing stands, kept beside its stills so it can carry on after a reload. */
+export interface RecorderPace {
+  /** Milliseconds between stills now; it doubles each time the stills are thinned. */
+  intervalMs: number;
+  /** Seconds of live clip held, against the room a recording has for them. */
+  clipSeconds: number;
+}
+
 export interface TimelapseRecorder {
   /** The camera. */
   status: RecorderStatus;
@@ -343,6 +354,10 @@ export interface TimelapseRecorder {
   spanSeconds: () => number;
   /** Throw the stills away. */
   clear: () => void;
+  /** Where the pacing stands, to keep with the stills. */
+  pace: () => RecorderPace;
+  /** Take back stills kept from before (the page reloaded), with their pacing. */
+  restore: (stills: Still[], pace: RecorderPace) => void;
   /** The live clip filming now: seconds into it, and how long it may run. */
   clip: { seconds: number; maxSeconds: number } | null;
   /** A live clip can start now: the camera is giving pictures during focus, with room left. */
@@ -777,6 +792,24 @@ export function useTimelapseRecorder({
     setClipsFull(false);
     setCount(0);
   }, [stopClip]);
+  const pace = useCallback(
+    (): RecorderPace => ({ intervalMs: intervalRef.current, clipSeconds: clipUsed.current }),
+    [],
+  );
+  const restore = useCallback(
+    (kept: Still[], p: RecorderPace) => {
+      stopClip();
+      clears.current += 1;
+      stillsRef.current = kept;
+      intervalRef.current = p.intervalMs > 0 ? p.intervalMs : startIntervalMs(live.current.options);
+      clipUsed.current = Math.max(0, p.clipSeconds);
+      // New clips are numbered on from the ones kept, so each stays its own clip.
+      clipsMade.current = kept.reduce((n, s) => Math.max(n, s.clip ?? 0), clipsMade.current);
+      setClipsFull(clipUsed.current > LIVE_CLIP_TOTAL_SECONDS - 1);
+      setCount(kept.length);
+    },
+    [stopClip],
+  );
 
   return {
     status,
@@ -792,6 +825,8 @@ export function useTimelapseRecorder({
     stills,
     spanSeconds,
     clear,
+    pace,
+    restore,
     clip: clipMax !== null ? { seconds: clipSeconds, maxSeconds: clipMax } : null,
     canClip:
       !clipOn &&
@@ -832,6 +867,12 @@ export interface TimelapseLook {
    * taken the other way round is cropped to the middle.
    */
   orientation?: TimelapseOrientation;
+  /**
+   * Which part of the camera shows when the video's shape cuts some of it off (a wide camera
+   * in a story, a phone's still the other way round); the middle when absent. It belongs to
+   * this one video, like its text.
+   */
+  crop?: CameraCrop;
 }
 
 /** The video's width over height for a look, from the camera's and the screen's shapes. */
@@ -944,18 +985,22 @@ function blendBuffer(
 
 /**
  * A still drawn over the whole buffer. A still the same shape as the buffer just fills it;
- * one the other way round (the phone held the other way from the video) is cropped to the
- * middle rather than squashed, since the video keeps its one shape.
+ * one the other way round (the phone held the other way from the video) is cropped rather
+ * than squashed, since the video keeps its one shape: to the middle, or where it was moved.
  */
-function fillBuffer(b: CanvasRenderingContext2D, bmp: ImageBitmap, bw: number, bh: number) {
+function fillBuffer(
+  b: CanvasRenderingContext2D,
+  bmp: ImageBitmap,
+  bw: number,
+  bh: number,
+  at?: CameraCrop,
+) {
   if (Math.abs(bmp.width / bmp.height - bw / bh) < 0.01) {
     b.drawImage(bmp, 0, 0, bw, bh);
     return;
   }
-  const scale = Math.max(bw / bmp.width, bh / bmp.height);
-  const cw = bw / scale;
-  const ch = bh / scale;
-  b.drawImage(bmp, (bmp.width - cw) / 2, (bmp.height - ch) / 2, cw, ch, 0, 0, bw, bh);
+  const cut = coverCut(bmp.width, bmp.height, bw / bh, at);
+  b.drawImage(bmp, cut.x, cut.y, cut.w, cut.h, 0, 0, bw, bh);
 }
 
 /**
@@ -1038,6 +1083,8 @@ function frameDrawer(
     const { ctx: b, canvas } = buf;
     const bw = canvas.width;
     const bh = canvas.height;
+    // Only the camera is moved; the screen keeps its own shape.
+    const at = key === 'blob' ? look.crop : undefined;
     b.filter = gain === 1 ? 'none' : `brightness(${gain.toFixed(3)})`;
     b.globalAlpha = 1;
     let drew = false;
@@ -1045,7 +1092,7 @@ function frameDrawer(
       // A live clip is real motion already: each frame is just its own still.
       const now = await bitmap(from, key);
       if (now) {
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       }
     } else if (look.smooth && to - from > 1) {
@@ -1056,7 +1103,7 @@ function frameDrawer(
         if (!bmp) continue;
         n++;
         b.globalAlpha = 1 / n;
-        fillBuffer(b, bmp, bw, bh);
+        fillBuffer(b, bmp, bw, bh, at);
         drew = true;
       }
     } else {
@@ -1064,12 +1111,12 @@ function frameDrawer(
       const before = previous !== null && previous !== from ? await bitmap(previous, key) : null;
       if (look.smooth && now && before) {
         // One still per frame: a little of the last one under it softens the steps.
-        fillBuffer(b, before, bw, bh);
+        fillBuffer(b, before, bw, bh, at);
         b.globalAlpha = 0.7;
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       } else if (now) {
-        fillBuffer(b, now, bw, bh);
+        fillBuffer(b, now, bw, bh, at);
         drew = true;
       }
     }
@@ -1116,7 +1163,7 @@ function frameDrawer(
         ...stillTexts(still, look),
         progress: progressAt(j),
       },
-      { mark },
+      { mark, crop: look.crop },
     );
     previous = to - 1;
     return drawn;
@@ -1330,5 +1377,5 @@ async function recordFrames(
 /** A file name for the download, by the day it was made. */
 export function timelapseFileName(mime: string, now = new Date()): string {
   const day = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  return `komodon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
+  return `komogon-timelapse-${day}.${mime.startsWith('video/mp4') ? 'mp4' : 'webm'}`;
 }

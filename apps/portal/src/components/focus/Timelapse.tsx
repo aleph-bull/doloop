@@ -35,6 +35,7 @@ import {
   Download,
   LayoutTemplate,
   MonitorUp,
+  Move,
   RectangleHorizontal,
   RectangleVertical,
   Share2,
@@ -70,6 +71,7 @@ import {
   knownCameraSize,
   liveMarks,
   knownScreenRatio,
+  lookRatio,
   measuredScreenBytes,
   measuredStillBytes,
   renderTimelapse,
@@ -83,6 +85,8 @@ import {
   type TimelapseRecorder,
   type TimelapseSources,
 } from '../../lib/timelapse';
+import { MIDDLE_CROP, type CameraCrop } from '../../lib/timelapse-compose';
+import { cropAxis, MoveFootageDialog, useCameraShape } from './MoveFootage';
 import { NoteField } from './NoteField';
 import { PostPreview } from './PostPreview';
 import { RelayoutDialog } from './RelayoutDialog';
@@ -1044,6 +1048,10 @@ export function TimelapseExport({
   });
   // The text on this video, written once the recording stops; the next video starts empty.
   const [noteText, setNoteText] = useState('');
+  // Which part of the camera shows when the video's shape cuts some off; this video's only.
+  const [crop, setCrop] = useState<CameraCrop>(MIDDLE_CROP);
+  /** "Move the footage" is open over a moment of the made video. */
+  const [moveOpen, setMoveOpen] = useState(false);
   const all = recorder.stills();
   // With breaks in the stills the session's running time places them, else focused time.
   const timeKey = all.some((x) => x.breakSeconds !== null) ? 'totalSeconds' : 'workSeconds';
@@ -1088,8 +1096,9 @@ export function TimelapseExport({
       startAt: startMs,
       endAt: endMs,
       orientation: device === 'phone' ? (orientation ?? undefined) : undefined,
+      crop,
     }),
-    [settings, device, upright, asStory, timeZone, noteText, startMs, endMs, orientation],
+    [settings, device, upright, asStory, timeZone, noteText, startMs, endMs, orientation, crop],
   );
   // The moment "Change layout?" arranges over: the middle of what the video keeps.
   const middleAt = Math.floor((startAt + Math.max(startAt, endAt - 1)) / 2);
@@ -1104,6 +1113,8 @@ export function TimelapseExport({
         : {},
     [middle, look, kept, middleAt, startAt],
   );
+  // That moment's camera shape: whether the made video cuts some of its footage off.
+  const middleShape = useCameraShape(middle);
 
   // A video replaced or gone gives back its memory. Making one stops only when the card
   // goes: a remake clears the old video while the new one is already on its way.
@@ -1272,6 +1283,7 @@ export function TimelapseExport({
     setPreviewOpen(false);
     setTrim({ from: null, to: null });
     setNoteText('');
+    setCrop(MIDDLE_CROP);
     recorder.clear();
   };
 
@@ -1372,6 +1384,11 @@ export function TimelapseExport({
             <Button variant="ghost" onClick={() => setRelayoutOpen(true)}>
               <LayoutTemplate size={14} aria-hidden /> Change layout?
             </Button>
+            {cropAxis(middleShape, video.w, video.h) && (
+              <Button variant="ghost" onClick={() => setMoveOpen(true)}>
+                <Move size={14} aria-hidden /> Move the footage
+              </Button>
+            )}
             <Button
               variant="ghost"
               onClick={() => {
@@ -1444,6 +1461,7 @@ export function TimelapseExport({
               onChange={(from, to) =>
                 setTrim({ from: from <= first ? null : from, to: to >= last ? null : to })
               }
+              onCrop={setCrop}
             />
           )}
           <LengthFields
@@ -1490,7 +1508,21 @@ export function TimelapseExport({
         still={middle}
         sample={middleSample}
         noteText={noteText}
+        crop={crop}
         onRedraw={remake}
+      />
+      <MoveFootageDialog
+        open={moveOpen}
+        onClose={() => setMoveOpen(false)}
+        still={middle}
+        look={look}
+        sample={middleSample}
+        ratio={video ? video.w / video.h : lookRatio(look, middleShape, knownScreenRatio())}
+        crop={crop}
+        onSave={(next) => {
+          setCrop(next);
+          remake({ crop: next });
+        }}
       />
     </section>
   );

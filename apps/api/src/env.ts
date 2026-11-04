@@ -29,6 +29,8 @@ export interface Env {
   allowedEmails: string[];
   /** Admins (`ADMIN_EMAILS`, comma separated): see every account and its data. */
   adminEmails: string[];
+  /** Where a reported post is emailed (`REPORTS_EMAIL`); the owner's address by default. */
+  reportsEmail: string;
   databaseUrl: string | undefined;
   supabaseUrl: string | undefined;
   supabaseJwtSecret: string | undefined;
@@ -79,7 +81,7 @@ export interface Env {
 export function loadEnv(): Env {
   return {
     resendApiKey: str('RESEND_API_KEY'),
-    mailFrom: str('MAIL_FROM', 'Komodon <noreply@komogon.app>')!,
+    mailFrom: str('MAIL_FROM', 'Komogon <noreply@komogon.app>')!,
     localTestAccounts: process.env.LOCAL_TEST_ACCOUNTS === 'true',
     devLogin: process.env.DEV_LOGIN !== 'off',
     outlook: {
@@ -105,6 +107,7 @@ export function loadEnv(): Env {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    reportsEmail: str('REPORTS_EMAIL', 'zachzhao2015@gmail.com')!,
     databaseUrl: str('DATABASE_URL'),
     supabaseUrl: str('SUPABASE_URL'),
     supabaseJwtSecret: str('SUPABASE_JWT_SECRET'),

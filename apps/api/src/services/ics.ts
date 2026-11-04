@@ -61,10 +61,10 @@ export function buildIcs(input: IcsInput): string {
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Komodon//Study planner//EN',
+    'PRODID:-//Komogon//Study planner//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
-    `X-WR-CALNAME:${esc(input.calendarName ?? 'Komodon study plan')}`,
+    `X-WR-CALNAME:${esc(input.calendarName ?? 'Komogon study plan')}`,
   ];
   const stamp = icsDate(input.now);
   for (const b of input.blocks) {
@@ -80,7 +80,7 @@ export function buildIcs(input: IcsInput): string {
       `DTSTART:${icsDate(b.startAt)}`,
       `DTEND:${icsDate(b.endAt)}`,
       `SUMMARY:${esc(`Study: ${titleOf(b.nodeId)}`)}`,
-      'DESCRIPTION:Planned in Komodon',
+      'DESCRIPTION:Planned in Komogon',
       'END:VEVENT',
     );
   }
@@ -94,7 +94,7 @@ export function buildIcs(input: IcsInput): string {
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${day}`,
       `SUMMARY:${esc(`${n.kind === 'assessment' ? '' : 'Due: '}${n.title}`)}`,
-      `DESCRIPTION:${esc(n.completedAt ? 'Done (Komodon)' : 'Due date set in Komodon')}`,
+      `DESCRIPTION:${esc(n.completedAt ? 'Done (Komogon)' : 'Due date set in Komogon')}`,
       'END:VEVENT',
     );
   }

@@ -803,6 +803,34 @@
   display: flex;
   gap: 6px;
 }
+/* Report: room for the box saying why. */
+.post-menu-pop.is-wide {
+  width: 240px;
+}
+.post-menu-reason {
+  min-height: 56px;
+  font-size: var(--text-sm);
+  resize: vertical;
+}
+.post-menu-item:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.post-menu-spin {
+  width: 14px;
+  height: 14px;
+}
+.post-menu-note {
+  max-width: 200px;
+  padding: 6px 10px;
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+/* An admin's look at the post's ID, last and quieter than the rest. */
+.post-menu-id {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
 
 /* Editing the words in place. */
 .post-edit {

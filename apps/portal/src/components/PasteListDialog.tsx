@@ -15,7 +15,7 @@ export interface PasteListDialogProps {
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 /**
- * A whole term's deadlines in one go. Komodon has no AI of its own: it hands over a prompt
+ * A whole term's deadlines in one go. Komogon has no AI of its own: it hands over a prompt
  * for the chat you already use, and reads back the list that chat writes (or one typed by
  * hand). Everything shows before it is added, and nothing is added twice.
  */

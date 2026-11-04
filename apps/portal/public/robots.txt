@@ -1,0 +1,3 @@
+# Komogon, the app. The homepage, with everything about it, is https://app.komogon.app/.
+User-agent: *
+Allow: /

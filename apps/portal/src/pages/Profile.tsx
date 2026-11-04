@@ -310,7 +310,7 @@ function Rolls({ rolls, you }: { rolls: ProfileRolls; you: boolean }) {
 }
 
 /**
- * Someone's page on Komodon: who they are, the days they studied, their totals, and what
+ * Someone's page on Komogon: who they are, the days they studied, their totals, and what
  * they have shared on Social with their top badges and hours of the day beside it. Your own
  * has a gear for the profile settings; someone else's has the friend button.
  */

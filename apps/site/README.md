@@ -1,6 +1,6 @@
-# Komodon homepage
+# Komogon homepage
 
-The marketing site for Komodon, beside the portal in this repo. Plain HTML and CSS,
+The marketing site for Komogon, beside the portal in this repo. Plain HTML and CSS,
 served and built with Vite.
 
 ```bash
@@ -189,7 +189,7 @@ down, are in [DESIGN.md](DESIGN.md). Read it before changing how the page looks 
   `essay` and `solo` were made from study-with-me videos and Word and Excel screen
   recordings the owner downloaded from YouTube: cut, sped up, and drawn frame by frame with
   the portal's own `composeFrame` (camera behind, the screen in its box, the clocks, the
-  task, the progress bar and the mark), so they look exactly like Komodon's. They are other
+  task, the progress bar and the mark), so they look exactly like Komogon's. They are other
   people's footage: check the rights before the site goes live, or swap them for the owner's.
 
 ## Retaking the screenshots

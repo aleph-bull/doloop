@@ -22,6 +22,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  serial,
   text,
   timestamp,
   uniqueIndex,
@@ -56,6 +57,8 @@ export const users = pgTable('users', {
   onboardedAt: ts('onboarded_at'),
   isTestAccount: boolean('is_test_account').notNull().default(false),
   emailVerifiedAt: ts('email_verified_at'),
+  /** Two-step sign-in is on: a password sign-in also needs a code from their email. Null is off. */
+  twoStepAt: ts('two_step_at'),
   authVersion: integer('auth_version').notNull().default(0),
   /** Suspended by an admin: every request is refused until they lift it. */
   bannedAt: ts('banned_at'),
@@ -83,7 +86,30 @@ export const users = pgTable('users', {
   rollCount: integer('roll_count').notNull().default(0),
   /** The running record the RNG Rolls badges read (core `RollStats`). */
   rollStats: jsonb('roll_stats').$type<RollStats>().notNull().default({}),
+  /**
+   * The last request the account made, kept to the minute (services/activity.ts). For the
+   * admin page only.
+   */
+  lastActiveAt: ts('last_active_at'),
+  /** Kept from posting and commenting on Social by an admin; everything else still works. */
+  socialBannedAt: ts('social_banned_at'),
 });
+
+/**
+ * The days each account used the app, as days in its own time zone: one row a day, written
+ * with `users.last_active_at` (services/activity.ts). For the admin page only.
+ */
+export const userActiveDays = pgTable(
+  'user_active_days',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** YYYY-MM-DD in the account's time zone. */
+    day: text('day').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] }), index('user_active_days_day_idx').on(t.day)],
+);
 
 /**
  * Addresses an admin has blocked: no sign-up, no sign-in. Kept apart from accounts so a
@@ -100,7 +126,7 @@ export const emailCodes = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull(),
     purpose: text('purpose', {
-      enum: ['signup', 'account', 'organization', 'password-reset'],
+      enum: ['signup', 'account', 'organization', 'password-reset', 'two-step'],
     }).notNull(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
     codeHash: text('code_hash').notNull(),
@@ -526,6 +552,11 @@ export const posts = pgTable(
   'posts',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    /**
+     * The post's ID for moderation (2026-11-03): a short number, counted up, that a report
+     * email names and Admin › Reports looks up. Shown to admins only.
+     */
+    ref: serial('ref').notNull().unique(),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -667,6 +698,31 @@ export const commentMentions = pgTable(
   (t) => [
     primaryKey({ columns: [t.commentId, t.userId] }),
     index('comment_mentions_user_idx').on(t.userId),
+  ],
+);
+
+/**
+ * Someone reporting a post (2026-11-03): one row per person per post, emailed to whoever
+ * runs Komogon (`REPORTS_EMAIL`) and listed in Admin › Reports until the post is deleted
+ * (the rows go with it) or the reports are dismissed.
+ */
+export const postReports = pgTable(
+  'post_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** What they said was wrong; empty when they said nothing. */
+    reason: text('reason').notNull().default(''),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('post_reports_post_reporter_idx').on(t.postId, t.reporterId),
+    index('post_reports_created_idx').on(t.createdAt),
   ],
 );
 
@@ -1139,7 +1195,7 @@ export const drillItems = pgTable(
 );
 
 /**
- * What someone answered in the first-time setup, for whoever runs Komodon (Admin ›
+ * What someone answered in the first-time setup, for whoever runs Komogon (Admin ›
  * Onboarding answers). One row per account, filled in as they go.
  */
 export const onboardingAnswers = pgTable('onboarding_answers', {
@@ -1185,6 +1241,7 @@ export const schema = {
   postLikes,
   postComments,
   commentMentions,
+  postReports,
   friendships,
   jams,
   jamMembers,

@@ -40,6 +40,7 @@ import { recordUndo } from './undo';
 
 export const keys = {
   me: ['me'] as const,
+  security: ['security'] as const,
   nodes: ['nodes'] as const,
   tags: ['tags'] as const,
   archivedNodes: ['nodes', 'archived'] as const,
@@ -95,6 +96,18 @@ export const keys = {
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: api.me, staleTime: 30_000 });
+}
+
+/** Settings › Security, and whether to ask them to verify their email. */
+export function useSecurity(enabled = true, fresh = false) {
+  return useQuery({
+    queryKey: keys.security,
+    queryFn: api.security,
+    staleTime: 60_000,
+    enabled,
+    // The ask must not go by a copy saved before they verified somewhere else.
+    refetchOnMount: fresh ? 'always' : true,
+  });
 }
 
 export function useNodes() {
@@ -543,7 +556,16 @@ export function useDeletePost() {
     onSuccess: () => {
       for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
       void qc.invalidateQueries({ queryKey: keys.postable });
+      // An admin deleting a reported post: Admin › Reports drops it.
+      void qc.invalidateQueries({ queryKey: ['admin', 'reports'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'post'] });
     },
+  });
+}
+
+export function useReportPost() {
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.reportPost(id, reason),
   });
 }
 

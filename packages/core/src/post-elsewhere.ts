@@ -1,5 +1,5 @@
 /**
- * Posting a timelapse on Instagram, TikTok or X. Komodon sends nothing to them itself: a web
+ * Posting a timelapse on Instagram, TikTok or X. Komogon sends nothing to them itself: a web
  * page can't hand a file to another site, so on a phone or tablet the video goes through the
  * share menu, where the apps are, and on a computer it downloads while the site's upload page
  * opens in a new tab. Each site's rules here were checked on 2026-10-22.
