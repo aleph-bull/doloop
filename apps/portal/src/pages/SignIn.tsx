@@ -25,7 +25,7 @@ export function SignIn() {
   const [password, setPassword] = useState('');
   const [creating, setCreating] = useState(useLocation().pathname === '/signup');
   /** What the email we just sent is for, when one was sent. */
-  const [sent, setSent] = useState<'link' | 'confirm' | null>(null);
+  const [sent, setSent] = useState<'link' | 'confirm' | 'two-step' | null>(null);
   const [busy, setBusy] = useState(false);
   const [code, setCode] = useState('');
 
@@ -57,7 +57,10 @@ export function SignIn() {
       if (auth.mode === 'dev') await auth.signInDev(email.trim());
       else if (creating) {
         if (await auth.signUpWithPassword(email.trim(), password)) setSent('confirm');
-      } else await auth.signInWithPassword(email.trim(), password);
+      } else if (await auth.signInWithPassword(email.trim(), password)) {
+        setCode('');
+        setSent('two-step');
+      }
     } catch (err) {
       toast(err instanceof Error ? friendlyAuthError(err.message) : 'Sign-in failed');
     } finally {
@@ -100,7 +103,67 @@ export function SignIn() {
             </p>
           )}
 
-          {sent === 'confirm' && auth.mode === 'server' && auth.pendingVerification ? (
+          {sent === 'two-step' && auth.pendingTwoStep ? (
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setBusy(true);
+                try {
+                  await auth.verifyTwoStep(code.trim());
+                } catch (err) {
+                  toast(err instanceof Error ? err.message : 'That code did not work.');
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <h2 className="section-title">Check your email</h2>
+              <p className="muted text-sm">Code sent to {auth.pendingTwoStep.email}.</p>
+              <Input
+                label="Code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                maxLength={6}
+                required
+                autoFocus
+              />
+              <Button type="submit" variant="primary" loading={busy}>
+                Sign in
+              </Button>
+              <Button
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  try {
+                    await auth.resendTwoStep();
+                    toast('A new code has been sent.');
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : 'Could not resend.');
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Send a new code
+              </Button>
+              <Button
+                variant="ghost"
+                disabled={busy}
+                onClick={() => {
+                  auth.cancelTwoStep();
+                  setSent(null);
+                  setCode('');
+                }}
+              >
+                Go back
+              </Button>
+              <LocalMailInbox email={auth.pendingTwoStep.email} />
+            </form>
+          ) : sent === 'confirm' && auth.mode === 'server' && auth.pendingVerification ? (
             <form
               className="flex flex-col gap-4"
               onSubmit={async (e) => {

@@ -37,7 +37,7 @@ import { OutlookCalendarSettings } from '../components/OutlookCalendarSettings';
 import { CalendarFeedsSettings } from '../components/CalendarFeedsSettings';
 import { GradeScaleSettings } from '../components/GradeScaleSettings';
 import { ProfileFields } from '../components/ProfileFields';
-import { SignOutButton } from '../components/SignOutButton';
+import { SecuritySettings } from '../components/SecuritySettings';
 import {
   matchSections,
   NoSettingsMatch,
@@ -64,7 +64,6 @@ import { NotificationSettings } from '../components/NotificationSettings';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
 import { keys, useAvatar } from '../lib/queries';
-import { useAuth } from '../lib/auth';
 import { useResolvedTheme } from '../lib/appearance';
 import {
   useAddVacation,
@@ -135,6 +134,9 @@ const MOVED_SECTIONS = new Map([
   ['rest-days', 'pace'],
   // The username field, which focuses itself (`UsernameField`).
   ['username', 'profile'],
+  // The email, two-step sign-in and the password (2026-11-03).
+  ['two-step', 'security'],
+  ['password', 'security'],
 ]);
 
 function NumberField({
@@ -282,7 +284,6 @@ function MinCostField({
 export function Settings() {
   const me = useMe();
   const update = useUpdateSettings();
-  const auth = useAuth();
   const { toast } = useToast();
   const restDays = useRestDays();
   const qc = useQueryClient();
@@ -424,10 +425,6 @@ export function Settings() {
                   </option>
                 ))}
               </Select>
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <p className="field-hint">Signed in as {me.data!.user.email || auth.email}.</p>
-                <SignOutButton labelled />
-              </div>
               <GroupHead id="social">Social</GroupHead>
               <p className="field-hint">What other people get to see of you on Social.</p>
               <div className="field">
@@ -483,6 +480,10 @@ export function Settings() {
               />
               <h3 className="settings-group-head">Data and privacy</h3>
               <DataPrivacySettings />
+            </Section>
+
+            <Section id="security" title="Security">
+              <SecuritySettings />
             </Section>
 
             <Section id="pages" title="Pages">

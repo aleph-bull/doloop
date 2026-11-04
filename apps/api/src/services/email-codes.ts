@@ -55,6 +55,12 @@ const descriptions: Record<Purpose, string> = {
   account: 'confirm your Komogon email address',
   organization: 'verify your school or organization email',
   'password-reset': 'reset your Komogon password',
+  'two-step': 'sign in to Komogon',
+};
+
+const subjects: Partial<Record<Purpose, string>> = {
+  'password-reset': 'Reset your Komogon password',
+  'two-step': 'Your Komogon sign-in code',
 };
 
 export async function issueEmailCode(
@@ -85,10 +91,7 @@ export async function issueEmailCode(
   try {
     await mailer.send({
       to: email,
-      subject:
-        input.purpose === 'password-reset'
-          ? 'Reset your Komogon password'
-          : 'Your Komogon verification code',
+      subject: subjects[input.purpose] ?? 'Your Komogon verification code',
       text: `${code}\n\nUse this code to ${descriptions[input.purpose]}. It expires in 10 minutes.\n\nIf you did not request this, ignore this email.`,
     });
   } catch (err) {

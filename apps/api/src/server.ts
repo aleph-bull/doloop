@@ -46,6 +46,7 @@ import type { FetchLike, TmdbCredentials } from './services/tmdb';
 import type { MediaStore } from './services/media-store';
 import { LOCAL_TEST_ACCOUNTS, seedLocalTestAccounts } from './services/local-test-accounts';
 import { emailAuthRoutes } from './routes/email-auth';
+import { securityRoutes } from './routes/security';
 import type { Mailer } from './services/mailer';
 
 export interface BuildOptions {
@@ -202,6 +203,7 @@ export async function buildServer(opts: BuildOptions) {
   );
   pushRoutes(app, opts.db);
   emailAuthRoutes(app, opts.db, clock, email);
+  securityRoutes(app, opts.db, clock, email);
   meRoutes(app, opts.db, clock, opts.mediaStore ?? null);
   adminRoutes(app, opts.db, admins, clock, opts.mediaStore ?? null);
   onboardingRoutes(app, opts.db, admins, clock);

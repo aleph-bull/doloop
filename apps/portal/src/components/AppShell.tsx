@@ -55,7 +55,8 @@ import { StartSessionDialog } from './StartSessionDialog';
 
 // The first-time setup's look around, loaded only while one is running.
 const Tour = lazy(() => import('./onboarding/Tour').then((m) => ({ default: m.Tour })));
-import { UsernameNotice } from './UsernameNotice';
+import { UsernameNotice, useUsernameNoticeDue } from './UsernameNotice';
+import { VerifyEmailPrompt } from './VerifyEmailPrompt';
 import { PushBridge } from './PushBridge';
 
 /**
@@ -410,6 +411,7 @@ export function AppShell() {
   // Ctrl+Z and Ctrl+Y for the small reversible things, anywhere in the app.
   useUndoShortcuts();
   const touring = useTour() !== null;
+  const usernameAsking = useUsernameNoticeDue();
   // Theme, accent, motion and backdrop: the same hook the focus screen uses.
   const appearance = useAppearance(settings);
   const shown = links.filter((l) => !l.feature || settings?.features?.[l.feature] !== false);
@@ -1043,6 +1045,7 @@ export function AppShell() {
           <PhoneSwitcher label="Your pages" pages={youPages} target={target} onGo={go} />
         )}
         <UsernameNotice />
+        <VerifyEmailPrompt hold={touring || usernameAsking} />
         <PushBridge />
         <ErrorBoundary>
           {/* Keyed by route so each page rises in as it arrives. A page whose code is still

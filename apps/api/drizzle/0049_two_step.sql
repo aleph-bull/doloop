@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "two_step_at" timestamp with time zone;

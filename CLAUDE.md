@@ -90,6 +90,13 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   0033 gave every older account some; the first-time setup opens with "Pick a username" (no
   skip), and older accounts are asked once to change theirs (`UsernameNotice`). A chosen one
   holds for 14 days. DECISIONS.md has the details.
+- **Settings › Security** (2026-11-03): the email (verified or not), two-step sign-in, the
+  password and Sign out. Verifying the email is never required: `VerifyEmailPrompt` asks as
+  the account is made and once each visit (a tab) until it's done. Two-step sign-in
+  (`users.two_step_at`) is off until turned on with an emailed code; a right password then
+  answers `{ twoStep, challengeId }` and `POST /api/auth/two-step` gives the token. Google
+  sign-in skips it. The API sends at most 95 emails a day for everyone, so nothing sends a
+  code by itself except sign-up's first ask and a two-step sign-in. DECISIONS.md has the details.
 - The owner asked to be able to read passwords. That was refused by a permission check;
   passwords stay hashed. Don't add plaintext storage unless the owner has explicitly
   overridden that check.
@@ -366,7 +373,7 @@ and never explain the difference on screen.
 
 - Your profile (2026-10-21): `/profile` is your own profile (`pages/Profile.tsx`), `/profile/:id`
   someone else's (with the friend button). It is not a page tab: the link sits where Sign out was (end of the top bar,
-  last sidebar row), and Sign out is a button on the profile itself and in Settings › Account. Picture, name, Ontario university (`settings.profile.university`, ids in
+  last sidebar row), and Sign out is a button on the profile itself and in Settings › Security. Picture, name, Ontario university (`settings.profile.university`, ids in
   `packages/core/src/universities.ts`), bio, the study-days grid and totals in one card, then the person's posts (see Social
   above). The gear on your own profile opens `ProfileSettingsDialog`; its fields are
   `ProfileFields`, shared with Settings › Account. Profiles are visible

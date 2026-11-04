@@ -42,6 +42,7 @@ import { lookPatch, lookPreset } from '../lib/onboarding-looks';
 import { useHints } from '../lib/hints';
 import { keys, useMe, useSetUsername, useUpdateSettings } from '../lib/queries';
 import { saveAnswers, setTour } from '../lib/tour';
+import { VerifyEmailPrompt } from '../components/VerifyEmailPrompt';
 
 /**
  * The questions in order, each named for the answer it fills. The names come first and are
@@ -136,6 +137,8 @@ export function Onboarding() {
         adjust={appearance.adjust}
       />
       <main className="ob-page on-backdrop">
+        {/* Asked as the account is made; never required to carry on. */}
+        <VerifyEmailPrompt />
         <Glass strong className="ob-card">
           <div className="ob-head">
             <span className="ob-brand">

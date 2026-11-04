@@ -57,6 +57,8 @@ export const users = pgTable('users', {
   onboardedAt: ts('onboarded_at'),
   isTestAccount: boolean('is_test_account').notNull().default(false),
   emailVerifiedAt: ts('email_verified_at'),
+  /** Two-step sign-in is on: a password sign-in also needs a code from their email. Null is off. */
+  twoStepAt: ts('two_step_at'),
   authVersion: integer('auth_version').notNull().default(0),
   /** Suspended by an admin: every request is refused until they lift it. */
   bannedAt: ts('banned_at'),
@@ -101,7 +103,7 @@ export const emailCodes = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     email: text('email').notNull(),
     purpose: text('purpose', {
-      enum: ['signup', 'account', 'organization', 'password-reset'],
+      enum: ['signup', 'account', 'organization', 'password-reset', 'two-step'],
     }).notNull(),
     userId: uuid('user_id').references(() => users.id, { onDelete: 'cascade' }),
     codeHash: text('code_hash').notNull(),

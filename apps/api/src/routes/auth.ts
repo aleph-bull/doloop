@@ -5,10 +5,10 @@ import { isInvited } from '../auth/plugin';
 import type { Db } from '../db/client';
 import { HttpError } from '../errors';
 import { isAdmin } from '../services/admin';
-import { isEmailBlocked, SUSPENDED } from '../services/moderation';
+import { assertMayEnter, isEmailBlocked, SUSPENDED } from '../services/moderation';
 import { hashPassword, signIn, signUp } from '../services/passwords';
 import { accountSession } from '../services/account-session';
-import { issueEmailCode, requestLimits } from '../services/email-codes';
+import { issueEmailCode, redeemEmailCode, requestLimits } from '../services/email-codes';
 import type { Mailer } from '../services/mailer';
 import {
   LOCAL_TEST_ACCOUNTS,
@@ -20,6 +20,7 @@ import { eq } from 'drizzle-orm';
 import { users } from '../db/schema';
 import { googleSignIn, type GoogleTokenVerifier } from '../services/google-signin';
 import { RateLimiter, checkLimits, type Limit } from '../services/rate-limit';
+import { codeInput } from './email-auth';
 
 const credentialsSchema = z.object({
   email: z.string().trim().email().max(320),
@@ -105,6 +106,31 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
       requireLocalTestRequest(req, opts.localTestAccounts ?? false);
     return respond(identity);
   };
+  /**
+   * A password that matched. With two-step sign-in on, the token waits for a code sent to
+   * the account's email (`POST /api/auth/two-step`); otherwise it is given now.
+   */
+  const passwordMatched = async (identity: { id: string; email: string }, req: FastifyRequest) => {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, identity.id),
+      columns: { twoStepAt: true, isTestAccount: true },
+    });
+    if (!user?.twoStepAt) return finishSignIn(identity, req);
+    if (user.isTestAccount || isLocalTestEmail(identity.email))
+      requireLocalTestRequest(req, opts.localTestAccounts ?? false);
+    // No code goes to a suspended account or a blocked address.
+    await assertMayEnter(db, identity);
+    const now = opts.clock?.() ?? new Date().toISOString();
+    await requestLimits(db, opts.secret, identity.email, req.ip, now);
+    const challenge = await issueEmailCode(
+      db,
+      opts.mailer ?? null,
+      opts.secret,
+      { email: identity.email, purpose: 'two-step', userId: identity.id },
+      now,
+    );
+    return { twoStep: true, ...challenge };
+  };
 
   const limits = opts.limits === undefined ? DEFAULT_AUTH_LIMITS : opts.limits;
   const limiter = (limit: Limit) => new RateLimiter(limit, limits?.now);
@@ -152,7 +178,8 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
   app.post('/api/auth/signin', { config: { public: true } }, async (req) => {
     const body = credentialsSchema.parse(req.body);
     const email = body.email.toLowerCase();
-    if (!signInEmail || !signInIp) return finishSignIn(await signIn(db, email, body.password), req);
+    if (!signInEmail || !signInIp)
+      return passwordMatched(await signIn(db, email, body.password), req);
     checkLimits([
       [signInEmail, email],
       [signInIp, req.ip],
@@ -160,7 +187,7 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
     try {
       const user = await signIn(db, email, body.password);
       signInEmail.clear(email);
-      return finishSignIn(user, req);
+      return passwordMatched(user, req);
     } catch (err) {
       // Only failed tries count, so people signing in normally never meet the limit.
       if (err instanceof HttpError && err.status === 401) {
@@ -169,6 +196,29 @@ export function passwordAuthRoutes(app: FastifyInstance, db: Db, opts: PasswordA
       }
       throw err;
     }
+  });
+
+  /** The second step of a two-step sign-in: the code from the email. */
+  app.post('/api/auth/two-step', { config: { public: true } }, async (req) => {
+    const body = codeInput.parse(req.body);
+    if (signInIp) checkLimits([[signInIp, req.ip]]);
+    const identity = await redeemEmailCode(
+      db,
+      opts.secret,
+      body.challengeId,
+      body.code,
+      'two-step',
+      null,
+      opts.clock?.() ?? new Date().toISOString(),
+      async (_tx, row) => {
+        if (!row.userId) throw new HttpError(400, 'Sign in again.');
+        return { id: row.userId, email: row.email };
+      },
+    ).catch((err: unknown) => {
+      signInIp?.hit(req.ip);
+      throw err;
+    });
+    return finishSignIn(identity, req);
   });
 
   const google = opts.google;

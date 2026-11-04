@@ -12,6 +12,16 @@ import { UsernameInput } from './UsernameInput';
  * still the picked one, and never over the first-time setup's look around. "Keep it" closes it
  * for good (the dismissal is stored on the account); Settings can still change it later.
  */
+/** Whether the notice is up; other questions (verifying the email) wait for it. */
+export function useUsernameNoticeDue(): boolean {
+  const me = useMe();
+  const tour = useTour();
+  const { isDismissed } = useHints();
+  const user = me.data?.user;
+  if (!me.data?.onboarded || !user?.username || user.usernameChangedAt) return false;
+  return !tour && !isDismissed('username');
+}
+
 export function UsernameNotice() {
   const me = useMe();
   const tour = useTour();

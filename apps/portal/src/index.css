@@ -3211,6 +3211,38 @@ button.start-subject:hover {
   font-size: var(--text-base);
   font-weight: 600;
 }
+/* Settings › Security: the email with its Verified chip, and the password form. */
+.security-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.security-email {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.security-password {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+}
+/* The emailed-code dialog (verifying, two-step on or off). */
+.email-code {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.email-code-again {
+  align-self: flex-start;
+  font-size: var(--text-sm);
+}
 /* Appearance › Advanced: the glass's four sliders, a name, the control and its value. */
 .glass-controls {
   display: grid;

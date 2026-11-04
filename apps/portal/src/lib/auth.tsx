@@ -9,6 +9,7 @@ import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api as accountApi, apiBaseUrl, setTokenGetter } from './api';
 import { pausePushForSignOut } from './push';
+import { markNewAccount } from './verify-email';
 
 /**
  * Three auth backends:
@@ -61,9 +62,17 @@ interface AuthApi extends AuthState {
   pendingVerification: { challengeId: string; email: string } | null;
   verifyEmailCode: (code: string) => Promise<void>;
   resendVerification: () => Promise<void>;
+  /** Server mode: a password sign-in waiting for the code emailed by two-step sign-in. */
+  pendingTwoStep: { challengeId: string; email: string } | null;
+  verifyTwoStep: (code: string) => Promise<void>;
+  resendTwoStep: () => Promise<void>;
+  cancelTwoStep: () => void;
+  /** Server mode: keep a token the API gave this device (after a password change). */
+  adoptToken: (token: string) => void;
   mode: typeof authMode;
   signInWithMagicLink: (email: string) => Promise<void>;
-  signInWithPassword: (email: string, password: string) => Promise<void>;
+  /** Resolves true when two-step sign-in wants the code from their email first. */
+  signInWithPassword: (email: string, password: string) => Promise<boolean>;
   /** Resolves true when the account needs its email confirmed before it can sign in. */
   signUpWithPassword: (email: string, password: string) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
@@ -83,15 +92,17 @@ export const EMAIL_KEY = authMode === 'dev' ? 'komogon.dev.email' : 'komogon.ema
 
 /** POST to the API's own account routes; answers the token and email, or throws its error. */
 async function serverAuth(
-  path: 'signin' | 'signup' | 'google' | 'dev',
+  path: 'signin' | 'signup' | 'google' | 'dev' | 'two-step',
   body:
     | { email: string; password: string }
     | { accessToken: string }
-    | { password: string; kind: 'fresh' | 'jerry' },
+    | { password: string; kind: 'fresh' | 'jerry' }
+    | { challengeId: string; code: string },
 ): Promise<{
   token?: string;
   email: string;
   verificationRequired?: boolean;
+  twoStep?: boolean;
   challengeId?: string;
 }> {
   const res = await fetch(`${apiBaseUrl(true)}/api/auth/${path}`, {
@@ -106,6 +117,7 @@ async function serverAuth(
     token?: string;
     email?: string;
     verificationRequired?: boolean;
+    twoStep?: boolean;
     challengeId?: string;
     error?: string;
   } | null;
@@ -113,12 +125,13 @@ async function serverAuth(
   if (res.status === 403 && data?.error === 'invite_only') throw new Error(NOT_INVITED_MESSAGE);
   if (res.status === 400 && data?.error === 'Validation failed')
     throw new Error('Enter a valid email and a password.');
-  if (!res.ok || (!data?.token && !data?.verificationRequired))
+  if (!res.ok || (!data?.token && !data?.verificationRequired && !data?.twoStep))
     throw new Error(data?.error ?? 'Sign-in failed');
   return {
     token: data.token,
     email: data.email ?? ('email' in body ? body.email : ''),
     verificationRequired: data.verificationRequired,
+    twoStep: data.twoStep,
     challengeId: data.challengeId,
   };
 }
@@ -218,6 +231,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     challengeId: string;
     email: string;
   } | null>(null);
+  const [pendingTwoStep, setPendingTwoStep] = useState<{
+    challengeId: string;
+    email: string;
+  } | null>(null);
   const [state, setState] = useState<AuthState>({ status: 'loading', email: null });
 
   useEffect(() => {
@@ -267,12 +284,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       if (!supabase) {
         const r = await serverAuth('signin', { email, password });
+        if (r.twoStep && r.challengeId) {
+          setPendingTwoStep({ challengeId: r.challengeId, email: r.email });
+          return true;
+        }
         if (!r.token) throw new Error('Verify your email before signing in.');
         keepToken(r.token, r.email);
-        return;
+        return false;
       }
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      return false;
     },
     [keepToken],
   );
@@ -286,6 +308,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return true;
         }
         if (!r.token) throw new Error('Could not create your account.');
+        // The first look at the app asks them to verify the address (never required).
+        markNewAccount();
         keepToken(r.token, r.email);
         return false;
       }
@@ -323,6 +347,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!pendingVerification) return;
     setPendingVerification(await accountApi.resendEmailCode(pendingVerification.challengeId));
   }, [pendingVerification]);
+  const verifyTwoStep = useCallback(
+    async (code: string) => {
+      if (!pendingTwoStep) throw new Error('Sign in again.');
+      const r = await serverAuth('two-step', { challengeId: pendingTwoStep.challengeId, code });
+      if (!r.token) throw new Error('Sign in again.');
+      setPendingTwoStep(null);
+      keepToken(r.token, pendingTwoStep.email);
+    },
+    [pendingTwoStep, keepToken],
+  );
+  const resendTwoStep = useCallback(async () => {
+    if (!pendingTwoStep) return;
+    setPendingTwoStep(await accountApi.resendEmailCode(pendingTwoStep.challengeId));
+  }, [pendingTwoStep]);
+  const cancelTwoStep = useCallback(() => setPendingTwoStep(null), []);
+  const adoptToken = useCallback(
+    (token: string) => keepToken(token, state.email ?? ''),
+    [keepToken, state.email],
+  );
   const signInWithGoogleToken = useCallback(
     async (accessToken: string) => {
       const r = await serverAuth('google', { accessToken });
@@ -374,6 +417,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pendingVerification,
       verifyEmailCode,
       resendVerification,
+      pendingTwoStep,
+      verifyTwoStep,
+      resendTwoStep,
+      cancelTwoStep,
+      adoptToken,
       mode: authMode,
       signInWithMagicLink,
       signInWithPassword,
@@ -389,6 +437,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pendingVerification,
       verifyEmailCode,
       resendVerification,
+      pendingTwoStep,
+      verifyTwoStep,
+      resendTwoStep,
+      cancelTwoStep,
+      adoptToken,
       signInWithMagicLink,
       signInWithPassword,
       signUpWithPassword,
