@@ -10,6 +10,7 @@ import { and, desc, eq, gte, inArray, isNotNull, isNull, lte, sql } from 'drizzl
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import { posts, sessions, universityVerifications, users } from '../db/schema';
+import { isAdmin } from '../services/admin';
 import { inWorldOf } from '../services/dev-accounts';
 import { loadPeople } from '../services/people';
 import { liveAmong } from './groups';
@@ -25,7 +26,12 @@ export async function verifiedSchool(db: Db, userId: string) {
   });
   return universityById(proof?.universityId);
 }
-export function schoolRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function schoolRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  admins: string[] = [],
+) {
   app.get('/api/schools', async (req) => {
     const { q } = z.object({ q: z.string().trim().max(100).default('') }).parse(req.query);
     const term = q.toLocaleLowerCase();
@@ -67,6 +73,7 @@ export function schoolRoutes(app: FastifyInstance, db: Db, clock: () => string) 
             sql`coalesce((select u.settings -> 'social' ->> 'posts' from users u where u.id = ${posts.userId}), 'everyone') = 'everyone'`,
           ),
           20,
+          { ids: isAdmin(req.user.email, admins) },
         )
       : { posts: [], people: {} };
     const people = {

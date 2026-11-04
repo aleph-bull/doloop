@@ -23,6 +23,7 @@ import {
   suspendAccount,
   unblockEmail,
 } from '../services/moderation';
+import { dismissReports, findPostForAdmin, listReportedPosts } from '../services/post-reports';
 import { sessionHistory, trimSession } from '../services/sessions';
 import { isoDate, isoDateTime, trimSessionSchema, uuid } from '../validation';
 
@@ -42,6 +43,14 @@ const addTimeSchema = z.object({
     .optional(),
 });
 const emailSchema = z.object({ email: z.string().trim().email().max(320) });
+/** A post's ID as a report names it (a number, "#" allowed), or its uuid. */
+const postKey = z.object({
+  key: z
+    .string()
+    .trim()
+    .transform((k) => k.replace(/^#/, ''))
+    .pipe(z.union([z.string().regex(/^\d{1,9}$/), uuid])),
+});
 
 /**
  * For whoever runs the alpha (`ADMIN_EMAILS`): every account, each one's data as JSON,
@@ -203,4 +212,29 @@ export function adminRoutes(
       return reply.code(204).send();
     },
   );
+
+  /* ---------- reported posts ---------- */
+  // Deleting a post is DELETE /api/posts/:id, which takes any post from an admin.
+
+  app.get('/api/admin/reports', async (req) => {
+    requireAdmin(req);
+    return listReportedPosts(db, req.user.id);
+  });
+
+  /** A post by the ID a report email names (a number), or by its uuid. */
+  app.get('/api/admin/posts/:key', async (req) => {
+    requireAdmin(req);
+    const { key } = postKey.parse(req.params);
+    const found = await findPostForAdmin(db, req.user.id, key);
+    if (!found) throw notFound('No post with that ID');
+    return found;
+  });
+
+  /** Keep the post and drop its reports. */
+  app.delete('/api/admin/posts/:id/reports', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    await dismissReports(db, id);
+    return reply.code(204).send();
+  });
 }

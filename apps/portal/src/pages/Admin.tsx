@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router';
 import { Button, Chip, Input, Panel, Spinner, useToast } from '@komogon/ui';
 import { AccountManager } from '../components/admin/AccountManager';
 import { OnboardingAnswers } from '../components/admin/OnboardingAnswers';
+import { Reports } from '../components/admin/Reports';
 import {
   adminFetch,
   adminKeys,
@@ -68,6 +69,8 @@ export function Admin() {
         </Panel>
       ) : (
         <>
+          <Reports />
+
           <Panel className="p-5 flex flex-col gap-3">
             <p className="muted text-sm">
               {accounts.data.length} {accounts.data.length === 1 ? 'account' : 'accounts'}. Download

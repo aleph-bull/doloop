@@ -543,7 +543,16 @@ export function useDeletePost() {
     onSuccess: () => {
       for (const key of POST_KEYS) void qc.invalidateQueries({ queryKey: key });
       void qc.invalidateQueries({ queryKey: keys.postable });
+      // An admin deleting a reported post: Admin › Reports drops it.
+      void qc.invalidateQueries({ queryKey: ['admin', 'reports'] });
+      void qc.invalidateQueries({ queryKey: ['admin', 'post'] });
     },
+  });
+}
+
+export function useReportPost() {
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => api.reportPost(id, reason),
   });
 }
 

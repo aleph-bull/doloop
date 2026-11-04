@@ -9,11 +9,13 @@ import {
   EyeOff,
   Flag,
   Flame,
+  Hash,
   MessageCircle,
   MoreHorizontal,
   Pencil,
   Play,
   Scissors,
+  Share,
   ThumbsUp,
   Timer,
   Trash2,
@@ -41,8 +43,11 @@ import {
   useDeletePost,
   useEditPost,
   useLikePost,
+  useReportPost,
 } from '../../lib/queries';
+import { useIsAdmin } from '../../lib/admin';
 import { Avatar } from './Avatar';
+import { PostElsewhere } from './PostElsewhere';
 import { TrimVideoDialog } from './TrimVideo';
 import { named } from '../../lib/rolls';
 
@@ -153,10 +158,15 @@ function SessionWins({ session }: { session: PostSession }) {
   );
 }
 
+/** What the ⋯ shows: its list, or one of the steps it leads to. */
+type MenuView = 'list' | 'sure' | 'report' | 'elsewhere';
+
 /**
- * The ⋯ under every post. Yours: edit the words, trim the video when there is one, or delete
- * it after "Are you sure?". Someone else's: Hide and Report, which only close the menu for
- * now (not built yet).
+ * The ⋯ under every post. Yours: edit the words, trim the video when there is one, post it
+ * on Instagram, TikTok or X (`PostElsewhere`), or delete it after "Are you sure?". Someone
+ * else's: Hide (not built yet) and Report, which asks why (optional) and goes to whoever
+ * runs Komodon. An admin also gets Delete on anyone's post and the post's ID, which a report
+ * names (2026-11-03).
  */
 function PostMenu({
   post,
@@ -168,15 +178,20 @@ function PostMenu({
   onTrim?: () => void;
 }) {
   const del = useDeletePost();
+  const report = useReportPost();
+  const admin = useIsAdmin();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const [sure, setSure] = useState(false);
+  const [view, setView] = useState<MenuView>('list');
+  const [reason, setReason] = useState('');
   const wrap = useRef<HTMLSpanElement>(null);
+  const setSure = (on: boolean) => setView(on ? 'sure' : 'list');
+  const sure = view === 'sure';
   useEffect(() => {
     if (!open) return;
     const close = () => {
       setOpen(false);
-      setSure(false);
+      setView('list');
     };
     const away = (e: MouseEvent) => {
       if (!wrap.current?.contains(e.target as Node)) close();
@@ -202,14 +217,54 @@ function PostMenu({
         aria-expanded={open}
         onClick={() => {
           setOpen((v) => !v);
-          setSure(false);
+          setView('list');
         }}
       >
         <MoreHorizontal size={17} aria-hidden />
       </button>
       {open && (
-        <span className="post-menu-pop" role="menu">
-          {sure ? (
+        <span className={`post-menu-pop${view === 'report' ? ' is-wide' : ''}`} role="menu">
+          {view === 'elsewhere' ? (
+            <PostElsewhere post={post} onDone={() => setOpen(false)} />
+          ) : view === 'report' ? (
+            <form
+              className="post-menu-sure"
+              onSubmit={(e) => {
+                e.preventDefault();
+                report.mutate(
+                  { id: post.id, reason: reason.trim() },
+                  {
+                    onSuccess: () => {
+                      setOpen(false);
+                      setView('list');
+                      setReason('');
+                      toast('Report submitted');
+                    },
+                    onError: (err) =>
+                      toast(err instanceof Error ? err.message : 'Could not report it'),
+                  },
+                );
+              }}
+            >
+              <span>Report this post?</span>
+              <textarea
+                className="textarea post-menu-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value.slice(0, 500))}
+                placeholder="Reason (optional)"
+                aria-label="Why"
+                rows={2}
+              />
+              <span className="post-menu-actions">
+                <Button type="submit" size="sm" variant="danger" loading={report.isPending}>
+                  Report
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setView('list')}>
+                  Cancel
+                </Button>
+              </span>
+            </form>
+          ) : sure ? (
             <span className="post-menu-sure">
               <span>Are you sure?</span>
               <span className="post-menu-actions">
@@ -260,11 +315,20 @@ function PostMenu({
               <button
                 type="button"
                 role="menuitem"
+                className="post-menu-item"
+                onClick={() => setView('elsewhere')}
+              >
+                <Share size={14} aria-hidden /> Post elsewhere
+              </button>
+              <button
+                type="button"
+                role="menuitem"
                 className="post-menu-item is-danger"
                 onClick={() => setSure(true)}
               >
                 <Trash2 size={14} aria-hidden /> Delete
               </button>
+              {admin && <PostId post={post} onCopied={() => setOpen(false)} />}
             </>
           ) : (
             <>
@@ -280,15 +344,51 @@ function PostMenu({
                 type="button"
                 role="menuitem"
                 className="post-menu-item is-danger"
-                onClick={() => setOpen(false)}
+                onClick={() => setView('report')}
               >
                 <Flag size={14} aria-hidden /> Report
               </button>
+              {admin && (
+                <>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="post-menu-item is-danger"
+                    onClick={() => setSure(true)}
+                  >
+                    <Trash2 size={14} aria-hidden /> Delete
+                  </button>
+                  <PostId post={post} onCopied={() => setOpen(false)} />
+                </>
+              )}
             </>
           )}
         </span>
       )}
     </span>
+  );
+}
+
+/** For admins: the post's ID, the number a report names; a click copies it. */
+function PostId({ post, onCopied }: { post: FeedPost; onCopied: () => void }) {
+  const { toast } = useToast();
+  if (post.ref === undefined) return null;
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      className="post-menu-item post-menu-id"
+      title="Copy"
+      onClick={() => {
+        void navigator.clipboard?.writeText(String(post.ref)).then(
+          () => toast('ID copied'),
+          () => toast(`ID ${post.ref}`),
+        );
+        onCopied();
+      }}
+    >
+      <Hash size={14} aria-hidden /> ID {post.ref}
+    </button>
   );
 }
 

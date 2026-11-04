@@ -18,6 +18,7 @@ import {
 import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db/client';
+import { isAdmin } from '../services/admin';
 import { posts, userAssets, users } from '../db/schema';
 import { notFound } from '../errors';
 import { listAchievements } from '../services/achievements';
@@ -130,7 +131,12 @@ export interface ProfileResponse {
  * a person chose to share is here (name, university, bio, picture) plus study totals and
  * posts. The email, settings and tasks never leave the account.
  */
-export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function profileRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  admins: string[] = [],
+) {
   const idParam = z.object({ id: z.union([z.literal('me'), uuid]) });
 
   app.get('/api/profiles/:id', async (req) => {
@@ -164,6 +170,7 @@ export function profileRoutes(app: FastifyInstance, db: Db, clock: () => string)
           ? eq(posts.userId, row.id)
           : and(eq(posts.userId, row.id), eq(posts.friendsOnly, false)),
         PROFILE_POSTS_LIMIT,
+        { ids: isAdmin(req.user.email, admins) },
       ),
       friendIds(db, row.id),
       showStats || showRolls ? listAchievements(db, row.id) : Promise.resolve([]),

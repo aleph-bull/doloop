@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiBaseUrl, authHeaders } from './api';
+import { apiBaseUrl, authHeaders, type FeedPost } from './api';
 
 /** Calls the API's admin routes; throws the API's error message on failure. */
 export async function adminFetch(path: string, init?: RequestInit): Promise<Response> {
@@ -61,10 +61,29 @@ export interface BlockedEmail {
   accountId: string | null;
 }
 
+export interface AdminReport {
+  id: string;
+  reporterId: string;
+  reporterEmail: string | null;
+  /** Empty when they didn't say. */
+  reason: string;
+  createdAt: string;
+}
+
+/** A post as Admin › Reports shows it: the post, its author's email and its reports. */
+export interface AdminPost {
+  post: FeedPost;
+  authorEmail: string | null;
+  reports: AdminReport[];
+}
+
 export const adminKeys = {
   accounts: ['admin', 'accounts'] as const,
   sessions: (id: string) => ['admin', 'sessions', id] as const,
   blocked: ['admin', 'blocked'] as const,
+  reports: ['admin', 'reports'] as const,
+  /** One post by the ID a report names, or its uuid. */
+  post: (key: string) => ['admin', 'post', key] as const,
 };
 
 /** Whether the signed-in account is an admin (`ADMIN_EMAILS` on the API). */

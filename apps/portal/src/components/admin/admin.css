@@ -68,6 +68,18 @@
   overflow-wrap: anywhere;
 }
 
+/* A reported post at the feed's width, its reports and actions beside it. */
+.admin-report {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .admin-report {
+    grid-template-columns: minmax(0, 600px) minmax(0, 1fr);
+  }
+}
+
 /* ---------- the account dialog ---------- */
 
 .modal.admin-manage {

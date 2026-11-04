@@ -384,6 +384,8 @@ export interface PostSession {
 /** A post on Social, with its counts as the viewer sees them. */
 export interface FeedPost {
   id: string;
+  /** Its ID for moderation, shown to admins; missing from a feed cached before it. */
+  ref?: number;
   userId: string;
   body: string;
   createdAt: string;
@@ -1055,7 +1057,11 @@ export const api = {
     ),
   createPost: (input: NewPost) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('POST', '/api/social/posts', input),
+  /** Your own post, or any post from an admin. */
   deletePost: (id: string) => request<void>('DELETE', `/api/posts/${id}`),
+  /** Someone else's post, with what's wrong (may be empty); goes to whoever runs Komodon. */
+  reportPost: (id: string, reason: string) =>
+    request<{ reported: boolean }>('POST', `/api/posts/${id}/report`, { reason }),
   /** Changes only the words of your own post. */
   editPost: (id: string, body: string) =>
     request<{ post: FeedPost; people: Record<string, Person> }>('PATCH', `/api/posts/${id}`, {

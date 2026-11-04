@@ -22,6 +22,7 @@ import {
   pgTable,
   primaryKey,
   real,
+  serial,
   text,
   timestamp,
   uniqueIndex,
@@ -526,6 +527,11 @@ export const posts = pgTable(
   'posts',
   {
     id: uuid('id').primaryKey().defaultRandom(),
+    /**
+     * The post's ID for moderation (2026-11-03): a short number, counted up, that a report
+     * email names and Admin › Reports looks up. Shown to admins only.
+     */
+    ref: serial('ref').notNull().unique(),
     userId: uuid('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
@@ -667,6 +673,31 @@ export const commentMentions = pgTable(
   (t) => [
     primaryKey({ columns: [t.commentId, t.userId] }),
     index('comment_mentions_user_idx').on(t.userId),
+  ],
+);
+
+/**
+ * Someone reporting a post (2026-11-03): one row per person per post, emailed to whoever
+ * runs Komodon (`REPORTS_EMAIL`) and listed in Admin › Reports until the post is deleted
+ * (the rows go with it) or the reports are dismissed.
+ */
+export const postReports = pgTable(
+  'post_reports',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    postId: uuid('post_id')
+      .notNull()
+      .references(() => posts.id, { onDelete: 'cascade' }),
+    reporterId: uuid('reporter_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** What they said was wrong; empty when they said nothing. */
+    reason: text('reason').notNull().default(''),
+    createdAt: ts('created_at').notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('post_reports_post_reporter_idx').on(t.postId, t.reporterId),
+    index('post_reports_created_idx').on(t.createdAt),
   ],
 );
 
@@ -1185,6 +1216,7 @@ export const schema = {
   postLikes,
   postComments,
   commentMentions,
+  postReports,
   friendships,
   jams,
   jamMembers,

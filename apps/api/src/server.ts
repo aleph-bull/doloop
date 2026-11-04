@@ -31,6 +31,7 @@ import { adminRoutes } from './routes/admin';
 import { onboardingRoutes } from './routes/onboarding';
 import { leaderboardRoutes } from './routes/leaderboard';
 import { profileRoutes } from './routes/profiles';
+import { reportRoutes } from './routes/reports';
 import { socialRoutes } from './routes/social';
 import { jamRoutes } from './routes/jams';
 import { compareRoutes } from './routes/compare';
@@ -67,6 +68,8 @@ export interface BuildOptions {
   trustProxyHops?: number;
   /** Who can see every account and its data (`ADMIN_EMAILS`). */
   adminEmails?: string[];
+  /** Where a reported post is emailed (`REPORTS_EMAIL`), through `mailer`; null sends none. */
+  reportsEmail?: string | null;
   /**
    * "I'm a dev" throwaway accounts on the sign-in page (needs `passwordAuth` for its
    * secret); null or left out turns them off.
@@ -203,15 +206,20 @@ export async function buildServer(opts: BuildOptions) {
   adminRoutes(app, opts.db, admins, clock, opts.mediaStore ?? null);
   onboardingRoutes(app, opts.db, admins, clock);
   leaderboardRoutes(app, opts.db, clock);
-  profileRoutes(app, opts.db, clock);
-  socialRoutes(app, opts.db, clock, opts.mediaStore ?? null);
+  profileRoutes(app, opts.db, clock, admins);
+  socialRoutes(app, opts.db, clock, opts.mediaStore ?? null, admins);
+  reportRoutes(app, opts.db, clock, {
+    mailer: opts.mailer ?? null,
+    to: opts.reportsEmail ?? null,
+    portalUrl: calendar.portalUrl,
+  });
   jamRoutes(app, opts.db, clock);
   compareRoutes(app, opts.db, clock);
   groupRoutes(app, opts.db, clock);
   notificationRoutes(app, opts.db, clock);
   // Codes go through the same mailer as account email; with none, verifying is off.
   universityRoutes(app, opts.db, clock, opts.mailer ?? null);
-  schoolRoutes(app, opts.db, clock);
+  schoolRoutes(app, opts.db, clock, admins);
   nodeRoutes(app, opts.db, clock);
   tagRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
