@@ -173,6 +173,7 @@ export async function buildServer(opts: BuildOptions) {
     verifier: opts.verifier,
     allowedEmails: opts.allowedEmails,
     localTestAccounts: opts.localTestAccounts ?? false,
+    clock,
   });
 
   const calendar: CalendarRouteOptions = {

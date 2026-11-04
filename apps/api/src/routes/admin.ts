@@ -12,11 +12,14 @@ import {
   restartOnboarding,
   setAccountPassword,
 } from '../services/admin';
+import { accountActivity, adminStats, cloudMeter } from '../services/admin-stats';
 import { exportUserData } from '../services/export';
 import type { MediaStore } from '../services/media-store';
 import {
+  banFromSocial,
   blockEmail,
   deleteAccount,
+  liftSocialBan,
   liftSuspension,
   listBlockedEmails,
   normaliseEmail,
@@ -74,6 +77,7 @@ export function adminRoutes(
     if (!user) throw notFound('No such account');
     return user;
   };
+  const cloud = cloudMeter(db, store);
   /** Admins, yourself included, can't be suspended, deleted or blocked from here. */
   const notAnAdmin = (email: string, what: string) => {
     if (isAdmin(email, admins)) throw badRequest(`An admin account can't be ${what}.`);
@@ -187,6 +191,45 @@ export function adminRoutes(
     notAnAdmin(user.email, 'deleted');
     await deleteAccount(db, id, { block: block === 'true', now: clock(), store, log: req.log });
     return reply.code(204).send();
+  });
+
+  /* ---------- posting on Social ---------- */
+
+  /** Keep an account from posting and commenting on Social; its posts so far stay. */
+  app.post('/api/admin/accounts/:id/social-ban', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    const user = await account(id);
+    notAnAdmin(user.email, 'kept from posting');
+    await banFromSocial(db, user, clock());
+    return reply.code(204).send();
+  });
+
+  app.delete('/api/admin/accounts/:id/social-ban', async (req, reply) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    await liftSocialBan(db, await account(id));
+    return reply.code(204).send();
+  });
+
+  /* ---------- figures ---------- */
+
+  /** People, activity, study, Social and storage across every real account. */
+  app.get('/api/admin/stats', async (req) => {
+    requireAdmin(req);
+    const now = clock();
+    return adminStats(db, {
+      now,
+      timezone: req.user.timezone,
+      cloud: await cloud(Date.parse(now), req.log),
+    });
+  });
+
+  /** One account's activity: days used, focus by week, Social and files. */
+  app.get('/api/admin/accounts/:id/activity', async (req) => {
+    requireAdmin(req);
+    const { id } = accountParams.parse(req.params);
+    return accountActivity(db, await account(id), clock());
   });
 
   /* ---------- blocked addresses ---------- */

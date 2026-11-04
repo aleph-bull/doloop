@@ -29,6 +29,7 @@ import { badRequest, conflict, forbidden, isUniqueViolation, notFound } from '..
 import { isAdmin } from '../services/admin';
 import { inWorldOf, ownerInWorldOf, sameWorld } from '../services/dev-accounts';
 import { removeAll, type MediaStore } from '../services/media-store';
+import { assertMayPost } from '../services/moderation';
 import { loadPeople, type Person } from '../services/people';
 import { pushMessages } from '../services/push';
 import { checkLimits, RateLimiter } from '../services/rate-limit';
@@ -458,6 +459,7 @@ export function socialRoutes(
    * `posts/`, so a file nobody posted doesn't stay.
    */
   app.post('/api/social/uploads', async (req) => {
+    assertMayPost(req.user);
     if (!store || !quota) throw conflict('Files go with the post here');
     const input = z
       .object({ mime: z.string().max(40), bytes: z.number().int().min(1) })
@@ -506,6 +508,7 @@ export function socialRoutes(
   });
 
   app.post('/api/social/posts', { bodyLimit: POST_BODY_LIMIT }, async (req, reply) => {
+    assertMayPost(req.user);
     const input = z
       .object({
         body: z.string().trim().max(POST_MAX_LENGTH).default(''),
@@ -720,6 +723,7 @@ export function socialRoutes(
 
   /** Only the words of your own post change; the session and files stay as they were. */
   app.patch('/api/posts/:id', async (req) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const { body } = z.object({ body: z.string().trim().max(POST_MAX_LENGTH) }).parse(req.body);
     const updated = await db
@@ -737,6 +741,7 @@ export function socialRoutes(
    * its poster the old poster's. The words, the pictures and the session stay as they were.
    */
   app.put('/api/posts/:id/video', { bodyLimit: POST_BODY_LIMIT }, async (req) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const input = z
       .object({
@@ -971,6 +976,7 @@ export function socialRoutes(
   });
 
   app.post('/api/posts/:id/comments', async (req, reply) => {
+    assertMayPost(req.user);
     const { id } = idParam.parse(req.params);
     const { body } = z
       .object({ body: z.string().trim().min(1).max(COMMENT_MAX_LENGTH) })

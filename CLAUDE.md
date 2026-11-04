@@ -84,6 +84,12 @@ More: [README.md](README.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
   `account_suspended`, and the portal signs out with a message). Suspended accounts are left
   off the leaderboard, the feed and people search. Admins can't be suspended, deleted or
   blocked from there.
+- Admin figures and tracking (2026-11-03): the auth plugin notes each account's last request
+  (`users.last_active_at`) and the days it was used (`user_active_days`, its own time zone), at
+  most once a minute (`services/activity.ts`). Admin shows people, activity, study, Social and
+  storage over real accounts (`services/admin-stats.ts`), and each Manage dialog that account's
+  activity. **Ban from posting** (`users.social_banned_at`) stops posts, comments, uploads and
+  edits through `assertMayPost`; a new way of posting on Social must call it too.
 - **Usernames** (2026-10-22): every account has a unique @username (`users.username`, stored
   without the @; rules in core `names.ts`: a to z, numbers and `_ - ! .`, no two symbols
   together; names take no symbols). Accounts get two random words when made, and migration

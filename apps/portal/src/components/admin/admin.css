@@ -217,3 +217,143 @@
     gap: 2px;
   }
 }
+
+/* ---------- figures (AdminStats.tsx, and Activity in the account dialog) ---------- */
+
+@media (min-width: 1100px) {
+  .admin-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+}
+.admin-people {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.admin-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  margin: 0;
+}
+.admin-figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.admin-figure dt {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+.admin-figure dd {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.admin-figure .admin-figure-unit {
+  margin-left: 0.15em;
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+.admin-figure .admin-figure-note {
+  font-size: var(--text-sm);
+  font-weight: 400;
+  color: var(--fg-muted);
+}
+
+/* One bar a day or a week, in the accent; the one named above is the full accent. */
+.admin-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.admin-chart-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: var(--text-sm);
+}
+.admin-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 96px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-bar-slot {
+  display: flex;
+  align-items: flex-end;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+.admin-bar {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 4px 4px 0 0;
+  background: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.admin-bar-slot.is-shown .admin-bar {
+  background: var(--accent);
+}
+.admin-chart-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+}
+
+.admin-meter-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.admin-meter-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: var(--text-sm);
+}
+.admin-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+.admin-meter span {
+  display: block;
+  height: 100%;
+  min-width: 4px;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+/* An account's last 30 days: a square a day, filled on the days it was used. */
+.admin-days {
+  display: grid;
+  grid-template-columns: repeat(30, minmax(0, 1fr));
+  gap: 3px;
+}
+.admin-day {
+  aspect-ratio: 1;
+  max-height: 18px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--fg-muted) 16%, transparent);
+}
+.admin-day.is-active {
+  background: var(--accent);
+}
+.admin-manage .admin-figure dd {
+  font-size: var(--text-xl);
+}
+
+/* Dates, times and sizes stay on one line; the table scrolls sideways instead. */
+.admin-accounts .data-table td.tabular {
+  white-space: nowrap;
+}

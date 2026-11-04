@@ -10,6 +10,7 @@ import type { Db } from '../db/client';
 import { passwordAccounts, sessions, users, xpTransactions, type UserRow } from '../db/schema';
 import { badRequest, conflict, notFound } from '../errors';
 import { revokeLapsedBadges } from './achievements';
+import { accountExtras } from './admin-stats';
 import { hashPassword } from './passwords';
 import { logSessionBlock } from './planned-blocks';
 import { FREE_SESSION_TITLE } from './sessions';
@@ -38,11 +39,18 @@ export interface AdminAccount {
   timezone: string;
   /** When an admin suspended it, or null. */
   bannedAt: string | null;
+  /** When an admin kept it from posting on Social, or null. */
+  socialBannedAt: string | null;
+  /** Its last request, to the minute; null before 2026-11-03 or if never used since. */
+  lastActiveAt: string | null;
+  posts: number;
+  /** Its post files and older uploads, in R2 and in the database together. */
+  storageBytes: number;
 }
 
 /** Every account, newest first, with a few figures to tell them apart. */
 export async function listAccounts(db: Db): Promise<AdminAccount[]> {
-  const [rows, passwords, counts] = await Promise.all([
+  const [rows, passwords, counts, extras] = await Promise.all([
     db.select().from(users),
     db.select({ userId: passwordAccounts.userId }).from(passwordAccounts),
     db
@@ -54,6 +62,7 @@ export async function listAccounts(db: Db): Promise<AdminAccount[]> {
       .from(sessions)
       .where(sql`${sessions.endedAt} is not null and ${sessions.counted}`)
       .groupBy(sessions.userId),
+    accountExtras(db),
   ]);
   const withPassword = new Set(passwords.map((p) => p.userId));
   const totals = new Map(counts.map((c) => [c.userId, c]));
@@ -73,6 +82,9 @@ export async function listAccounts(db: Db): Promise<AdminAccount[]> {
       focusMinutes: Math.round(Number(totals.get(u.id)?.focus ?? 0) / 60),
       timezone: u.timezone,
       bannedAt: u.bannedAt?.toISOString() ?? null,
+      socialBannedAt: u.socialBannedAt?.toISOString() ?? null,
+      lastActiveAt: u.lastActiveAt?.toISOString() ?? null,
+      ...extras(u.id),
     }))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }

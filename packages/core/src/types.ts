@@ -487,6 +487,11 @@ export interface User {
   username: string | null;
   /** When the person last chose it; null while it is still the one the app picked. */
   usernameChangedAt: ISODateTime | null;
+  /**
+   * Kept from posting and commenting on Social by an admin. Optional because the portal's
+   * offline cache can hold a user from before it existed.
+   */
+  socialBanned?: boolean;
 }
 
 /**

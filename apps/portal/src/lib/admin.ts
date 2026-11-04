@@ -42,9 +42,54 @@ export interface AdminAccount {
   focusMinutes: number;
   timezone: string;
   bannedAt: string | null;
+  /** Kept from posting and commenting on Social. */
+  socialBannedAt: string | null;
+  /** Its last request, to the minute; null if not used since 2026-11-03. */
+  lastActiveAt: string | null;
+  posts: number;
+  /** Post files and older uploads, in R2 and the database together. */
+  storageBytes: number;
   /** On `ADMIN_EMAILS`: can't be suspended, deleted or blocked. */
   admin: boolean;
   you: boolean;
+}
+
+/** `GET /api/admin/stats`: real accounts only. */
+export interface AdminStats {
+  accounts: { total: number; newThisWeek: number; onboarded: number };
+  active: { now: number; day: number; week: number; month: number };
+  daily: { day: string; people: number }[];
+  study: { sessions: number; focusMinutes: number; focusMinutesWeek: number };
+  social: { posts: number; comments: number; kudos: number; postBans: number };
+  storage: {
+    cloud: { bytes: number; maxBytes: number; measured: boolean } | null;
+    databaseBytes: number | null;
+    mediaInDatabaseBytes: number;
+  };
+}
+
+/** `GET /api/admin/accounts/:id/activity`. */
+export interface AccountActivity {
+  lastActiveAt: string | null;
+  lastSessionAt: string | null;
+  days: { day: string; active: boolean }[];
+  weeks: { week: string; focusMinutes: number }[];
+  social: {
+    posts: number;
+    comments: number;
+    kudosGiven: number;
+    kudosReceived: number;
+    friends: number;
+  };
+  storage: { cloudBytes: number; databaseBytes: number };
+}
+
+/** "None", "820 KB", "3.4 GB". */
+export function fmtSize(bytes: number): string {
+  if (bytes <= 0) return 'None';
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(bytes >= 1e8 ? 0 : 1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1e3))} KB`;
 }
 
 export interface AdminSession {
@@ -84,6 +129,8 @@ export const adminKeys = {
   reports: ['admin', 'reports'] as const,
   /** One post by the ID a report names, or its uuid. */
   post: (key: string) => ['admin', 'post', key] as const,
+  stats: ['admin', 'stats'] as const,
+  activity: (id: string) => ['admin', 'activity', id] as const,
 };
 
 /** Whether the signed-in account is an admin (`ADMIN_EMAILS` on the API). */

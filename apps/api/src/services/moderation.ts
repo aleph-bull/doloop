@@ -122,3 +122,26 @@ export async function deleteAccount(
   }
   await deleteUser(db, userId, opts.store ?? null, opts.log);
 }
+
+/** What someone kept from posting on Social is told when they try. */
+export const SOCIAL_BANNED = "You can't post on Social right now.";
+
+/**
+ * Refuse a post, a comment, an upload or an edit from an account an admin has kept from
+ * posting. Likes, friends and everything outside Social still work.
+ */
+export function assertMayPost(user: UserRow): void {
+  if (user.socialBannedAt) throw new HttpError(403, SOCIAL_BANNED);
+}
+
+/** Keep an account from posting and commenting on Social. Its posts so far stay. */
+export async function banFromSocial(db: Db, user: UserRow, now: string): Promise<void> {
+  await db
+    .update(users)
+    .set({ socialBannedAt: new Date(now) })
+    .where(eq(users.id, user.id));
+}
+
+export async function liftSocialBan(db: Db, user: UserRow): Promise<void> {
+  await db.update(users).set({ socialBannedAt: null }).where(eq(users.id, user.id));
+}

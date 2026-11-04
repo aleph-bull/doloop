@@ -1,15 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toLocalDate } from '@komogon/core';
 import { Button, Chip, Input, Modal, Spinner, Toggle, useToast } from '@komogon/ui';
-import { adminKeys, adminSend, type AdminAccount, type AdminSession } from '../../lib/admin';
-import { fmtDate, fmtMinutes } from '../../lib/format';
+import {
+  adminKeys,
+  adminSend,
+  fmtSize,
+  type AccountActivity,
+  type AdminAccount,
+  type AdminSession,
+} from '../../lib/admin';
+import { fmtAgo, fmtDate, fmtMinutes } from '../../lib/format';
+import { Bars, dayLabel, Figure } from './AdminStats';
 
 const PAGE = 15;
 
 /**
- * One account up close: add or take away study time, send it through onboarding again,
- * and suspend or delete it. Admins (yourself included) can't be suspended or deleted.
+ * One account up close: what it has been doing, add or take away study time, send it
+ * through onboarding again, keep it from posting on Social, and suspend or delete it.
+ * Admins (yourself included) can't be banned, suspended or deleted.
  */
 export function AccountManager({
   account,
@@ -44,14 +53,17 @@ function ManageBody({ account, onDeleted }: { account: AdminAccount; onDeleted: 
         {account.you && <Chip tone="neutral">You</Chip>}
         {account.admin && !account.you && <Chip tone="neutral">Admin</Chip>}
         {account.bannedAt && <Chip tone="warn">Suspended</Chip>}
+        {account.socialBannedAt && <Chip tone="warn">Can't post</Chip>}
         <span>
           Joined {fmtDate(account.createdAt, { year: 'numeric' })} ·{' '}
           {fmtMinutes(account.focusMinutes)} focus · {account.sessions}{' '}
           {account.sessions === 1 ? 'session' : 'sessions'} · {account.timezone.replace(/_/g, ' ')}
         </span>
       </p>
+      <Activity account={account} />
       <StudyTime account={account} />
       <Onboarding account={account} />
+      <SocialPosting account={account} />
       <AccountStatus account={account} onDeleted={onDeleted} />
     </div>
   );
@@ -65,9 +77,64 @@ function useRefresh(account: AdminAccount) {
       qc.invalidateQueries({ queryKey: adminKeys.accounts }),
       qc.invalidateQueries({ queryKey: adminKeys.sessions(account.id) }),
       qc.invalidateQueries({ queryKey: adminKeys.blocked }),
+      qc.invalidateQueries({ queryKey: adminKeys.stats }),
+      qc.invalidateQueries({ queryKey: adminKeys.activity(account.id) }),
       // Your own account: the dashboard and analytics read the same sessions.
       ...(account.you ? [qc.invalidateQueries()] : []),
     ]);
+}
+
+/* ---------- activity ---------- */
+
+function Activity({ account }: { account: AdminAccount }) {
+  const activity = useQuery({
+    queryKey: adminKeys.activity(account.id),
+    queryFn: () => adminSend<AccountActivity>('GET', `/api/admin/accounts/${account.id}/activity`),
+  });
+  const a = activity.data;
+  return (
+    <section className="admin-section">
+      <h3 className="font-medium">Activity</h3>
+      {!a ? (
+        activity.isPending && <Spinner />
+      ) : (
+        <>
+          <dl className="admin-figures">
+            <Figure label="Last active" value={a.lastActiveAt ? fmtAgo(a.lastActiveAt) : '–'} />
+            <Figure label="Last session" value={a.lastSessionAt ? fmtAgo(a.lastSessionAt) : '–'} />
+            <Figure label="Days used, last 30" value={a.days.filter((d) => d.active).length} />
+          </dl>
+          <div className="admin-days" role="img" aria-label="Days used, last 30">
+            {a.days.map((d) => (
+              <span
+                key={d.day}
+                className={`admin-day${d.active ? ' is-active' : ''}`}
+                title={dayLabel(d.day)}
+              />
+            ))}
+          </div>
+          <Bars
+            title="Focus each week"
+            points={a.weeks.map((w) => ({ key: w.week, value: w.focusMinutes }))}
+            describe={(i) =>
+              `Week of ${dayLabel(a.weeks[i]!.week)} · ${fmtMinutes(a.weeks[i]!.focusMinutes)}`
+            }
+            first={dayLabel(a.weeks[0]!.week)}
+            last="This week"
+          />
+          <dl className="admin-figures">
+            <Figure label="Posts" value={a.social.posts} />
+            <Figure label="Comments" value={a.social.comments} />
+            <Figure label="Kudos given" value={a.social.kudosGiven} />
+            <Figure label="Kudos got" value={a.social.kudosReceived} />
+            <Figure label="Friends" value={a.social.friends} />
+            <Figure label="Cloud files" value={fmtSize(a.storage.cloudBytes)} />
+            <Figure label="In the database" value={fmtSize(a.storage.databaseBytes)} />
+          </dl>
+        </>
+      )}
+    </section>
+  );
 }
 
 /* ---------- study time ---------- */
@@ -332,6 +399,43 @@ function Onboarding({ account }: { account: AdminAccount }) {
   );
 }
 
+/* ---------- posting on Social ---------- */
+
+function SocialPosting({ account }: { account: AdminAccount }) {
+  const { toast } = useToast();
+  const refresh = useRefresh(account);
+  const [busy, setBusy] = useState(false);
+  if (account.admin) return null;
+  const banned = account.socialBannedAt !== null;
+  const toggle = async () => {
+    setBusy(true);
+    try {
+      await adminSend(banned ? 'DELETE' : 'POST', `/api/admin/accounts/${account.id}/social-ban`);
+      toast(banned ? `${account.email} can post again.` : `${account.email} can't post now.`);
+      await refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not change that');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="admin-section">
+      <h3 className="font-medium">Social</h3>
+      <div className="admin-tool">
+        <p className="field-hint">
+          {banned
+            ? `Can't post or comment since ${fmtDate(account.socialBannedAt)}.`
+            : 'Banning stops their posts and comments. Posts they made stay up.'}
+        </p>
+        <Button size="sm" onClick={() => void toggle()} loading={busy}>
+          {banned ? 'Lift the ban' : 'Ban from posting'}
+        </Button>
+      </div>
+    </section>
+  );
+}
+
 /* ---------- suspending and deleting ---------- */
 
 function AccountStatus({ account, onDeleted }: { account: AdminAccount; onDeleted: () => void }) {
@@ -346,7 +450,9 @@ function AccountStatus({ account, onDeleted }: { account: AdminAccount; onDelete
     return (
       <section className="admin-section">
         <h3 className="font-medium">Account</h3>
-        <p className="field-hint">Admin accounts can't be suspended or deleted from here.</p>
+        <p className="field-hint">
+          Admin accounts can't be banned, suspended or deleted from here.
+        </p>
       </section>
     );
 

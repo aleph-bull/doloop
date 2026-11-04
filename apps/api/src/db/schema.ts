@@ -86,7 +86,30 @@ export const users = pgTable('users', {
   rollCount: integer('roll_count').notNull().default(0),
   /** The running record the RNG Rolls badges read (core `RollStats`). */
   rollStats: jsonb('roll_stats').$type<RollStats>().notNull().default({}),
+  /**
+   * The last request the account made, kept to the minute (services/activity.ts). For the
+   * admin page only.
+   */
+  lastActiveAt: ts('last_active_at'),
+  /** Kept from posting and commenting on Social by an admin; everything else still works. */
+  socialBannedAt: ts('social_banned_at'),
 });
+
+/**
+ * The days each account used the app, as days in its own time zone: one row a day, written
+ * with `users.last_active_at` (services/activity.ts). For the admin page only.
+ */
+export const userActiveDays = pgTable(
+  'user_active_days',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** YYYY-MM-DD in the account's time zone. */
+    day: text('day').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.day] }), index('user_active_days_day_idx').on(t.day)],
+);
 
 /**
  * Addresses an admin has blocked: no sign-up, no sign-in. Kept apart from accounts so a

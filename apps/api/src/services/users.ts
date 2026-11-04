@@ -146,6 +146,7 @@ export function toUser(row: UserRow): User {
     devAccount: row.devAccount,
     username: row.username,
     usernameChangedAt: row.usernameChangedAt?.toISOString() ?? null,
+    socialBanned: row.socialBannedAt !== null,
   };
 }
 
