@@ -41,6 +41,15 @@ export function HomeScreenSteps() {
           2
         </span>
         <div>
+          <p className="hs-step-label">Tap View More</p>
+          <p className="field-hint">Or scroll down.</p>
+        </div>
+      </li>
+      <li>
+        <span className="hs-step-n" aria-hidden>
+          3
+        </span>
+        <div>
           <p className="hs-step-label">
             Tap
             <span className="hs-glyph" aria-hidden>
@@ -48,12 +57,11 @@ export function HomeScreenSteps() {
             </span>
             Add to Home Screen
           </p>
-          <p className="field-hint">Scroll down if you don't see it.</p>
         </div>
       </li>
       <li>
         <span className="hs-step-n" aria-hidden>
-          3
+          4
         </span>
         <div>
           <p className="hs-step-label">Tap Add</p>
