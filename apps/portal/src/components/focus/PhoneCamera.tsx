@@ -37,9 +37,10 @@ export interface PhoneCameraProps {
   /** Which way the video goes, picked before the camera opened; null filming for a computer. */
   orientation: TimelapseOrientation | null;
   /**
-   * Filming for the computer recording this session instead of recording here
-   * (lib/camera-link.ts): how the link stands. The computer takes the stills and copies them
-   * back here; the session ends from here or there, and the top button stops filming.
+   * Filming for the computer recording this session (lib/camera-link.ts): how the link stands.
+   * The computer takes its stills from this camera and this phone keeps its own as well, so it
+   * is recording whatever the link does; the session ends from here or there, and the top
+   * button stops filming.
    */
   link?: CameraLinkStatus | null;
   /** Which camera is filming, so the front one shows as a mirror. */
@@ -145,26 +146,26 @@ export function PhoneCamera({
       ? 'Starting the camera'
       : stopped
         ? 'The camera stopped'
-        : link === 'connecting'
-          ? 'Connecting to your computer'
-          : link === 'lost'
-            ? 'Reconnecting'
-            : recorder.cameraMuted
-              ? 'The camera is paused'
-              : clip
-                ? `Live clip ${clipTime(clip)}`
-                : filming
-                  ? link
-                    ? 'Filming for your computer'
+        : recorder.cameraMuted
+          ? 'The camera is paused'
+          : clip
+            ? `Live clip ${clipTime(clip)}`
+            : filming
+              ? link === 'on'
+                ? 'Filming for your computer'
+                : link === 'lost'
+                  ? 'Recording · Reconnecting'
+                  : link === 'connecting'
+                    ? 'Recording · Connecting'
                     : 'Recording'
-                  : onBreak
-                    ? 'Not filming the break'
-                    : timer.phase === 'paused'
-                      ? 'Paused'
-                      : 'Waiting for focus';
+              : onBreak
+                ? 'Not filming the break'
+                : timer.phase === 'paused'
+                  ? 'Paused'
+                  : 'Waiting for focus';
   // Filming for a computer, the clips are the computer's (L there).
   const clipButton = !link && (!!clip || recorder.canClip || recorder.clipsFull);
-  const live = filming && recorder.live && (!link || link === 'on');
+  const live = filming && recorder.live;
 
   const chrome = `focus-chrome${chromeVisible ? '' : ' is-hidden'}`;
 

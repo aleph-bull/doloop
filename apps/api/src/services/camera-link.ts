@@ -34,6 +34,8 @@ export interface CameraLinkState {
   host: boolean;
   /** Which kind it is, when it said; absent from a host that didn't. */
   hostDevice?: CameraLinkDevice;
+  /** The session has ended. */
+  ended?: boolean;
   messages: CameraLinkMessage[];
 }
 

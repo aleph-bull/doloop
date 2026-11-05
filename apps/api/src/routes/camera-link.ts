@@ -44,9 +44,10 @@ export function cameraLinkRoutes(app: FastifyInstance, db: Db, clock: () => stri
       .limit(1);
     if (!session) throw notFound('Session not found');
     const key = `${req.user.id}:${body.sessionId}`;
+    // Ended: said, so a device that missed it (no link) shows its ending screen straight away.
     if (session.endedAt) {
       links.close(key);
-      return { host: false, messages: [] };
+      return { host: false, ended: true, messages: [] };
     }
     return links.exchange(key, body.role, body);
   });

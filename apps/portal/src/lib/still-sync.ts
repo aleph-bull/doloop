@@ -14,6 +14,12 @@ import type { CoveredSession } from './timelapse-keep';
  * earlier link, or kept through a refresh), and the sender sends the rest, oldest first, then
  * each new one as it comes. When the sender's set loses stills (thinned, or started over), it
  * sends the whole list and the copy keeps only those.
+ *
+ * The side taking them also says whether it wants them at all: a device filming keeps its own
+ * stills, and a copy as well would only crowd the link the picture goes down. And a phone
+ * asks for them smaller: a computer's whole recording, screen and all, is a few hundred MB,
+ * more than a phone's browser can hold beside its camera (owner, 2026-11-04: the phone "shut
+ * down" filming). Smaller, the copy is about the size of the phone's own recordings.
  */
 
 /** What the other device needs beside the stills to make the same video. */
@@ -55,11 +61,15 @@ const LOOK_MS = 400;
 const HAVE_WAIT_MS = 2000;
 /** The copy hands its stills on at most this often while they pour in. */
 const FLUSH_MS = 250;
+/** A phone's copy: the camera and the screen at most this wide, a little lighter. */
+const SMALL_CAMERA_WIDTH = 640;
+const SMALL_SCREEN_WIDTH = 960;
+const SMALL_QUALITY = 0.72;
 
 type StillMeta = Omit<Still, 'blob' | 'screen'>;
 
 type Head =
-  | { t: 'have'; keys: number[] }
+  | { t: 'have'; keys: number[]; want: boolean; small: boolean }
   | { t: 'info'; info: MirrorInfo; keys: number[] }
   | { t: 'still'; key: number; sizes: [number, number]; meta: StillMeta };
 
@@ -83,7 +93,9 @@ function readHead(data: unknown): Head | null {
   if (typeof data !== 'string') return null;
   try {
     const h = JSON.parse(data) as Record<string, unknown>;
-    if (h.t === 'have' && isNumbers(h.keys)) return { t: 'have', keys: unpack(h.keys) };
+    // The first version always took the copy, at full size, and didn't say.
+    if (h.t === 'have' && isNumbers(h.keys))
+      return { t: 'have', keys: unpack(h.keys), want: h.want !== false, small: h.small === true };
     if (h.t === 'info' && isNumbers(h.keys) && h.info && typeof h.info === 'object') {
       const info = h.info as MirrorInfo;
       if (info.device !== 'phone' && info.device !== 'computer') return null;
@@ -130,6 +142,29 @@ function readHead(data: unknown): Head | null {
 
 const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
+/** A still's picture made no wider than `width`; as it was when it already isn't, or can't be. */
+async function shrink(blob: Blob, width: number): Promise<Blob> {
+  try {
+    const img = await createImageBitmap(blob);
+    if (img.width <= width) {
+      img.close();
+      return blob;
+    }
+    const h = Math.max(1, Math.round((img.height * width) / img.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = h;
+    canvas.getContext('2d')?.drawImage(img, 0, 0, width, h);
+    img.close();
+    const out = await new Promise<Blob | null>((r) =>
+      canvas.toBlob(r, 'image/jpeg', SMALL_QUALITY),
+    );
+    return out ?? blob;
+  } catch {
+    return blob;
+  }
+}
+
 /**
  * The device recording: sends its stills down `channel` as `read` gives them, until stopped or
  * the channel closes. `read` answers null while there is nothing to send.
@@ -140,12 +175,20 @@ export function sendStills(channel: RTCDataChannel, read: () => MirrorSource | n
   let stopped = false;
   /** What the other side holds, once it has said. */
   let theirs: Set<number> | null = null;
+  /** It takes the copy at all, and smaller (a phone). */
+  let want = true;
+  let small = false;
   let sentInfo = '';
   const open = () => !stopped && channel.readyState === 'open';
 
   channel.addEventListener('message', (e) => {
     const head = readHead(e.data);
-    if (head?.t === 'have') theirs = new Set(head.keys);
+    if (head?.t !== 'have') return;
+    theirs = new Set(head.keys);
+    want = head.want;
+    small = head.small;
+    // Said again (it dropped its copy, or wants one now): the list goes again too.
+    sentInfo = '';
   });
 
   const drained = () =>
@@ -161,8 +204,10 @@ export function sendStills(channel: RTCDataChannel, read: () => MirrorSource | n
     });
 
   const sendStill = async (s: Still) => {
-    const camera = s.blob ? await s.blob.arrayBuffer() : null;
-    const screen = s.screen ? await s.screen.arrayBuffer() : null;
+    const cam = s.blob && small ? await shrink(s.blob, SMALL_CAMERA_WIDTH) : s.blob;
+    const scr = s.screen && small ? await shrink(s.screen, SMALL_SCREEN_WIDTH) : s.screen;
+    const camera = cam ? await cam.arrayBuffer() : null;
+    const screen = scr ? await scr.arrayBuffer() : null;
     if (!open()) throw new Error('closed');
     const { blob: _blob, screen: _screen, ...meta } = s;
     channel.send(
@@ -194,6 +239,10 @@ export function sendStills(channel: RTCDataChannel, read: () => MirrorSource | n
         theirs = new Set();
       }
       const held: Set<number> = theirs;
+      if (!want) {
+        await sleep(LOOK_MS);
+        continue;
+      }
       const src = read();
       if (!src || src.stills.length === 0) {
         await sleep(LOOK_MS);
@@ -233,16 +282,20 @@ export function sendStills(channel: RTCDataChannel, read: () => MirrorSource | n
 
 /**
  * The other device: takes the stills that come down `channel`, starting from those it already
- * holds (`have`), and hands the whole copy to `onChange` as it grows.
+ * holds (`have`), and hands the whole copy to `onChange` as it grows. `want` false asks for
+ * none (it records its own); `small` asks for them phone-sized. `ask` says either again.
  */
 export function takeStills(
   channel: RTCDataChannel,
   have: Still[],
   onChange: (mirror: StillsMirror) => void,
+  opts: { want: boolean; small: boolean },
 ) {
   channel.binaryType = 'arraybuffer';
-  const held = new Map<number, Still>(have.map((s) => [keyOf(s), s]));
-  let order: number[] = have.map(keyOf);
+  let want = opts.want;
+  const small = opts.small;
+  const held = new Map<number, Still>(want ? have.map((s) => [keyOf(s), s]) : []);
+  let order: number[] = [...held.keys()];
   let listed = new Set(order);
   let info: MirrorInfo | null = null;
   let incoming: {
@@ -273,6 +326,8 @@ export function takeStills(
     const c = incoming;
     if (!c) return;
     incoming = null;
+    // Asked for none meanwhile: one already on its way is let go.
+    if (!want) return;
     const all = new Blob(c.parts);
     const [a, b] = c.sizes;
     held.set(c.key, {
@@ -298,6 +353,7 @@ export function takeStills(
     }
     const head = readHead(e.data);
     if (!head) return;
+    if (!want) return;
     if (head.t === 'info') {
       info = head.info;
       order = head.keys;
@@ -313,12 +369,23 @@ export function takeStills(
 
   const sayHave = () => {
     if (channel.readyState === 'open')
-      channel.send(JSON.stringify({ t: 'have', keys: pack([...held.keys()]) }));
+      channel.send(JSON.stringify({ t: 'have', keys: pack([...held.keys()]), want, small }));
   };
   if (channel.readyState === 'open') sayHave();
   else channel.addEventListener('open', sayHave, { once: true });
 
   return {
+    /** Ask for the copy again, or for none; `now` is what this device holds of it. */
+    ask: (wants: boolean, now: Still[]) => {
+      if (wants === want) return;
+      want = wants;
+      held.clear();
+      if (want) for (const s of now) held.set(keyOf(s), s);
+      order = [...held.keys()];
+      listed = new Set(order);
+      incoming = null;
+      sayHave();
+    },
     stop: () => {
       stopped = true;
       window.clearTimeout(timer);

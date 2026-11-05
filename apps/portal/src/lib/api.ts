@@ -184,6 +184,8 @@ export interface CameraLinkState {
   host: boolean;
   /** Which kind it is; absent from an API or a host from before 2026-11-04. */
   hostDevice?: 'phone' | 'computer';
+  /** The session has ended (from 2026-11-04). */
+  ended?: boolean;
   messages: CameraLinkMessage[];
 }
 
@@ -261,6 +263,43 @@ export interface EndSummary {
   confetti: boolean;
   isFirstSessionOnNode: boolean;
   endedEarly: boolean;
+  /**
+   * Made here, not by the API: a session ended on the other device whose summary the API no
+   * longer had. Its ending screen shows the stills without the session's figures.
+   */
+  bare?: true;
+}
+
+/** The ending screen's summary for a session ended elsewhere, from the session alone. */
+export function bareSummary(session: Session): EndSummary {
+  return {
+    session,
+    bare: true,
+    xp: {
+      base: 0,
+      reviewSubmitted: 0,
+      focus: 0,
+      plannedBlock: 0,
+      onPace: 0,
+      estimateBeat: 0,
+      streakBonus: 0,
+      total: 0,
+      withheld: false,
+    },
+    xpTotal: 0,
+    levelBefore: 0,
+    levelAfter: 0,
+    leveledUp: false,
+    streak: { current: 0, longest: 0, message: null, milestonesReached: [] },
+    statusAfter: 'no-estimate',
+    nodeCompleted: false,
+    routineTicked: false,
+    phrase: null,
+    badges: [],
+    confetti: false,
+    isFirstSessionOnNode: false,
+    endedEarly: false,
+  };
 }
 
 /** A finished session with what it was for, as the history lists it. */
@@ -872,6 +911,11 @@ export const api = {
     id: string,
     body: { review?: ReviewInput | null; markComplete?: boolean; endAt?: string },
   ) => request<{ summary: EndSummary }>('POST', `/api/sessions/${id}/end`, body),
+  /** A session ended on the other device: the summary it ended with, kept a while. */
+  sessionSummary: (id: string) =>
+    request<{ summary: EndSummary }>('GET', `/api/sessions/${id}/summary`),
+  /** One session, ended or not. */
+  session: (id: string) => request<{ session: Session }>('GET', `/api/sessions/${id}`),
   trimSession: (id: string, removeFocusMinutes: number) =>
     request<TrimSummary>('POST', `/api/sessions/${id}/trim`, { removeFocusMinutes }),
   countSession: (id: string, counted: boolean) =>

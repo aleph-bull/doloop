@@ -43,7 +43,7 @@ import {
   useToast,
   Reveal,
 } from '@komogon/ui';
-import type { ActiveSession, EndSummary } from '../lib/api';
+import { api, bareSummary, type ActiveSession, type EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
 import { handTimelapse, useSocialAfterSession } from '../lib/after-session';
 import { sendOpenerTo, useFocusTabBeacon } from '../lib/focus-tab';
@@ -326,7 +326,9 @@ export function Focus() {
   const orientAskOpen = phone && wantsRecording && !!pickSession && orientation === null;
   /**
    * A phone filming for the computer recording this session (lib/camera-link.ts): the
-   * session it films for. The computer takes the stills; this phone only sends its camera.
+   * session it films for. The computer takes its stills from the phone's camera, and the phone
+   * keeps its own as well, so a link that never gets through (or drops) loses nothing (owner,
+   * 2026-11-04: "finished session with no way to see or share or download footage").
    */
   const [filmsFor, setFilmsFor] = useState<string | null>(null);
   const linking = phone && !!pickSession && filmsFor === pickSession;
@@ -349,6 +351,12 @@ export function Focus() {
   const copyCount = useRef(0);
   /** The copy was thrown away here this session: more of it isn't taken. */
   const copyDropped = useRef(false);
+  const [copyOff, setCopyOff] = useState(false);
+  /** The session the other device recorded, as seen here: where its video is. */
+  const [recordedThere, setRecordedThere] = useState<{
+    id: string;
+    device: TimelapseDevice;
+  } | null>(null);
   /** The session whose recording this device hands to the other one (see below). */
   const [hostFor, setHostFor] = useState<string | null>(null);
   /** What the link does, filled in once everything it needs is defined (below). */
@@ -433,7 +441,7 @@ export function Focus() {
   }, []);
   const [inFocus, setInFocus] = useState(false);
   useEffect(() => {
-    if (!recording) return;
+    if (!cameraOn) return;
     // Stills are taken in focus, and in breaks too when the user asked for them.
     const tick = () => {
       const phase = sample().phase;
@@ -444,7 +452,7 @@ export function Focus() {
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, [recording, sample, device]);
+  }, [cameraOn, sample, device]);
   const tlOptions = useMemo(
     () => ({
       lengthMode: preset?.lengthMode ?? 'auto',
@@ -490,7 +498,6 @@ export function Focus() {
     },
     facing,
     remote: phoneCamera,
-    keepStills: !linking,
   });
   // A device not recording looks for one that is: a phone open on a session the computer is
   // recording offers to film for it, and either takes a copy of the other's stills. On the
@@ -498,12 +505,16 @@ export function Focus() {
   const companionFor = hostFor
     ? null
     : (session?.session.id ?? (summary && tlFrom ? summary.session.id : null));
+  // A device with a camera on, or a recording of its own not yet made into a video, keeps
+  // that; it takes no copy as well.
+  const ownPending = !tlFrom && recorder.count > 0 && recorder.count !== tlSavedAt;
   const cameraLink = useCameraSender({
     sessionId: companionFor,
     device,
     film: linking,
     stream: linking ? recorder.stream : null,
     have: () => linkFns.current.have(),
+    wantCopy: !cameraOn && !ownPending && !copyOff,
     onStills: (m) => linkFns.current.takeCopy(m),
     onHostGone: () => linkFns.current.hostGone(),
     onEnded: (s) => linkFns.current.endedThere(s),
@@ -512,6 +523,16 @@ export function Focus() {
   const computerRecords = cameraLink.host && cameraLink.hostDevice !== 'phone';
   /** A phone is recording this session, seen from a computer. */
   const phoneRecords = !phone && cameraLink.host && cameraLink.hostDevice === 'phone';
+  // Remembered past the session's end, so an ending screen with nothing here can say where.
+  useEffect(() => {
+    if (!screenSessionId || !cameraLink.host) return;
+    const there: TimelapseDevice = cameraLink.hostDevice ?? (phone ? 'computer' : 'phone');
+    setRecordedThere((was) =>
+      was?.id === screenSessionId && was.device === there
+        ? was
+        : { id: screenSessionId, device: there },
+    );
+  }, [screenSessionId, cameraLink.host, cameraLink.hostDevice, phone]);
   const linkAskOpen =
     phone &&
     !!pickSession &&
@@ -601,6 +622,14 @@ export function Focus() {
     setScreenAskOpen(false);
   }, [screenSessionId]);
 
+  /** The last session seen running here, so the other device's end is taken only for it. */
+  const lastSession = useRef<string | null>(null);
+  const summaryRef = useRef(summary);
+  useEffect(() => {
+    if (session) lastSession.current = session.session.id;
+    summaryRef.current = summary;
+  });
+
   /**
    * The stills kept from before this page loaded (a refresh, the browser closed, the computer
    * turned off) come back once, before anything is asked. While their session still runs, the
@@ -631,6 +660,20 @@ export function Focus() {
       setSummary(meta.summary);
       return;
     }
+    if (meta.sessionId && !current) {
+      // Its session ended on the other device while this page was away: the stills come back
+      // and get their ending screen once its summary is fetched (below), never thrown away.
+      restoreStills(stills, meta.pace);
+      tlRecordedIn.current = meta.sessionId;
+      lastSession.current = meta.sessionId;
+      setTlCovered(meta.covered);
+      tlOffset.current = meta.offset;
+      if (meta.source) {
+        setTlFrom({ device: meta.source, o: meta.orientation });
+        copyCount.current = stills.length;
+      } else if (meta.orientation) setPicked({ session: meta.sessionId, o: meta.orientation });
+      return;
+    }
     if (!meta.sessionId || meta.sessionId !== current) {
       keep.keeper?.drop(true);
       return;
@@ -646,10 +689,29 @@ export function Focus() {
     if (meta.source) {
       setTlFrom({ device: meta.source, o: meta.orientation });
       copyCount.current = stills.length;
+      // Holding a copy, it wasn't filming: "Film from this phone?" was answered already.
+      if (phone) setLinkAskedFor(current);
     } else if (meta.orientation) setPicked({ session: current, o: meta.orientation });
     if (meta.recording) setRecording(true);
-    toast(meta.recording ? 'Still recording.' : 'Your timelapse is back.');
-  }, [keptBack, keep, settings, activeLoaded, nodes.data, restoreStills, currentSessionId, toast]);
+    // Filming for the computer when the page went (a phone's browser can close a page itself):
+    // it films again, with the stills it had.
+    if (meta.films && phone) {
+      tlAskedFor.current = current;
+      setLinkAskedFor(current);
+      setFilmsFor(current);
+    }
+    toast(meta.recording || meta.films ? 'Still recording.' : 'Your timelapse is back.');
+  }, [
+    keptBack,
+    keep,
+    settings,
+    activeLoaded,
+    nodes.data,
+    restoreStills,
+    currentSessionId,
+    toast,
+    phone,
+  ]);
 
   // A recording that starts with stills already made into a video starts over; with stills
   // not yet made into one, it goes on with them (the same session, or the next).
@@ -659,18 +721,30 @@ export function Focus() {
     recorderRef.current = recorder;
     savedAtRef.current = tlSavedAt;
   });
+  const tlFromRef = useRef(tlFrom);
   useEffect(() => {
-    if (!recording) return;
+    tlFromRef.current = tlFrom;
+  });
+  useEffect(() => {
+    if (!cameraOn) return;
     if (screenSessionId) tlRecordedIn.current = screenSessionId;
-    // A copy of the other device's recording becomes this one's own, and goes on here.
-    setTlFrom(null);
-    setTlMissing(0);
     const r = recorderRef.current;
+    // A copy of the other device's recording makes way: it still has it, and its stills and
+    // these would make one muddled video. This device's own start here.
+    if (tlFromRef.current) {
+      r.clear();
+      copyCount.current = 0;
+      setTlFrom(null);
+      setTlMissing(0);
+      setTlCovered([]);
+      tlOffset.current = { work: 0, breaks: 0 };
+      return;
+    }
     if (r.count > 0 && r.count !== savedAtRef.current) return;
     if (r.count > 0) r.clear();
     setTlCovered([]);
     tlOffset.current = { work: 0, breaks: 0 };
-  }, [recording, screenSessionId]);
+  }, [cameraOn, screenSessionId]);
 
   // The session after one that ended while recording picks the recording up, screen
   // included, while its video isn't made yet: tasks one after another in one timelapse.
@@ -728,7 +802,11 @@ export function Focus() {
    * Either way this device shows the ending screen, with its own stills or its copy. Ended
    * here, the other device is told first, so it shows its ending screen too.
    */
+  /** The session the ending screen was last shown for, so two words of one end show it once. */
+  const endedFor = useRef<string | null>(null);
   const ended = (s: EndSummary, here: boolean) => {
+    if (!here && endedFor.current === s.session.id) return;
+    endedFor.current = s.session.id;
     if (here) {
       host.sayEnded(s);
       cameraLink.sayEnded(s);
@@ -741,22 +819,18 @@ export function Focus() {
     window.setTimeout(() => announceAchievements(s.badges), 600);
   };
 
-  /** The last session seen running here, so the other device's end is taken only for it. */
-  const lastSession = useRef<string | null>(null);
-  const summaryRef = useRef(summary);
-  useEffect(() => {
-    if (session) lastSession.current = session.session.id;
-    summaryRef.current = summary;
-  });
   // A new session takes the other device's copy again, even if the last one was thrown away.
   useEffect(() => {
-    if (screenSessionId) copyDropped.current = false;
+    if (!screenSessionId) return;
+    copyDropped.current = false;
+    setCopyOff(false);
   }, [screenSessionId]);
 
   // The copy thrown away here ("Throw the stills away"): the rest of it isn't taken.
   useEffect(() => {
     if (!tlFrom || recorder.count > 0 || copyCount.current === 0) return;
     copyDropped.current = true;
+    setCopyOff(true);
     copyCount.current = 0;
     setTlFrom(null);
     setTlMissing(0);
@@ -795,8 +869,8 @@ export function Focus() {
       },
       have: () => (tlFrom && !copyDropped.current ? recorderRef.current.stills() : []),
       takeCopy: (m) => {
-        // Stills of its own not yet made into a video come first.
-        if (copyDropped.current || (!tlFrom && tlPending)) return;
+        // Stills of its own not yet made into a video come first, and a camera on makes its own.
+        if (copyDropped.current || cameraOn || (!tlFrom && tlPending)) return;
         copyCount.current = m.stills.length;
         recorderRef.current.restore(m.stills, m.info.pace);
         setTlFrom((was) =>
@@ -811,15 +885,17 @@ export function Focus() {
         const running = sessionRef.current?.session.id;
         if (running) tlRecordedIn.current = running;
       },
+      // Filming goes on: this phone keeps its own stills, and links again when the computer
+      // is back (owner, 2026-11-04: it "stopped filming midway through").
       hostGone: () => {
         setTlMissing(0);
-        if (!linkingRef.current) return;
-        setFilmsFor(null);
-        if (sessionRef.current) toast('Your computer stopped recording.');
+        if (linkingRef.current && sessionRef.current)
+          toast('Your computer stopped recording. Still recording here.');
       },
       endedThere: (s) => {
         if (s.session.id !== lastSession.current) return;
         if (summaryRef.current?.session.id === s.session.id) return;
+        if (endedFor.current === s.session.id) return;
         qc.setQueryData(keys.active, {
           now: s.session.endedAt ?? new Date().toISOString(),
           active: null,
@@ -828,6 +904,45 @@ export function Focus() {
       },
     };
   });
+
+  /**
+   * The session ended on the other device and no word came over the link (they never linked,
+   * or it dropped): with stills of it here, its summary comes from the API instead, and the
+   * ending screen shows them (owner, 2026-11-04: ended on one, the other "didnt save any of the
+   * video"). An API that no longer has it gives the session alone, and the ending screen goes
+   * without the session's figures. Until then the stills stay kept in this browser.
+   */
+  const awaitingEnd = useRef<string | null>(null);
+  const [endTry, setEndTry] = useState(0);
+  useEffect(() => {
+    if (session || summary || !keptBack || !activeLoaded) return;
+    const id = lastSession.current;
+    if (!id || tlRecordedIn.current !== id || recorderRef.current.count === 0) return;
+    if (awaitingEnd.current === id) return;
+    awaitingEnd.current = id;
+    let retry = 0;
+    void (async () => {
+      let s: EndSummary | null = null;
+      try {
+        s = (await api.sessionSummary(id)).summary;
+      } catch {
+        try {
+          const row = (await api.session(id)).session;
+          if (row.endedAt) s = bareSummary(row);
+        } catch {
+          /* offline, or the API is away: tried again shortly */
+        }
+      }
+      if (!s) {
+        awaitingEnd.current = null;
+        retry = window.setTimeout(() => setEndTry((n) => n + 1), 5000);
+        return;
+      }
+      linkFns.current.endedThere(s);
+      awaitingEnd.current = null;
+    })();
+    return () => window.clearTimeout(retry);
+  }, [session, summary, keptBack, activeLoaded, recorder.count, endTry]);
 
   // The first recording in a session: ask about the screen.
   useEffect(() => {
@@ -942,7 +1057,9 @@ export function Focus() {
       const inSession = tlRecordedIn.current;
       const ending = summary && !tlEndingLeft.current ? summary : null;
       const running = !!inSession && sessionRef.current?.session.id === inSession;
-      if (!ending && !running) return null;
+      // Ended on the other device, its summary on the way: kept as if it still ran.
+      const fetching = !!inSession && !summary && lastSession.current === inSession;
+      if (!ending && !running && !fetching) return null;
       return {
         userId,
         sessionId: ending ? null : inSession,
@@ -950,8 +1067,14 @@ export function Focus() {
         covered: tlCovered,
         offset: { ...tlOffset.current },
         recording: wantsRecording,
+        ...(linking ? { films: true } : {}),
         screen: screenOn,
-        orientation: tlFrom ? tlFrom.o : (orientation ?? picked?.o ?? null),
+        // Filming for the computer nobody picked a way round: the stills' own shape decides.
+        orientation: tlFrom
+          ? tlFrom.o
+          : linking
+            ? (picked?.o ?? null)
+            : (orientation ?? picked?.o ?? null),
         pace: recorder.pace(),
         ...(tlFrom ? { source: tlFrom.device } : {}),
       };
@@ -1296,7 +1419,7 @@ export function Focus() {
             cameraScreen
               ? {
                   recorder,
-                  filming: linking ? cameraLink.filming : inFocus,
+                  filming: inFocus,
                   orientation: linking ? null : (orientation ?? 'upright'),
                   link: linking ? cameraLink.status : null,
                   facing,
@@ -1312,17 +1435,21 @@ export function Focus() {
       ) : summary ? (
         <main className="focus-centre is-summary">
           <Glass className="focus-summary" strong>
-            <SessionSummary
-              summary={summary}
-              phrasesEnabled={settings.effects.phrases}
-              onTrimmed={() => setSummary(null)}
-            />
+            {summary.bare ? (
+              <h2 className="card-title">Session ended</h2>
+            ) : (
+              <SessionSummary
+                summary={summary}
+                phrasesEnabled={settings.effects.phrases}
+                onTrimmed={() => setSummary(null)}
+              />
+            )}
             <TimelapseExport
               recorder={recorder}
               settings={settings}
               device={tlFrom?.device ?? device}
               onChange={patch}
-              recording={recording}
+              recording={cameraOn}
               onSaved={() => setTlSavedAt(recorder.count)}
               onVideo={keepTlVideo}
               sessionIds={tlLinked.map((c) => c.id)}
@@ -1336,6 +1463,11 @@ export function Focus() {
               postSession={linkedPost(tlLinked)}
             />
             <CopyingHint from={tlFrom?.device} missing={tlMissing} linked={cameraLink.linked} />
+            {recorder.count === 0 && recordedThere?.id === summary.session.id && (
+              <p className="muted text-sm" style={{ marginTop: 12 }}>
+                Your timelapse is on your {recordedThere.device}.
+              </p>
+            )}
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
                 Start another
@@ -1432,7 +1564,7 @@ export function Focus() {
                   settings={settings}
                   device={tlFrom?.device ?? device}
                   onChange={patch}
-                  recording={recording}
+                  recording={cameraOn}
                   onSaved={() => setTlSavedAt(recorder.count)}
                   sessionIds={[
                     ...tlCovered.map((c) => c.id),

@@ -836,8 +836,8 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
 - **A phone filming for the computer** (2026-10-28, `lib/camera-link.ts`): a phone open on a
   session the computer is recording asks "Film from this phone?", then streams its camera
   straight to the computer over WebRTC; the computer's recorder takes it as its camera
-  (`remote` on `useTimelapseRecorder`; the phone's own runs with `keepStills: false`), and
-  its webcam comes back when the phone goes. The API only passes one offer and one answer
+  (`remote` on `useTimelapseRecorder`), and its webcam comes back when the phone goes. The
+  phone keeps its own stills too (2026-11-05, below). The API only passes one offer and one answer
   (`POST /api/camera-link`, in memory); nothing is uploaded. No TURN relay, so devices on
   networks that keep them apart won't link. A computer with no webcam carries on recording its
   screen. DECISIONS.md, "A phone films for the computer's timelapse". Testing: two headless
@@ -867,6 +867,26 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   summary over the link (`ended`) and both show the ending screen. Old portals: a host that
   doesn't say its kind only links to a filming phone, and a link id without `_` is a phone
   that never says whether its camera is on, so its picture is taken as before.
+- **Nothing rests on the link** (2026-11-05, owner on a real phone: "when i ended it didnt
+  save any of the video", "stopped filming midway through", "finished session with no way to
+  see or share or download footage"). A phone filming for the computer **keeps its own
+  stills** (the recorder takes stills whenever the camera is on; `inFocus` and
+  `tlRecordedIn` follow `cameraOn`), so its ending screen always has its own video; it takes
+  no copy while its camera is on or it holds its own (`wantCopy`, said in the copy's `have`).
+  It **goes on filming when the computer goes** ("Recording · Reconnecting", linking again
+  when it is back), comes back filming after its page reloads (`films` on the kept meta), and
+  offers again with its camera in it when the camera comes on unlinked. A copy to a phone is
+  **phone-sized** (`small` in `have`: camera 640, screen 960 wide, JPEG 0.72), since a
+  computer's whole recording is a few hundred MB. A session **ended on the other device**
+  without a word over the link still gets its ending screen here: `POST
+  /api/sessions/:id/end` keeps the summary in memory for 30 minutes
+  (`services/session-endings.ts`, `GET /api/sessions/:id/summary`), `POST /api/camera-link`
+  says `ended: true` so the other device looks at once, and a summary no longer kept gives a
+  bare ending screen ("Session ended", the stills, no figures; `bareSummary`). Stills of a
+  session that ended while the page was away come back with its ending screen instead of
+  being dropped. An ending screen with nothing here says "Your timelapse is on your
+  computer." The stills channel is only opened to a host that says its kind (an older one
+  would take it for the link's).
 - **One recording across sessions** (2026-10-29, Focus.tsx): a session that ends while
   recording hands it on to the next one started in the same tab while the video isn't saved
   or shared yet (`tlCarry`): the camera and screen come back on by themselves, and each

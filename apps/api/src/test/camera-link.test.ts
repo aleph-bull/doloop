@@ -105,7 +105,16 @@ describe('a phone filming for the computer', () => {
       payload: {},
     });
     expect(stopped.statusCode).toBeLessThan(300);
-    expect((await link({ role: 'host' })).json()).toEqual({ host: false, messages: [] });
-    expect((await link({ role: 'camera' })).json()).toEqual({ host: false, messages: [] });
+    // Both are told it ended, so one that missed it (never linked) shows its ending screen.
+    expect((await link({ role: 'host' })).json()).toEqual({
+      host: false,
+      ended: true,
+      messages: [],
+    });
+    expect((await link({ role: 'camera' })).json()).toEqual({
+      host: false,
+      ended: true,
+      messages: [],
+    });
   });
 });

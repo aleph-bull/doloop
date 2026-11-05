@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Db } from '../db/client';
 import type { CalendarDeps } from '../services/calendar-sync';
+import { SessionEndings } from '../services/session-endings';
 import {
   applySessionEvent,
   endSession,
@@ -15,6 +16,7 @@ import {
   startSession,
   trimSession,
 } from '../services/sessions';
+import { notFound } from '../errors';
 import {
   countSessionSchema,
   endSessionSchema,
@@ -35,6 +37,8 @@ export function sessionRoutes(
   clock: () => string,
   calendar: CalendarDeps | null = null,
 ) {
+  const endings = new SessionEndings(() => Date.parse(clock()));
+
   app.get('/api/sessions/active', async (req) => {
     const now = clock();
     return { now, active: await getActive(db, req.user, now) };
@@ -57,7 +61,20 @@ export function sessionRoutes(
   app.post('/api/sessions/:id/end', async (req) => {
     const { id } = idParams.parse(req.params);
     const body = endSessionSchema.parse(req.body ?? {});
-    return { summary: await endSession(db, req.user, id, body, clock(), calendar) };
+    const summary = await endSession(db, req.user, id, body, clock(), calendar);
+    endings.keep(req.user.id, id, summary);
+    return { summary };
+  });
+
+  /**
+   * How a session that just ended went, for the user's other device open on it, so it shows
+   * the same ending screen (services/session-endings.ts). Not found once it is no longer kept.
+   */
+  app.get('/api/sessions/:id/summary', async (req) => {
+    const { id } = idParams.parse(req.params);
+    const summary = endings.get(req.user.id, id);
+    if (!summary) throw notFound('Summary not kept');
+    return { summary };
   });
 
   /** Delete focused time from the end of a finished session. */

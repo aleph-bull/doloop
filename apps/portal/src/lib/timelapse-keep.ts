@@ -47,6 +47,8 @@ export interface KeptRecording {
   offset: { work: number; breaks: number };
   /** The camera was on. */
   recording: boolean;
+  /** A phone was filming for the computer (lib/camera-link.ts), keeping its own stills too. */
+  films?: boolean;
   /** The screen was being recorded this session. */
   screen: boolean;
   /** A phone's video: which way it goes. */
