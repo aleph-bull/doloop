@@ -38,8 +38,8 @@ export interface PhoneCameraProps {
   orientation: TimelapseOrientation | null;
   /**
    * Filming for the computer recording this session instead of recording here
-   * (lib/camera-link.ts): how the link stands. The computer takes the stills and makes the
-   * video, so the session is ended there; the button on the right stops filming.
+   * (lib/camera-link.ts): how the link stands. The computer takes the stills and copies them
+   * back here; the session ends from here or there, and the top button stops filming.
    */
   link?: CameraLinkStatus | null;
   /** Which camera is filming, so the front one shows as a mirror. */
@@ -207,16 +207,14 @@ export function PhoneCamera({
               <SwitchCamera size={20} aria-hidden />
             </button>
           )}
-          {!link && (
-            <button
-              type="button"
-              className="pcam-round"
-              aria-label="Stop recording"
-              onClick={onStopRecording}
-            >
-              <VideoOff size={20} aria-hidden />
-            </button>
-          )}
+          <button
+            type="button"
+            className="pcam-round"
+            aria-label={link ? 'Stop filming' : 'Stop recording'}
+            onClick={onStopRecording}
+          >
+            <VideoOff size={20} aria-hidden />
+          </button>
         </span>
       </div>
 
@@ -307,26 +305,15 @@ export function PhoneCamera({
           >
             {ctl.canResume ? <Play size={26} aria-hidden /> : <Pause size={26} aria-hidden />}
           </button>
-          {link ? (
-            <button
-              type="button"
-              className="pcam-round"
-              aria-label="Stop filming"
-              onClick={onStopRecording}
-            >
-              <VideoOff size={20} aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="pcam-round is-stop"
-              aria-label="Stop the session"
-              onClick={() => void ctl.stop()}
-              disabled={ctl.busy}
-            >
-              <Square size={16} aria-hidden />
-            </button>
-          )}
+          <button
+            type="button"
+            className="pcam-round is-stop"
+            aria-label="Stop the session"
+            onClick={() => void ctl.stop()}
+            disabled={ctl.busy}
+          >
+            <Square size={16} aria-hidden />
+          </button>
         </div>
       </div>
     </div>

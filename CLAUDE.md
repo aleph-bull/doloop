@@ -839,19 +839,34 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   (`remote` on `useTimelapseRecorder`; the phone's own runs with `keepStills: false`), and
   its webcam comes back when the phone goes. The API only passes one offer and one answer
   (`POST /api/camera-link`, in memory); nothing is uploaded. No TURN relay, so devices on
-  networks that keep them apart won't link. The phone's camera screen in this mode has Stop
-  filming where Stop the session was: the session ends on the computer, which makes the
-  video. A computer with no webcam carries on recording its screen. DECISIONS.md, "A phone
-  films for the computer's timelapse". Testing: two headless Chrome pages with
-  `--use-fake-device-for-media-stream`, one in a phone's shape (touch, 390 px); a real phone
-  needs HTTPS for its camera. **While it films, the phone follows the computer** (2026-11-03):
+  networks that keep them apart won't link. A computer with no webcam carries on recording its
+  screen. DECISIONS.md, "A phone films for the computer's timelapse". Testing: two headless
+  Chrome pages with `--use-fake-device-for-media-stream`, one in a phone's shape (touch,
+  390 px); a real phone needs HTTPS for its camera. **While linked, the phone follows the
+  computer** (2026-11-03):
   the two hand each other the session over the link (newer by the API's `now` wins), the
   phone runs its timer on the computer's clock (`clockOffsetMs`), and `follow` in
-  `useSessionController` keeps sounds, Jack mode's machine, sleep questions and the end on the
-  computer, from the moment the phone sees it recording. Nothing on a phone holds the clock
-  while a computer records the session, and while the computer isn't filming (a break, a pause,
-  the lever) the phone takes its picture off the link (`replaceTrack(null)`) and sends nothing
-  (2026-11-04: a phone joining on a break froze).
+  `useSessionController` keeps sounds, Jack mode's machine, sleep questions and the planned
+  end on the computer, from the moment the phone sees it recording. Nothing on a phone holds
+  the clock while a computer records the session, and while the computer isn't filming (a
+  break, a pause, the lever) the phone takes its picture off the link (`replaceTrack(null)`)
+  and sends nothing (2026-11-04: a phone joining on a break froze).
+- **Both devices hold the recording** (2026-11-04, `lib/still-sync.ts`, owner: "make sure
+  file transfer of the screen recording or the phone recording can go onto either devices"):
+  the device recording is the host and says its kind (`device` on `POST /api/camera-link`,
+  `hostDevice` back); the other kind of device open on the session links to it even without
+  filming (a phone to a computer, a computer to a phone; never two of a kind, so a second tab
+  can't fight a phone for the link) and gets a copy of every still over a data channel of its
+  own as it is taken, thinned with it, picked up after a refresh (it says which it holds).
+  The copy is `tlFrom` in Focus.tsx: its video uses the recording device's preset, it is kept
+  in IndexedDB like one's own (`source` on the kept meta), and the link lasts through the
+  ending screen so the last stills get across ("Still copying from your computer."). A
+  computer doesn't ask to record while a phone records the session. **Stop filming** keeps the
+  link (the phone says `camera` off, the computer gives its webcam back) and the phone's
+  camera screen has Stop the session like any other: whichever device ends it sends the
+  summary over the link (`ended`) and both show the ending screen. Old portals: a host that
+  doesn't say its kind only links to a filming phone, and a link id without `_` is a phone
+  that never says whether its camera is on, so its picture is taken as before.
 - **One recording across sessions** (2026-10-29, Focus.tsx): a session that ends while
   recording hands it on to the next one started in the same tab while the video isn't saved
   or shared yet (`tlCarry`): the camera and screen come back on by themselves, and each

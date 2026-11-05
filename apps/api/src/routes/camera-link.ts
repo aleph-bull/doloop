@@ -24,6 +24,8 @@ const exchangeBody = z.object({
     .max(4)
     .default([]),
   leave: z.boolean().default(false),
+  /** The host's kind of device, so the other end knows whether to film or to take the stills. */
+  device: z.enum(['phone', 'computer']).optional(),
 });
 
 /**

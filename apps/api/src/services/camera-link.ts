@@ -6,6 +6,8 @@
  */
 
 export type CameraLinkRole = 'host' | 'camera';
+/** The kind of device recording: a computer takes a phone's camera; either hands its stills over. */
+export type CameraLinkDevice = 'phone' | 'computer';
 
 /** What one side leaves for the other. */
 export interface CameraLinkMessage {
@@ -23,11 +25,15 @@ export interface CameraLinkExchange {
   after?: number;
   /** The computer stops recording: it is no longer there to film for. */
   leave?: boolean;
+  /** The host's kind of device. Portals from before 2026-11-04 don't say. */
+  device?: CameraLinkDevice;
 }
 
 export interface CameraLinkState {
-  /** A computer is recording this session and can take the phone's camera. */
+  /** A device is recording this session: a computer can take the phone's camera. */
   host: boolean;
+  /** Which kind it is, when it said; absent from a host that didn't. */
+  hostDevice?: CameraLinkDevice;
   messages: CameraLinkMessage[];
 }
 
@@ -40,6 +46,7 @@ const INBOX_MAX = 8;
 
 interface Room {
   hostSeenAt: number | null;
+  hostDevice: CameraLinkDevice | null;
   touchedAt: number;
   inbox: Record<CameraLinkRole, CameraLinkMessage[]>;
 }
@@ -59,11 +66,14 @@ export class CameraLinks {
     this.prune(t);
     let room = this.rooms.get(key);
     if (!room) {
-      room = { hostSeenAt: null, touchedAt: t, inbox: { host: [], camera: [] } };
+      room = { hostSeenAt: null, hostDevice: null, touchedAt: t, inbox: { host: [], camera: [] } };
       this.rooms.set(key, room);
     }
     room.touchedAt = t;
-    if (role === 'host') room.hostSeenAt = ex.leave ? null : t;
+    if (role === 'host') {
+      room.hostSeenAt = ex.leave ? null : t;
+      room.hostDevice = ex.leave ? null : (ex.device ?? null);
+    }
     const other: CameraLinkRole = role === 'host' ? 'camera' : 'host';
     for (const m of ex.send ?? []) {
       const box = room.inbox[other];
@@ -72,8 +82,10 @@ export class CameraLinks {
     }
     const after = ex.after ?? 0;
     room.inbox[role] = room.inbox[role].filter((m) => m.id > after);
+    const host = room.hostSeenAt !== null && t - room.hostSeenAt < CAMERA_HOST_TTL_MS;
     return {
-      host: room.hostSeenAt !== null && t - room.hostSeenAt < CAMERA_HOST_TTL_MS,
+      host,
+      ...(host && room.hostDevice ? { hostDevice: room.hostDevice } : {}),
       messages: [...room.inbox[role]],
     };
   }

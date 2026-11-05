@@ -175,11 +175,15 @@ export interface CameraLinkExchange {
   send?: Array<Omit<CameraLinkMessage, 'id'>>;
   /** The computer stops recording. */
   leave?: boolean;
+  /** The host's kind of device. */
+  device?: 'phone' | 'computer';
 }
 
 export interface CameraLinkState {
-  /** A computer is recording this session. */
+  /** A device is recording this session. */
   host: boolean;
+  /** Which kind it is; absent from an API or a host from before 2026-11-04. */
+  hostDevice?: 'phone' | 'computer';
   messages: CameraLinkMessage[];
 }
 

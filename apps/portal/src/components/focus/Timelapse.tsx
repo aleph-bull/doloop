@@ -57,7 +57,7 @@ import {
   Toggle,
   useToast,
 } from '@komogon/ui';
-import { isUpright, mobileOs } from '../../lib/device';
+import { isPhone, isUpright, mobileOs } from '../../lib/device';
 import { fmtMinutes } from '../../lib/format';
 import { FALLBACK_LIMITS, posterFromImage, sendMedia } from '../../lib/post-media';
 import type { PostSession } from '../../lib/api';
@@ -1157,7 +1157,9 @@ export function TimelapseExport({
   // On a phone or tablet the share sheet takes the video to the apps (on an iPhone, Apple's
   // share sheet), when this browser can share files.
   const os = mobileOs();
-  const mobile = device === 'phone' || os !== null;
+  // `device` is the recording's: a phone can hold a copy of a computer's (lib/still-sync.ts).
+  const onPhone = device === 'phone' || isPhone();
+  const mobile = onPhone || os !== null;
   const shareSheet = useMemo(
     () => mobile && !!video && !!navigator.canShare?.({ files: [videoFile(video)] }),
     [mobile, video],
@@ -1441,7 +1443,7 @@ export function TimelapseExport({
           </div>
           <p className="field-hint">
             {shareSheet
-              ? `They open your ${device === 'phone' ? 'phone’s' : 'tablet’s'} share menu. Pick the app there.`
+              ? `They open your ${onPhone ? 'phone’s' : 'tablet’s'} share menu. Pick the app there.`
               : `${downloaded ? 'The video is in your downloads, and the' : 'The video downloads and the'} ${os ? 'app opens.' : 'site opens in a new tab.'}`}
             {postNote && ` ${postNote}`}
           </p>

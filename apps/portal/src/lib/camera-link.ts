@@ -1,14 +1,26 @@
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { api, type ActiveSession, type CameraLinkMessage } from './api';
+import type { TimelapseDevice } from '@komogon/core';
+import { api, type ActiveSession, type CameraLinkMessage, type EndSummary } from './api';
 import { keys } from './queries';
+import { sendStills, STILLS_CHANNEL, takeStills, type MirrorSource } from './still-sync';
+import type { StillsMirror } from './still-sync';
+import type { Still } from './timelapse';
 
 /**
- * A phone filming for a computer's timelapse. The computer recording a session is the host;
- * a phone open on the same session can stream its camera straight to it (WebRTC), and the
- * computer records that picture exactly as it would its own webcam's, beside the screen. The
- * API only passes the phone's offer and the computer's answer between them
- * (routes/camera-link.ts); the picture never goes through it, and nothing is uploaded.
+ * A phone and a computer on the same session, linked. The device recording a timelapse is the
+ * host; the other kind of device open on the same session links to it (WebRTC), and:
+ *
+ * - the host's stills are copied to it as they are taken (lib/still-sync.ts), so either can
+ *   make and save the video (owner, 2026-11-04);
+ * - a phone linked to a recording computer can film for it: the computer records the phone's
+ *   picture exactly as it would its own webcam's, beside the screen;
+ * - whichever ends the session tells the other, with the summary, so both show the ending
+ *   screen.
+ *
+ * The API only passes the phone's offer and the computer's answer between them
+ * (routes/camera-link.ts); the picture and the stills never go through it, and nothing is
+ * uploaded. Only a phone and a computer link: two tabs, two computers or two phones never do.
  *
  * The handshake is one offer and one answer, each sent once every address is known (no
  * trickling), because the two sides only meet by asking the API every second or so.
@@ -18,21 +30,27 @@ import { keys } from './queries';
  * Once linked, the two keep the session the same (owner, 2026-11-03: "first make sure both
  * ends are on the same state, then get the time"). Whichever end hears of a change first (its
  * own pause, a refresh) hands the session to the other over the link, and the newer one wins
- * (`relayActive`). The phone then reads the computer's clock (`ping`/`pong`) and runs its
- * timer on it, so both show the same second. The phone only follows: the computer owns the
- * session (its sounds, Jack mode's machine, its end), see `follow` in session-controller.
+ * (`relayActive`). A phone linked to a computer then reads the computer's clock
+ * (`ping`/`pong`) and runs its timer on it, so both show the same second. The phone follows:
+ * the computer keeps the session's sounds and Jack mode's machine, see `follow` in
+ * session-controller.
+ *
+ * The link lasts from when the two find each other until either leaves the session's ending
+ * screen, so the last stills still get across after the session is over. The phone's camera
+ * goes down it only while the phone films (and while the computer is taking stills); "Stop
+ * filming" keeps the link.
  */
 
 const ICE_SERVERS: RTCIceServer[] = [
   { urls: ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'] },
 ];
-/** How often a recording computer says it's there and picks up offers. */
+/** How often a recording device says it's there and picks up offers. */
 const HOST_POLL_MS = 2500;
-/** How often a phone looks for a computer recording its session. */
+/** How often the other device looks for one recording its session. */
 const WATCH_MS = 3000;
-/** How often a phone asks while it waits for the computer's answer. */
+/** How often it asks while it waits for the answer. */
 const PAIR_MS = 800;
-/** How often a linked phone checks the computer is still there. */
+/** How often a linked device checks the other is still there. */
 const LINKED_MS = 5000;
 /** After a failed ask (offline, or an API without this): try again later. */
 const ERROR_MS = 15_000;
@@ -40,7 +58,7 @@ const ERROR_MS = 15_000;
 const ANSWER_WAIT_MS = 10_000;
 /** Cut off this long: start over with a new offer. */
 const LOST_WAIT_MS = 6000;
-/** The first look for a computer gives up waiting after this; the phone carries on alone. */
+/** The first look for a host gives up waiting after this; the device carries on alone. */
 const CHECK_WAIT_MS = 2500;
 /** The most the phone's camera may send. Plenty for sharp stills over Wi-Fi. */
 const MAX_BITRATE = 4_000_000;
@@ -57,8 +75,10 @@ type ActiveData = { now: string; active: ActiveSession | null };
 /** What the two say to each other once linked. */
 type Note =
   | { t: 'state'; filming: boolean }
+  | { t: 'camera'; on: boolean }
   | { t: 'bye' }
   | { t: 'active'; data: ActiveData }
+  | { t: 'ended'; summary: EndSummary }
   | { t: 'ping'; a: number }
   | { t: 'pong'; a: number; b: number };
 
@@ -66,10 +86,18 @@ type Outgoing = Omit<CameraLinkMessage, 'id'>;
 
 export const cameraLinkSupported = (): boolean => typeof RTCPeerConnection !== 'undefined';
 
-function newLinkId(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(12));
+function randomId(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
+
+/**
+ * Each try is `<page>_<try>`. Portals from before 2026-11-04 sent one plain id, linked only to
+ * film, and never said whether the camera was on: a host takes their camera as before.
+ */
+const PAGE_ID = cameraLinkSupported() ? randomId() : '';
+const newLinkId = () => `${PAGE_ID}_${randomId()}`;
+const saysCamera = (link: string) => link.includes('_');
 
 function readNote(data: unknown): Note | null {
   if (typeof data !== 'string') return null;
@@ -77,6 +105,7 @@ function readNote(data: unknown): Note | null {
     const note = JSON.parse(data) as Partial<Note> & Record<string, unknown>;
     if (note.t === 'bye') return { t: 'bye' };
     if (note.t === 'state') return { t: 'state', filming: !!note.filming };
+    if (note.t === 'camera') return { t: 'camera', on: !!note.on };
     if (note.t === 'ping' && typeof note.a === 'number') return { t: 'ping', a: note.a };
     if (note.t === 'pong' && typeof note.a === 'number' && typeof note.b === 'number')
       return { t: 'pong', a: note.a, b: note.b };
@@ -84,6 +113,11 @@ function readNote(data: unknown): Note | null {
       const d = note.data as Partial<ActiveData> | undefined;
       if (d && typeof d.now === 'string' && d.active !== undefined)
         return { t: 'active', data: { now: d.now, active: d.active } };
+    }
+    if (note.t === 'ended') {
+      const s = note.summary as Partial<EndSummary> | undefined;
+      if (s && typeof s === 'object' && s.session && typeof s.session.id === 'string')
+        return { t: 'ended', summary: s as EndSummary };
     }
   } catch {
     /* not one of ours */
@@ -149,7 +183,7 @@ function gathered(pc: RTCPeerConnection, ms = 2500): Promise<void> {
 
 /** Keep the picture sharp rather than smooth: stills want detail, not frames. */
 async function tuneSender(sender: RTCRtpSender | null) {
-  if (!sender) return;
+  if (!sender?.track) return;
   try {
     const p = sender.getParameters();
     if (!p.encodings?.length) p.encodings = [{}];
@@ -201,18 +235,55 @@ function asker(run: () => Promise<number>) {
   };
 }
 
-/* ---------- the computer ---------- */
+/** What both ends are given to do beyond the link itself. */
+interface LinkHandlers {
+  /** The other device ended the session: its summary, for the ending screen here. */
+  onEnded: (summary: EndSummary) => void;
+}
+
+/** Tell the other device the session was ended here. */
+export type SayEnded = (summary: EndSummary) => void;
+
+/* ---------- the device recording ---------- */
+
+export interface CameraHostArgs extends LinkHandlers {
+  /** The session whose recording this device holds; null when it holds none to hand over. */
+  sessionId: string | null;
+  /** Stills are being taken right now: focus, not a break or a pause. Passed on to the phone. */
+  filming: boolean;
+  device: TimelapseDevice;
+  /** The stills to copy to the other device, and what goes with them; null while there are none. */
+  mirror: () => MirrorSource | null;
+}
+
+export interface CameraHost {
+  /** A phone's camera, streamed here while it films for this computer. */
+  camera: MediaStream | null;
+  sayEnded: SayEnded;
+}
 
 /**
- * The computer's side: while it records `sessionId`, it says so, answers a phone's offer and
- * hands back the phone's camera once it is connected (null otherwise, and again if the phone
- * goes). `filming` is passed on so the phone can say whether stills are being taken.
+ * The recording device's side: while it holds a recording of `sessionId`, it says so, answers
+ * the other device's offer, copies its stills over and, on a computer, hands back a phone's
+ * camera while the phone films (null otherwise, and again if the phone stops or goes).
  */
-export function useCameraHost(sessionId: string | null, filming: boolean): MediaStream | null {
+export function useCameraHost({
+  sessionId,
+  filming,
+  device,
+  mirror,
+  onEnded,
+}: CameraHostArgs): CameraHost {
   const qc = useQueryClient();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const channel = useRef<RTCDataChannel | null>(null);
   const filmingRef = useRef(filming);
+  const mirrorRef = useRef(mirror);
+  const endedRef = useRef(onEnded);
+  useEffect(() => {
+    mirrorRef.current = mirror;
+    endedRef.current = onEnded;
+  });
   useEffect(() => {
     filmingRef.current = filming;
     say(channel.current, { t: 'state', filming });
@@ -225,11 +296,14 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
     let pc: RTCPeerConnection | null = null;
     let link: string | null = null;
     let relay: ReturnType<typeof relayActive> | null = null;
+    let stills: ReturnType<typeof sendStills> | null = null;
     const outbox: Outgoing[] = [];
 
     const drop = () => {
       relay?.stop();
       relay = null;
+      stills?.stop();
+      stills = null;
       channel.current = null;
       closeSoon(pc);
       pc = null;
@@ -238,19 +312,35 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
     };
 
     const answer = async (id: string, sdp: string) => {
-      // A new offer replaces whatever was there: the phone reloaded, or tried again.
+      // A new offer replaces whatever was there: the other device reloaded, or tried again.
       drop();
       const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       pc = conn;
       link = id;
       let incoming: MediaStream | null = null;
+      // A phone from before said nothing and only linked to film; a phone now says.
+      let cameraOn = !saysCamera(id);
+      const show = () => {
+        if (conn !== pc) return;
+        setStream(conn.connectionState === 'connected' && cameraOn ? incoming : null);
+      };
       conn.ontrack = (e) => {
         incoming = e.streams[0] ?? new MediaStream([e.track]);
-        if (conn === pc && conn.connectionState === 'connected') setStream(incoming);
+        show();
       };
       conn.ondatachannel = (e) => {
         if (conn !== pc) return;
         const c = e.channel;
+        if (c.label === STILLS_CHANNEL) {
+          const start = () => {
+            if (conn !== pc) return;
+            stills?.stop();
+            stills = sendStills(c, () => mirrorRef.current());
+          };
+          if (c.readyState === 'open') start();
+          else c.addEventListener('open', start, { once: true });
+          return;
+        }
         channel.current = c;
         c.onopen = () => {
           if (conn !== pc) return;
@@ -263,6 +353,11 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
           if (conn !== pc || !note) return;
           if (note.t === 'bye') drop();
           else if (note.t === 'active') relay?.take(note.data);
+          else if (note.t === 'ended') endedRef.current(note.summary);
+          else if (note.t === 'camera') {
+            cameraOn = note.on;
+            show();
+          }
           // The phone reads this computer's clock to run its timer on the same second.
           else if (note.t === 'ping') say(c, { t: 'pong', a: note.a, b: Date.now() });
         };
@@ -271,7 +366,7 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
         if (conn !== pc) return;
         // Only a connected phone takes over from the webcam; a short cut-off keeps it (its
         // picture just pauses), and a failed or closed link gives the webcam back.
-        if (conn.connectionState === 'connected' && incoming) setStream(incoming);
+        if (conn.connectionState === 'connected') show();
         else if (conn.connectionState === 'failed' || conn.connectionState === 'closed') drop();
       };
       try {
@@ -290,7 +385,7 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
     const polls = asker(async () => {
       const send = outbox.splice(0);
       try {
-        const res = await api.cameraLink({ sessionId, role: 'host', after, send });
+        const res = await api.cameraLink({ sessionId, role: 'host', after, send, device });
         if (stopped) return HOST_POLL_MS;
         for (const m of res.messages) {
           after = Math.max(after, m.id);
@@ -308,7 +403,7 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
       stopped = true;
       polls.stop();
       const c = channel.current;
-      // The session as it stands now (ended, if that is why), so the phone isn't left behind.
+      // The session as it stands now (ended, if that is why), so the other isn't left behind.
       const last = qc.getQueryData<ActiveData>(keys.active);
       if (last) say(c, { t: 'active', data: last });
       say(c, { t: 'bye' });
@@ -323,81 +418,115 @@ export function useCameraHost(sessionId: string | null, filming: boolean): Media
         })
         .catch(() => undefined);
     };
-  }, [sessionId, qc]);
+  }, [sessionId, device, qc]);
 
-  return stream;
+  return {
+    camera: stream,
+    sayEnded: (summary) => say(channel.current, { t: 'ended', summary }),
+  };
 }
 
-/* ---------- the phone ---------- */
+/* ---------- the other device ---------- */
 
 /** How the phone's link to the computer stands while it films for it. */
 export type CameraLinkStatus = 'connecting' | 'on' | 'lost';
 
 export interface CameraSender {
-  /** The first look for a computer is done (or gave up), so the phone can decide what to ask. */
+  /** The first look for a host is done (or gave up), so this device can decide what to ask. */
   checked: boolean;
-  /** A computer is recording this session. */
+  /** A device is recording this session. */
   host: boolean;
+  /** Which kind it is; null when it didn't say (a portal from before). */
+  hostDevice: TimelapseDevice | null;
+  /** The two are linked now. */
+  linked: boolean;
   status: CameraLinkStatus;
   /** The computer is taking stills right now: focus, not a break or a pause. */
   filming: boolean;
   /**
-   * How far the computer's clock is ahead of this phone's, in ms, read over the link while it
-   * films; 0 until read. The phone runs the session's timer on it.
+   * How far the computer's clock is ahead of this phone's, in ms, read over the link; 0 until
+   * read. The phone runs the session's timer on it.
    */
   clockOffsetMs: number;
+  sayEnded: SayEnded;
 }
 
-export interface CameraSenderArgs {
+export interface CameraSenderArgs extends LinkHandlers {
+  /** The session to look for a recording of; null to stop looking (and leave the link). */
   sessionId: string | null;
-  /** Look for a computer recording the session. */
-  watch: boolean;
-  /** Film for it. */
+  device: TimelapseDevice;
+  /** Film for the computer: this phone's camera goes down the link. */
   film: boolean;
   /** This phone's camera, while it is on. */
   stream: MediaStream | null;
-  /** The computer stopped recording (or went) while this phone filmed for it. */
+  /** The stills already held from this recording, so only the rest come. */
+  have: () => Still[];
+  /** The copy of the recording grew. */
+  onStills: (mirror: StillsMirror) => void;
+  /** The recording device stopped (or went) while linked. */
   onHostGone: () => void;
 }
 
-/** The phone's side: finds a computer recording the session and, when asked, films for it. */
+/**
+ * The other device's side: finds the device recording the session, links to it when it is the
+ * other kind (a phone to a computer, a computer to a phone), takes a copy of its stills and,
+ * on a phone, films for a computer when asked.
+ */
 export function useCameraSender({
   sessionId,
-  watch,
+  device,
   film,
   stream,
+  have,
+  onStills,
   onHostGone,
+  onEnded,
 }: CameraSenderArgs): CameraSender {
   const qc = useQueryClient();
   const [checkedFor, setCheckedFor] = useState<string | null>(null);
-  const [hostFor, setHostFor] = useState<string | null>(null);
+  const [hostFor, setHostFor] = useState<{ id: string; device: TimelapseDevice | null } | null>(
+    null,
+  );
+  const [linked, setLinked] = useState(false);
   const [status, setStatus] = useState<CameraLinkStatus>('connecting');
   const [filming, setFilming] = useState(false);
   const [clockOffsetMs, setClockOffset] = useState(0);
   const streamRef = useRef(stream);
   const senderRef = useRef<RTCRtpSender | null>(null);
-  const goneRef = useRef(onHostGone);
+  const channelRef = useRef<RTCDataChannel | null>(null);
+  const filmRef = useRef(film);
+  const kick = useRef<() => void>(() => undefined);
+  const handlers = useRef({ have, onStills, onHostGone, onEnded });
   useEffect(() => {
-    goneRef.current = onHostGone;
+    handlers.current = { have, onStills, onHostGone, onEnded };
   });
 
-  // The picture goes down the link only while the computer is taking stills. On a break, a
-  // pause or Jack mode's lever the camera stays on for the phone's own screen, but nothing is
-  // encoded or sent (owner, 2026-11-04: a phone joining on a break, filming while the computer
-  // wasn't, froze and the video had none of it); it is back the moment focus is. A new camera
-  // (swapped, or started again after the screen locked) goes down the same link.
+  // The picture goes down the link only while this phone films and the computer is taking
+  // stills. On a break, a pause or Jack mode's lever the camera stays on for the phone's own
+  // screen, but nothing is encoded or sent (owner, 2026-11-04: a phone joining on a break,
+  // filming while the computer wasn't, froze and the video had none of it); it is back the
+  // moment focus is. A new camera (swapped, or started again after the screen locked) goes
+  // down the same link. The computer is told whether the phone films, so it gives its webcam
+  // back the moment it stops.
   const [linkedAt, setLinkedAt] = useState(0);
   useEffect(() => {
     streamRef.current = stream;
+    filmRef.current = film;
+    say(channelRef.current, { t: 'camera', on: film });
+    // Asked to film (or to stop) between turns: look again now rather than at the next one.
+    kick.current();
     const sender = senderRef.current;
     if (!sender) return;
-    const track = filming ? (stream?.getVideoTracks()[0] ?? null) : null;
+    const track = film && filming ? (stream?.getVideoTracks()[0] ?? null) : null;
     if (sender.track === track) return;
     if (track) track.contentHint = 'detail';
-    void sender.replaceTrack(track).catch(() => undefined);
-  }, [stream, filming, linkedAt]);
+    void sender
+      .replaceTrack(track)
+      .then(() => tuneSender(sender))
+      .catch(() => undefined);
+  }, [stream, film, filming, linkedAt]);
 
-  const looking = !!sessionId && (watch || film) && cameraLinkSupported();
+  const looking = !!sessionId && cameraLinkSupported();
   useEffect(() => {
     if (!looking || !sessionId) return;
     let stopped = false;
@@ -408,9 +537,12 @@ export function useCameraSender({
     let connected = false;
     let sentAt = 0;
     let lostAt = 0;
-    /** Asks in a row with no computer there while not connected. */
+    /** Asks in a row with no host there while not connected. */
     let missing = 0;
+    /** The host's kind of device, as it last said while it was there. */
+    let hostKind: TimelapseDevice | null = null;
     let relay: ReturnType<typeof relayActive> | null = null;
+    let stills: ReturnType<typeof takeStills> | null = null;
     let clockTimer = 0;
     /** Readings of the computer's clock: the round trip, and how far ahead it was. */
     const readings: Array<{ trip: number; ahead: number }> = [];
@@ -436,37 +568,52 @@ export function useCameraSender({
       }
       relay?.stop();
       relay = null;
+      stills?.stop();
+      stills = null;
       window.clearInterval(clockTimer);
       closeSoon(pc);
       pc = null;
       channel = null;
+      channelRef.current = null;
       senderRef.current = null;
       link = null;
       connected = false;
       lostAt = 0;
+      setLinked(false);
     };
     const gone = () => {
       close(false);
-      goneRef.current();
+      handlers.current.onHostGone();
     };
 
     const offer = async () => {
       close(false);
-      const s = streamRef.current;
-      const track = s?.getVideoTracks()[0];
-      // The camera is still starting: the next ask tries again.
-      if (!s || !track) return;
       const conn = new RTCPeerConnection({ iceServers: ICE_SERVERS });
       const id = newLinkId();
       pc = conn;
       link = id;
       sentAt = Date.now();
-      track.contentHint = 'detail';
-      senderRef.current = conn.addTrack(track, s);
+      // A phone keeps a place for its camera from the start, so it can film (and stop) later
+      // on the same link; the picture goes in once it films.
+      if (device === 'phone') {
+        const s = streamRef.current;
+        const track = filmRef.current ? (s?.getVideoTracks()[0] ?? null) : null;
+        if (track) {
+          track.contentHint = 'detail';
+          senderRef.current = conn.addTrack(track, s!);
+        } else senderRef.current = conn.addTransceiver('video', { direction: 'sendonly' }).sender;
+      }
       const c = conn.createDataChannel('link');
       channel = c;
+      const copy = conn.createDataChannel(STILLS_CHANNEL);
+      stills = takeStills(copy, handlers.current.have(), (m) => {
+        if (conn === pc) handlers.current.onStills(m);
+      });
       c.onopen = () => {
         if (conn !== pc) return;
+        channelRef.current = c;
+        setLinked(true);
+        say(c, { t: 'camera', on: filmRef.current });
         // The same session on both ends first, then the computer's time.
         relay?.stop();
         relay = relayActive(qc, c);
@@ -479,6 +626,7 @@ export function useCameraSender({
         if (conn !== pc || !note) return;
         if (note.t === 'state') setFilming(note.filming);
         else if (note.t === 'active') relay?.take(note.data);
+        else if (note.t === 'ended') handlers.current.onEnded(note.summary);
         else if (note.t === 'pong') tookReading(note.a, note.b);
         else if (note.t === 'bye') gone();
       };
@@ -525,7 +673,8 @@ export function useCameraSender({
         const res = await api.cameraLink({ sessionId, role: 'camera', after, send });
         if (stopped) return WATCH_MS;
         window.clearTimeout(giveUp);
-        setHostFor(res.host ? sessionId : null);
+        const hostDevice = res.hostDevice ?? null;
+        setHostFor(res.host ? { id: sessionId, device: hostDevice } : null);
         setCheckedFor(sessionId);
         for (const m of res.messages) {
           after = Math.max(after, m.id);
@@ -534,41 +683,56 @@ export function useCameraSender({
           if (m.kind === 'answer' && m.sdp && pc?.signalingState === 'have-local-offer')
             await pc.setRemoteDescription({ type: 'answer', sdp: m.sdp }).catch(() => undefined);
         }
-        if (!film) return WATCH_MS;
-        // Linked, the connection itself says the computer is there; otherwise the API does.
+        // The other kind of device links for the stills; a host that doesn't say its kind
+        // (a portal from before) only takes a phone's camera, so only filming links to it,
+        // and the link goes when the filming stops, as it did then. Once the session is over
+        // the API stops answering for the host, and the link carries on as it was.
+        if (res.host) hostKind = hostDevice;
+        const wants = filmRef.current || (hostKind !== null && hostKind !== device);
+        if (pc && !wants) {
+          close(true);
+          return WATCH_MS;
+        }
+        if (!pc && !wants) return WATCH_MS;
+        // Linked, the connection itself says the host is there; otherwise the API does.
         missing = res.host || connected ? 0 : missing + 1;
         if (missing >= 2) return hostGone();
         const stale =
           !pc ||
           (!connected && lostAt === 0 && Date.now() - sentAt > ANSWER_WAIT_MS) ||
           (lostAt > 0 && Date.now() - lostAt >= LOST_WAIT_MS);
-        if (res.host && stale) void offer();
+        if (res.host && wants && stale) void offer();
         return connected ? LINKED_MS : PAIR_MS;
       } catch {
         setCheckedFor(sessionId);
-        return film ? PAIR_MS * 4 : ERROR_MS;
+        return pc ? PAIR_MS * 4 : ERROR_MS;
       }
     });
+    kick.current = () => polls.ask();
     polls.ask();
-    if (film) void offer();
 
     return () => {
       stopped = true;
+      kick.current = () => undefined;
       window.clearTimeout(giveUp);
       polls.stop();
       const had = !!link;
-      close(film);
+      close(true);
       setClockOffset(0);
       if (had)
         void api.cameraLink({ sessionId, role: 'camera', send: outbox }).catch(() => undefined);
     };
-  }, [looking, sessionId, film, qc]);
+  }, [looking, sessionId, device, qc]);
 
+  const host = hostFor !== null && hostFor.id === sessionId;
   return {
     checked: !looking || checkedFor === sessionId,
-    host: hostFor !== null && hostFor === sessionId,
+    host,
+    hostDevice: host ? hostFor.device : null,
+    linked,
     status,
     filming,
-    clockOffsetMs: film ? clockOffsetMs : 0,
+    clockOffsetMs: linked ? clockOffsetMs : 0,
+    sayEnded: (summary) => say(channelRef.current, { t: 'ended', summary }),
   };
 }

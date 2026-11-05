@@ -1,4 +1,4 @@
-import type { TimelapseOrientation } from '@komogon/core';
+import type { TimelapseDevice, TimelapseOrientation } from '@komogon/core';
 import { useEffect, useState } from 'react';
 import type { EndSummary } from './api';
 import type { RecorderPace, Still } from './timelapse';
@@ -52,6 +52,11 @@ export interface KeptRecording {
   /** A phone's video: which way it goes. */
   orientation: TimelapseOrientation | null;
   pace: RecorderPace;
+  /**
+   * A copy of the other device's recording (lib/still-sync.ts): the kind of device that took
+   * it, whose preset makes the video. Absent for stills taken here.
+   */
+  source?: TimelapseDevice;
 }
 
 export interface Kept {

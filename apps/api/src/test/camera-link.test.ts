@@ -71,6 +71,23 @@ describe('a phone filming for the computer', () => {
     expect(again.messages).toEqual([]);
   });
 
+  it('says which kind of device is recording, when it said', async () => {
+    await link({ role: 'host', device: 'phone' });
+    expect((await link({ role: 'camera' })).json()).toMatchObject({
+      host: true,
+      hostDevice: 'phone',
+    });
+    // A host from before says nothing, and nothing is made up for it.
+    await link({ role: 'host' });
+    const quiet = (await link({ role: 'camera' })).json();
+    expect(quiet.host).toBe(true);
+    expect(quiet.hostDevice).toBeUndefined();
+    await link({ role: 'host', device: 'computer' });
+    await link({ role: 'host', leave: true });
+    expect((await link({ role: 'camera' })).json()).toEqual({ host: false, messages: [] });
+    expect((await link({ role: 'host', device: 'tablet' })).statusCode).toBe(400);
+  });
+
   it('is only for the session’s owner', async () => {
     expect((await link({ role: 'camera' }, t.tokenB)).statusCode).toBe(404);
     expect((await link({ role: 'host', send: [{ link: 'x', kind: 'offer' }] })).statusCode).toBe(

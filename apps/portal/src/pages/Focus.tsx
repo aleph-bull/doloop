@@ -78,8 +78,10 @@ import {
   screenSupported,
   useTimelapseRecorder,
   type CameraFacing,
+  type Still,
   type TimelapseRecorder,
 } from '../lib/timelapse';
+import type { MirrorSource, StillsMirror } from '../lib/still-sync';
 import { FocusWake } from '../components/focus/FocusWake';
 import { PhoneCamera, type CameraView } from '../components/focus/PhoneCamera';
 import {
@@ -110,6 +112,24 @@ function linkedPost(list: CoveredSession[]) {
     elapsedMinutes: Math.round((work + breaks) / 60),
     subject: subjects.length ? subjects.join(', ') : null,
   };
+}
+
+/** Under the timelapse while the other device's stills are still on their way here. */
+function CopyingHint({
+  from,
+  missing,
+  linked,
+}: {
+  from: TimelapseDevice | undefined;
+  missing: number;
+  linked: boolean;
+}) {
+  if (!from || missing <= 0 || !linked) return null;
+  return (
+    <p className="field-hint" role="status">
+      Still copying from your {from === 'phone' ? 'phone' : 'computer'}.
+    </p>
+  );
 }
 
 /** Seconds of stillness before the controls fade away. */
@@ -314,6 +334,31 @@ export function Focus() {
   const [linkAskedFor, setLinkAskedFor] = useState<string | null>(null);
   /** The camera is on: recording here, or filming for the computer. */
   const cameraOn = recording || linking;
+  /**
+   * The stills here are a copy of the other device's recording (lib/still-sync.ts): the kind
+   * of device that took them, whose preset makes the video, and which way a phone's goes.
+   * Null when they were taken here.
+   */
+  const [tlFrom, setTlFrom] = useState<{
+    device: TimelapseDevice;
+    o: TimelapseOrientation | null;
+  } | null>(null);
+  /** Stills of that copy still to come from the other device. */
+  const [tlMissing, setTlMissing] = useState(0);
+  /** How many stills the copy last held, to tell it being thrown away here. */
+  const copyCount = useRef(0);
+  /** The copy was thrown away here this session: more of it isn't taken. */
+  const copyDropped = useRef(false);
+  /** The session whose recording this device hands to the other one (see below). */
+  const [hostFor, setHostFor] = useState<string | null>(null);
+  /** What the link does, filled in once everything it needs is defined (below). */
+  const linkFns = useRef({
+    mirror: (): MirrorSource | null => null,
+    have: (): Still[] => [],
+    takeCopy: (_m: StillsMirror) => {},
+    hostGone: () => {},
+    endedThere: (_s: EndSummary) => {},
+  });
   // A remembered answer is kept for the session once the camera is on, so changing the
   // setting mid-session can't turn the video round.
   useEffect(() => {
@@ -424,8 +469,16 @@ export function Focus() {
   const screenAskedFor = useRef<string | null>(null);
   const screenSessionId = session?.session.id ?? null;
   const tlSources = useMemo(() => ({ camera: true, screen: screenOn }), [screenOn]);
-  // A computer recording takes a phone's camera in place of its own while one films for it.
-  const phoneCamera = useCameraHost(!phone && recording ? screenSessionId : null, inFocus);
+  // The device recording hands its stills to the other kind of device open on the session,
+  // and a computer takes a phone's camera in place of its own while the phone films for it.
+  const host = useCameraHost({
+    sessionId: hostFor,
+    filming: inFocus,
+    device,
+    mirror: () => linkFns.current.mirror(),
+    onEnded: (s) => linkFns.current.endedThere(s),
+  });
+  const phoneCamera = phone ? null : host.camera;
   const recorder = useTimelapseRecorder({
     recording: cameraOn,
     capturing: inFocus,
@@ -439,21 +492,30 @@ export function Focus() {
     remote: phoneCamera,
     keepStills: !linking,
   });
-  // A phone open on a session the computer is recording offers to film for it.
+  // A device not recording looks for one that is: a phone open on a session the computer is
+  // recording offers to film for it, and either takes a copy of the other's stills. On the
+  // ending screen the link stays while the copy is there, so the last stills get across.
+  const companionFor = hostFor
+    ? null
+    : (session?.session.id ?? (summary && tlFrom ? summary.session.id : null));
   const cameraLink = useCameraSender({
-    sessionId: phone ? pickSession : null,
-    watch: !!session && !recording,
+    sessionId: companionFor,
+    device,
     film: linking,
     stream: linking ? recorder.stream : null,
-    onHostGone: () => {
-      setFilmsFor(null);
-      toast('Your computer stopped recording.');
-    },
+    have: () => linkFns.current.have(),
+    onStills: (m) => linkFns.current.takeCopy(m),
+    onHostGone: () => linkFns.current.hostGone(),
+    onEnded: (s) => linkFns.current.endedThere(s),
   });
+  /** A computer is recording this session (or one that didn't say which kind it is). */
+  const computerRecords = cameraLink.host && cameraLink.hostDevice !== 'phone';
+  /** A phone is recording this session, seen from a computer. */
+  const phoneRecords = !phone && cameraLink.host && cameraLink.hostDevice === 'phone';
   const linkAskOpen =
     phone &&
     !!pickSession &&
-    cameraLink.host &&
+    computerRecords &&
     !cameraOn &&
     linkAskedFor !== pickSession &&
     !tlAskOpen;
@@ -561,7 +623,11 @@ export function Focus() {
       tlRecordedIn.current = null;
       setTlCovered(meta.covered);
       tlOffset.current = meta.offset;
-      if (meta.orientation) setPicked({ session: meta.summary.session.id, o: meta.orientation });
+      if (meta.source) {
+        setTlFrom({ device: meta.source, o: meta.orientation });
+        copyCount.current = stills.length;
+      } else if (meta.orientation)
+        setPicked({ session: meta.summary.session.id, o: meta.orientation });
       setSummary(meta.summary);
       return;
     }
@@ -577,7 +643,10 @@ export function Focus() {
     screenAskedFor.current = current;
     // The screen picker needs a click: the recording pill offers Share screen.
     if (meta.screen) setScreenOn(true);
-    if (meta.orientation) setPicked({ session: current, o: meta.orientation });
+    if (meta.source) {
+      setTlFrom({ device: meta.source, o: meta.orientation });
+      copyCount.current = stills.length;
+    } else if (meta.orientation) setPicked({ session: current, o: meta.orientation });
     if (meta.recording) setRecording(true);
     toast(meta.recording ? 'Still recording.' : 'Your timelapse is back.');
   }, [keptBack, keep, settings, activeLoaded, nodes.data, restoreStills, currentSessionId, toast]);
@@ -593,6 +662,9 @@ export function Focus() {
   useEffect(() => {
     if (!recording) return;
     if (screenSessionId) tlRecordedIn.current = screenSessionId;
+    // A copy of the other device's recording becomes this one's own, and goes on here.
+    setTlFrom(null);
+    setTlMissing(0);
     const r = recorderRef.current;
     if (r.count > 0 && r.count !== savedAtRef.current) return;
     if (r.count > 0) r.clear();
@@ -642,12 +714,120 @@ export function Focus() {
             },
           ],
     );
+    // A copy: the device recording sends its own numbers along with the stills.
+    if (tlFrom) return;
     tlOffset.current = {
       work: tlOffset.current.work + s.session.workSeconds,
       breaks: tlOffset.current.breaks + s.session.breakSeconds,
     };
     tlCarry.current = recording ? { from: id, screen: screenOn, o: picked?.o ?? null } : null;
   };
+
+  /**
+   * The session ended: here (`here`), or on the other device, which said so with its summary.
+   * Either way this device shows the ending screen, with its own stills or its copy. Ended
+   * here, the other device is told first, so it shows its ending screen too.
+   */
+  const ended = (s: EndSummary, here: boolean) => {
+    if (here) {
+      host.sayEnded(s);
+      cameraLink.sayEnded(s);
+    }
+    coverEnded(s);
+    setSummary(s);
+    setRecording(false);
+    void qc.invalidateQueries({ queryKey: keys.active });
+    if (s.confetti && settings?.effects.confetti) fireConfetti();
+    window.setTimeout(() => announceAchievements(s.badges), 600);
+  };
+
+  /** The last session seen running here, so the other device's end is taken only for it. */
+  const lastSession = useRef<string | null>(null);
+  const summaryRef = useRef(summary);
+  useEffect(() => {
+    if (session) lastSession.current = session.session.id;
+    summaryRef.current = summary;
+  });
+  // A new session takes the other device's copy again, even if the last one was thrown away.
+  useEffect(() => {
+    if (screenSessionId) copyDropped.current = false;
+  }, [screenSessionId]);
+
+  // The copy thrown away here ("Throw the stills away"): the rest of it isn't taken.
+  useEffect(() => {
+    if (!tlFrom || recorder.count > 0 || copyCount.current === 0) return;
+    copyDropped.current = true;
+    copyCount.current = 0;
+    setTlFrom(null);
+    setTlMissing(0);
+  }, [tlFrom, recorder.count]);
+
+  // Which session's recording this device hands over: from the recording's start until its
+  // ending screen is gone through (while there are stills to give), not for a copy.
+  const hostWanted = tlFrom
+    ? null
+    : recording
+      ? screenSessionId
+      : summary && recorder.count > 0 && tlCovered.some((c) => c.id === summary.session.id)
+        ? summary.session.id
+        : null;
+  useEffect(() => setHostFor(hostWanted), [hostWanted]);
+
+  /** Filming for the computer right now, for the link's callbacks. */
+  const linkingRef = useRef(linking);
+  useEffect(() => {
+    linkingRef.current = linking;
+    linkFns.current = {
+      // The stills taken here, and what the other device needs to make the same video.
+      mirror: () => {
+        const r = recorderRef.current;
+        if (tlFrom || r.count === 0) return null;
+        return {
+          stills: r.stills(),
+          info: {
+            device,
+            orientation: orientation ?? picked?.o ?? null,
+            covered: tlCovered,
+            offset: { ...tlOffset.current },
+            pace: r.pace(),
+          },
+        };
+      },
+      have: () => (tlFrom && !copyDropped.current ? recorderRef.current.stills() : []),
+      takeCopy: (m) => {
+        // Stills of its own not yet made into a video come first.
+        if (copyDropped.current || (!tlFrom && tlPending)) return;
+        copyCount.current = m.stills.length;
+        recorderRef.current.restore(m.stills, m.info.pace);
+        setTlFrom((was) =>
+          was?.device === m.info.device && was.o === m.info.orientation
+            ? was
+            : { device: m.info.device, o: m.info.orientation },
+        );
+        setTlCovered(m.info.covered);
+        tlOffset.current = m.info.offset;
+        setTlMissing(m.missing);
+        // Kept in this browser like its own while the session runs.
+        const running = sessionRef.current?.session.id;
+        if (running) tlRecordedIn.current = running;
+      },
+      hostGone: () => {
+        setTlMissing(0);
+        if (!linkingRef.current) return;
+        setFilmsFor(null);
+        if (sessionRef.current) toast('Your computer stopped recording.');
+      },
+      endedThere: (s) => {
+        if (s.session.id !== lastSession.current) return;
+        if (summaryRef.current?.session.id === s.session.id) return;
+        qc.setQueryData(keys.active, {
+          now: s.session.endedAt ?? new Date().toISOString(),
+          active: null,
+        });
+        ended(s, false);
+      },
+    };
+  });
 
   // The first recording in a session: ask about the screen.
   useEffect(() => {
@@ -716,6 +896,8 @@ export function Focus() {
     if (askOpen || audio.state === 'requesting' || !cameraSupported()) return;
     // Last session's stills are still waiting to be saved; they come first.
     if (tlPending) return;
+    // A phone already recording this session hands its stills here; one recording is enough.
+    if (!cameraLink.checked || phoneRecords) return;
     if (tl.record === 'never') {
       tlAskedFor.current = sessionId;
       return;
@@ -726,7 +908,17 @@ export function Focus() {
       else setTlAskOpen(true);
     }, PROMPT_DELAY_MS * 1.6);
     return () => window.clearTimeout(id);
-  }, [phone, tl, sessionId, keptBack, askOpen, audio.state, tlPending]);
+  }, [
+    phone,
+    tl,
+    sessionId,
+    keptBack,
+    askOpen,
+    audio.state,
+    tlPending,
+    cameraLink.checked,
+    phoneRecords,
+  ]);
 
   // A break starting or ending while it records: the screen wakes for a moment to show it.
   useEffect(() => {
@@ -759,8 +951,9 @@ export function Focus() {
         offset: { ...tlOffset.current },
         recording: wantsRecording,
         screen: screenOn,
-        orientation: orientation ?? picked?.o ?? null,
+        orientation: tlFrom ? tlFrom.o : (orientation ?? picked?.o ?? null),
         pace: recorder.pace(),
+        ...(tlFrom ? { source: tlFrom.device } : {}),
       };
     };
   });
@@ -820,9 +1013,11 @@ export function Focus() {
     recorder.screenStatus === 'starting';
   // A computer recording this session owns its clock: nothing asked on a phone holds it, or
   // opening the phone would pause the computer's recording (and the two would disagree).
-  const computerOwns = phone && (cameraLink.host || linking);
+  const computerOwns = phone && (computerRecords || linking);
+  // Nor does a question on a computer hold a phone's recording.
   const holdTimer =
     !computerOwns &&
+    !phoneRecords &&
     (askOpen ||
       tlAskOpen ||
       orientAskOpen ||
@@ -1096,7 +1291,7 @@ export function Focus() {
           chromeVisible={chromeVisible}
           holdTimer={holdTimer}
           follow={computerOwns}
-          clockOffsetMs={linking ? cameraLink.clockOffsetMs : 0}
+          clockOffsetMs={computerOwns ? cameraLink.clockOffsetMs : 0}
           camera={
             cameraScreen
               ? {
@@ -1112,14 +1307,7 @@ export function Focus() {
                 }
               : null
           }
-          onEnded={(s) => {
-            coverEnded(s);
-            setSummary(s);
-            setRecording(false);
-            void qc.invalidateQueries({ queryKey: keys.active });
-            if (s.confetti && settings.effects.confetti) fireConfetti();
-            window.setTimeout(() => announceAchievements(s.badges), 600);
-          }}
+          onEnded={(s) => ended(s, true)}
         />
       ) : summary ? (
         <main className="focus-centre is-summary">
@@ -1132,7 +1320,7 @@ export function Focus() {
             <TimelapseExport
               recorder={recorder}
               settings={settings}
-              device={device}
+              device={tlFrom?.device ?? device}
               onChange={patch}
               recording={recording}
               onSaved={() => setTlSavedAt(recorder.count)}
@@ -1144,9 +1332,10 @@ export function Focus() {
                 // Every session the recording went through, as the video's clocks run.
                 elapsedSeconds: tlCovered.reduce((n, c) => n + c.workSeconds + c.breakSeconds, 0),
               }}
-              orientation={picked?.o ?? null}
+              orientation={tlFrom ? tlFrom.o : (picked?.o ?? null)}
               postSession={linkedPost(tlLinked)}
             />
+            <CopyingHint from={tlFrom?.device} missing={tlMissing} linked={cameraLink.linked} />
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
                 Start another
@@ -1209,7 +1398,7 @@ export function Focus() {
               onToggle={() => toggleFold('timelapse')}
             >
               {/* Asked once a session; here it can film for the computer again. */}
-              {phone && session && cameraLink.host && !cameraOn && (
+              {phone && session && computerRecords && !cameraOn && (
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -1241,7 +1430,7 @@ export function Focus() {
                 <TimelapseExport
                   recorder={recorder}
                   settings={settings}
-                  device={device}
+                  device={tlFrom?.device ?? device}
                   onChange={patch}
                   recording={recording}
                   onSaved={() => setTlSavedAt(recorder.count)}
@@ -1257,8 +1446,11 @@ export function Focus() {
                         }
                       : null
                   }
-                  orientation={orientation ?? picked?.o ?? null}
+                  orientation={tlFrom ? tlFrom.o : (orientation ?? picked?.o ?? null)}
                 />
+              )}
+              {!summary && (
+                <CopyingHint from={tlFrom?.device} missing={tlMissing} linked={cameraLink.linked} />
               )}
             </SheetFold>
           )}
@@ -1353,9 +1545,9 @@ interface FocusSessionProps {
   /** Pause the clock while true and resume it when it goes false, if this paused it. */
   holdTimer: boolean;
   /**
-   * A phone on a session the computer is recording, filming for it or not yet: the computer
-   * owns the session and this follows it (no sounds, no slot machine, no end of its own; once
-   * filming, its state and its clock come over the link too).
+   * A phone on a session the computer is recording, filming for it or not: the computer owns
+   * the session and this follows it (no sounds, no slot machine, no planned end of its own;
+   * once linked, its state and its clock come over the link too). Stop still ends it here.
    */
   follow: boolean;
   /** How far the computer's clock is ahead of this phone's, while following it. */
