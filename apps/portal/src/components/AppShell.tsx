@@ -57,6 +57,7 @@ import { StartSessionDialog } from './StartSessionDialog';
 const Tour = lazy(() => import('./onboarding/Tour').then((m) => ({ default: m.Tour })));
 import { UsernameNotice, useUsernameNoticeDue } from './UsernameNotice';
 import { VerifyEmailPrompt } from './VerifyEmailPrompt';
+import { HomeScreenAsk } from './HomeScreen';
 import { PushBridge } from './PushBridge';
 
 /**
@@ -1048,6 +1049,7 @@ export function AppShell() {
         )}
         <UsernameNotice />
         <VerifyEmailPrompt hold={touring || usernameAsking} />
+        <HomeScreenAsk hold={touring || usernameAsking} />
         <PushBridge />
         <ErrorBoundary>
           {/* Keyed by route so each page rises in as it arrives. A page whose code is still

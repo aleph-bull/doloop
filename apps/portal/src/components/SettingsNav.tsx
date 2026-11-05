@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Search, X } from 'lucide-react';
 import { Glass, Panel } from '@komogon/ui';
+import { canAddToHomeScreen } from '../lib/home-screen';
 
 /**
  * The settings page is long enough that scrolling it is not navigation. A sidebar shows
@@ -17,9 +18,11 @@ export interface SettingsSectionMeta {
   title: string;
   /** Plain words someone might type looking for a setting in here. */
   keywords: string[];
+  /** Only on some devices: left out of the nav, search and links everywhere else. */
+  shown?: () => boolean;
 }
 
-export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
+const ALL_SECTIONS: SettingsSectionMeta[] = [
   {
     // You and your account, in one place.
     id: 'profile',
@@ -644,6 +647,27 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     ],
   },
   {
+    // An iPhone or iPad in a browser only: elsewhere there is nothing to add.
+    id: 'home-screen',
+    title: 'Home Screen',
+    shown: canAddToHomeScreen,
+    keywords: [
+      'home screen',
+      'add to home screen',
+      'app',
+      'install',
+      'download',
+      'shortcut',
+      'icon',
+      'iphone',
+      'ipad',
+      'ios',
+      'safari',
+      'web app',
+      'full screen',
+    ],
+  },
+  {
     id: 'history',
     title: 'Session history',
     keywords: [
@@ -664,6 +688,9 @@ export const SETTINGS_SECTIONS: SettingsSectionMeta[] = [
     ],
   },
 ];
+
+/** The sections on this device. */
+export const SETTINGS_SECTIONS = ALL_SECTIONS.filter((section) => section.shown?.() ?? true);
 
 export interface SettingsFilter {
   /** Section ids to render. */

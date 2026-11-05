@@ -19,7 +19,8 @@ export type HintKey =
   | 'dashboard'
   | 'grades'
   | 'username'
-  | 'notifications';
+  | 'notifications'
+  | 'home-screen';
 
 const KEY = 'komogon.hints.dismissed';
 

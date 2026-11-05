@@ -3211,6 +3211,55 @@ button.start-subject:hover {
   font-size: var(--text-base);
   font-weight: 600;
 }
+/* Settings › Home Screen and the phone's question: Safari's steps, with its symbols. */
+.hs-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.hs-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.hs-step-n {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.hs-step-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+.hs-steps .field-hint {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.hs-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--accent-text);
+}
+.field-hint .hs-glyph {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
 /* Settings › Security: the email with its Verified chip, and the password form. */
 .security-row {
   display: flex;

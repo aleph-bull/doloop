@@ -60,6 +60,7 @@ import { TimelapsePresets } from '../components/focus/TimelapsePresets';
 import { SessionHistory } from '../components/SessionHistory';
 import { DataPrivacySettings } from '../components/DataPrivacySettings';
 import { NotificationSettings } from '../components/NotificationSettings';
+import { HomeScreenSettings } from '../components/HomeScreen';
 import { useQueryClient } from '@tanstack/react-query';
 import { playSound } from '../lib/sounds';
 import { keys, useAvatar } from '../lib/queries';
@@ -1133,6 +1134,10 @@ export function Settings() {
                   </Button>
                 </div>
               </div>
+            </Section>
+
+            <Section id="home-screen" title="Home Screen">
+              <HomeScreenSettings />
             </Section>
 
             <Section id="history" title="Session history">
