@@ -25,24 +25,11 @@ export interface PlanCardProps {
 /** How many of the day's plan the panel names. */
 const PRESSING = 4;
 
-/** Whether the list is unfolded: open until folded, then kept in this browser as it was left. */
-const OPEN_KEY = 'komogon.pressing-open';
-
-function readOpen(): boolean {
-  try {
-    return localStorage.getItem(OPEN_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
-
-function writeOpen(open: boolean): void {
-  try {
-    localStorage.setItem(OPEN_KEY, String(open));
-  } catch {
-    /* Storage blocked: it just opens next time. */
-  }
-}
+/**
+ * Whether the phone's list is unfolded. Folded each time the site is opened (owner,
+ * 2026-11-05); within a visit it stays as it was left.
+ */
+let openThisVisit = false;
 
 /**
  * The dashboard's start panel: one big Start, the focus screen beside it, and the most
@@ -62,10 +49,10 @@ export function PlanCard({
 }: PlanCardProps) {
   const narrow = useMediaQuery(NARROW_QUERY);
   const pressing = plan.slice(0, PRESSING);
-  const [open, setOpen] = useState(readOpen);
+  const [open, setOpen] = useState(() => openThisVisit);
   const toggle = () => {
+    openThisVisit = !open;
     setOpen(!open);
-    writeOpen(!open);
   };
   return (
     <Glass className="start-panel" as="section" aria-label="Start">

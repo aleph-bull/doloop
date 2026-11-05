@@ -3311,3 +3311,13 @@ The owner: "refine the extension and update it as it has not been updated with t
 - **Ended elsewhere, still an ending screen.** The API keeps each session's end summary for 30 minutes (in memory); the other device fetches it when its session stops, and the camera link says "ended" so it looks at once. Without the summary (the API restarted) the ending screen shows "Session ended" and the stills. Stills of a session that ended while the page was closed come back with its ending screen.
 - **A copy to a phone is smaller** (camera 640, screen 960 wide), about the size of the phone's own recordings; a computer still takes a phone's at full size.
 - Checked in two headless Chrome pages with fake cameras on the sandbox: a link that never gets through (the phone filmed with its own 34 stills, ended the session, and the computer showed its own ending screen with the real summary within seconds; both made the video); the normal link (the phone's own 47 stills through Stop filming and filming again, the computer's 105 with the phone's picture and the screen); the computer closed mid-filming (the phone kept filming to 76 stills); the phone reloaded mid-filming (filming again, linked again); "Not now" (a 63-still copy at about half the size); the computer's tab closed and opened again after the phone ended (its stills came back with the ending screen); and the phone recording itself with the computer taking the copy.
+
+## Most pressing starts folded on every visit, 2026-11-05 (owner request)
+
+The owner: "always auto hide the most pressing upon site entry", on the dashboard.
+
+- **On a phone the "Most pressing" list under Start is folded each time the site is opened.**
+  It used to open until folded and then keep that in the browser (`komogon.pressing-open`);
+  that key is no longer read or written. Unfolded during a visit, it stays unfolded while
+  moving between pages, and folds again on the next visit or a reload.
+- **On a computer nothing changed**: the pill's pop-out already started shut on every visit.
