@@ -191,6 +191,10 @@ export interface UserSettings {
     goalGpa: number | null;
     /** The mark aimed for in each course, as a percentage; null when none is set. */
     targetPercent: number | null;
+    /** The GPA on the transcript so far, before the courses being graded now. */
+    pastGpa: number | null;
+    /** The credits that GPA was earned on. */
+    pastCredits: number | null;
   };
   /** The focus screen's audio-reactive visualizer. Audio capture itself is per visit. */
   visualizer: {

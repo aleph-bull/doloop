@@ -98,7 +98,13 @@ export const DEFAULT_SETTINGS: UserSettings = {
     logSessions: true,
   },
   routines: { missedClearedThrough: null },
-  grading: { scale: UOFT_GRADE_SCALE, goalGpa: null, targetPercent: null },
+  grading: {
+    scale: UOFT_GRADE_SCALE,
+    goalGpa: null,
+    targetPercent: null,
+    pastGpa: null,
+    pastCredits: null,
+  },
   visualizer: {
     enabled: false,
     onMinimalist: false,

@@ -4,6 +4,7 @@ import {
   courseGrade,
   gpa,
   neededOnRemaining,
+  overallGpa,
   UOFT_GRADE_SCALE,
   type CourseGrade,
 } from './grades';
@@ -189,5 +190,38 @@ describe('gpa', () => {
 
   it('has no average with nothing graded', () => {
     expect(gpa({ grades: [g('a', null)] }).points).toBeNull();
+  });
+
+  it('adds up the credits it averages over', () => {
+    const out = gpa({
+      grades: [g('full', 4), g('half', 2), g('none', null)],
+      weightOf: (id) => (id === 'full' ? 1 : 0.5),
+    });
+    expect(out.credits).toBeCloseTo(1.5);
+  });
+});
+
+describe('overallGpa', () => {
+  const current = (points: number | null, credits: number) => ({
+    points,
+    courseCount: points === null ? 0 : 1,
+    credits,
+  });
+
+  it('weights the past GPA and this year by their credits', () => {
+    // 3.5 over 5 credits, then 4.0 over 3: (17.5 + 12) / 8.
+    expect(overallGpa({ current: current(4, 3), pastGpa: 3.5, pastCredits: 5 })).toBeCloseTo(
+      29.5 / 8,
+    );
+  });
+
+  it('is the past GPA while nothing is graded', () => {
+    expect(overallGpa({ current: current(null, 0), pastGpa: 3.2, pastCredits: 4 })).toBe(3.2);
+  });
+
+  it('needs both the past GPA and its credits', () => {
+    expect(overallGpa({ current: current(4, 1), pastGpa: 3.5, pastCredits: null })).toBeNull();
+    expect(overallGpa({ current: current(4, 1), pastGpa: null, pastCredits: 5 })).toBeNull();
+    expect(overallGpa({ current: current(4, 1), pastGpa: 3.5, pastCredits: 0 })).toBeNull();
   });
 });

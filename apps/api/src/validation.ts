@@ -384,6 +384,8 @@ export const settingsSchema = z
         scale: z.array(gradeBand).min(1).max(40),
         goalGpa: z.number().min(0).max(10).nullable(),
         targetPercent: z.number().min(0).max(200).nullable(),
+        pastGpa: z.number().min(0).max(10).nullable(),
+        pastCredits: z.number().min(0).max(1000).nullable(),
       })
       .partial(),
     visualizer: z

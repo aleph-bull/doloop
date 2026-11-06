@@ -1,12 +1,13 @@
 import {
   bandFor,
   neededOnRemaining,
+  overallGpa,
   type CourseGrade,
   type GradeComponent,
   type StudyNode,
 } from '@komogon/core';
 import { Plus, Trash2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { Link } from 'react-router';
 import { Button, Chip, EmptyState, Input, Panel, Segmented, Spinner, useToast } from '@komogon/ui';
 import { ErrorPanel } from '../components/ErrorState';
@@ -378,6 +379,45 @@ function UngradedList({ courses }: { courses: CourseEntry[] }) {
   );
 }
 
+/**
+ * A number in `settings.grading` typed into a pill: the saved value shows until the user
+ * types, then it saves a moment after typing stops, on blur and on Enter.
+ */
+function useGradingNumber(key: 'pastGpa' | 'pastCredits', max: number) {
+  const me = useMe();
+  const updateSettings = useUpdateSettings();
+  const { toast } = useToast();
+  const [draft, setDraft] = useState<string | null>(null);
+  const saved = me.data?.user.settings.grading[key] ?? null;
+  /** The last value sent, so Enter, blur and the typing pause don't each save it. */
+  const sent = useRef<number | null | undefined>(undefined);
+  const save = () => {
+    if (draft === null) return;
+    const n = draft.trim() === '' ? null : Number(draft);
+    if (n !== null && (!Number.isFinite(n) || n < 0 || n > max)) return;
+    if (n === saved || n === sent.current) return;
+    sent.current = n;
+    updateSettings.mutate(
+      { grading: key === 'pastGpa' ? { pastGpa: n } : { pastCredits: n } },
+      { onError: (e) => toast(e instanceof Error ? e.message : 'Could not save that') },
+    );
+  };
+  useEffect(() => {
+    if (draft === null) return;
+    const t = setTimeout(save, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
+  return {
+    value: draft ?? (saved === null ? '' : String(saved)),
+    onChange: (e: ChangeEvent<HTMLInputElement>) => setDraft(e.target.value),
+    onBlur: save,
+    onKeyDown: (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') save();
+    },
+  };
+}
+
 /** Running grade per course, plus the GPA across them, on the user's own scale. */
 export function Grades() {
   const grades = useGrades();
@@ -390,6 +430,8 @@ export function Grades() {
   const goal = goalDraft ?? (savedTarget === null ? '' : String(savedTarget));
   /** The last target sent, so Enter, blur and the typing pause don't each save it. */
   const sentTarget = useRef<number | null | undefined>(undefined);
+  const pastGpaField = useGradingNumber('pastGpa', 10);
+  const pastCreditsField = useGradingNumber('pastCredits', 1000);
   const saveGoal = () => {
     if (goalDraft === null) return;
     const n = goalDraft.trim() === '' ? null : Number(goalDraft);
@@ -442,6 +484,14 @@ export function Grades() {
       : null;
   const points = gpa.points;
   const gpaBand = points === null ? null : scale.find((b) => b.points <= points);
+  const pastCredits = me.data?.user.settings.grading.pastCredits ?? null;
+  const overall = overallGpa({
+    current: gpa,
+    pastGpa: me.data?.user.settings.grading.pastGpa ?? null,
+    pastCredits,
+  });
+  const overallBand = overall === null ? null : scale.find((b) => b.points <= overall);
+  const overallCredits = (pastCredits ?? 0) + (gpa.points === null ? 0 : gpa.credits);
   const tracked = sortCourses(
     courses.filter((c) => c.node.gradeMode !== 'off'),
     sort,
@@ -532,6 +582,48 @@ export function Grades() {
                     {Math.round(gpa.points * 100) / 100}
                   </span>
                   {gpaBand && <span className="grades-pill-letter">{gpaBand.letter}</span>}
+                </div>
+              )}
+              <div className="grades-pill">
+                <label className="muted" htmlFor="grades-past-gpa">
+                  Current GPA
+                </label>
+                <Input
+                  id="grades-past-gpa"
+                  type="number"
+                  min={0}
+                  max={10}
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="None"
+                  {...pastGpaField}
+                />
+                <span className="muted" aria-hidden>
+                  on
+                </span>
+                <Input
+                  aria-label="Credits completed"
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  placeholder="0"
+                  {...pastCreditsField}
+                />
+                <span className="muted" aria-hidden>
+                  credits
+                </span>
+              </div>
+              {overall !== null && (
+                <div
+                  className="grades-pill"
+                  title={`Over ${Math.round(overallCredits * 100) / 100} credits`}
+                >
+                  <span className="muted">Overall</span>
+                  <span className="grades-pill-value tabular">
+                    {Math.round(overall * 100) / 100}
+                  </span>
+                  {overallBand && <span className="grades-pill-letter">{overallBand.letter}</span>}
                 </div>
               )}
             </div>

@@ -149,6 +149,8 @@ export interface Gpa {
   /** Grade-point average over the courses that have a grade, or null when none do. */
   points: number | null;
   courseCount: number;
+  /** What the average is over: the graded courses' credits added up. */
+  credits: number;
 }
 
 /** Straight average of grade points across courses that have one. Ungraded courses, and
@@ -165,5 +167,27 @@ export function gpa(input: GpaInput): Gpa {
     weight += w;
     count++;
   }
-  return { points: weight > 0 ? weighted / weight : null, courseCount: count };
+  return { points: weight > 0 ? weighted / weight : null, courseCount: count, credits: weight };
+}
+
+export interface OverallGpaInput {
+  /** This year's average, from `gpa`. */
+  current: Gpa;
+  /** The GPA on the transcript before these courses, and the credits it was earned on. */
+  pastGpa: number | null;
+  pastCredits: number | null;
+}
+
+/**
+ * The GPA with everything counted: the GPA already earned, on the credits it was earned
+ * on, together with the courses being graded now at their own credits. Null until both the
+ * past GPA and its credits are set; with nothing graded yet it is the past GPA.
+ */
+export function overallGpa(input: OverallGpaInput): number | null {
+  const { current, pastGpa, pastCredits } = input;
+  if (pastGpa === null || pastCredits === null || pastCredits <= 0) return null;
+  if (current.points === null) return pastGpa;
+  return (
+    (pastGpa * pastCredits + current.points * current.credits) / (pastCredits + current.credits)
+  );
 }

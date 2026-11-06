@@ -68,7 +68,8 @@ export const keys = {
   routines: (from?: string, to?: string) => ['routines', from ?? '', to ?? ''] as const,
   routineList: ['routines', 'list'] as const,
   trackers: (weeks?: number) => ['trackers', weeks ?? 'default'] as const,
-  grades: ['grades'] as const,
+  // Versioned: the GPA gained `credits` (2026-11-06), which a cached copy lacks.
+  grades: ['grades', 2] as const,
   recap: (range: string, ago = 0) => ['analytics', 'recap', range, ago] as const,
   dashboardStats: ['analytics', 'dashboard'] as const,
   screens: ['equivalents', 'screens'] as const,

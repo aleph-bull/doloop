@@ -3333,3 +3333,11 @@ The owner: "always auto hide the most pressing upon site entry", on the dashboar
   that key is no longer read or written. Unfolded during a visit, it stays unfolded while
   moving between pages, and folds again on the next visit or a reload.
 - **On a computer nothing changed**: the pill's pop-out already started shut on every visit.
+
+## Overall GPA from the GPA so far, 2026-11-06 (owner request)
+
+The owner: "add an overall gpa calculated based on currect gpa and amount of credits youve completed".
+
+- **Two numbers typed on the Grades page**, in one pill after Average: "Current GPA [ ] on [ ] credits", the GPA on the transcript before this year's courses and the credits it was earned on (`settings.grading.pastGpa`, `pastCredits`, null until set; no migration, settings are jsonb). They save as you type, like Target.
+- **Overall** shows beside it once both are set: the past GPA weighted by its credits, together with this year's graded courses at their own credits (`overallGpa` in core `grades.ts`). With nothing graded yet it is the past GPA. Its letter comes from the scale like Average's, and hovering says how many credits it is over.
+- `gpa()` now returns the credits it averaged over (`credits`), so the grades query key went to `['grades', 2]`; a copy cached before has no credits.
