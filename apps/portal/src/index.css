@@ -3215,7 +3215,7 @@ button.start-subject:hover {
 .hs-steps {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 .hs-steps li {
   display: flex;
@@ -3237,14 +3237,15 @@ button.start-subject:hover {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 10px;
   min-height: 28px;
 }
 .hs-steps .field-hint {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 8px;
+  margin-top: 8px;
 }
 .hs-glyph {
   display: inline-grid;
