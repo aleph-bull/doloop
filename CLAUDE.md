@@ -834,10 +834,10 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   takes `liveMarks(stills)` and slots each clip in where it was filmed. The why and the
   details are in DECISIONS.md, "Live clip".
 - **A phone filming for the computer** (2026-10-28, `lib/camera-link.ts`): a phone open on a
-  session the computer is recording asks "Film from this phone?", then streams its camera
-  straight to the computer over WebRTC; the computer's recorder takes it as its camera
-  (`remote` on `useTimelapseRecorder`), and its webcam comes back when the phone goes. The
-  phone keeps its own stills too (2026-11-05, below). The API only passes one offer and one answer
+  session the computer is recording asks "Film from this phone?", then links to it over
+  WebRTC. Since 2026-11-05 the phone makes the video and the computer records only its screen
+  (below); only a computer from before still takes the phone's picture as its camera
+  (`remote` on `useTimelapseRecorder`). The API only passes one offer and one answer
   (`POST /api/camera-link`, in memory); nothing is uploaded. No TURN relay, so devices on
   networks that keep them apart won't link. A computer with no webcam carries on recording its
   screen. DECISIONS.md, "A phone films for the computer's timelapse". Testing: two headless
@@ -873,8 +873,8 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   stills** (the recorder takes stills whenever the camera is on; `inFocus` and
   `tlRecordedIn` follow `cameraOn`), so its ending screen always has its own video; it takes
   no copy while its camera is on or it holds its own (`wantCopy`, said in the copy's `have`).
-  It **goes on filming when the computer goes** ("Recording · Reconnecting", linking again
-  when it is back), comes back filming after its page reloads (`films` on the kept meta), and
+  It **goes on filming when the computer goes** (linking again when it is back; it says
+  "Filming for your computer" either way since 2026-11-05), comes back filming after its page reloads (`films` on the kept meta), and
   offers again with its camera in it when the camera comes on unlinked. A copy to a phone is
   **phone-sized** (`small` in `have`: camera 640, screen 960 wide, JPEG 0.72), since a
   computer's whole recording is a few hundred MB. A session **ended on the other device**
@@ -887,6 +887,28 @@ The decisions, in order, are in DECISIONS.md under the three "Timelapse" section
   being dropped. An ending screen with nothing here says "Your timelapse is on your
   computer." The stills channel is only opened to a host that says its kind (an older one
   would take it for the link's).
+- **The phone makes the video** (2026-11-05, owner on a real phone: "still does not connect
+  properlly ... the phone should have the finished product and the computer should tell the
+  user to check the phone", "it should finish and send to eachother when the session is
+  over"). Nothing that ends up in the video goes over the direct link any more. The phone says
+  it films through the API (`films` on `POST /api/camera-link`, held until it says
+  otherwise), so the computer knows with no link at all (`phoneFilms` back to the host): it
+  turns its webcam off, records only its screen, and says so (`screen`), which marks the
+  screen as expected. Once the session is over (ended on either device) the computer packs its
+  screen stills small (`lib/handover.ts`: screen 960, its own camera 640, JPEG 0.7, at most
+  700, thinned to fit 64 MB) and sends them through the API in 2 MB parts
+  (`routes/handover.ts`, `services/session-handovers.ts`: in memory, 160 MB for everyone,
+  two hours, gone once the phone has them). Its ending screen says "Your timelapse is on your
+  phone." with no video card, and its stills go once the phone has taken them. The phone's
+  ending screen waits ("Getting your screen from your computer.", with Don't wait) while the
+  API says the screen is coming and the computer was there at the end, then lays each screen
+  still on the camera still nearest it on the API's clock (`mergeScreens`; the computer's
+  own camera stills fill a stretch of a minute or more the phone didn't film) and makes the
+  video with the computer's preset (`merged` on the kept meta). A screen that comes later
+  still goes in until a video is made. The phone's picture goes down the link only to a
+  computer that doesn't say its kind, live clips are the phone's, and after three offers that
+  never connect it tries once a minute. To test a link that never connects, wrap
+  `RTCPeerConnection` in the page with `iceServers: []` and `iceTransportPolicy: 'relay'`.
 - **One recording across sessions** (2026-10-29, Focus.tsx): a session that ends while
   recording hands it on to the next one started in the same tab while the video isn't saved
   or shared yet (`tlCarry`): the camera and screen come back on by themselves, and each

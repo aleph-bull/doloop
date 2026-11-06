@@ -39,6 +39,7 @@ import {
   Button,
   fireConfetti,
   Glass,
+  ProgressBar,
   Spinner,
   useToast,
   Reveal,
@@ -46,6 +47,7 @@ import {
 import { api, bareSummary, type ActiveSession, type EndSummary } from '../lib/api';
 import { useAppearance } from '../lib/appearance';
 import { handTimelapse, useSocialAfterSession } from '../lib/after-session';
+import { handoverNow, mergeScreens, sendScreens, takeScreens } from '../lib/handover';
 import { sendOpenerTo, useFocusTabBeacon } from '../lib/focus-tab';
 import { fmtTime } from '../lib/format';
 import {
@@ -131,6 +133,68 @@ function CopyingHint({
     </p>
   );
 }
+
+/**
+ * A computer whose session a phone filmed: its screen on the way to the phone, which makes the
+ * video (lib/handover.ts).
+ */
+function HandingToPhone({
+  state,
+  progress,
+  onRetry,
+}: {
+  state: 'sending' | 'sent' | 'taken' | 'failed';
+  progress: number;
+  onRetry: () => void;
+}) {
+  if (state === 'sending')
+    return (
+      <div className="flex flex-col gap-2" style={{ marginTop: 12 }} role="status">
+        <span className="muted text-sm">Sending your screen to your phone.</span>
+        <ProgressBar value={progress} label="Sending your screen to your phone" />
+      </div>
+    );
+  if (state === 'failed')
+    return (
+      <div className="flex items-center gap-2 flex-wrap" style={{ marginTop: 12 }}>
+        <span className="muted text-sm">Your screen didn't get to your phone.</span>
+        <Button size="sm" variant="secondary" onClick={onRetry}>
+          Try again
+        </Button>
+      </div>
+    );
+  return (
+    <p className="muted text-sm" style={{ marginTop: 12 }} role="status">
+      Your timelapse is on your phone.
+    </p>
+  );
+}
+
+/**
+ * A phone that filmed for the computer, while the computer's screen is on its way here.
+ * "Don't wait" shows the video now; the screen still goes in if it comes before one is made.
+ */
+function ScreenComing({ progress, onSkip }: { progress: number | null; onSkip: () => void }) {
+  return (
+    <div className="flex flex-col gap-2" style={{ marginTop: 12 }} role="status">
+      <span className="muted text-sm">Getting your screen from your computer.</span>
+      {progress !== null ? (
+        <ProgressBar value={progress} label="Getting your screen from your computer" />
+      ) : (
+        <div>
+          <Button size="sm" variant="ghost" onClick={onSkip}>
+            Don't wait
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** How long a phone holds its video for the computer's screen, once the computer said it's coming. */
+const SCREEN_WAIT_MS = 2 * 60_000;
+/** The computer last said it was recording this long before the session ended: it had gone. */
+const COMPUTER_AWAY_MS = 20_000;
 
 /** Seconds of stillness before the controls fade away. */
 const STILL_SECONDS = 4;
@@ -359,6 +423,16 @@ export function Focus() {
   } | null>(null);
   /** The session whose recording this device hands to the other one (see below). */
   const [hostFor, setHostFor] = useState<string | null>(null);
+  /**
+   * A computer: the session a phone filmed, as the phone told the API. The phone makes the
+   * video (owner, 2026-11-05: "the phone should have the finished product and the computer
+   * should tell the user to check the phone"), and this computer hands it the screen at the end.
+   */
+  const [phoneFilmed, setPhoneFilmed] = useState<string | null>(null);
+  /** A phone: the session it filmed for the computer, whose screen it waits for at the end. */
+  const [forComputer, setForComputer] = useState<string | null>(null);
+  /** A phone: the session whose stills have the computer's screen in them now. */
+  const [mergedFor, setMergedFor] = useState<string | null>(null);
   /** What the link does, filled in once everything it needs is defined (below). */
   const linkFns = useRef({
     mirror: (): MirrorSource | null => null,
@@ -380,8 +454,11 @@ export function Focus() {
   const [tlSavedAt, setTlSavedAt] = useState(0);
   /** The video made after the session, to go along to Social's post box. */
   const tlVideo = useRef<File | null>(null);
+  /** A video has been made: a computer's screen arriving after it isn't put in. */
+  const [videoMade, setVideoMade] = useState(false);
   const keepTlVideo = useCallback((file: File | null) => {
     tlVideo.current = file;
+    setVideoMade(!!file);
   }, []);
   /** Off to Social with the video: the stills behind it are safe to leave. */
   const tlHandedOff = useRef(false);
@@ -476,16 +553,22 @@ export function Focus() {
   const [screenAskOpen, setScreenAskOpen] = useState(false);
   const screenAskedFor = useRef<string | null>(null);
   const screenSessionId = session?.session.id ?? null;
-  const tlSources = useMemo(() => ({ camera: true, screen: screenOn }), [screenOn]);
-  // The device recording hands its stills to the other kind of device open on the session,
-  // and a computer takes a phone's camera in place of its own while the phone films for it.
+  // The device recording hands its stills to the other kind of device open on the session.
+  // A computer whose session a phone films records only its screen: the phone is the camera
+  // and makes the video (lib/handover.ts). A phone from before still sends its picture here.
   const host = useCameraHost({
     sessionId: hostFor,
     filming: inFocus,
     device,
     mirror: () => linkFns.current.mirror(),
+    screen: screenOn,
     onEnded: (s) => linkFns.current.endedThere(s),
   });
+  const phoneFilmsNow = !phone && host.phoneFilms;
+  const tlSources = useMemo(
+    () => ({ camera: !phoneFilmsNow, screen: screenOn }),
+    [phoneFilmsNow, screenOn],
+  );
   const phoneCamera = phone ? null : host.camera;
   const recorder = useTimelapseRecorder({
     recording: cameraOn,
@@ -550,13 +633,22 @@ export function Focus() {
   };
 
   // The computer says when a phone takes over its camera, and when it lets go mid-recording.
-  const fromPhone = recorder.remote;
+  const fromPhone = recorder.remote || phoneFilmsNow;
+  // Remembered past the session's end: the ending screen says the video is on the phone.
+  useEffect(() => {
+    if (phoneFilmsNow && screenSessionId) setPhoneFilmed(screenSessionId);
+  }, [phoneFilmsNow, screenSessionId]);
+  // A phone filming for the computer makes the video, and waits for its screen at the end.
+  useEffect(() => {
+    if (linking && pickSession) setForComputer(pickSession);
+  }, [linking, pickSession]);
   const wasFromPhone = useRef(false);
   useEffect(() => {
     if (fromPhone === wasFromPhone.current) return;
     wasFromPhone.current = fromPhone;
-    if (fromPhone) toast('Filming from your phone.');
-    else if (recording) toast('Your phone stopped filming.');
+    // Only while recording: the ending screen coming in counts neither.
+    if (!recording) return;
+    toast(fromPhone ? 'Filming from your phone.' : 'Your phone stopped filming.');
   }, [fromPhone, recording, toast]);
 
   // Phones list every camera only once one is allowed, so look again when it comes on.
@@ -647,6 +739,12 @@ export function Focus() {
     if (!found) return;
     const { meta, stills } = found;
     const current = currentSessionId;
+    // Who filmed, and whether the computer's screen is in: the same after a reload.
+    const pair = (id: string) => {
+      if (meta.forComputer) setForComputer(id);
+      if (meta.merged) setMergedFor(id);
+      if (meta.phoneFilmed) setPhoneFilmed(id);
+    };
     if (!meta.sessionId && meta.summary && !current) {
       restoreStills(stills, meta.pace);
       tlRecordedIn.current = null;
@@ -657,6 +755,7 @@ export function Focus() {
         copyCount.current = stills.length;
       } else if (meta.orientation)
         setPicked({ session: meta.summary.session.id, o: meta.orientation });
+      pair(meta.summary.session.id);
       setSummary(meta.summary);
       return;
     }
@@ -672,6 +771,7 @@ export function Focus() {
         setTlFrom({ device: meta.source, o: meta.orientation });
         copyCount.current = stills.length;
       } else if (meta.orientation) setPicked({ session: meta.sessionId, o: meta.orientation });
+      pair(meta.sessionId);
       return;
     }
     if (!meta.sessionId || meta.sessionId !== current) {
@@ -693,6 +793,7 @@ export function Focus() {
       if (phone) setLinkAskedFor(current);
     } else if (meta.orientation) setPicked({ session: current, o: meta.orientation });
     if (meta.recording) setRecording(true);
+    pair(current);
     // Filming for the computer when the page went (a phone's browser can close a page itself):
     // it films again, with the stills it had.
     if (meta.films && phone) {
@@ -917,7 +1018,11 @@ export function Focus() {
   useEffect(() => {
     if (session || summary || !keptBack || !activeLoaded) return;
     const id = lastSession.current;
-    if (!id || tlRecordedIn.current !== id || recorderRef.current.count === 0) return;
+    // A computer whose session a phone filmed shows its ending screen with no stills too: it
+    // says where the video is.
+    const filmedThere = !phone && phoneFilmed === id;
+    if (!id || (!filmedThere && (tlRecordedIn.current !== id || recorderRef.current.count === 0)))
+      return;
     if (awaitingEnd.current === id) return;
     awaitingEnd.current = id;
     let retry = 0;
@@ -942,7 +1047,140 @@ export function Focus() {
       awaitingEnd.current = null;
     })();
     return () => window.clearTimeout(retry);
-  }, [session, summary, keptBack, activeLoaded, recorder.count, endTry]);
+  }, [session, summary, keptBack, activeLoaded, recorder.count, endTry, phone, phoneFilmed]);
+
+  /**
+   * A computer whose session a phone filmed: once it is over, its screen stills go to the phone
+   * through the API (lib/handover.ts), and the ending screen says the video is on the phone.
+   * Kept here until the phone has them, so a reload sends them again.
+   */
+  const [handing, setHanding] = useState<{
+    id: string;
+    state: 'sending' | 'sent' | 'taken' | 'failed';
+    progress: number;
+  } | null>(null);
+  const [sendTry, setSendTry] = useState(0);
+  const sendingRef = useRef<Promise<unknown> | null>(null);
+  const sentFor = useRef<string | null>(null);
+  const endedId = summary?.session.id ?? null;
+  const sendsToPhone = !phone && !!endedId && phoneFilmed === endedId;
+  useEffect(() => {
+    if (!sendsToPhone || !endedId) return;
+    const key = `${endedId}:${sendTry}`;
+    if (sentFor.current === key) return;
+    sentFor.current = key;
+    const id = endedId;
+    const at = (state: 'sending' | 'sent' | 'taken' | 'failed', progress: number) =>
+      setHanding({ id, state, progress });
+    at('sending', 0);
+    const run: Promise<unknown> = sendScreens(id, recorderRef.current.stills(), (f) =>
+      at('sending', f),
+    )
+      .then((r) => at(r === 'sent' ? 'sent' : 'taken', 1))
+      .catch(() => at('failed', 0))
+      .finally(() => {
+        if (sendingRef.current === run) sendingRef.current = null;
+      });
+    sendingRef.current = run;
+  }, [sendsToPhone, endedId, sendTry]);
+  // Sent: the phone takes it soon. Once it has, the stills here aren't needed.
+  const handingId = handing?.state === 'sent' ? handing.id : null;
+  useEffect(() => {
+    if (!handingId) return;
+    const timer = window.setInterval(() => {
+      void api
+        .handover(handingId)
+        .then((r) => {
+          if (r.handover?.state === 'taken')
+            setHanding((h) => (h?.id === handingId ? { ...h, state: 'taken' } : h));
+        })
+        .catch(() => undefined);
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [handingId]);
+  const handedOver = handing?.state === 'taken' ? handing.id : null;
+  useEffect(() => {
+    if (handedOver && recorderRef.current.count > 0) recorderRef.current.clear();
+  }, [handedOver]);
+
+  /**
+   * A phone that filmed for the computer: on the ending screen the computer's screen comes
+   * through the API and goes onto these stills (lib/handover.ts), and the video is made with the
+   * computer's preset, screen and all. Waited for while the computer says it is coming; taken
+   * later too, until a video is made.
+   */
+  const [screenWait, setScreenWait] = useState<{
+    id: string;
+    phase: 'waiting' | 'getting' | 'late' | 'none';
+    progress: number | null;
+  } | null>(null);
+  const waitsFor =
+    phone && endedId && forComputer === endedId && mergedFor !== endedId && !videoMade
+      ? endedId
+      : null;
+  useEffect(() => {
+    if (!waitsFor) return;
+    const id = waitsFor;
+    let stopped = false;
+    let timer = 0;
+    const since = Date.now();
+    const show = (
+      phase: 'waiting' | 'getting' | 'late' | 'none',
+      progress: number | null = null,
+    ) => {
+      if (!stopped) setScreenWait({ id, phase, progress });
+    };
+    const look = async () => {
+      let next: number;
+      try {
+        const { info } = await handoverNow(id);
+        if (stopped) return;
+        const state = info.handover?.state ?? null;
+        if (state === 'ready') {
+          show('getting', 0);
+          const got = await takeScreens(id, (f) => show('getting', f));
+          if (stopped) return;
+          if (got) {
+            const r = recorderRef.current;
+            r.restore(mergeScreens(r.stills(), got.offsetMs, got.pack), r.pace());
+            setMergedFor(id);
+            setScreenWait(null);
+            // Kept in this browser first (the keeper writes every second); then the API lets go.
+            await new Promise((done) => window.setTimeout(done, 2500));
+            await api.handoverTaken(id).catch(() => undefined);
+            return;
+          }
+        }
+        if (state === 'nothing' || state === 'taken') return show('none');
+        const coming = state === 'expected' || state === 'sending' || state === 'ready';
+        // The computer went before the session ended (closed, asleep): nothing to hold for. Its
+        // screen still goes in if it comes back and sends it before a video is made.
+        const endedAt = Date.parse(summaryRef.current?.session.endedAt ?? '');
+        const seen = info.handover?.seen;
+        const away =
+          state === 'expected' &&
+          seen !== undefined &&
+          Number.isFinite(endedAt) &&
+          seen < endedAt - COMPUTER_AWAY_MS;
+        const late = away || Date.now() - since > SCREEN_WAIT_MS;
+        show(coming ? (late ? 'late' : 'waiting') : 'none');
+        next = coming && !late ? 3000 : 15_000;
+      } catch {
+        next = 6000;
+      }
+      if (!stopped) timer = window.setTimeout(() => void look(), next);
+    };
+    void look();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
+  }, [waitsFor]);
+  /** "Don't wait" was pressed for this session's screen. */
+  const [skippedFor, setSkippedFor] = useState<string | null>(null);
+  const shownPhase = waitsFor ? (screenWait?.id === waitsFor ? screenWait.phase : 'waiting') : null;
+  const screenPhase = shownPhase === 'waiting' && skippedFor === waitsFor ? 'late' : shownPhase;
+  const screenProgress = screenWait?.id === waitsFor ? screenWait.progress : null;
 
   // The first recording in a session: ask about the screen.
   useEffect(() => {
@@ -1060,6 +1298,7 @@ export function Focus() {
       // Ended on the other device, its summary on the way: kept as if it still ran.
       const fetching = !!inSession && !summary && lastSession.current === inSession;
       if (!ending && !running && !fetching) return null;
+      const keptFor = ending ? ending.session.id : inSession;
       return {
         userId,
         sessionId: ending ? null : inSession,
@@ -1068,6 +1307,9 @@ export function Focus() {
         offset: { ...tlOffset.current },
         recording: wantsRecording,
         ...(linking ? { films: true } : {}),
+        ...(keptFor && forComputer === keptFor ? { forComputer: true } : {}),
+        ...(keptFor && mergedFor === keptFor ? { merged: true } : {}),
+        ...(keptFor && phoneFilmed === keptFor ? { phoneFilmed: true } : {}),
         screen: screenOn,
         // Filming for the computer nobody picked a way round: the stills' own shape decides.
         orientation: tlFrom
@@ -1131,7 +1373,9 @@ export function Focus() {
    * refused), so the allow prompt and the screen picker count as the question too.
    */
   const recordingSetUp =
-    (cameraOn && (recorder.status === 'off' || recorder.status === 'starting')) ||
+    (cameraOn &&
+      tlSources.camera &&
+      (recorder.status === 'off' || recorder.status === 'starting')) ||
     screenAskOpen ||
     recorder.screenStatus === 'starting';
   // A computer recording this session owns its clock: nothing asked on a phone holds it, or
@@ -1216,7 +1460,7 @@ export function Focus() {
     tlLinked.map((c) => c.id),
   );
   const summarySessionId = summary?.session.id ?? null;
-  const leave = useCallback(() => {
+  const leaveNow = useCallback(() => {
     // Leaving the ending screen is going through it: the copy of its stills goes. They are
     // only in this tab now, so leaving asks first as it always did, unless the video went along.
     if (summarySessionId) {
@@ -1243,6 +1487,19 @@ export function Focus() {
       window.setTimeout(() => navigate('/'), 150);
     });
   }, [navigate, toSocial, summarySessionId, keeper]);
+  // Still sending the screen to the phone: that finishes first, then the ending screen goes.
+  const leavingRef = useRef(false);
+  const leave = useCallback(() => {
+    const sending = sendingRef.current;
+    if (!sending) return leaveNow();
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    toast('Sending your screen to your phone.');
+    void sending.finally(() => {
+      leavingRef.current = false;
+      leaveNow();
+    });
+  }, [leaveNow, toast]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -1444,29 +1701,56 @@ export function Focus() {
                 onTrimmed={() => setSummary(null)}
               />
             )}
-            <TimelapseExport
-              recorder={recorder}
-              settings={settings}
-              device={tlFrom?.device ?? device}
-              onChange={patch}
-              recording={cameraOn}
-              onSaved={() => setTlSavedAt(recorder.count)}
-              onVideo={keepTlVideo}
-              sessionIds={tlLinked.map((c) => c.id)}
-              sessionSpan={{
-                startedAt: tlLinked[0]?.startedAt ?? summary.session.startedAt,
-                endedAt: tlLinked[tlLinked.length - 1]?.endedAt ?? summary.session.endedAt,
-                // Every session the recording went through, as the video's clocks run.
-                elapsedSeconds: tlCovered.reduce((n, c) => n + c.workSeconds + c.breakSeconds, 0),
-              }}
-              orientation={tlFrom ? tlFrom.o : (picked?.o ?? null)}
-              postSession={linkedPost(tlLinked)}
-            />
-            <CopyingHint from={tlFrom?.device} missing={tlMissing} linked={cameraLink.linked} />
-            {recorder.count === 0 && recordedThere?.id === summary.session.id && (
-              <p className="muted text-sm" style={{ marginTop: 12 }}>
-                Your timelapse is on your {recordedThere.device}.
-              </p>
+            {sendsToPhone ? (
+              <HandingToPhone
+                state={handing?.id === summary.session.id ? handing.state : 'sending'}
+                progress={handing?.id === summary.session.id ? handing.progress : 0}
+                onRetry={() => setSendTry((n) => n + 1)}
+              />
+            ) : screenPhase === 'waiting' || screenPhase === 'getting' ? (
+              <ScreenComing
+                progress={screenPhase === 'getting' ? (screenProgress ?? 0) : null}
+                onSkip={() => setSkippedFor(summary.session.id)}
+              />
+            ) : (
+              <>
+                <TimelapseExport
+                  // The computer's screen came in: a fresh card, made with the computer's preset.
+                  key={mergedFor === summary.session.id ? 'with-screen' : 'own'}
+                  recorder={recorder}
+                  settings={settings}
+                  device={
+                    tlFrom?.device ?? (mergedFor === summary.session.id ? 'computer' : device)
+                  }
+                  onChange={patch}
+                  recording={cameraOn}
+                  onSaved={() => setTlSavedAt(recorder.count)}
+                  onVideo={keepTlVideo}
+                  sessionIds={tlLinked.map((c) => c.id)}
+                  sessionSpan={{
+                    startedAt: tlLinked[0]?.startedAt ?? summary.session.startedAt,
+                    endedAt: tlLinked[tlLinked.length - 1]?.endedAt ?? summary.session.endedAt,
+                    // Every session the recording went through, as the video's clocks run.
+                    elapsedSeconds: tlCovered.reduce(
+                      (n, c) => n + c.workSeconds + c.breakSeconds,
+                      0,
+                    ),
+                  }}
+                  orientation={tlFrom ? tlFrom.o : (picked?.o ?? null)}
+                  postSession={linkedPost(tlLinked)}
+                />
+                {screenPhase === 'late' && (
+                  <p className="field-hint" role="status">
+                    Your screen hasn't come from your computer yet.
+                  </p>
+                )}
+                <CopyingHint from={tlFrom?.device} missing={tlMissing} linked={cameraLink.linked} />
+                {recorder.count === 0 && recordedThere?.id === summary.session.id && (
+                  <p className="muted text-sm" style={{ marginTop: 12 }}>
+                    Your timelapse is on your {recordedThere.device}.
+                  </p>
+                )}
+              </>
             )}
             <div className="focus-actions" style={{ marginTop: 20 }}>
               <Button variant="primary" onClick={() => setStartOpen(true)}>
@@ -1558,7 +1842,10 @@ export function Focus() {
                     : undefined
                 }
               />
-              {!summary && (
+              {!summary && phoneFilmsNow && (
+                <p className="muted text-sm">Your timelapse will be on your phone.</p>
+              )}
+              {!summary && !phoneFilmsNow && (
                 <TimelapseExport
                   recorder={recorder}
                   settings={settings}

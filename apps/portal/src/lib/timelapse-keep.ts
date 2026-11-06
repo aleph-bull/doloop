@@ -49,6 +49,15 @@ export interface KeptRecording {
   recording: boolean;
   /** A phone was filming for the computer (lib/camera-link.ts), keeping its own stills too. */
   films?: boolean;
+  /**
+   * A phone filmed this recording for the computer: it makes the video, with the computer's
+   * screen once it comes (lib/handover.ts).
+   */
+  forComputer?: boolean;
+  /** The computer's screen is in these stills: the computer's preset makes the video. */
+  merged?: boolean;
+  /** A computer: a phone filmed this session, so the phone makes the video and gets the screen. */
+  phoneFilmed?: boolean;
   /** The screen was being recorded this session. */
   screen: boolean;
   /** A phone's video: which way it goes. */

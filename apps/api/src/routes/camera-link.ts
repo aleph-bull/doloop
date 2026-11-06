@@ -5,6 +5,7 @@ import type { Db } from '../db/client';
 import { sessions } from '../db/schema';
 import { notFound } from '../errors';
 import { CameraLinks } from '../services/camera-link';
+import type { SessionHandovers } from '../services/session-handovers';
 
 /** An offer or answer with every address in it is a few kB; this leaves plenty of room. */
 const SDP_MAX = 24_000;
@@ -26,13 +27,22 @@ const exchangeBody = z.object({
   leave: z.boolean().default(false),
   /** The host's kind of device, so the other end knows whether to film or to take the stills. */
   device: z.enum(['phone', 'computer']).optional(),
+  /** A phone: it films for the computer (or has stopped). */
+  films: z.boolean().optional(),
+  /** The host: it is recording its screen, which a filming phone will want at the end. */
+  screen: z.boolean().optional(),
 });
 
 /**
  * A phone filming for the computer recording the same session (services/camera-link.ts).
  * Only the session's owner can pair for it, and only while it runs.
  */
-export function cameraLinkRoutes(app: FastifyInstance, db: Db, clock: () => string) {
+export function cameraLinkRoutes(
+  app: FastifyInstance,
+  db: Db,
+  clock: () => string,
+  handovers: SessionHandovers,
+) {
   const links = new CameraLinks(() => Date.parse(clock()));
 
   app.post('/api/camera-link', async (req) => {
@@ -49,6 +59,10 @@ export function cameraLinkRoutes(app: FastifyInstance, db: Db, clock: () => stri
       links.close(key);
       return { host: false, ended: true, messages: [] };
     }
-    return links.exchange(key, body.role, body);
+    const state = links.exchange(key, body.role, body);
+    // A phone films while the computer records its screen: the phone will make the video, and
+    // waits for the screen once the session is over (services/session-handovers.ts).
+    if (body.role === 'host' && body.screen && state.phoneFilms) handovers.expect(key);
+    return state;
   });
 }

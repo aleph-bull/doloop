@@ -39,6 +39,8 @@ import { groupRoutes } from './routes/groups';
 import { notificationRoutes } from './routes/notifications';
 import { pushRoutes } from './routes/push';
 import { cameraLinkRoutes } from './routes/camera-link';
+import { handoverRoutes } from './routes/handover';
+import { SessionHandovers } from './services/session-handovers';
 import { createPush } from './services/push';
 import { universityRoutes } from './routes/university';
 import { schoolRoutes } from './routes/schools';
@@ -227,7 +229,10 @@ export async function buildServer(opts: BuildOptions) {
   tagRoutes(app, opts.db, clock);
   // Sessions need the calendar deps: a finished session is written to the calendar.
   sessionRoutes(app, opts.db, clock, calendar.deps);
-  cameraLinkRoutes(app, opts.db, clock);
+  // A phone filming for the computer gets the computer's screen through the API at the end.
+  const handovers = new SessionHandovers(() => Date.parse(clock()));
+  cameraLinkRoutes(app, opts.db, clock, handovers);
+  handoverRoutes(app, opts.db, clock, handovers);
   plannedBlockRoutes(app, opts.db, clock, calendar.deps);
   calendarRoutes(app, opts.db, clock, calendar);
   shopRoutes(app, opts.db, clock);

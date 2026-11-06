@@ -27,6 +27,11 @@ export interface CameraLinkExchange {
   leave?: boolean;
   /** The host's kind of device. Portals from before 2026-11-04 don't say. */
   device?: CameraLinkDevice;
+  /**
+   * The phone films for the computer, or has stopped (2026-11-05). Held until it says
+   * otherwise, so a phone whose page goes quiet is still the camera.
+   */
+  films?: boolean;
 }
 
 export interface CameraLinkState {
@@ -36,6 +41,8 @@ export interface CameraLinkState {
   hostDevice?: CameraLinkDevice;
   /** The session has ended. */
   ended?: boolean;
+  /** To the host: a phone films this session, so the phone makes the video (2026-11-05). */
+  phoneFilms?: boolean;
   messages: CameraLinkMessage[];
 }
 
@@ -49,6 +56,7 @@ const INBOX_MAX = 8;
 interface Room {
   hostSeenAt: number | null;
   hostDevice: CameraLinkDevice | null;
+  phoneFilms: boolean;
   touchedAt: number;
   inbox: Record<CameraLinkRole, CameraLinkMessage[]>;
 }
@@ -68,14 +76,20 @@ export class CameraLinks {
     this.prune(t);
     let room = this.rooms.get(key);
     if (!room) {
-      room = { hostSeenAt: null, hostDevice: null, touchedAt: t, inbox: { host: [], camera: [] } };
+      room = {
+        hostSeenAt: null,
+        hostDevice: null,
+        phoneFilms: false,
+        touchedAt: t,
+        inbox: { host: [], camera: [] },
+      };
       this.rooms.set(key, room);
     }
     room.touchedAt = t;
     if (role === 'host') {
       room.hostSeenAt = ex.leave ? null : t;
       room.hostDevice = ex.leave ? null : (ex.device ?? null);
-    }
+    } else if (ex.films !== undefined) room.phoneFilms = ex.films;
     const other: CameraLinkRole = role === 'host' ? 'camera' : 'host';
     for (const m of ex.send ?? []) {
       const box = room.inbox[other];
@@ -88,6 +102,7 @@ export class CameraLinks {
     return {
       host,
       ...(host && room.hostDevice ? { hostDevice: room.hostDevice } : {}),
+      ...(role === 'host' && room.phoneFilms ? { phoneFilms: true } : {}),
       messages: [...room.inbox[role]],
     };
   }

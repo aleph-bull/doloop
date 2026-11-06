@@ -177,6 +177,10 @@ export interface CameraLinkExchange {
   leave?: boolean;
   /** The host's kind of device. */
   device?: 'phone' | 'computer';
+  /** A phone: it films for the computer, or has stopped (from 2026-11-05). */
+  films?: boolean;
+  /** The host: it is recording its screen (from 2026-11-05). */
+  screen?: boolean;
 }
 
 export interface CameraLinkState {
@@ -186,7 +190,33 @@ export interface CameraLinkState {
   hostDevice?: 'phone' | 'computer';
   /** The session has ended (from 2026-11-04). */
   ended?: boolean;
+  /** To the host: a phone films this session, so the phone makes the video (from 2026-11-05). */
+  phoneFilms?: boolean;
   messages: CameraLinkMessage[];
+}
+
+/**
+ * The computer's screen stills on their way to the phone that filmed the session
+ * (lib/handover.ts): expected while both record, then sending, ready, and taken by the phone;
+ * nothing when the computer has no screen to give.
+ */
+export type HandoverState = 'expected' | 'sending' | 'ready' | 'nothing' | 'taken';
+
+export interface Handover {
+  state: HandoverState;
+  parts?: number;
+  bytes?: number;
+  /** While expected: when the computer last said it was recording its screen (the API's ms). */
+  seen?: number;
+}
+
+export interface HandoverInfo {
+  handover: Handover | null;
+  /** The most one may be, and the size of each part. */
+  maxBytes: number;
+  partBytes: number;
+  /** The API's time, so both devices put their stills on one clock. */
+  now: string;
 }
 
 /** A calendar added by its link. The link itself never comes back from the API. */
@@ -1229,6 +1259,24 @@ export const api = {
     request<void>('DELETE', '/api/push/subscription', { endpoint }),
   cameraLink: (body: CameraLinkExchange) =>
     request<CameraLinkState>('POST', '/api/camera-link', body),
+  handover: (sessionId: string) =>
+    request<HandoverInfo>('GET', `/api/sessions/${sessionId}/handover`),
+  handoverStart: (sessionId: string, body: { bytes: number; parts: number } | { nothing: true }) =>
+    request<{ handover: Handover | null; now: string }>(
+      'POST',
+      `/api/sessions/${sessionId}/handover`,
+      body,
+    ),
+  handoverDone: (sessionId: string) =>
+    request<{ handover: Handover; now: string }>(
+      'POST',
+      `/api/sessions/${sessionId}/handover/done`,
+    ),
+  handoverTaken: (sessionId: string) =>
+    request<{ handover: Handover | null; now: string }>(
+      'POST',
+      `/api/sessions/${sessionId}/handover/taken`,
+    ),
   compare: () => request<CompareResponse>('GET', '/api/social/compare'),
   leaderboard: (scope: LeaderboardScope) =>
     request<{ scope: LeaderboardScope; entries: LeaderboardEntry[] }>(

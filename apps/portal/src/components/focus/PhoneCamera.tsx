@@ -38,9 +38,9 @@ export interface PhoneCameraProps {
   orientation: TimelapseOrientation | null;
   /**
    * Filming for the computer recording this session (lib/camera-link.ts): how the link stands.
-   * The computer takes its stills from this camera and this phone keeps its own as well, so it
-   * is recording whatever the link does; the session ends from here or there, and the top
-   * button stops filming.
+   * This phone makes the video, with the computer's screen handed over at the end
+   * (lib/handover.ts), so it is recording whatever the link does; the session ends from here or
+   * there, and the top button stops filming.
    */
   link?: CameraLinkStatus | null;
   /** Which camera is filming, so the front one shows as a mirror. */
@@ -151,20 +151,16 @@ export function PhoneCamera({
           : clip
             ? `Live clip ${clipTime(clip)}`
             : filming
-              ? link === 'on'
+              ? link
                 ? 'Filming for your computer'
-                : link === 'lost'
-                  ? 'Recording · Reconnecting'
-                  : link === 'connecting'
-                    ? 'Recording · Connecting'
-                    : 'Recording'
+                : 'Recording'
               : onBreak
                 ? 'Not filming the break'
                 : timer.phase === 'paused'
                   ? 'Paused'
                   : 'Waiting for focus';
-  // Filming for a computer, the clips are the computer's (L there).
-  const clipButton = !link && (!!clip || recorder.canClip || recorder.clipsFull);
+  // Filming for a computer too: this phone makes the video, so its clips are the video's.
+  const clipButton = !!clip || recorder.canClip || recorder.clipsFull;
   const live = filming && recorder.live;
 
   const chrome = `focus-chrome${chromeVisible ? '' : ' is-hidden'}`;
