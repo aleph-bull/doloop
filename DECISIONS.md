@@ -3323,3 +3323,13 @@ The owner: "refine the extension and update it as it has not been updated with t
 - **The phone's ending screen** waits with "Getting your screen from your computer." while the API says the screen is coming, for up to two minutes, with Don't wait. When the computer had gone before the session ended (it last checked in more than 20 seconds before the end), it doesn't wait and says "Your screen hasn't come from your computer yet." The screen still goes in whenever it comes, until a video is made, so opening the computer again later sends it.
 - **A link that won't connect is tried less**: after three offers that never connected, once a minute instead of every ten seconds, and the API is asked every 3 seconds instead of under one.
 - Checked in two headless Chrome pages with fake cameras on the sandbox, with the link made never to connect: ended on the computer (the computer said "on your phone" 2.0 s after the end, and the phone had the screen in all 45 of its stills at 3.6 s; the video frame shows the phone's camera with the computer's screen in its box), ended on the phone (3.3 s and 5.4 s, 42 of 42), the computer's tab closed mid-session (the phone showed its video at once, and when the computer's focus screen opened again its screen went in: 33 of 76, the rest filmed after it closed), and the phone's tab closed before the end (opened again, its ending screen came back with the screen in all 31). With the link working: 1.3 s and 2.4 s, 43 of 43, and Stop filming and filming again (the computer's webcam came back between, 47 of 47). The phone recording itself and "Not now" still copy as before.
+
+## Most pressing starts folded on every visit, 2026-11-05 (owner request)
+
+The owner: "always auto hide the most pressing upon site entry", on the dashboard.
+
+- **On a phone the "Most pressing" list under Start is folded each time the site is opened.**
+  It used to open until folded and then keep that in the browser (`komogon.pressing-open`);
+  that key is no longer read or written. Unfolded during a visit, it stays unfolded while
+  moving between pages, and folds again on the next visit or a reload.
+- **On a computer nothing changed**: the pill's pop-out already started shut on every visit.
